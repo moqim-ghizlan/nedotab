@@ -2,8 +2,17 @@
 name: Deploy site to Pages
 
 on:
+  # Only pushes that change the site or what it is built from.
   push:
-    branches: ["main"]
+    branches: ["main", "dev"]
+    paths:
+      - "site/**"
+      - "CHANGELOG.md"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.site.config.js"
+      - "scripts/changelog-vers-html.js"
+      - ".github/workflows/static.yml"
   workflow_dispatch:
 
 permissions:
