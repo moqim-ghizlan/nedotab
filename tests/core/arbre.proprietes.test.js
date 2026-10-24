@@ -88,6 +88,13 @@ describe("propriétés de l'arbre", () => {
           const mode = hasard(2) ? "viderDansParent" : "avecContenu";
           if (mode === "avecContenu") corbeille.push({ element: d, parentId: null, index: 0 });
           action = { type: A.DOSSIER_SUPPRIMER, id: d.id, mode };
+        } else if (op === 8 && tous.length > 1) {
+          action = {
+            type: A.FUSIONNER,
+            sourceId: tous[hasard(tous.length)].id,
+            cibleId: tous[hasard(tous.length)].id,
+            nouveauDossierId: `f${n++}`,
+          };
         } else {
           continue;
         }

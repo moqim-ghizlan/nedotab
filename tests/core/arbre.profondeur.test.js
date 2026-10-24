@@ -127,3 +127,34 @@ describe("valider : données invalides corrigées sans rien supprimer", () => {
     expect(texteDe(r.grille)).toBe("a b[a~2 c] c~2");
   });
 });
+
+describe("FUSIONNER", () => {
+  const etat = (texte) => ({ versionSchema: 1, grille: arbreDe(texte), reglages: {} });
+  const fusion = (e, sourceId, cibleId) =>
+    reduire(e, { type: A.FUSIONNER, sourceId, cibleId, nouveauDossierId: "F", titre: "Dossier" });
+  it("site + site à l'accueil : dossier à la place de la cible, [cible, source]", () => {
+    expect(texteDe(fusion(etat("a b c"), "c", "a").grille)).toBe("F[a c] b");
+    expect(texteDe(fusion(etat("a b c"), "a", "c").grille)).toBe("b F[c a]");
+  });
+  it("site + site au niveau 2 : ok ; au niveau 3 : refus", () => {
+    expect(texteDe(fusion(etat("D[E[x y]]"), "y", "x").grille)).toBe("D[E[F[x y]]]");
+    const profond = etat("D[E[G[x y]]]");
+    expect(fusion(profond, "y", "x")).toBe(profond);
+  });
+  it("site → dossier : entre à la fin", () => {
+    expect(texteDe(fusion(etat("a D[x]"), "a", "D").grille)).toBe("D[x a]");
+  });
+  it("dossier → dossier : hauteur respectée", () => {
+    expect(texteDe(fusion(etat("D[] E[]"), "D", "E").grille)).toBe("E[D[]]");
+    const haut = etat("D[d[]] E[e[]]");
+    expect(fusion(haut, "D", "e")).toBe(haut);
+  });
+  it("refus : dossier sur lui-même, dans son descendant, dossier sur un site, source = cible", () => {
+    const e = etat("D[x] a");
+    expect(fusion(e, "D", "D")).toBe(e);
+    expect(fusion(e, "D", "a")).toBe(e);
+    expect(fusion(e, "a", "a")).toBe(e);
+    const b = etat("D[E[]]");
+    expect(fusion(b, "D", "E")).toBe(b);
+  });
+});

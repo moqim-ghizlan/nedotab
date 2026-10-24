@@ -7,6 +7,7 @@ import { genererImagesTest } from "./generer-images-test.mjs";
 import { lancerChrome, attendre } from "./navigateur.mjs";
 import { scenarioDossiers } from "./scenarios/dossiers.mjs";
 import { scenarioImbrication } from "./scenarios/imbrication.mjs";
+import { scenarioFusion } from "./scenarios/fusion.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -34,10 +35,11 @@ async function ajouterSite(p, url, titre) {
 const nombreTuiles = (p) => p.eval(`document.querySelectorAll(".tuile--site").length`);
 
 const seulement = process.argv.find((a) => a.startsWith("--seulement="))?.split("=")[1];
-const nav = seulement
-  ? null
-  : await lancerChrome({ headless: !process.argv.includes("--visible") });
-if (!seulement)
+const principal = !seulement || seulement === "principal";
+const nav = principal
+  ? await lancerChrome({ headless: !process.argv.includes("--visible") })
+  : null;
+if (principal)
   try {
     const id = await nav.chargerExtension();
     const url = `chrome-extension://${id}/newtab.html`;
@@ -298,7 +300,7 @@ if (!seulement)
     const lireMajLe = () => p.eval(`chrome.storage.local.get("etat").then((r) => r.etat.majLe)`);
     let ids = (await ordre()).split(",");
     const [dernierX, dernierY] = await centre(ids.at(-1));
-    await glisserVers(ids[0], dernierX + 10, dernierY);
+    await glisserVers(ids[0], dernierX + 24, dernierY);
     let apresGlisser = (await ordre()).split(",");
     verifier("Glisser le premier à la fin", apresGlisser.at(-1) === ids[0], `${ids.length} tuiles`);
     verifier(
@@ -315,7 +317,7 @@ if (!seulement)
     );
     ids = apresGlisser;
     const [premierX, premierY] = await centre(ids[0]);
-    await glisserVers(ids.at(-1), premierX - 10, premierY);
+    await glisserVers(ids.at(-1), premierX - 24, premierY);
     verifier("Glisser le dernier au début", (await ordre()).split(",")[0] === ids.at(-1));
     await attendre(500);
     const avantSurPlace = await lireMajLe();
@@ -408,7 +410,7 @@ if (!seulement)
   }
 
 // V1.3 — with the site permission granted (test copy with host_permissions)
-if (!seulement) {
+if (!seulement || seulement === "principal") {
   const copie = mkdtempSync(join(tmpdir(), "nedotab-ext-"));
   cpSync("dist/extension", copie, { recursive: true });
   const m = JSON.parse(readFileSync(join(copie, "manifest.json"), "utf8"));
@@ -483,6 +485,22 @@ if (!seulement || seulement === "imbrication") {
     });
   } finally {
     await nav4.fermer();
+  }
+}
+
+// V1.8 — drag between levels (fresh browser)
+if (!seulement || seulement === "fusion") {
+  const nav5 = await lancerChrome();
+  try {
+    const id = await nav5.chargerExtension();
+    await scenarioFusion({
+      nav: nav5,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav5.fermer();
   }
 }
 

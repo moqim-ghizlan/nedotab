@@ -2,6 +2,45 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.8.0] - 2026-10-24
+
+### Ajouté
+
+- Ranger à la souris comme sur un téléphone : maintenir une icône 500 ms au centre d'une
+  autre (halo) puis relâcher —
+  - sur un site : un dossier « Dossier » contenant les deux remplace la cible, s'ouvre et
+    son nom est prêt à être tapé (`OUVRIR_APRES_FUSION`) ;
+  - sur un dossier : l'élément y entre, l'aperçu se met à jour.
+- Fil d'Ariane comme zone de dépôt : maintenir 400 ms sur « Accueil » ou un dossier parent
+  fait remonter l'élément à ce niveau ; la fenêtre reste au niveau courant.
+- Refus visible : cible en rouge et toast explicatif (« Dépasserait 3 niveaux », « Un dossier
+  ne peut pas aller dans lui-même », un dossier lâché sur un site ne crée pas de dossier).
+- « Annuler » après chaque fusion, rangement ou remontée.
+- Ctrl+Maj+↑ dans un dossier : l'élément remonte au niveau parent, juste après le dossier.
+- Action `FUSIONNER`, ajoutée au test de propriétés. Détection d'intention isolée dans
+  `intentionDepot.js` (indépendante de SortableJS, réutilisable pour le tactile).
+
+### Corrigé
+
+- Après un glisser relâché sur un autre élément, SortableJS ignorait le clic suivant de
+  l'utilisateur (par exemple sur « Annuler ») : ce clic fantôme est désormais consommé.
+
+### Écart au plan
+
+- Le plan proposait `swapThreshold: 0.65` sans inversion. Avec SortableJS, la zone d'échange
+  est centrée sur la cible : viser le centre d'une tuile la faisait bouger avant les 500 ms.
+  Réglage retenu : `invertSwap: true`, `invertedSwapThreshold: 0.7` (échange sur les côtés,
+  centre réservé au dépôt). Le plan B (glisser maison) n'a pas été nécessaire.
+
+### Tests
+
+- 169 tests : `FUSIONNER` (accueil, niveau 2, refus au niveau 3, site → dossier, dossier →
+  dossier, refus dossier → site et boucle), propriétés étendues, zone centrale.
+- Navigateur : 18 vérifications de fusion — halo, dossier ouvert en édition, passage rapide
+  sans fusion, dépôt dans un dossier, 4ᵉ niveau refusé en rouge, dépôt sur « Accueil » du
+  fil d'Ariane puis Annuler, Ctrl+Maj+↑, 20 manipulations rapides sans perte ni doublon,
+  rechargement — plus toutes les vérifications précédentes.
+
 ## [1.7.0] - 2026-10-24
 
 ### Ajouté

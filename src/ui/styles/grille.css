@@ -238,3 +238,39 @@
     transform: none;
   }
 }
+
+/* --- drop targets (hold over a tile or a breadcrumb segment) -------------------------- */
+
+.case--glissee,
+.sortable-fallback {
+  pointer-events: none;
+}
+
+.tuile.cible--fusion .tuile-icone {
+  transform: scale(1.12);
+  box-shadow:
+    0 0 0 3px var(--surface),
+    0 0 0 6px var(--accent),
+    var(--ombre-forte);
+}
+
+.tuile.cible--refusee .tuile-icone {
+  box-shadow:
+    0 0 0 3px var(--surface),
+    0 0 0 6px var(--danger);
+}
+
+.glisser-en-cours .ariane-segment {
+  outline: 1px dashed var(--accent);
+  outline-offset: 1px;
+}
+
+.ariane-segment.cible--niveau {
+  background: var(--accent);
+  color: var(--accent-texte);
+}
+
+.ariane-segment.cible--refusee {
+  background: var(--danger);
+  color: #fff;
+}

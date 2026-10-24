@@ -21,7 +21,7 @@ let ouverte = null;
 export function ouvrirFenetreDossier(
   store,
   dossierId,
-  { retourFocus, lectureSeule = () => false, annoncer } = {},
+  { retourFocus, lectureSeule = () => false, annoncer, editerTitre = false } = {},
 ) {
   ouverte?.fermer();
   const grille = () => store.lire().grille;
@@ -121,7 +121,7 @@ export function ouvrirFenetreDossier(
   );
 
   /** Shows folder `id` in the window; `focusId` gets the focus once rendered. */
-  const aller = (id, { focusId, sens = 0 } = {}) => {
+  const aller = (id, { focusId, sens = 0, editerTitre: editer = false } = {}) => {
     if (id == null) {
       dialogue.close();
       return;
@@ -136,6 +136,7 @@ export function ouvrirFenetreDossier(
     actualiser();
     const cible = focusId && grilleEl.querySelector(`.tuile[data-id="${CSS.escape(focusId)}"]`);
     (cible ?? grilleEl.querySelector(".tuile") ?? titre).focus();
+    if (editer) commencerEdition();
   };
   /** One level up; at level 1, closes the window. */
   const remonter = () => {
@@ -182,6 +183,7 @@ export function ouvrirFenetreDossier(
     libelleAjout: "Ajouter un site ou un dossier ici",
     ajouter,
     ouvrirDossier: (id) => aller(id, { sens: 1 }),
+    apresFusion: (id) => aller(id, { sens: 1, editerTitre: true }),
   });
 
   function actualiser() {
@@ -255,6 +257,7 @@ export function ouvrirFenetreDossier(
   actualiser();
   dialogue.showModal();
   (grilleEl.querySelector(".tuile") ?? titre).focus();
+  if (editerTitre) commencerEdition();
   ouverte = { dialogue, fermer: () => dialogue.close(), aller };
   return ouverte;
 }

@@ -4,6 +4,7 @@
  */
 import {
   deplacer,
+  fusionner,
   hauteur,
   inserer,
   modifierListe,
@@ -27,6 +28,7 @@ export const A = {
   DOSSIER_RENOMMER: "DOSSIER_RENOMMER",
   DOSSIER_SUPPRIMER: "DOSSIER_SUPPRIMER",
   GRILLE_REMPLACER: "GRILLE_REMPLACER",
+  FUSIONNER: "FUSIONNER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -147,6 +149,8 @@ export function reduire(etat, action) {
     }
     case A.DOSSIER_SUPPRIMER:
       return avecGrille(etat, supprimerDossier(etat.grille, action));
+    case A.FUSIONNER:
+      return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:
       return Array.isArray(action.grille) ? avecGrille(etat, action.grille) : etat;
     default:

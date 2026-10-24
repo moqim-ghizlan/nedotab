@@ -212,3 +212,41 @@ export function listerDossiers(grille, niveau = 1, acc = []) {
   }
   return acc;
 }
+
+/**
+ * Drop of `sourceId` held over `cibleId`:
+ * - target is a folder: the source goes into it, at the end (if allowed);
+ * - target is a site: a new folder takes the target's place and holds [target, source];
+ *   a folder dropped on a site never creates a folder (refused).
+ * Returns the same grid when refused.
+ */
+export function fusionner(
+  grille,
+  { sourceId, cibleId, nouveauDossierId, titre = "Dossier", creeLe = 0 },
+) {
+  if (sourceId === cibleId) return grille;
+  const source = trouver(grille, sourceId);
+  const cible = trouver(grille, cibleId);
+  if (!source || !cible) return grille;
+  if (cible.element.type === "dossier") {
+    if (!peutPlacer(grille, sourceId, cibleId).ok) return grille;
+    return deplacer(grille, sourceId, cibleId);
+  }
+  if (source.element.type !== "site" || !nouveauDossierId || trouver(grille, nouveauDossierId)) {
+    return grille;
+  }
+  const parentId = cible.parent?.id ?? null;
+  if (!peutCreerDossierDans(grille, parentId)) return grille;
+  const sans = retirer(grille, sourceId).grille;
+  const position = trouver(sans, cibleId);
+  const dossier = {
+    id: nouveauDossierId,
+    type: "dossier",
+    titre,
+    items: [cible.element, source.element],
+    creeLe,
+  };
+  return modifierListe(sans, parentId, (liste) =>
+    liste.map((e, i) => (i === position.index ? dossier : e)),
+  );
+}

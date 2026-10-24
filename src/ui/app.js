@@ -106,6 +106,12 @@ export async function demarrerApp(racine) {
     lectureSeule: () => lectureSeule,
     annoncer,
     ouvrirDossier,
+    apresFusion: (id) =>
+      ouvrirFenetreDossier(store, id, {
+        lectureSeule: () => lectureSeule,
+        annoncer,
+        editerTitre: true,
+      }),
     ajouter: menuAjout,
     libelleAjout: "Ajouter un site ou un dossier",
   });
