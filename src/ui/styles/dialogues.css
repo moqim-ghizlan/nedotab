@@ -114,6 +114,18 @@
   color: var(--danger);
 }
 
+/* Main action that destroys something: solid red, readable in both themes. */
+.bouton--principal.bouton--danger {
+  background: var(--danger);
+  color: var(--surface);
+}
+
+.bouton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: none;
+}
+
 .toasts {
   position: fixed;
   left: 50%;

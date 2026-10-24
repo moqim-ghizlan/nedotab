@@ -21,6 +21,7 @@ import { creerCompte } from "./services/compte.js";
 import { creerSynchro } from "./services/synchro.js";
 import { creerSauvegardes } from "./services/sauvegardes.js";
 import { creerRestauration } from "./services/restauration.js";
+import { creerDonnees } from "./services/donnees.js";
 import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
@@ -183,6 +184,96 @@ export async function demarrerApp(racine) {
         location.reload();
       }
     },
+    /**
+     * V2.10: deletes the account and all its data (Cloud Function). Explanation, export
+     * offered first, "SUPPRIMER" typed, recent Google sign-in, then the server deletes
+     * everything; this device goes back to local mode. On failure nothing changes here.
+     */
+    async supprimerCompte() {
+      const champ = el("input", {
+        id: "confirmer-suppression",
+        type: "text",
+        autocomplete: "off",
+        spellcheck: "false",
+      });
+      const garder = el("input", { type: "checkbox", id: "garder-apres-suppression" });
+      const promesse = demander({
+        titre: "Supprimer mon compte",
+        message:
+          "Vos sites, dossiers, réglages, sauvegardes et fonds d'écran enregistrés sur votre compte seront supprimés définitivement, ainsi que le compte lui-même. Cette action ne peut pas être annulée.",
+        contenu: [
+          el("button", {
+            type: "button",
+            class: "bouton",
+            texte: "Exporter mes données d'abord",
+            onclick: () => session.donnees.exporter(),
+          }),
+          el(
+            "label",
+            { class: "reglages-case", for: "garder-apres-suppression" },
+            garder,
+            el("span", { texte: "Garder une copie de mes sites sur cet ordinateur" }),
+          ),
+          el(
+            "div",
+            { class: "champ" },
+            el("label", {
+              for: "confirmer-suppression",
+              texte: "Pour confirmer, tapez SUPPRIMER",
+            }),
+            champ,
+          ),
+        ],
+        boutons: [
+          { libelle: "Annuler", valeur: false },
+          { libelle: "Supprimer définitivement", valeur: true, principal: true, danger: true },
+        ],
+      });
+      const confirmer = champ.closest("form").querySelector(".bouton--danger");
+      confirmer.disabled = true;
+      champ.addEventListener("input", () => {
+        confirmer.disabled = champ.value.trim() !== "SUPPRIMER";
+      });
+      if (!(await promesse) || champ.value.trim() !== "SUPPRIMER") return false;
+
+      // A recent sign-in is required by the server.
+      if (!(await compte.reconnecter())) {
+        toast("Reconnectez-vous pour confirmer : rien n'a été supprimé.", {
+          type: "erreur",
+          duree: 7000,
+        });
+        return false;
+      }
+      synchro.suspendre();
+      try {
+        await (await chargerFirebase()).supprimerMonCompte();
+      } catch (e) {
+        synchro.reprendre();
+        toast(
+          e?.code === "functions/failed-precondition"
+            ? "Reconnectez-vous pour confirmer : rien n'a été supprimé."
+            : "Suppression impossible pour l'instant : rien n'a été supprimé. Réessayez plus tard.",
+          { type: "erreur", duree: 9000 },
+        );
+        return false;
+      }
+      // Deleted on the server: forget everything tied to the account on this device.
+      await synchro.quitter({ garderCopie: garder.checked, envoyer: false });
+      await compte.oublier();
+      await plateforme.copies.effacerTout().catch(() => {});
+      await (await chargerFirebase()).effacerCache?.().catch(() => {});
+      await stockage.sauvegarder(store.lire());
+      try {
+        localStorage.setItem(
+          "nedotab:annonce",
+          "Votre compte et toutes ses données ont été supprimés.",
+        );
+      } catch {
+        /* the message is only a courtesy */
+      }
+      location.reload();
+      return true;
+    },
     async restaurerCopie() {
       const ok = await demander({
         titre: "Restaurer la copie de cet ordinateur",
@@ -201,6 +292,7 @@ export async function demarrerApp(racine) {
   };
   session.sauvegardes = creerSauvegardes({ store, session });
   session.restauration = creerRestauration({ store, session });
+  session.donnees = creerDonnees({ store, session });
   // Automatic backup: once the account is synced (first server snapshot), at most daily.
   let sauvegardeVerifiee = false;
   synchro.abonner((e) => {
@@ -375,5 +467,15 @@ export async function demarrerApp(racine) {
       });
     },
   });
+  // Message left before a reload (account deleted, V2.10).
+  try {
+    const annonce = localStorage.getItem("nedotab:annonce");
+    if (annonce) {
+      localStorage.removeItem("nedotab:annonce");
+      toast(annonce, { duree: 8000 });
+    }
+  } catch {
+    /* storage unavailable: nothing to show */
+  }
   return store;
 }

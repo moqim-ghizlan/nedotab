@@ -29,3 +29,4 @@ export {
   sauvegarderAvantRemplacement,
   supprimerSauvegarde,
 } from "./sauvegardes.js";
+export { supprimerMonCompte } from "./suppression.js";

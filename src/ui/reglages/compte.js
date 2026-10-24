@@ -1,5 +1,15 @@
 import { el } from "../dom.js";
 import { creerAvatar } from "../avatar.js";
+import { URL_SITE } from "../../core/constantes.js";
+
+/** What happens to the account's data: the privacy page of the site (V2.10). */
+const lienConfidentialite = () =>
+  el("a", {
+    href: `${URL_SITE}confidentialite.html`,
+    target: "_blank",
+    rel: "noopener",
+    texte: "Vos données et la confidentialité",
+  });
 
 /** Google "G" logo (brand asset kept locally, as required for sign-in buttons). */
 function logoGoogle() {
@@ -96,6 +106,24 @@ export function sectionCompte(session) {
           bouton("Restaurer la copie de cet ordinateur", () => session.restaurerCopie()),
           bouton("Se déconnecter", () => session.deconnecter()),
         ),
+        el("p", { class: "reglages-liens" }, lienConfidentialite()),
+        session.supprimerCompte
+          ? el(
+              "div",
+              { class: "zone-danger" },
+              el("strong", { texte: "Supprimer mon compte" }),
+              el("p", {
+                class: "reglages-note",
+                texte:
+                  "Supprime définitivement votre compte et tout ce qui y est enregistré (sites, réglages, sauvegardes, fonds d'écran).",
+              }),
+              bouton(
+                "Supprimer mon compte…",
+                () => session.supprimerCompte(),
+                "bouton bouton--danger",
+              ),
+            )
+          : null,
       );
       return;
     }
@@ -117,6 +145,7 @@ export function sectionCompte(session) {
         el("span", { texte: enCours ? "Connexion…" : "Se connecter avec Google" }),
       ),
       ...(etat.erreur ? [erreurAvecReessai(etat.erreur, () => session.connecter())] : []),
+      el("p", { class: "reglages-liens" }, lienConfidentialite()),
     );
   };
   rendre();

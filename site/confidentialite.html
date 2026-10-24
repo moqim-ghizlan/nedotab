@@ -7,7 +7,7 @@
     <title>Confidentialité — NedoTab</title>
     <meta
       name="description"
-      content="NedoTab ne collecte, n'envoie ni ne vend aucune donnée. Ce qui reste sur votre ordinateur et les rares appels faits pour afficher les icônes."
+      content="Quelles données NedoTab enregistre, où, pourquoi, combien de temps, et comment les exporter ou les supprimer."
     />
     <link rel="canonical" href="%CANONICAL%" />
     <link rel="icon" href="./icones/32.png" />
@@ -20,19 +20,103 @@
     <main id="contenu" class="page">
       <h1>Confidentialité</h1>
       <p class="chapo">
-        NedoTab ne collecte, n'envoie ni ne vend aucune donnée. Il n'y a pas de compte, pas d'outil
-        de mesure d'audience et pas de publicité.
+        NedoTab s'utilise sans compte. Si vous vous connectez avec Google, vos sites sont
+        enregistrés sur votre compte pour les retrouver sur vos autres appareils. Il n'y a ni
+        publicité, ni revente de données, ni outil de mesure d'audience.
       </p>
 
-      <h2>Ce qui reste sur votre ordinateur</h2>
+      <h2>Responsable du traitement</h2>
+      <p>%EDITEUR% — contact : %CONTACT%.</p>
+
+      <h2>Sans compte</h2>
       <p>
-        Vos sites, vos dossiers, vos icônes personnalisées et vos réglages sont enregistrés par
-        Chrome sur votre ordinateur (stockage local de l'extension). L'image de fond que vous
-        importez est gardée dans la base locale du navigateur (IndexedDB). Rien de tout cela n'est
-        copié ailleurs.
+        Vos sites, dossiers, icônes personnalisées et réglages sont enregistrés par le navigateur
+        sur votre ordinateur (stockage local de l'extension). L'image de fond que vous importez est
+        gardée dans la base locale du navigateur (IndexedDB). Rien de tout cela n'est copié
+        ailleurs.
       </p>
 
-      <h2>Les seuls échanges avec Internet</h2>
+      <h2>Avec un compte (connexion Google)</h2>
+      <p>
+        La connexion est facultative. Elle sert uniquement à synchroniser et sauvegarder vos
+        données.
+      </p>
+      <ul>
+        <li>
+          <strong>Identité</strong> : l'identifiant de votre compte Google, votre nom, votre adresse
+          e-mail et l'adresse de votre photo de profil, transmis par Google à la connexion. La photo
+          est affichée dans l'extension ; elle n'est pas copiée par NedoTab.
+        </li>
+        <li>
+          <strong>Vos données</strong> : vos sites et dossiers (titres, adresses, icônes), vos
+          réglages synchronisés (thème, fond, bibliothèque de fonds d'écran), vos sauvegardes et les
+          fonds d'écran que vous importez sur votre compte.
+        </li>
+        <li>
+          <strong>Données techniques</strong> : un identifiant d'appareil tiré au hasard et une date
+          de modification, pour départager les changements faits sur plusieurs appareils.
+        </li>
+      </ul>
+      <p>
+        Les réglages propres à un appareil (nombre de colonnes, journal de débogage, image de fond
+        gardée sur cet appareil) ne sont jamais envoyés.
+      </p>
+      <p>
+        <strong>Finalité et base légale</strong> : synchroniser et sauvegarder vos données entre vos
+        appareils, c'est-à-dire fournir le service que vous demandez en vous connectant (exécution
+        du service).
+      </p>
+
+      <h2>Où sont-elles hébergées ?</h2>
+      <p>
+        Chez Google, via Firebase (Authentication, Cloud Firestore, et Cloud Storage pour les fonds
+        d'écran du compte). Base de données : %REGION_DONNEES%. Fonction de suppression de compte :
+        région europe-west1 (Belgique). Google agit comme sous-traitant ; d'éventuels transferts
+        hors de l'Union européenne sont encadrés par les
+        <a href="https://cloud.google.com/terms/data-processing-addendum" rel="noopener"
+          >conditions de traitement des données de Google Cloud</a
+        >.
+      </p>
+      <p>
+        Chaque utilisateur ne peut lire et écrire que ses propres données : les règles de sécurité
+        de la base le garantissent.
+      </p>
+
+      <h2>Combien de temps ?</h2>
+      <ul>
+        <li>Vos données de compte : tant que votre compte existe.</li>
+        <li>
+          Sauvegardes : les 30 dernières sauvegardes automatiques (une par jour au plus) et les 10
+          dernières copies faites avant une restauration ; vos sauvegardes manuelles jusqu'à ce que
+          vous les supprimiez.
+        </li>
+        <li>
+          Sur votre ordinateur : jusqu'à la déconnexion (si vous choisissez de ne pas garder de
+          copie) ou la suppression de l'extension.
+        </li>
+      </ul>
+
+      <h2>Vos droits</h2>
+      <ul>
+        <li>
+          <strong>Accès et portabilité</strong> : Réglages → Mes données → « Exporter mes données »
+          télécharge un fichier avec vos sites, réglages et sauvegardes.
+        </li>
+        <li>
+          <strong>Rectification</strong> : modifiez vos sites et réglages directement dans
+          l'extension.
+        </li>
+        <li>
+          <strong>Effacement</strong> : Réglages → Compte → « Supprimer mon compte » supprime
+          définitivement votre compte, vos données, vos sauvegardes et vos fonds d'écran.
+        </li>
+        <li>
+          Pour toute question ou demande : %CONTACT%. Vous pouvez aussi adresser une réclamation à
+          la <a href="https://www.cnil.fr/fr/plaintes" rel="noopener">CNIL</a>.
+        </li>
+      </ul>
+
+      <h2>Les échanges avec d'autres services</h2>
       <p>
         Quand vous ajoutez un site ou demandez sa nouvelle icône, NedoTab cherche son nom et son
         icône :
@@ -42,16 +126,12 @@
           <strong>auprès du site lui-même</strong>, seulement si vous avez accordé l'accès aux sites
           (facultatif, modifiable dans les réglages) ; la requête est faite sans vos cookies ;
         </li>
-        <li><strong>dans le cache d'icônes de Chrome</strong>, sans échange réseau ;</li>
+        <li><strong>dans le cache d'icônes du navigateur</strong>, sans échange réseau ;</li>
         <li>
           <strong>auprès du service d'icônes de Google</strong>, qui reçoit alors le nom de domaine
-          du site ajouté (par exemple <code>wikipedia.org</code>).
+          du site (par exemple <code>wikipedia.org</code>), à l'ajout et parfois à l'affichage.
         </li>
       </ul>
-      <p>
-        Les icônes ainsi trouvées sont ensuite chargées depuis leur adresse à chaque affichage,
-        comme une image de page web.
-      </p>
       <p>
         La barre de recherche cherche d'abord dans vos sites, sans rien envoyer. Si vous appuyez sur
         Entrée sans résultat, votre texte est transmis au moteur de recherche choisi dans votre
@@ -66,10 +146,7 @@
       </p>
 
       <aside class="encadre">
-        <p>
-          Cette page décrit la version %VERSION%, qui fonctionne sans compte. Elle sera mise à jour
-          avant l'arrivée de la synchronisation entre appareils.
-        </p>
+        <p>Mise à jour le %DATE_CONFIDENTIALITE%, pour la version %VERSION%.</p>
       </aside>
     </main>
     <!-- @pied -->

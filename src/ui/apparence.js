@@ -94,7 +94,7 @@ export function configurerFondsCompte(telecharger) {
  * Blob of a library picture: from the local cache, else downloaded ONCE and cached. Storage
  * bandwidth is billed: the download URL is never used as the background of every tab.
  */
-async function blobFondCompte(fond) {
+export async function blobFondCompte(fond) {
   const enCache = await plateforme.fichiers.lireCacheFond(fond.id).catch(() => null);
   if (enCache) return enCache;
   if (!telechargerFondCompte) return null;

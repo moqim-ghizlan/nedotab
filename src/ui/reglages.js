@@ -8,6 +8,7 @@ import { el } from "./dom.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { sectionSauvegardes } from "./reglages/sauvegardes.js";
+import { sectionDonnees } from "./reglages/donnees.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -305,6 +306,10 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       compteUi?.section,
       session?.sauvegardes
         ? sectionSauvegardes(session.sauvegardes, session.restauration).section
+        : null,
+      session?.donnees
+        ? sectionDonnees({ donnees: session.donnees, restauration: session.restauration, store })
+            .section
         : null,
       section(
         "Apparence",

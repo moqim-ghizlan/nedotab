@@ -18,6 +18,8 @@ import { scenarioFondsCompte } from "./scenarios/fonds-compte.mjs";
 import { scenarioSauvegardes } from "./scenarios/sauvegardes.mjs";
 import { scenarioRestauration } from "./scenarios/restauration.mjs";
 import { scenarioConflits } from "./scenarios/conflits.mjs";
+import { scenarioDonnees } from "./scenarios/donnees.mjs";
+import { scenarioSuppression } from "./scenarios/suppression.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -573,6 +575,22 @@ if (!seulement || seulement === "icones") {
   }
 }
 
+// V2.10 — export and import of the user's data (local mode)
+if (!seulement || seulement === "donnees") {
+  const nav16 = await lancerChrome();
+  try {
+    const id = await nav16.chargerExtension();
+    await scenarioDonnees({
+      nav: nav16,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav16.fermer();
+  }
+}
+
 // V2.1 — Google account (only with the emulators: npm run verifier:compte)
 if (seulement === "compte") {
   const nav8 = await lancerChrome();
@@ -698,6 +716,22 @@ if (seulement === "compte" || seulement === "conflits") {
     });
   } finally {
     await nav15.fermer();
+  }
+}
+
+// V2.10 — account deletion (emulators, with Functions)
+if (seulement === "compte" || seulement === "suppression") {
+  const nav17 = await lancerChrome();
+  try {
+    const id = await nav17.chargerExtension();
+    await scenarioSuppression({
+      nav: nav17,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav17.fermer();
   }
 }
 

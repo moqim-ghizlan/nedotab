@@ -84,5 +84,26 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
       await ecrireIndicateur(null);
       changer({ statut: "deconnecte", profil: null, erreur: null });
     },
+    /**
+     * Signs in again with Google (V2.10: a recent sign-in confirms the account deletion).
+     * @returns {Promise<boolean>} false when the window was closed or the sign-in failed
+     */
+    async reconnecter() {
+      try {
+        const fb = await charger();
+        const profil = await fb.connecter(jetons);
+        return profil?.uid === etat.profil?.uid;
+      } catch (e) {
+        if (!(e instanceof plat.ConnexionAnnulee)) console.error(e);
+        return false;
+      }
+    },
+    /** After the account was deleted on the server: forget the session on this device. */
+    async oublier() {
+      const fb = await charger();
+      await fb.deconnecter(jetons).catch(() => {});
+      await ecrireIndicateur(null);
+      changer({ statut: "deconnecte", profil: null, erreur: null });
+    },
   };
 }

@@ -38,7 +38,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   );
   verifier(
     "Panneau Réglages en sections",
-    sections === "Compte, Sauvegardes, Apparence, Autorisations, Stockage, À propos",
+    sections === "Compte, Sauvegardes, Mes données, Apparence, Autorisations, Stockage, À propos",
     sections,
   );
   verifier(
@@ -93,7 +93,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   const images = genererImagesTest(mkdtempSync(join(tmpdir(), "nedotab-fond-")));
   await segment("Type de fond", "image");
   await p.envoyer("DOM.enable");
-  await p.fichiers('.reglages input[type="file"]', [images.simple]);
+  await p.fichiers('.reglages input[type="file"][accept^="image/"]', [images.simple]);
   await attendre(2500);
   let r = await etatReglages();
   verifier(
@@ -115,7 +115,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   f = await fond();
   verifier("Image affichée", f.image.startsWith('url("blob:'), f.image.slice(0, 30));
   const refAvant = r.fond.ref;
-  await p.fichiers('.reglages input[type="file"]', [images.bruit]);
+  await p.fichiers('.reglages input[type="file"][accept^="image/"]', [images.bruit]);
   await attendre(2500);
   r = await etatReglages();
   const clesApres = await cles();

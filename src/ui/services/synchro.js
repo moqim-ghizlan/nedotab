@@ -72,6 +72,7 @@ export function creerSynchro({
   let serveur = null; // last state received from the account
   let revisionServeur = -1; // its revision
   let envoiEnCours = false;
+  let suspendue = false; // account deletion in progress: nothing is sent
   let arreterEcoute = null;
   let arreterAutres = null;
   let ecritures = 0;
@@ -128,7 +129,7 @@ export function creerSynchro({
    */
   const envoyer = async () => {
     minuteur = null;
-    if (etat.mode !== "compte" || file.length === 0 || envoiEnCours || !fb) return;
+    if (etat.mode !== "compte" || file.length === 0 || envoiEnCours || !fb || suspendue) return;
     if (!enLigne) return majStatut(); // sent again on "online"
     envoiEnCours = true;
     const lot = file;
@@ -373,6 +374,20 @@ export function creerSynchro({
       revision,
     }),
 
+    /**
+     * Account deletion (V2.10): nothing is sent meanwhile (a pending operation would
+     * create the document again right after its deletion). reprendre() if it fails.
+     */
+    suspendre() {
+      suspendue = true;
+      clearTimeout(minuteur);
+      minuteur = null;
+    },
+    reprendre() {
+      suspendue = false;
+      if (file.length) planifier();
+    },
+
     /** Local changes not yet confirmed by the server (sign-out and restoration warnings). */
     modificationsNonEnvoyees: () => file.length,
 
@@ -471,12 +486,13 @@ export function creerSynchro({
     /**
      * Sign-out: back to local mode with the last known grid, or an empty one when the user
      * does not want to keep a copy on this computer (shared computer). What is still queued
-     * is sent first when possible (at most 5 s).
+     * is sent first when possible (at most 5 s), unless `envoyer` is false (the account was
+     * deleted).
      */
-    async quitter({ garderCopie }) {
+    async quitter({ garderCopie, envoyer: envoyerAvant = true }) {
       clearTimeout(minuteur);
       minuteur = null;
-      if (etat.mode === "compte" && file.length && enLigne) {
+      if (envoyerAvant && etat.mode === "compte" && file.length && enLigne) {
         await Promise.race([envoyer(), new Promise((r) => setTimeout(r, 5000))]);
       }
       clearTimeout(minuteur);
@@ -490,6 +506,7 @@ export function creerSynchro({
       serveur = null;
       await persistance.supprimer(idOnglet).catch(() => {});
       await plat.preferences.ecrire("synchro", null);
+      suspendue = false;
       changer({ mode: "local", uid: null, erreur: null, statut: null });
       if (!garderCopie) {
         await plat.copies.enregistrer(store.lire());

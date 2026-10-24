@@ -55,6 +55,42 @@ export function dateCourte(ms) {
 }
 
 /**
+ * Folder of imported elements: the sites of `grilleImportee` that are not already in
+ * `grilleActuelle` (same address), ids kept unique, too deep folders flattened by valider()
+ * (nothing is lost). Used by the first synchronisation (V2.3) and the file import (V2.10).
+ * @returns {{ dossier: object|null, ajoutes: number, aplati: boolean }}
+ */
+export function dossierImporte(
+  grilleActuelle,
+  grilleImportee,
+  { dossierId, titre, maintenant = Date.now() },
+) {
+  const connues = new Set(
+    [...parcourir(grilleActuelle)].filter((e) => e.type === "site").map((e) => cleUrl(e.url)),
+  );
+  // Ids are kept unique: an imported element may share its id with a current one.
+  const idsActuels = new Set([...parcourir(grilleActuelle)].map((e) => e.id));
+  const renommer = (liste) =>
+    liste.map((e) => {
+      const id = idsActuels.has(e.id) ? `${e.id}~import` : e.id;
+      return e.type === "dossier" ? { ...e, id, items: renommer(e.items) } : { ...e, id };
+    });
+  const importes = renommer(sansDoublons(grilleImportee, connues));
+  const ajoutes = compter(importes).sites;
+  if (ajoutes === 0) return { dossier: null, ajoutes: 0, aplati: false };
+  let aplati = false;
+  const { grille } = valider(
+    {
+      versionSchema: 2,
+      grille: [{ id: dossierId, type: "dossier", titre, items: importes, creeLe: maintenant }],
+    },
+    () => {},
+    () => (aplati = true),
+  );
+  return { dossier: grille[0], ajoutes, aplati };
+}
+
+/**
  * "Fusionner": the account's grid stays as it is; the local sites that are not already in
  * the account (same address) go into a folder "Importé de cet ordinateur — JJ/MM/AAAA" at
  * the end. Too deep folders are flattened by valider() (nothing is lost).
@@ -65,31 +101,11 @@ export function fusionnerImport(
   grilleLocale,
   { dossierId, maintenant = Date.now() },
 ) {
-  const connues = new Set(
-    [...parcourir(grilleCompte)].filter((e) => e.type === "site").map((e) => cleUrl(e.url)),
-  );
-  // Ids are kept unique: a local element may share its id with one of the account.
-  const idsCompte = new Set([...parcourir(grilleCompte)].map((e) => e.id));
-  const renommer = (liste) =>
-    liste.map((e) => {
-      const id = idsCompte.has(e.id) ? `${e.id}~import` : e.id;
-      return e.type === "dossier" ? { ...e, id, items: renommer(e.items) } : { ...e, id };
-    });
-  const importes = renommer(sansDoublons(grilleLocale, connues));
-  const ajoutes = compter(importes).sites;
-  if (ajoutes === 0) return { grille: grilleCompte, ajoutes: 0, aplati: false };
-  const dossier = {
-    id: dossierId,
-    type: "dossier",
+  const { dossier, ajoutes, aplati } = dossierImporte(grilleCompte, grilleLocale, {
+    dossierId,
     titre: `Importé de cet ordinateur — ${dateCourte(maintenant)}`,
-    items: importes,
-    creeLe: maintenant,
-  };
-  let aplati = false;
-  const { grille } = valider(
-    { versionSchema: 2, grille: [...grilleCompte, dossier] },
-    () => {},
-    () => (aplati = true),
-  );
-  return { grille, ajoutes, aplati };
+    maintenant,
+  });
+  if (!dossier) return { grille: grilleCompte, ajoutes: 0, aplati: false };
+  return { grille: [...grilleCompte, dossier], ajoutes, aplati };
 }

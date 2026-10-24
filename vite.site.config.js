@@ -62,6 +62,8 @@ function gabarits() {
         DEPOT: config.depot,
         EDITEUR: echapper(config.editeur),
         CONTACT: echapper(config.contact),
+        REGION_DONNEES: echapper(config.regionDonnees),
+        DATE_CONFIDENTIALITE: echapper(config.dateConfidentialite),
         HEBERGEUR_NOM: echapper(config.hebergeur.nom),
         HEBERGEUR_ADRESSE: echapper(config.hebergeur.adresse),
         HEBERGEUR_NOTE: config.hebergeur.confirme ? "" : " (À CONFIRMER)",

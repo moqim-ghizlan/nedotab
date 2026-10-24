@@ -185,6 +185,10 @@ const PREFIXE_COPIE = "copieAvantSynchro:";
  * (the 3 most recent are kept). Returned newest first: [{ cle, date, etat }].
  */
 export const copies = {
+  /** Every safety copy of this computer (account deletion, V2.10). */
+  async effacerTout() {
+    await chrome.storage.local.remove((await copies.lister()).map((c) => c.cle));
+  },
   async enregistrer(etat) {
     const cle = `${PREFIXE_COPIE}${new Date().toISOString()}`;
     await chrome.storage.local.set({ [cle]: etat });

@@ -56,6 +56,7 @@ export async function oublierJetonGoogle() {}
 
 export const copies = {
   async enregistrer() {},
+  async effacerTout() {},
   async lister() {
     return [];
   },

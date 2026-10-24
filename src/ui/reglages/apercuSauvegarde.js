@@ -52,9 +52,23 @@ function liste(titre, elements, texte) {
 /**
  * Preview of a backup (or a local copy) before restoring it: header, differences with the
  * current grid, tree; then "Restaurer cette version", confirmed, with "Annuler" for 10 s.
- * @param {{ titre: string, sous: string, source: object }} options
+ * @param {{ titre: string, sous: string, source: object, libelleRestaurer?: string,
+ *           notes?: string[], autreChoix?: { libelle: string, onChoix: () => unknown } }} options
+ *   autreChoix: a second way to use the content (file import: "Fusionner").
  */
-export async function ouvrirApercu(restauration, { titre, sous, source }) {
+export async function ouvrirApercu(
+  restauration,
+  {
+    titre,
+    sous,
+    source,
+    libelleRestaurer = "Restaurer cette version",
+    succes,
+    libelleContenu = "Contenu de la sauvegarde",
+    notes = [],
+    autreChoix,
+  },
+) {
   const prepare = restauration.preparer(source);
   const d = prepare.differences;
   const { sites, dossiers } = compter(prepare.etat.grille);
@@ -87,9 +101,10 @@ export async function ouvrirApercu(restauration, { titre, sous, source }) {
     el(
       "details",
       { class: "apercu-contenu" },
-      el("summary", { texte: "Contenu de la sauvegarde" }),
+      el("summary", { texte: libelleContenu }),
       arbre(prepare.etat.grille),
     ),
+    ...notes.map((n) => el("p", { class: "reglages-note", texte: n })),
     impossible ? el("p", { class: "compte-erreur", texte: impossible }) : null,
   ].filter(Boolean);
   const choix = await demander({
@@ -97,12 +112,14 @@ export async function ouvrirApercu(restauration, { titre, sous, source }) {
     contenu,
     boutons: [
       { libelle: "Fermer", valeur: false },
-      ...(impossible
-        ? []
-        : [{ libelle: "Restaurer cette version", valeur: true, principal: true }]),
+      ...(autreChoix && !prepare.lectureSeule
+        ? [{ libelle: autreChoix.libelle, valeur: "autre" }]
+        : []),
+      ...(impossible ? [] : [{ libelle: libelleRestaurer, valeur: true, principal: true }]),
     ],
   });
   if (!choix) return null;
+  if (choix === "autre") return autreChoix.onChoix();
   const perdues = restauration.nonEnvoyees?.() ?? 0;
   const abandon =
     perdues === 1
@@ -111,7 +128,7 @@ export async function ouvrirApercu(restauration, { titre, sous, source }) {
         ? ` ${perdues} modifications pas encore envoyées sur votre compte seront abandonnées.`
         : "";
   const ok = await demander({
-    titre: "Restaurer cette version",
+    titre: libelleRestaurer,
     message: `Votre grille actuelle sera remplacée. Une copie en sera gardée et vous pourrez annuler.${abandon}`,
     boutons: [
       { libelle: "Annuler", valeur: false },
@@ -126,7 +143,7 @@ export async function ouvrirApercu(restauration, { titre, sous, source }) {
   }
   const date = source.creeLe ? dateHeure(source.creeLe).slice(0, 5) : "";
   toast(
-    `Version${date ? ` du ${date}` : ""} restaurée${r.fondPerdu ? " (fond d'écran introuvable)" : ""}`,
+    `${succes ?? `Version${date ? ` du ${date}` : ""} restaurée`}${r.fondPerdu ? " (fond d'écran introuvable)" : ""}`,
     {
       duree: 10000,
       action: { libelle: "Annuler", onClic: () => r.annuler() },

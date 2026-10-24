@@ -657,3 +657,24 @@ body.fond-sombre {
 .apercu-icone .tuile-icone--image {
   padding: 2px;
 }
+
+/* A row of buttons in a section (V2.10: export, import). */
+.reglages-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+/* Account deletion (V2.10): set apart at the bottom of the account section. */
+.zone-danger {
+  display: grid;
+  gap: var(--espace-2);
+  margin-top: var(--espace-3);
+  padding: var(--espace-3);
+  border: 1px solid var(--danger);
+  border-radius: var(--rayon-petit);
+}
+
+.zone-danger .bouton {
+  justify-self: start;
+}

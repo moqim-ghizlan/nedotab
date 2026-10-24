@@ -2,6 +2,48 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.0] - 2026-10-24
+
+Dernière version de la V2 : chacun garde le contrôle complet de ses données.
+
+### Ajouté
+
+- **Exporter mes données** (Réglages → Mes données), avec ou sans compte : un fichier
+  `nedotab-AAAA-MM-JJ.json` avec la grille, les réglages et, en mode compte, les sauvegardes
+  (option cochée par défaut). Icônes importées incluses telles quelles.
+- **Télécharger mes fonds d'écran** en `.zip` (fonds du compte et image de cet appareil),
+  sans dépendance ajoutée (archive non compressée : les images le sont déjà).
+- **Importer un fichier** : validation stricte avant toute modification (format, version,
+  adresses — `javascript:` et `data:` refusés —, icônes PNG/WebP/JPEG de 16 Ko au plus,
+  titres de 200 caractères au plus, taille, fichier de plus de 5 Mo refusé sans être lu).
+  La première erreur est expliquée avec sa ligne (« Ligne 45 : adresse refusée
+  (javascript:) »). Aperçu avec les différences, puis :
+  - **Remplacer** : copie de sécurité d'abord, comme une restauration, avec « Annuler » ;
+  - **Fusionner** : les sites absents sont ajoutés dans un dossier « Importé le JJ/MM/AAAA »,
+    avec de nouveaux identifiants, doublons ignorés, « Annuler » possible.
+    Les sauvegardes contenues dans le fichier ne sont jamais importées.
+- **Supprimer mon compte** (Réglages → Compte, zone séparée) : explication, export proposé,
+  saisie de « SUPPRIMER », reconnexion Google, puis suppression **côté serveur** par une
+  Cloud Function (`supprimerMonCompte`, europe-west1) : document, sauvegardes, fonds
+  d'écran, puis le compte Google de NedoTab en dernier. Cet appareil repasse en mode local
+  (copie des sites gardée à la demande), copies de sécurité et cache effacés. En cas
+  d'échec, rien n'est supprimé localement.
+- Lien « Vos données et la confidentialité » dans la section Compte.
+
+### Site vitrine
+
+- Politique de confidentialité réécrite d'après le code (brouillon à relire par le
+  propriétaire avant publication) ; FAQ : export, suppression du compte, Brave et Edge.
+
+### Tests
+
+- Export puis import (Remplacer) : état identique ; Fusionner : nouveaux ids, doublons
+  ignorés, action rejouable ; 20 fichiers invalides refusés ; archive ZIP vérifiée.
+- Émulateurs (Auth, Functions, Firestore, Storage) : compte avec grille, 3 sauvegardes et
+  2 fonds entièrement supprimé, autre utilisateur intact, appel sans connexion ou avec une
+  connexion ancienne refusé.
+- Navigateur : « mes données » 13/13 (sans compte), « suppression » 13/13 (émulateurs).
+
 ## [2.9.3] - 2026-10-24
 
 ### Corrigé
