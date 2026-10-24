@@ -2,7 +2,7 @@
  * Actions are plain JSON objects ({ type, ...data }). The reducer is the only way to change
  * the state: it never mutates its input and returns a new object along the modified path.
  */
-import { inserer, remplacer, retirer, trouver } from "./arbre.js";
+import { deplacer, inserer, remplacer, retirer, trouver } from "./arbre.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -10,6 +10,7 @@ export const A = {
   SITE_MODIFIER: "SITE_MODIFIER",
   ELEMENT_SUPPRIMER: "ELEMENT_SUPPRIMER",
   ELEMENT_RESTAURER: "ELEMENT_RESTAURER",
+  ELEMENT_DEPLACER: "ELEMENT_DEPLACER",
 };
 
 /** Fields of a site that SITE_MODIFIER may change. */
@@ -56,6 +57,11 @@ export function reduire(etat, action) {
         action.parentId != null && trouver(etat.grille, action.parentId) ? action.parentId : null;
       return avecGrille(etat, inserer(etat.grille, action.element, parentId, action.index));
     }
+    case A.ELEMENT_DEPLACER:
+      return avecGrille(
+        etat,
+        deplacer(etat.grille, action.id, action.versParentId ?? null, action.versIndex),
+      );
     default:
       return etat;
   }

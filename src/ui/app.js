@@ -6,7 +6,8 @@ import { plateforme } from "../platform/index.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { brancherActionsElements } from "./actionsElement.js";
-import { activerClavierGrille, rendreGrille } from "./grille.js";
+import { activerDeplacementClavier, activerGlisser } from "./glisser.js";
+import { activerClavierGrille, colonnes, rendreGrille } from "./grille.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
 
@@ -52,7 +53,12 @@ export async function demarrerApp(racine) {
     : null;
   const page = el("main", { class: "page" }, bandeau, vide, grilleEl);
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });
-  racine.replaceChildren(page, pied);
+  const annonces = el("div", { class: "visuellement-cache", "aria-live": "polite" });
+  racine.replaceChildren(page, pied, annonces);
+  const annoncer = (texte) => {
+    annonces.textContent = "";
+    requestAnimationFrame(() => (annonces.textContent = texte));
+  };
 
   const rendre = (e = store.lire()) => {
     const estVide = e.grille.length === 0;
@@ -71,8 +77,14 @@ export async function demarrerApp(racine) {
     }
   };
   rendre();
-  store.abonner(() => rendre());
+  const glisser = lectureSeule
+    ? { demanderRendu: () => rendre() }
+    : activerGlisser(store, grilleEl, { rendre });
+  store.abonner(() => glisser.demanderRendu());
   activerClavierGrille(grilleEl);
+  if (!lectureSeule) {
+    activerDeplacementClavier(store, grilleEl, { annoncer, colonnes: () => colonnes(grilleEl) });
+  }
   brancherActionsElements(store, grilleEl, { lectureSeule: () => lectureSeule });
 
   const focaliser = (site) =>

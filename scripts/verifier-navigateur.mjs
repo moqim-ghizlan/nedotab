@@ -270,6 +270,113 @@ try {
       "✈️Code",
   );
 
+  // V1.5 — drag and drop, keyboard reordering
+  const centre = (id) =>
+    p.eval(
+      `(() => { const r = document.querySelector('.tuile[data-id="${id}"] .tuile-icone').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`,
+    );
+  async function glisserVers(id, x, y) {
+    const [ax, ay] = await centre(id);
+    await p.souris("mouseMoved", ax, ay, { buttons: 0 });
+    await p.souris("mousePressed", ax, ay);
+    for (let i = 1; i <= 12; i++) {
+      await p.souris("mouseMoved", ax + ((x - ax) * i) / 12, ay + ((y - ay) * i) / 12);
+      await attendre(25);
+    }
+    await attendre(150);
+    await p.souris("mouseReleased", x, y, { buttons: 0 });
+    await attendre(400);
+  }
+  const lireMajLe = () => p.eval(`chrome.storage.local.get("etat").then((r) => r.etat.majLe)`);
+  let ids = (await ordre()).split(",");
+  const [dernierX, dernierY] = await centre(ids.at(-1));
+  await glisserVers(ids[0], dernierX + 10, dernierY);
+  let apresGlisser = (await ordre()).split(",");
+  verifier("Glisser le premier à la fin", apresGlisser.at(-1) === ids[0], `${ids.length} tuiles`);
+  verifier(
+    "Aucun doublon après glisser",
+    new Set(apresGlisser).size === ids.length && (await nombreTuiles(p)) === ids.length,
+  );
+  verifier(
+    "Le glisser n'a pas ouvert le site",
+    (await p.eval("location.href")).endsWith("newtab.html"),
+  );
+  verifier(
+    "La tuile « + » reste la dernière",
+    await p.eval(`document.querySelector(".grille > li:last-child .tuile--ajout") !== null`),
+  );
+  ids = apresGlisser;
+  const [premierX, premierY] = await centre(ids[0]);
+  await glisserVers(ids.at(-1), premierX - 10, premierY);
+  verifier("Glisser le dernier au début", (await ordre()).split(",")[0] === ids.at(-1));
+  await attendre(500);
+  const avantSurPlace = await lireMajLe();
+  const [sx, sy] = await centre((await ordre()).split(",")[2]);
+  await glisserVers((await ordre()).split(",")[2], sx + 3, sy + 30);
+  await attendre(600);
+  verifier("Relâcher à la même place : aucune écriture", (await lireMajLe()) === avantSurPlace);
+  await p.capture(`${dossier}/apres-glisser.png`);
+
+  ids = (await ordre()).split(",");
+  await p.eval(`document.querySelector('.tuile[data-id="${ids[0]}"]').focus()`);
+  await p.touche("ArrowRight", { vk: 39, modifiers: 1 });
+  await attendre(200);
+  verifier("Alt+→ déplace d'une case", (await ordre()).split(",")[1] === ids[0]);
+  verifier(
+    "Focus conservé sur la tuile déplacée",
+    await p.eval(`document.activeElement?.dataset.id === "${ids[0]}"`),
+  );
+  const annonce = await p.eval(
+    `document.querySelector("[aria-live]:not(.toasts)")?.textContent || ""`,
+  );
+  verifier("Annonce vocale de la position", /position 2 sur [0-9]+/.test(annonce), annonce);
+  await p.touche("End", { vk: 35, modifiers: 1 });
+  await attendre(200);
+  verifier("Alt+Fin : tout à la fin", (await ordre()).split(",").at(-1) === ids[0]);
+  verifier(
+    "Alt+← ne fait pas « page précédente »",
+    (await p.eval("location.href")).endsWith("newtab.html"),
+  );
+  await attendre(900);
+  verifier(
+    "Ordre synchronisé dans l'autre onglet",
+    (await p2.eval(
+      `[...document.querySelectorAll(".tuile--site")].map((t) => t.dataset.id).join()`,
+    )) === (await ordre()),
+  );
+  const ordreFinal = await ordre();
+  await p.aller(url);
+  await attendre(400);
+  verifier("Rechargement : ordre conservé", (await ordre()) === ordreFinal);
+
+  // 100 sites: the grid still renders and drags quickly
+  const sauvegarde = await p.eval(`chrome.storage.local.get("etat").then((r) => r.etat)`);
+  await p.eval(`(() => {
+    const grille = Array.from({ length: 100 }, (_, i) => ({ id: "s" + i, type: "site", titre: "Site " + i, url: "https://site" + i + ".fr", icone: { type: "lettre", couleur: "#2c6b5a" }, creeLe: 0 }));
+    return chrome.storage.local.set({ etat: { versionSchema: 1, grille, reglages: { theme: "auto", fond: { type: "aucun" } }, ecritPar: "test", majLe: Date.now() } });
+  })()`);
+  await p.aller(url);
+  await attendre(400);
+  const tempsRendu = await p.eval(
+    `(() => { const t = performance.now(); document.querySelector(".tuile").focus(); return performance.getEntriesByType("navigation")[0].domContentLoadedEventEnd; })()`,
+  );
+  verifier(
+    "100 sites affichés",
+    (await nombreTuiles(p)) === 100,
+    `page prête en ${Math.round(tempsRendu)} ms`,
+  );
+  const debut = Date.now();
+  const [cx, cy] = await centre("s50");
+  await glisserVers("s0", cx + 10, cy);
+  verifier(
+    "Glisser dans une grille de 100 sites",
+    (await ordre()).split(",").indexOf("s0") === 50,
+    `${Date.now() - debut} ms avec les pauses du test`,
+  );
+  await p.eval(`chrome.storage.local.set({ etat: ${JSON.stringify(sauvegarde)} })`);
+  await p.aller(url);
+  await attendre(300);
+
   await p.capture(`${dossier}/clair.png`);
   await p.sombre(true);
   await p.capture(`${dossier}/sombre.png`);

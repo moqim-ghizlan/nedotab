@@ -88,3 +88,26 @@ export function* parcourir(grille) {
     if (e.type === "dossier") yield* parcourir(e.items);
   }
 }
+
+/**
+ * Moves element `id` to folder `versParentId` (null = root) at `versIndex`, the index the
+ * element must have once moved. Returns the same grid when nothing changes (same place,
+ * unknown id, unknown target folder, or a folder dropped into itself or a descendant).
+ */
+export function deplacer(grille, id, versParentId = null, versIndex) {
+  const r = trouver(grille, id);
+  if (!r) return grille;
+  const deParentId = r.parent?.id ?? null;
+  if (versParentId != null) {
+    if (versParentId === id) return grille;
+    const cible = trouver(grille, versParentId);
+    if (!cible || cible.element.type !== "dossier") return grille;
+    if (r.element.type === "dossier" && cible.chemin.some((d) => d.id === id)) return grille;
+  }
+  const destination = versParentId == null ? grille : trouver(grille, versParentId).element.items;
+  const longueurApres = destination.length - (deParentId === versParentId ? 1 : 0);
+  const index = Math.max(0, Math.min(versIndex ?? longueurApres, longueurApres));
+  if (deParentId === versParentId && index === r.index) return grille;
+  const sans = retirer(grille, id).grille;
+  return inserer(sans, r.element, versParentId, index);
+}

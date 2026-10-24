@@ -12,7 +12,7 @@ export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
     fragment.append(
       el(
         "li",
-        { class: "case" },
+        { class: "case case--element" },
         creerTuile(element),
         el("button", {
           type: "button",
@@ -28,7 +28,7 @@ export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
     fragment.append(
       el(
         "li",
-        { class: "case" },
+        { class: "case case--ajout" },
         el(
           "button",
           {
@@ -61,7 +61,7 @@ const DEPLACEMENTS = { ArrowLeft: -1, ArrowRight: 1 };
 export function activerClavierGrille(conteneur) {
   conteneur.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea, select, [contenteditable]")) return;
-    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    if (e.altKey || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
     const tuiles = [...conteneur.querySelectorAll(".tuile")];
     const actuel = tuiles.indexOf(document.activeElement);
     if (actuel < 0) return;

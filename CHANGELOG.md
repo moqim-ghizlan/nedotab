@@ -2,6 +2,28 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.5.0] - 2026-10-24
+
+### Ajouté
+
+- Glisser-déposer pour réorganiser la grille (SortableJS, intégré au paquet). Le geste
+  devient une action `ELEMENT_DEPLACER` ; le DOM est redessiné à partir de l'état, et les
+  rendus demandés pendant un glisser attendent le dépôt.
+- Retour visuel : emplacement cible en pointillés, tuile soulevée et légèrement inclinée,
+  curseur « grabbing » ; sans animation si le système demande moins de mouvement.
+- Réorganisation au clavier : Alt+← → (une case), Alt+↑ ↓ (une ligne), Alt+Début / Fin,
+  focus conservé et annonce vocale « … déplacé en position 3 sur 12 ».
+- `deplacer()` dans `arbre.js`, déjà capable de viser un dossier et de refuser un dossier
+  déposé dans lui-même ou un descendant.
+
+### Tests
+
+- 115 tests, dont 1 000 déplacements aléatoires (graine fixe) sans perte ni doublon.
+- Navigateur : 51/51 — premier → fin et dernier → début à la souris, aucun doublon, aucun
+  site ouvert par un glisser, tuile « + » toujours dernière, relâcher sur place sans
+  écriture, Alt+→ et Alt+Fin, annonce vocale, synchro dans l'autre onglet, ordre conservé
+  au rechargement, grille de 100 sites prête en 43 ms et glissable.
+
 ## [1.4.0] - 2026-10-24
 
 ### Ajouté

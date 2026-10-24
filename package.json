@@ -1,6 +1,6 @@
 {
   "name": "nedotab",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "type": "module",
   "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
@@ -26,5 +26,8 @@
     "prettier": "^3.9.10",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
+  },
+  "dependencies": {
+    "sortablejs": "^1.15.7"
   }
 }

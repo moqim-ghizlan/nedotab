@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inserer, parcourir, remplacer, retirer, trouver } from "../../src/core/arbre.js";
+import { deplacer, inserer, parcourir, remplacer, retirer, trouver } from "../../src/core/arbre.js";
 
 const site = (id) => ({ id, type: "site", titre: id, url: `https://${id}.fr`, creeLe: 0 });
 const dossier = (id, items) => ({ id, type: "dossier", titre: id, items, creeLe: 0 });
@@ -87,5 +87,53 @@ describe("parcourir", () => {
       "d",
       "e",
     ]);
+  });
+});
+
+describe("deplacer", () => {
+  const ids = (g) => g.map((x) => x.id).join("");
+  it("début → fin et fin → début", () => {
+    expect(ids(deplacer(plate(), "a", null, 2))).toBe("bca");
+    expect(ids(deplacer(plate(), "c", null, 0))).toBe("cab");
+    expect(ids(deplacer(plate(), "a", null, 1))).toBe("bac");
+  });
+  it("vers soi-même : même objet", () => {
+    const g = plate();
+    expect(deplacer(g, "b", null, 1)).toBe(g);
+  });
+  it("index hors bornes", () => {
+    expect(ids(deplacer(plate(), "a", null, 99))).toBe("bca");
+    expect(ids(deplacer(plate(), "c", null, -3))).toBe("cab");
+  });
+  it("élément ou dossier introuvable : inchangé", () => {
+    const g = plate();
+    expect(deplacer(g, "zz", null, 0)).toBe(g);
+    expect(deplacer(g, "a", "zz", 0)).toBe(g);
+  });
+  it("vers un dossier, et refus d'un dossier dans son descendant", () => {
+    const g = deplacer(arbre(), "a", "D3", 0);
+    expect(trouver(g, "a").parent.id).toBe("D3");
+    const t = arbre();
+    expect(deplacer(t, "D1", "D3", 0)).toBe(t);
+    expect(deplacer(t, "D1", "D1", 0)).toBe(t);
+  });
+  it("propriété : 1 000 déplacements aléatoires sans perte ni doublon", () => {
+    let graine = 42;
+    const hasard = (n) => {
+      graine = (graine * 1103515245 + 12345) % 2147483648;
+      return graine % n;
+    };
+    let g = [];
+    for (let i = 0; i < 30; i++) g.push(site(`s${i}`));
+    g = [...g, dossier("D1", [site("x1"), dossier("D2", [site("x2")])]), dossier("D3", [])];
+    const attendu = [...parcourir(g)].map((e) => e.id).sort();
+    const dossiers = [null, "D1", "D2", "D3"];
+    for (let i = 0; i < 1000; i++) {
+      const tous = [...parcourir(g)];
+      const e = tous[hasard(tous.length)];
+      g = deplacer(g, e.id, dossiers[hasard(dossiers.length)], hasard(40) - 5);
+    }
+    const obtenu = [...parcourir(g)].map((e) => e.id).sort();
+    expect(obtenu).toEqual(attendu);
   });
 });

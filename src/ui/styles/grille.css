@@ -194,3 +194,47 @@
     display: none;
   }
 }
+
+/* --- drag and drop ------------------------------------------------------------------ */
+
+.case--fantome {
+  opacity: 0.4;
+}
+
+.case--fantome .tuile-icone {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+
+.case--fantome .tuile-plus {
+  display: none;
+}
+
+.case--glissee {
+  opacity: 1 !important;
+}
+
+.case--glissee .tuile {
+  transform: rotate(2deg) scale(1.05);
+}
+
+.case--glissee .tuile-icone {
+  box-shadow: var(--ombre-forte);
+}
+
+.case--glissee .tuile-plus,
+.case--glissee .tuile-titre {
+  visibility: hidden;
+}
+
+.glisser-en-cours,
+.glisser-en-cours * {
+  cursor: grabbing !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case--glissee .tuile {
+    transform: none;
+  }
+}
