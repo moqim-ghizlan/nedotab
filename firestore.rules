@@ -1,0 +1,9 @@
+rules_version = '2';
+// V2.0: everything is closed until the real rules (V2.2).
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

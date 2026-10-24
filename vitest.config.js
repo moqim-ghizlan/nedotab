@@ -2,6 +2,10 @@ import { defineConfig } from "vitest/config";
 
 const define = { "import.meta.env.VITE_TARGET": JSON.stringify("extension") };
 
+// Security-rules tests need the Firebase emulators: `npm run test:regles` starts them and
+// sets FIRESTORE_EMULATOR_HOST, which enables the "regles" project.
+const avecEmulateurs = !!process.env.FIRESTORE_EMULATOR_HOST;
+
 export default defineConfig({
   define,
   test: {
@@ -18,6 +22,18 @@ export default defineConfig({
         define,
         test: { name: "ui", environment: "happy-dom", include: ["tests/ui/**/*.test.js"] },
       },
+      ...(avecEmulateurs
+        ? [
+            {
+              test: {
+                name: "regles",
+                environment: "node",
+                include: ["tests/regles/**/*.test.js"],
+                testTimeout: 20000,
+              },
+            },
+          ]
+        : []),
     ],
     coverage: {
       provider: "v8",

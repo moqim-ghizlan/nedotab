@@ -1,6 +1,6 @@
 {
   "name": "nedotab",
-  "version": "1.11.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
@@ -21,12 +21,17 @@
     "captures": "node scripts/captures-site.mjs",
     "build:site": "vite build --config vite.site.config.js",
     "publier": "node scripts/publier.js",
-    "verifier:site": "node scripts/verifier-site.mjs"
+    "verifier:site": "node scripts/verifier-site.mjs",
+    "emulateurs": "firebase emulators:start --import=./.emulateurs --export-on-exit",
+    "deployer:regles": "firebase deploy --only firestore:rules,storage",
+    "test:regles": "firebase emulators:exec --only firestore,storage \"vitest run --project regles\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.13.0",
+    "firebase-tools": "^15.34.1",
     "globals": "^17.13.0",
     "happy-dom": "^21.0.4",
     "prettier": "^3.9.10",
@@ -34,6 +39,7 @@
     "vitest": "^5.0.5"
   },
   "dependencies": {
+    "firebase": "^13.1.0",
     "sortablejs": "^1.15.7"
   }
 }

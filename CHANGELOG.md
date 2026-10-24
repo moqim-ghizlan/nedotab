@@ -2,6 +2,36 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.0.0] - 2026-10-24
+
+### Ajouté
+
+- Socle Firebase : SDK modulaire installé par npm (aucun code distant), initialisé une seule
+  fois (`src/firebase/app.js`) et chargé **à la demande** (`src/firebase/charger.js`) :
+  un utilisateur sans compte ne télécharge jamais Firebase.
+- Configuration par variables d'environnement (`.env.example` → `.env.local`), avec une
+  erreur lisible qui nomme la variable manquante.
+- Émulateurs Auth, Firestore et Storage (`npm run emulateurs`) sur un projet local
+  `demo-nedotab` ; `firebase.json`, `.firebaserc`, règles Firestore et Storage
+  **entièrement fermées** en attendant la V2.2.
+- `npm run test:regles` : tests des règles sur les émulateurs (lecture et écriture
+  refusées, connecté ou non) ; `npm run deployer:regles`.
+
+### En attente du propriétaire
+
+- Création du projet Firebase (eur3), plan Blaze, budget et alertes, connexion de la CLI,
+  déploiement des règles : procédure détaillée dans `docs/firebase.md`. Rien n'a été créé,
+  facturé ni déployé.
+
+### Mesure
+
+- `dist/extension` : 586 Ko (dont cartes de sources) ; aucun fichier Firebase n'est inclus
+  tant qu'aucune fonction de compte ne le demande.
+
+### Tests
+
+- 207 tests (+ configuration Firebase) ; règles : 2/2 sur les émulateurs.
+
 ## [1.11.0] - 2026-10-24
 
 ### Ajouté

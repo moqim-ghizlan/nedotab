@@ -12,3 +12,8 @@ cles/
 !.env.example
 .DS_Store
 .firebase/
+.emulateurs/
+firebase-debug.log
+firestore-debug.log
+storage-debug.log
+ui-debug.log

@@ -23,6 +23,7 @@ niveaux. Disponible en extension Chrome (PC) et, plus tard, en application web (
 - Node.js 22 LTS ou plus récent (développé avec Node 24.21, npm 11.19)
 - Git
 - Google Chrome à jour
+- Java 21 ou plus récent pour les émulateurs Firebase (V2)
 
 ## Commandes
 
@@ -79,6 +80,7 @@ public/       fichiers statiques de la future PWA
 src/core/     logique pure (modèle, arbre, règles, recherche, réglages), testée unitairement
 src/ui/       rendu et interactions DOM, styles
 src/platform/ extension.js / pwa.js : tout ce qui dépend de la plateforme
+src/firebase/ configuration et SDK Firebase, chargés à la demande
 site/         site vitrine (pages, gabarits, captures, téléchargement)
 tests/        tests Vitest (core en Node, ui avec happy-dom)
 scripts/      vérification, empaquetage, publication, captures, tests navigateur
