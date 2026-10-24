@@ -154,3 +154,43 @@
   object-fit: contain;
   border-radius: 4px;
 }
+
+.case {
+  position: relative;
+}
+
+.tuile-plus {
+  position: absolute;
+  top: 0;
+  right: calc(50% - 44px);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--bordure);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--texte);
+  font-size: 0.875rem;
+  line-height: 1;
+  box-shadow: var(--ombre);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity var(--duree) ease-out,
+    transform var(--duree) ease-out;
+}
+
+.case:hover .tuile-plus,
+.case:focus-within .tuile-plus {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (hover: none) {
+  .tuile-plus {
+    display: none;
+  }
+}

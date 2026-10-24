@@ -9,7 +9,20 @@ export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
   const fragment = document.createDocumentFragment();
   for (const element of elements) {
     if (element.type !== "site") continue;
-    fragment.append(el("li", { class: "case" }, creerTuile(element)));
+    fragment.append(
+      el(
+        "li",
+        { class: "case" },
+        creerTuile(element),
+        el("button", {
+          type: "button",
+          class: "tuile-plus",
+          "aria-label": `Actions pour ${element.titre}`,
+          dataset: { menu: element.id },
+          texte: "⋯",
+        }),
+      ),
+    );
   }
   if (avecAjout) {
     fragment.append(
@@ -37,7 +50,7 @@ export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
   conteneur.replaceChildren(fragment);
 }
 
-function colonnes(conteneur) {
+export function colonnes(conteneur) {
   const modele = getComputedStyle(conteneur).gridTemplateColumns;
   return Math.max(1, modele && modele !== "none" ? modele.split(" ").length : 1);
 }

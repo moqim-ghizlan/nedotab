@@ -3,6 +3,7 @@
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { genererImagesTest } from "./generer-images-test.mjs";
 import { lancerChrome, attendre } from "./navigateur.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
@@ -135,6 +136,140 @@ try {
       `!!document.querySelector(".tuile--site:last-of-type, .case:nth-last-child(2) .tuile-icone--lettre")`,
     ),
   );
+  // V1.4 — context menu, edit, icons, delete and undo
+  const idDe = (texte) =>
+    p.eval(
+      `[...document.querySelectorAll(".tuile--site")].find((t) => t.textContent.includes(${JSON.stringify(texte)}))?.dataset.id`,
+    );
+  const ordre = () =>
+    p.eval(`[...document.querySelectorAll(".tuile--site")].map((t) => t.dataset.id).join()`);
+  const rectTuile = (id) =>
+    p.eval(
+      `(() => { const r = document.querySelector('.tuile[data-id="${id}"]').getBoundingClientRect(); return [r.x + r.width / 2, r.y + 20]; })()`,
+    );
+  const idGithub = await idDe("github");
+  const [gx, gy] = await rectTuile(idGithub);
+  await p.souris("mousePressed", gx, gy, { button: "right", buttons: 2 });
+  await p.souris("mouseReleased", gx, gy, { button: "right", buttons: 0 });
+  await attendre(150);
+  verifier("Clic droit sur une tuile : menu", await p.eval(`!!document.querySelector(".menu")`));
+  await p.capture(`${dossier}/menu.png`);
+  await p.touche("Escape", { vk: 27 });
+  await attendre(100);
+  verifier("Échap ferme le menu", await p.eval(`!document.querySelector(".menu")`));
+  await p.souris("mousePressed", 40, 700, { button: "right", buttons: 2 });
+  await p.souris("mouseReleased", 40, 700, { button: "right", buttons: 0 });
+  await attendre(100);
+  verifier(
+    "Clic droit sur le fond : pas de menu NedoTab",
+    await p.eval(`!document.querySelector(".menu")`),
+  );
+  await p.touche("Escape", { vk: 27 });
+
+  // F2 → edit: rename and letter ✈️ on blue
+  await p.eval(`document.querySelector('.tuile[data-id="${idGithub}"]').focus()`);
+  await p.touche("F2", { vk: 113 });
+  await attendre(200);
+  verifier(
+    "F2 ouvre « Modifier le site »",
+    await p.eval(`!!document.getElementById("edition-titre")`),
+  );
+  await p.eval(`document.getElementById("edition-titre").select()`);
+  await p.taper("Code");
+  await p.eval(`document.querySelector('.segment[data-mode="lettre"]').click()`);
+  await p.eval(
+    `(() => { const c = document.querySelector(".champ-lettre"); c.value = ""; c.focus(); })()`,
+  );
+  await p.taper("✈️");
+  await p.eval(`document.querySelector('.nuance[data-couleur="#3a5ba0"]').click()`);
+  await p.capture(`${dossier}/edition-lettre.png`);
+  await p.eval(`document.querySelector("dialog form").requestSubmit()`);
+  await attendre(200);
+  const github = await p.eval(
+    `(() => { const t = document.querySelector('.tuile[data-id="${idGithub}"]'); return [t.textContent, t.querySelector(".tuile-icone").style.background]; })()`,
+  );
+  verifier(
+    "Renommé « Code », lettre ✈️ sur fond bleu",
+    github[0] === "✈️Code" && github[1].includes("58, 91, 160"),
+    github.join(" / "),
+  );
+
+  // Imported images: 3.5 MB simple picture accepted, pure noise refused
+  const images = genererImagesTest(mkdtempSync(join(tmpdir(), "nedotab-img-")));
+  const idWiki = await idDe("wikipedia");
+  await p.eval(`document.querySelector('.tuile[data-id="${idWiki}"]').focus()`);
+  await p.touche("F2", { vk: 113 });
+  await attendre(200);
+  await p.eval(`document.querySelector('.segment[data-mode="import"]').click()`);
+  await p.envoyer("DOM.enable");
+  await p.fichiers('input[type="file"]', [images.bruit]);
+  await attendre(1500);
+  const refus = await p.eval(
+    `document.querySelector('.icone-panneau[data-mode="import"] .icone-etat').textContent`,
+  );
+  verifier(
+    "Photo de bruit (469 Ko) : compressée sous 16 Ko",
+    /Ko$/.test(refus) && parseFloat(refus) <= 16,
+    refus,
+  );
+  await p.fichiers('input[type="file"]', [images.simple]);
+  await attendre(1500);
+  const accepte = await p.eval(
+    `document.querySelector('.icone-panneau[data-mode="import"] .icone-etat').textContent`,
+  );
+  verifier("PNG de 3,5 Mo redimensionné et accepté", /Ko$/.test(accepte), accepte);
+  await p.capture(`${dossier}/edition-import.png`);
+  await p.eval(`document.querySelector("dialog form").requestSubmit()`);
+  await attendre(200);
+  const srcWiki = await p.eval(
+    `document.querySelector('.tuile[data-id="${idWiki}"] img')?.src || ""`,
+  );
+  verifier(
+    "Icône importée stockée en WebP",
+    srcWiki.startsWith("data:image/webp"),
+    srcWiki.slice(0, 30),
+  );
+
+  // Delete then undo: same place; two deletions in a row: only the last can be undone
+  const ordreAvant = await ordre();
+  const idMonde = await idDe("lemonde");
+  await p.eval(`document.querySelector('.tuile[data-id="${idMonde}"]').focus()`);
+  await p.touche("Delete", { vk: 46 });
+  await attendre(150);
+  verifier(
+    "Suppr supprime, toast affiché",
+    (await p.eval(`document.querySelector(".toast")?.textContent || ""`)).includes("supprimé"),
+  );
+  verifier(
+    "Focus sur la tuile suivante",
+    await p.eval(`document.activeElement?.classList.contains("tuile")`),
+  );
+  await p.capture(`${dossier}/toast.png`);
+  await p.eval(`document.querySelector(".toast-action").click()`);
+  await attendre(150);
+  verifier("Annuler : la tuile revient à la même place", (await ordre()) === ordreAvant);
+  const idOsm = await idDe("openstreetmap");
+  const idMdn = await idDe("mozilla");
+  await p.eval(`document.querySelector('.tuile[data-id="${idOsm}"]').focus()`);
+  await p.touche("Delete", { vk: 46 });
+  await attendre(100);
+  await p.eval(`document.querySelector('.tuile[data-id="${idMdn}"]').focus()`);
+  await p.touche("Delete", { vk: 46 });
+  await attendre(100);
+  await p.eval(`document.querySelector(".toast-action").click()`);
+  await attendre(150);
+  const apres = await ordre();
+  verifier(
+    "Deux suppressions : seule la dernière est annulable",
+    apres.includes(idMdn) && !apres.includes(idOsm),
+  );
+  await attendre(900);
+  verifier(
+    "Modification visible dans l'autre onglet",
+    (await p2.eval(`document.querySelector('.tuile[data-id="${idGithub}"]')?.textContent`)) ===
+      "✈️Code",
+  );
+
   await p.capture(`${dossier}/clair.png`);
   await p.sombre(true);
   await p.capture(`${dossier}/sombre.png`);

@@ -2,6 +2,36 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.4.0] - 2026-10-24
+
+### Ajouté
+
+- Menu contextuel sur les tuiles (clic droit, bouton « ⋯ » au survol, touche Menu ou
+  Maj+F10) : Modifier, Ouvrir dans un nouvel onglet, Copier le lien, Supprimer. Clavier
+  ↑ ↓ Entrée Échap ; le clic droit hors d'une tuile garde le menu de Chrome.
+- Fenêtre « Modifier le site » : nom, adresse (avec mise à jour proposée de l'icône) et
+  icône en quatre modes — automatique (« Re-détecter »), lettre ou emoji sur une des
+  12 couleurs, image depuis une adresse (vérifiée, 32 px minimum), image importée
+  (réduite à 96 px en WebP, SVG rastérisé, 16 Ko au plus). Aperçu en direct.
+- Suppression immédiate avec toast « Annuler » (5 s, pause au survol) ; une nouvelle
+  suppression rend la précédente définitive. Le focus passe à la tuile suivante.
+- Raccourcis sur une tuile : Suppr / Retour arrière, F2 ou E.
+- `src/core/arbre.js` : recherche, insertion, retrait, remplacement sur un arbre de dossiers
+  imbriqués (prêt pour les dossiers).
+
+### Tests
+
+- 109 tests : arbre plat et imbriqué, liste blanche de `SITE_MODIFIER`, suppression puis
+  restauration identique à l'original, menu fermé par Échap, « Annuler » qui restaure,
+  limite de 16 Ko des images importées.
+- Navigateur : menu au clic droit, renommage et lettre ✈️ sur fond bleu, import d'un PNG de
+  3,5 Mo (1 Ko après réduction), suppression puis Annuler à la même place, seule la
+  dernière suppression annulable, modification visible dans l'autre onglet.
+- Remarque : en WebP 96 px, même une photo de bruit pur tient en 3 Ko ; la limite de 16 Ko
+  protège surtout le repli PNG.
+- Le script de test met désormais l'onglet au premier plan avant chaque frappe (les
+  événements clavier n'atteignaient que l'onglet affiché).
+
 ## [1.3.0] - 2026-10-24
 
 ### Ajouté

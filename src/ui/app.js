@@ -3,8 +3,9 @@ import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
-import { ouvrirAjoutSite } from "./dialogues/ajouterSite.js";
+import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
+import { brancherActionsElements } from "./actionsElement.js";
 import { activerClavierGrille, rendreGrille } from "./grille.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
@@ -53,7 +54,7 @@ export async function demarrerApp(racine) {
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });
   racine.replaceChildren(page, pied);
 
-  const rendre = (e) => {
+  const rendre = (e = store.lire()) => {
     const estVide = e.grille.length === 0;
     // The grid is rebuilt: remember which tile had the focus and give it back.
     const focusId = grilleEl.contains(document.activeElement)
@@ -69,9 +70,10 @@ export async function demarrerApp(racine) {
         ?.focus();
     }
   };
-  store.abonner(rendre);
-  rendre(store.lire());
+  rendre();
+  store.abonner(() => rendre());
   activerClavierGrille(grilleEl);
+  brancherActionsElements(store, grilleEl, { lectureSeule: () => lectureSeule });
 
   const focaliser = (site) =>
     requestAnimationFrame(() =>

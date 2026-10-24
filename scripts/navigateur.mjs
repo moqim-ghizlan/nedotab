@@ -95,6 +95,7 @@ export async function lancerChrome({ headless = true, largeur = 1280, hauteur = 
 }
 
 function creerPage(envoyer, sessionId, targetId, ecouteurs) {
+  creerPage.devant = targetId; // a new tab opens in the foreground
   const erreurs = [];
   ecouteurs.add((msg) => {
     if (msg.sessionId !== sessionId) return;
@@ -107,6 +108,12 @@ function creerPage(envoyer, sessionId, targetId, ecouteurs) {
     targetId,
     erreurs,
     envoyer: (m, p) => envoyer(m, p, sessionId),
+    /** Input events only reach the foreground tab: bring this one to the front first. */
+    async premierPlan() {
+      if (creerPage.devant === targetId) return;
+      await page.envoyer("Page.bringToFront");
+      creerPage.devant = targetId;
+    },
     async aller(url) {
       await page.envoyer("Page.navigate", { url });
       await attendre(600);
@@ -142,6 +149,7 @@ function creerPage(envoyer, sessionId, targetId, ecouteurs) {
       });
     },
     async touche(key, options = {}) {
+      await page.premierPlan();
       const base = {
         key,
         code: options.code || key,
@@ -157,10 +165,19 @@ function creerPage(envoyer, sessionId, targetId, ecouteurs) {
         });
       await page.envoyer("Input.dispatchKeyEvent", { type: "keyUp", ...base });
     },
+    /** Puts local files in the <input type=file> matched by `selecteur`, then fires "change". */
+    async fichiers(selecteur, chemins) {
+      const { result } = await page.envoyer("Runtime.evaluate", {
+        expression: `document.querySelector(${JSON.stringify(selecteur)})`,
+      });
+      await page.envoyer("DOM.setFileInputFiles", { files: chemins, objectId: result.objectId });
+    },
     async taper(texte) {
+      await page.premierPlan();
       await page.envoyer("Input.insertText", { text: texte });
     },
     async souris(type, x, y, options = {}) {
+      await page.premierPlan();
       await page.envoyer("Input.dispatchMouseEvent", {
         type,
         x,
