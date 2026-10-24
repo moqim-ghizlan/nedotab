@@ -10,6 +10,7 @@ import { scenarioImbrication } from "./scenarios/imbrication.mjs";
 import { scenarioFusion } from "./scenarios/fusion.mjs";
 import { scenarioApparence } from "./scenarios/apparence.mjs";
 import { scenarioRecherche } from "./scenarios/recherche.mjs";
+import { scenarioCompte } from "./scenarios/compte.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -55,8 +56,8 @@ if (principal)
     const manifeste = await p.eval("chrome.runtime.getManifest()");
     verifier(
       "Permissions minimales",
-      JSON.stringify(manifeste.permissions) === JSON.stringify(["storage", "favicon", "search"]) &&
-        !manifeste.host_permissions,
+      JSON.stringify(manifeste.permissions) ===
+        JSON.stringify(["storage", "favicon", "search", "identity"]) && !manifeste.host_permissions,
       JSON.stringify(manifeste.permissions),
     );
 
@@ -533,6 +534,22 @@ if (!seulement || seulement === "recherche") {
     });
   } finally {
     await nav7.fermer();
+  }
+}
+
+// V2.1 — Google account (only with the emulators: npm run verifier:compte)
+if (seulement === "compte") {
+  const nav8 = await lancerChrome();
+  try {
+    const id = await nav8.chargerExtension();
+    await scenarioCompte({
+      nav: nav8,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav8.fermer();
   }
 }
 

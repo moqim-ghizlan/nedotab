@@ -4,6 +4,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { FLOU_MAX, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
+import { sectionCompte } from "./reglages/compte.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -46,7 +47,7 @@ function section(titre, ...contenu) {
  * shows live, without a "Save" button). Built as independent sections so that later
  * versions can add theirs (account, AI…).
  */
-export function ouvrirReglages(store, { retourFocus } = {}) {
+export function ouvrirReglages(store, { retourFocus, compte } = {}) {
   if (ouvert) {
     ouvert.fermer();
     return null;
@@ -242,6 +243,9 @@ export function ouvrirReglages(store, { retourFocus } = {}) {
     etatStockage.textContent = `Données : ${ko(poids)}. Icônes personnalisées : ${images.length} (${ko(poidsImages)}).`;
   };
 
+  // --- Compte (account) -----------------------------------------------------------------
+  const compteUi = compte ? sectionCompte(compte) : null;
+
   // --- panel ---------------------------------------------------------------------------
   const panneau = el(
     "dialog",
@@ -261,6 +265,7 @@ export function ouvrirReglages(store, { retourFocus } = {}) {
     el(
       "div",
       { class: "reglages-corps" },
+      compteUi?.section,
       section(
         "Apparence",
         el("p", { class: "reglages-libelle", texte: "Thème" }),
@@ -325,6 +330,7 @@ export function ouvrirReglages(store, { retourFocus } = {}) {
   };
   function fermer() {
     desabonner();
+    compteUi?.arreter();
     document.removeEventListener("keydown", surTouche);
     panneau.close();
     panneau.remove();

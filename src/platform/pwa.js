@@ -43,3 +43,13 @@ export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
   if (nouvelOnglet) window.open(url, "_blank", "noopener");
   else location.assign(url);
 }
+
+export class ConnexionIndisponible extends Error {}
+export class ConnexionAnnulee extends Error {}
+
+/** PWA sign-in uses a redirect (V3.2): no Chrome token here. */
+export async function obtenirJetonGoogle() {
+  throw new ConnexionIndisponible("Connexion PWA prévue en V3.2");
+}
+
+export async function oublierJetonGoogle() {}

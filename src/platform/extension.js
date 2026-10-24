@@ -52,3 +52,52 @@ export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
     disposition: nouvelOnglet ? "NEW_TAB" : "CURRENT_TAB",
   });
 }
+
+/** Error raised when the browser has no Google sign-in through chrome.identity. */
+export class ConnexionIndisponible extends Error {}
+/** The user closed or refused the sign-in window: not an error to show. */
+export class ConnexionAnnulee extends Error {}
+
+const EMULATEURS = import.meta.env.VITE_UTILISER_EMULATEURS === "true";
+const clientOauth = () => globalThis.chrome?.runtime?.getManifest?.().oauth2?.client_id;
+
+/**
+ * Google token for Firebase. With the emulators, a test identity is used (the Auth
+ * emulator accepts unsigned Google ID tokens): no real Google account is involved.
+ * @returns {Promise<{ accessToken?: string, idToken?: string }>}
+ */
+export async function obtenirJetonGoogle(interactif) {
+  if (EMULATEURS) {
+    const email = (await preferences.lire("emulateurCompte")) ?? "testeur@nedotab.test";
+    const idToken = JSON.stringify({
+      sub: `google-${email}`,
+      email,
+      email_verified: true,
+      name: "Testeur NedoTab",
+    });
+    return { idToken };
+  }
+  if (typeof chrome.identity?.getAuthToken !== "function" || !clientOauth()) {
+    throw new ConnexionIndisponible("chrome.identity indisponible");
+  }
+  try {
+    const r = await chrome.identity.getAuthToken({ interactive: interactif });
+    const token = typeof r === "string" ? r : r?.token;
+    if (!token) throw new ConnexionAnnulee("aucun jeton");
+    return { accessToken: token };
+  } catch (e) {
+    const message = String(e?.message ?? e);
+    if (/not approve|did not approve|cancel|closed|not granted|revoked|user/i.test(message)) {
+      throw new ConnexionAnnulee(message);
+    }
+    if (/not supported|unsupported|not available/i.test(message)) {
+      throw new ConnexionIndisponible(message);
+    }
+    throw e;
+  }
+}
+
+export function oublierJetonGoogle(token) {
+  if (EMULATEURS) return Promise.resolve();
+  return chrome.identity.removeCachedAuthToken({ token });
+}

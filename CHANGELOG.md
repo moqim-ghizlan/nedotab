@@ -2,6 +2,49 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.1.0] - 2026-10-24
+
+### Ajouté
+
+- Connexion et déconnexion Google dans l'extension : jeton fourni par Chrome
+  (`chrome.identity.getAuthToken`, permission `identity`), session Firebase
+  (`firebase/auth/web-extension`), gardée par Firebase entre les redémarrages.
+- Réglages → section **Compte** : bouton « Se connecter avec Google » (logo officiel local),
+  puis photo ou initiale, nom, e-mail et « Se déconnecter » ; petit avatar à côté de
+  l'engrenage quand on est connecté.
+- Démarrage rapide : un indicateur local dit si un compte était connecté. Sans lui,
+  Firebase n'est **jamais** chargé ; avec lui, l'avatar s'affiche aussitôt et la session est
+  restaurée en arrière-plan, sans fenêtre.
+- Fenêtre de connexion fermée : aucun message. Navigateur sans `chrome.identity` :
+  « La connexion n'est disponible que dans Google Chrome pour l'instant. » Autre erreur :
+  message et « Réessayer ».
+- `client_id` OAuth injecté au build depuis `.env.local` ; identité de test avec les
+  émulateurs.
+
+### Corrigé
+
+- La vérification « aucun code distant » signalait à tort des méthodes nommées `eval`
+  dans le SDK Firebase ; seul l'`eval` global est désormais refusé (testé).
+
+### En attente du propriétaire
+
+- Écran de consentement OAuth (Externe, puis En production), client OAuth « Extension
+  Chrome », fournisseur Google dans Firebase : procédure dans `docs/firebase.md`.
+
+### Mesure
+
+- Firebase (Auth, Firestore, Storage) forme un fichier séparé de 470 Ko, chargé seulement
+  à la connexion ; la page reste à 117 Ko de JavaScript.
+
+### Tests
+
+- 214 tests (service de compte : démarrage sans Firebase, connexion, annulation,
+  navigateur non compatible, déconnexion).
+- Émulateurs : 4/4 (règles fermées, connexion/déconnexion et uid stable via l'émulateur Auth).
+- Navigateur avec l'émulateur : 14/14 (aucun fichier Firebase sans compte, connexion,
+  avatar, session restaurée au rechargement sans fenêtre, utilisateur présent dans Auth,
+  déconnexion) ; sans émulateur : 149/149.
+
 ## [2.0.0] - 2026-10-24
 
 ### Ajouté

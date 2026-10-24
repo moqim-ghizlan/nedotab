@@ -11,3 +11,10 @@ describe("verifier-code-distant", () => {
     expect(analyserTexte('const u = "https://www.google.com/s2/favicons";')).toHaveLength(0);
   });
 });
+
+describe("définition de méthode eval", () => {
+  it("une classe qui définit eval(t, n) { … } n'est pas signalée", () => {
+    expect(analyserTexte("class A{x(){return 1}eval(t,n){switch(t){}}}")).toHaveLength(0);
+    expect(analyserTexte("}eval(code)")).toHaveLength(1);
+  });
+});

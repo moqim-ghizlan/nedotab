@@ -27,6 +27,7 @@ export default defineConfig({
             {
               test: {
                 name: "regles",
+                env: { VITE_UTILISER_EMULATEURS: "true" },
                 environment: "node",
                 include: ["tests/regles/**/*.test.js"],
                 testTimeout: 20000,

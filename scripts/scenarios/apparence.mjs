@@ -35,7 +35,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   );
   verifier(
     "Panneau Réglages en sections",
-    sections === "Apparence, Autorisations, Stockage, À propos",
+    sections === "Compte, Apparence, Autorisations, Stockage, À propos",
     sections,
   );
   verifier(
@@ -141,14 +141,14 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
 
   // Autorisations and storage sections
   const autorisation = await p.eval(
-    `document.querySelectorAll(".reglages-section")[1].textContent`,
+    `document.querySelectorAll(".reglages-section")[2].textContent`,
   );
   verifier(
     "Autorisations : état et bouton",
     autorisation.includes("non accordé") && autorisation.includes("Autoriser"),
     autorisation,
   );
-  const stockage = await p.eval(`document.querySelectorAll(".reglages-section")[2].textContent`);
+  const stockage = await p.eval(`document.querySelectorAll(".reglages-section")[3].textContent`);
   verifier("Stockage : taille des données", /Données : [\d.,]+ Ko/.test(stockage), stockage);
   await p.touche("Escape", { vk: 27 });
   await attendre(150);

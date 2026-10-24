@@ -9,7 +9,10 @@ const MOTIFS = [
   /import\s+["'`]https?:/,
   /from\s+["'`]https?:/,
   /importScripts\(\s*["'`]https?:/,
-  /\beval\(/,
+  // Global eval only: a method named eval — called (obj.eval(...)) or defined in a class
+  // (eval(a, b) { ... }) — is not dynamic code.
+  /(^|[^.\w$])eval\((?![\w$,\s]*\)\s*\{)/,
+  /\b(window|globalThis|self)\.eval\(/,
   /new Function\(/,
 ];
 

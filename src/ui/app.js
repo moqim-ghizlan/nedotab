@@ -13,6 +13,8 @@ import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages } from "./apparence.js";
 import { creerRecherche } from "./recherche.js";
 import { ouvrirReglages } from "./reglages.js";
+import { creerAvatar } from "./avatar.js";
+import { creerCompte } from "./services/compte.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -73,9 +75,27 @@ export async function demarrerApp(racine) {
     "aria-label": "Réglages",
     title: "Réglages",
     texte: "⚙",
-    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages }),
+    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages, compte }),
   });
-  racine.replaceChildren(boutonReglages, page, pied, annonces);
+  // Account: Firebase is only loaded when a user signed in before (indicator) or signs in.
+  const compte = creerCompte();
+  const boutonCompte = el("button", {
+    type: "button",
+    class: "bouton-compte",
+    hidden: true,
+    onclick: () => ouvrirReglages(store, { retourFocus: boutonCompte, compte }),
+  });
+  compte.abonner((e) => {
+    const connecte = e.statut === "connecte" && e.profil;
+    boutonCompte.hidden = !connecte;
+    if (connecte) {
+      boutonCompte.setAttribute("aria-label", `Compte : ${e.profil.nom || e.profil.email}`);
+      boutonCompte.replaceChildren(creerAvatar(e.profil, { taille: 30 }));
+    }
+  });
+  compte.demarrer();
+  const barre = el("div", { class: "barre-haut" }, boutonCompte, boutonReglages);
+  racine.replaceChildren(barre, page, pied, annonces);
   const annoncer = (texte) => {
     annonces.textContent = "";
     requestAnimationFrame(() => (annonces.textContent = texte));

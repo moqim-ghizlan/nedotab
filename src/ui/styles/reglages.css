@@ -68,11 +68,43 @@ body.fond-sombre {
 
 /* --- settings button and panel --------------------------------------------------------- */
 
-.bouton-reglages {
+.barre-haut {
   position: fixed;
   top: var(--espace-4);
   right: var(--espace-4);
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.bouton-compte {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--surface) 80%, transparent);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.bouton-compte[hidden] {
+  display: none;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar--initiale {
+  color: #fff;
+  font-weight: 650;
+}
+
+.bouton-reglages {
   display: grid;
   place-items: center;
   width: 40px;
@@ -254,4 +286,58 @@ body.fond-sombre {
 .reglages-liens a {
   color: var(--accent);
   text-underline-offset: 3px;
+}
+
+/* --- account ----------------------------------------------------------------------- */
+
+.compte {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espace-3);
+}
+
+.compte-profil {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.compte-identite {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--taille-s);
+}
+
+.compte-identite span {
+  color: var(--texte-secondaire);
+}
+
+/* Google sign-in button: white surface, official "G", standard wording. */
+.bouton-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px 9px 12px;
+  border: 1px solid #747775;
+  border-radius: 20px;
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.bouton-google:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.compte-erreur {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--taille-s);
 }
