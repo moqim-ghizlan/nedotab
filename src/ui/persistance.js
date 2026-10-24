@@ -58,7 +58,9 @@ export function brancherPersistance(
     }
   };
   store.abonner((_etat, action) => {
-    if (EXTERNES.has(action.type) || action.externe) return;
+    // Loads from the storage or another tab are not saved again; a change received from
+    // another device (origine "distant") is: the local cache must follow the account.
+    if ((EXTERNES.has(action.type) && action.origine !== "distant") || action.externe) return;
     enAttente.push(action);
     planifier();
   });

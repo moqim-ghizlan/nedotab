@@ -2,6 +2,41 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.4.0] - 2026-10-24
+
+### Ajouté
+
+- Synchronisation en temps réel : en mode compte, le document du compte est écouté
+  (`onSnapshot`) ; un changement fait sur un autre ordinateur apparaît en quelques secondes
+  et met aussi à jour le cache local.
+- Écritures regroupées (1,5 s après la dernière action), une seule à la fois, immédiates à
+  la fermeture ou au masquage de la page ; compteur de révision.
+- Pas d'écho ni de ping-pong : nos propres écritures en attente et nos échos sont ignorés,
+  un changement reçu ne déclenche jamais d'écriture, un état identique ne redessine rien.
+- Les modifications locales pas encore envoyées sont rejouées sur le changement reçu.
+- Fermeture pendant un envoi : l'appareil s'en souvient et envoie son état au démarrage
+  suivant, avant d'écouter le compte (la modification n'est jamais écrasée).
+- Indicateur sur l'avatar : ✓ synchronisé, ⟳ envoi en attente, ⚠ erreur (message au survol,
+  « Réessayer » au clic) ; messages dédiés pour accès refusé et quota atteint.
+- Taille du document surveillée (limite Firestore 1 Mo) : affichée dans Réglages →
+  Stockage, avertissement à 800 Ko, import d'images d'icônes bloqué à 950 Ko.
+
+### Mesures (émulateurs)
+
+- 150 déplacements en 20 s → 1 écriture ; changement visible sur l'autre ordinateur en
+  ~1,6 s (dont 1,5 s de regroupement). Lectures : un écouteur par onglet en mode compte.
+- Conflit de deux écritures simultanées : la dernière gagne (traité en V2.9).
+
+### Tests
+
+- 234 tests (regroupement 20 actions → 1 écriture, échos, changement distant sans écriture,
+  état identique, indicateur, accès refusé, envoi au démarrage, taille UTF-8).
+- Émulateurs : 46/46, dont deux appareils : réception en moins de 2 s, aucun ping-pong,
+  rejeu des changements en attente, fond image jamais envoyé.
+- Navigateur avec émulateurs : 41/41, dont deux ordinateurs (ajout, déplacement,
+  suppression, réorganisation intense, 3 onglets et une écriture, fermeture puis
+  réouverture) ; sans émulateur : 149/149.
+
 ## [2.3.0] - 2026-10-24
 
 ### Ajouté
@@ -36,7 +71,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ### Tests
 
-- 230 tests (fusion, comparaison, migration 1 → 2, réglages de l'appareil).
+- 222 tests (comparaison, migration 1 → 2, réglages de l'appareil ; la fusion est testée sur les émulateurs).
 - Émulateurs : 42/42, dont les 4 cas de première connexion et les 3 choix, Annuler,
   données d'une version future non écrasées, écritures regroupées, double clic, déconnexion
   et restauration de la copie.

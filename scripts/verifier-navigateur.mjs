@@ -12,6 +12,7 @@ import { scenarioApparence } from "./scenarios/apparence.mjs";
 import { scenarioRecherche } from "./scenarios/recherche.mjs";
 import { scenarioCompte } from "./scenarios/compte.mjs";
 import { scenarioSynchro } from "./scenarios/synchro.mjs";
+import { scenarioTempsReel } from "./scenarios/temps-reel.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -567,6 +568,22 @@ if (seulement === "compte" || seulement === "synchro") {
     });
   } finally {
     await nav9.fermer();
+  }
+}
+
+// V2.4 — live sync between two computers (emulators)
+if (seulement === "compte" || seulement === "temps-reel") {
+  const nav10 = await lancerChrome();
+  try {
+    const id = await nav10.chargerExtension();
+    await scenarioTempsReel({
+      nav: nav10,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav10.fermer();
   }
 }
 

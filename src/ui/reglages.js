@@ -1,5 +1,6 @@
 import { A } from "../core/actions.js";
 import { parcourir } from "../core/arbre.js";
+import { estimerTaille, niveauTaille } from "../core/taille.js";
 import { URL_SITE } from "../core/constantes.js";
 import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
@@ -237,10 +238,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   const etatStockage = el("p", { class: "reglages-note" });
   const majStockage = () => {
     const etat = store.lire();
-    const poids = new Blob([JSON.stringify(etat)]).size;
+    const poids = estimerTaille(etat);
     const images = [...parcourir(etat.grille)].filter((e) => e.icone?.type === "image");
     const poidsImages = images.reduce((s, e) => s + poidsDataUrl(e.icone.valeur), 0);
-    etatStockage.textContent = `Données : ${ko(poids)}. Icônes personnalisées : ${images.length} (${ko(poidsImages)}).`;
+    const niveau = niveauTaille(poids);
+    etatStockage.textContent =
+      `Données : ${ko(poids)} sur 1 024 Ko. Icônes personnalisées : ${images.length} (${ko(poidsImages)}).` +
+      (niveau === "avertissement"
+        ? " Votre grille approche de la limite : préférez les icônes automatiques aux images importées."
+        : niveau === "bloque"
+          ? " Limite presque atteinte : l'import d'images pour les icônes est bloqué."
+          : "");
+    etatStockage.classList.toggle("reglages-note--alerte", niveau !== "ok");
   };
 
   // --- Compte (account) -----------------------------------------------------------------

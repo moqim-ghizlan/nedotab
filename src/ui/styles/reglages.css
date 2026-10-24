@@ -409,3 +409,45 @@ body.fond-sombre {
     grid-template-columns: 1fr;
   }
 }
+
+.indicateur-synchro {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-texte);
+  font-size: 9px;
+  line-height: 1;
+  cursor: default;
+}
+
+.indicateur-synchro[hidden] {
+  display: none;
+}
+
+.indicateur-synchro[data-statut="attente"] {
+  background: var(--texte-secondaire);
+  color: var(--surface);
+}
+
+.indicateur-synchro[data-statut="erreur"] {
+  background: var(--danger);
+  color: #fff;
+  cursor: pointer;
+}
+
+.compte-avatar {
+  position: relative;
+  display: inline-grid;
+}
+
+.reglages-note--alerte {
+  color: var(--danger);
+}

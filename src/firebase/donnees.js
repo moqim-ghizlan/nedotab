@@ -1,4 +1,12 @@
-import { addDoc, collection, doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  serverTimestamp,
+  setDoc,
+} from "firebase/firestore";
 import { compter } from "../core/fusion.js";
 import { obtenirApp } from "./app.js";
 
@@ -45,4 +53,20 @@ export async function sauvegarderAvantRemplacement(uid, etat, appareil) {
     grille: json(etat.grille),
     reglages: json(etat.reglages),
   });
+}
+
+/**
+ * Listens to users/{uid}. `callback(brut, { ecritureEnAttente })`: ecritureEnAttente is true
+ * for a snapshot of our own write not yet confirmed by the server (to be ignored).
+ */
+export function ecouterDocument(uid, callback, surErreur) {
+  return onSnapshot(
+    doc(obtenirApp().firestore, "users", uid),
+    { includeMetadataChanges: true },
+    (instantane) =>
+      callback(instantane.exists() ? instantane.data() : null, {
+        ecritureEnAttente: instantane.metadata.hasPendingWrites,
+      }),
+    surErreur,
+  );
 }

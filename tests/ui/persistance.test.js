@@ -102,3 +102,22 @@ describe("deux onglets qui écrivent presque en même temps", () => {
     expect(titres(b)).toEqual(["A", "B"]);
   });
 });
+
+describe("changement reçu d'un autre appareil", () => {
+  it("est écrit dans le cache local, contrairement aux chargements", async () => {
+    vi.useFakeTimers();
+    const store = creerStore(etatInitial(), reduire);
+    const stockage = fauxStockage();
+    brancherPersistance(store, stockage, { delai: 300 });
+    store.envoyer({ type: A.CHARGER, etat: { ...etatInitial(), grille: [] } });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(stockage.sauvegarder).not.toHaveBeenCalled();
+    store.envoyer({
+      type: A.CHARGER,
+      origine: "distant",
+      etat: { ...etatInitial(), grille: [creerSite({ titre: "D", url: "https://d.fr" })] },
+    });
+    await vi.advanceTimersByTimeAsync(400);
+    expect(stockage.sauvegarder).toHaveBeenCalledTimes(1);
+  });
+});

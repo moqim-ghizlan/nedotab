@@ -1,6 +1,7 @@
 import { A } from "../../core/actions.js";
 import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { creerSite } from "../../core/modele.js";
+import { estimerTaille, niveauTaille } from "../../core/taille.js";
 import { cleUrl, domaine, normaliserUrl } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
 import { el } from "../dom.js";
@@ -300,7 +301,12 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
       el("span", { class: "apercu-titre", texte: titre || domaine(url || site.url) }),
     );
   };
-  const editeur = creerEditeurIcone({ iconeInitiale: site.icone, lireSite, onChange: majApercu });
+  const editeur = creerEditeurIcone({
+    iconeInitiale: site.icone,
+    lireSite,
+    onChange: majApercu,
+    importBloque: () => niveauTaille(estimerTaille(store.lire())) === "bloque",
+  });
   champTitre.addEventListener("input", majApercu);
   champUrl.addEventListener("input", () => {
     const { url } = lireSite();

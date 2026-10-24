@@ -17,6 +17,7 @@ import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
 import { creerCompte } from "./services/compte.js";
 import { creerSynchro } from "./services/synchro.js";
+import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
@@ -153,7 +154,16 @@ export async function demarrerApp(racine) {
     },
   };
   compte.demarrer().then(() => synchro.demarrer());
-  const barre = el("div", { class: "barre-haut" }, boutonCompte, boutonReglages);
+  // Test builds against the emulators only: inspection hook for the browser scenarios.
+  if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
+    globalThis.__nedotab = { store, synchro, compte };
+  const groupeCompte = el(
+    "span",
+    { class: "compte-avatar" },
+    boutonCompte,
+    creerIndicateurSynchro(synchro),
+  );
+  const barre = el("div", { class: "barre-haut" }, groupeCompte, boutonReglages);
   racine.replaceChildren(barre, page, pied, annonces);
   const annoncer = (texte) => {
     annonces.textContent = "";

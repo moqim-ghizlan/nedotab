@@ -22,7 +22,12 @@ function modeDe(icone) {
  * URL, imported image). `lireSite()` gives the current title and URL of the dialog;
  * `onChange(icone)` is called with every new candidate icon.
  */
-export function creerEditeurIcone({ iconeInitiale, lireSite, onChange }) {
+export function creerEditeurIcone({
+  iconeInitiale,
+  lireSite,
+  onChange,
+  importBloque = () => false,
+}) {
   let icone = { ...iconeInitiale };
   let mode = modeDe(icone);
   const definir = (nouvelle) => {
@@ -131,6 +136,13 @@ export function creerEditeurIcone({ iconeInitiale, lireSite, onChange }) {
   champFichier.addEventListener("change", async () => {
     const fichier = champFichier.files?.[0];
     if (!fichier) return;
+    if (importBloque()) {
+      // The account's document must stay under 1 MB: imported images are its main cost.
+      etatFichier.textContent =
+        "Limite de taille presque atteinte : choisissez une icône automatique, une lettre ou une adresse d'image.";
+      champFichier.value = "";
+      return;
+    }
     etatFichier.textContent = "Préparation…";
     const r = await importerImage(fichier);
     etatFichier.textContent = r.ok ? `${(r.poids / 1024).toFixed(1)} Ko` : r.erreur;
