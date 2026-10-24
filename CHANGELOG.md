@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.5] - 2026-10-24
+
+### Modifié
+
+- Carte du compte plus sobre : l'état de synchronisation devient une simple ligne avec un
+  point coloré sous l'e-mail, et les actions (« Restaurer la copie », « Se déconnecter »,
+  « Synchroniser » s'il y a lieu) forment une barre en bas de la carte, en parts égales,
+  au lieu de pastilles empilées. Le libellé complet reste au survol.
+
 ## [2.10.4] - 2026-10-24
 
 ### Modifié

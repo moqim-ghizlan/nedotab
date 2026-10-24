@@ -66,10 +66,10 @@ export function sectionCompte(session) {
   const danger = el("div", { class: "zone-danger-conteneur" });
   const bouton = (texte, onclick, classe = "bouton") =>
     el("button", { type: "button", class: classe, texte, onclick });
-  const action = (nom, texte, onclick, classe = "") =>
+  const action = (nom, texte, onclick, { classe = "", titre } = {}) =>
     el(
       "button",
-      { type: "button", class: `carte-action ${classe}`.trim(), onclick },
+      { type: "button", class: `carte-action ${classe}`.trim(), title: titre, onclick },
       icone(nom, { taille: 16 }),
       el("span", { texte }),
     );
@@ -100,30 +100,28 @@ export function sectionCompte(session) {
             { class: "compte-identite" },
             el("strong", { texte: etat.profil.nom || etat.profil.email }),
             etat.profil.nom ? el("span", { texte: etat.profil.email }) : null,
+            el(
+              "p",
+              { class: "compte-statut", dataset: { statut }, title: detail, "aria-live": "polite" },
+              el("span", { class: "compte-statut-point", "aria-hidden": "true" }),
+              court,
+              el("span", { class: "visuellement-cache", texte: ` : ${detail}` }),
+            ),
           ),
-        ),
-        el(
-          "p",
-          { class: "compte-statut", dataset: { statut }, title: detail, "aria-live": "polite" },
-          el("span", { class: "compte-statut-point", "aria-hidden": "true" }),
-          el("span", { texte: court }),
-          el("span", { class: "visuellement-cache", texte: ` : ${detail}` }),
         ),
         ...(sync.erreur ? [erreurAvecReessai(sync.erreur, () => session.synchroniser())] : []),
         el(
           "div",
           { class: "compte-actions" },
           sync.mode !== "compte" && !sync.enCours
-            ? action(
-                "synchroniser",
-                "Synchroniser maintenant",
-                () => session.synchroniser(),
-                "carte-action--principale",
-              )
+            ? action("synchroniser", "Synchroniser", () => session.synchroniser(), {
+                classe: "carte-action--principale",
+                titre: "Synchroniser maintenant",
+              })
             : null,
-          action("restaurer", "Restaurer la copie de cet ordinateur", () =>
-            session.restaurerCopie(),
-          ),
+          action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
+            titre: "Restaurer la copie de cet ordinateur",
+          }),
           action("deconnexion", "Se déconnecter", () => session.deconnecter()),
         ),
       );

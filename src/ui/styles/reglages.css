@@ -714,37 +714,36 @@ body.fond-clair .carte-compte {
   letter-spacing: -0.01em;
 }
 
-.compte-identite span {
+.compte-identite > span {
   overflow: hidden;
   color: var(--carte-texte-2, var(--texte-secondaire));
   font-size: var(--taille-s);
   text-overflow: ellipsis;
 }
 
+/* Sync state: a quiet line under the e-mail, the dot says it at a glance. */
 .compte-statut {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 14px 0 0;
-  padding: 5px 11px 5px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
+  gap: 7px;
+  margin: 5px 0 0;
+  color: var(--carte-texte-2, var(--texte-secondaire));
   font-size: var(--taille-xs);
   font-weight: 550;
 }
 
 .compte-statut-point {
   flex: none;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #5fd39a;
-  box-shadow: 0 0 0 3px rgb(95 211 154 / 0.25);
+  box-shadow: 0 0 0 3px rgb(95 211 154 / 0.22);
 }
 
 .compte-statut[data-statut="local"] .compte-statut-point {
   background: #f2b84b;
-  box-shadow: 0 0 0 3px rgb(242 184 75 / 0.25);
+  box-shadow: 0 0 0 3px rgb(242 184 75 / 0.22);
 }
 
 .compte-statut[data-statut="en-cours"] .compte-statut-point {
@@ -757,47 +756,63 @@ body.fond-clair .carte-compte {
   }
 }
 
+/* Actions: a bar along the bottom edge of the card, split in equal parts. */
 .compte-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 14px;
+  align-self: stretch;
+  margin: 16px -16px -16px;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  background: color-mix(in srgb, currentColor 4%, transparent);
 }
 
 .carte-action {
   display: inline-flex;
+  flex: 1;
   align-items: center;
+  justify-content: center;
   gap: 7px;
-  padding: 7px 13px 7px 10px;
-  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
+  min-width: 0;
+  padding: 11px 8px;
+  border: 0;
+  background: none;
   color: inherit;
   font-size: var(--taille-s);
   font-weight: 550;
+  white-space: nowrap;
   cursor: pointer;
-  transition:
-    background-color 180ms,
-    transform 120ms;
+  transition: background-color 180ms;
+}
+
+.carte-action + .carte-action {
+  border-left: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.carte-action .icone {
+  flex: none;
+  opacity: 0.8;
+  transition: transform 320ms var(--ressort);
 }
 
 .carte-action:hover {
-  background: color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, currentColor 9%, transparent);
 }
 
-.carte-action:active {
-  transform: scale(0.97);
+.carte-action:hover .icone {
+  transform: translateX(-2px);
+}
+
+.carte-action:focus-visible {
+  outline-offset: -2px;
 }
 
 .carte-action--principale {
-  border-color: transparent;
-  background: var(--accent);
-  color: var(--accent-texte);
+  color: var(--accent);
 }
 
-.carte-action--principale:hover {
-  background: var(--accent);
-  filter: brightness(1.08);
+body.fond-sombre .carte-action--principale,
+body.fond-clair .carte-action--principale {
+  color: inherit;
+  font-weight: 650;
 }
 
 .compte-invitation {
@@ -844,12 +859,6 @@ body.fond-clair .carte-compte {
   margin: 0;
   color: var(--danger);
   font-size: var(--taille-s);
-}
-
-.compte-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--espace-2);
 }
 
 .bouton-compte.en-synchro {
