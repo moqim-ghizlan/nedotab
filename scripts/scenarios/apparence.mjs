@@ -38,7 +38,8 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   );
   verifier(
     "Panneau Réglages en sections",
-    sections === "Compte, Apparence, Sauvegardes, Mes données, Autorisations, Stockage, À propos",
+    sections ===
+      "Compte, Apparence, Sites, Sauvegardes, Mes données, Autorisations, Stockage, À propos",
     sections,
   );
   verifier(

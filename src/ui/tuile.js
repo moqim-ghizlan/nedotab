@@ -59,6 +59,27 @@ export function creerIcone(site) {
   return cadre;
 }
 
+/** Synced setting (V2.10.3): sites open in a new tab. */
+let nouvelOnglet = false;
+
+/** Applies the setting to the tiles already shown and to those created afterwards. */
+export function ouvrirSitesDansNouvelOnglet(actif) {
+  nouvelOnglet = !!actif;
+  for (const lien of document.querySelectorAll("a.tuile--site")) cibler(lien);
+}
+
+function cibler(lien) {
+  if (nouvelOnglet) {
+    lien.target = "_blank";
+    lien.rel = "noopener";
+  } else {
+    lien.removeAttribute("target");
+    lien.removeAttribute("rel");
+  }
+}
+
+export const sitesDansNouvelOnglet = () => nouvelOnglet;
+
 /** Purely presentational: receives an element, returns a DOM node. */
 export function creerTuile(element) {
   const lien = el("a", {
@@ -68,6 +89,7 @@ export function creerTuile(element) {
     "aria-label": element.titre,
     draggable: "false",
   });
+  cibler(lien);
   lien.append(
     creerIcone(element),
     el("span", { class: "tuile-titre", title: element.titre, texte: element.titre }),

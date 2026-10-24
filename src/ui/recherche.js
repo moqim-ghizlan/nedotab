@@ -2,7 +2,7 @@ import { indexer, rechercher } from "../core/recherche.js";
 import { normaliserUrl } from "../core/url.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
-import { creerIcone } from "./tuile.js";
+import { creerIcone, sitesDansNouvelOnglet } from "./tuile.js";
 import { creerIconeDossier } from "./tuileDossier.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
@@ -174,7 +174,8 @@ export function creerRecherche(store, { ouvrirDossier }) {
     }
     if (o.type === "adresse") ouvrirUrl(o.url, nouvelOnglet);
     else if (o.type === "web") plateforme.rechercherSurLeWeb(o.texte, { nouvelOnglet });
-    else if (o.type === "site") ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet);
+    else if (o.type === "site")
+      ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet || sitesDansNouvelOnglet());
     else if (o.type === "dossier") {
       fermerListe();
       ouvrirDossier(o.resultat.entree.id);

@@ -1,5 +1,6 @@
 /**
- * Settings: theme and background. Pure validation, shared by the reducer and the loader.
+ * Settings: theme, background and how sites open. Pure validation, shared by the reducer and
+ * the loader.
  *
  * fond: { type: "aucun" }
  *     | { type: "couleur", valeur: "#1e293b" }
@@ -105,13 +106,14 @@ export function validerFond(fond) {
 }
 
 /**
- * Applies `changements` (whitelisted keys: theme, fond) to `reglages`.
+ * Applies `changements` (whitelisted keys: theme, fond, nouvelOnglet) to `reglages`.
  * Unknown keys and invalid values are refused: the same object is returned.
  */
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  if (cles.length === 0 || cles.some((c) => !["theme", "fond"].includes(c))) return reglages;
+  if (cles.length === 0 || cles.some((c) => !["theme", "fond", "nouvelOnglet"].includes(c)))
+    return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
     if (!THEMES.includes(changements.theme)) return reglages;
@@ -121,6 +123,13 @@ export function modifierReglages(reglages, changements) {
     const fond = validerFond(changements.fond);
     if (!fond) return reglages;
     suivant.fond = fond;
+  }
+  if ("nouvelOnglet" in changements) {
+    // Stored only when on: settings saved before it existed stay unchanged.
+    if (typeof changements.nouvelOnglet !== "boolean") return reglages;
+    if (cles.length === 1 && changements.nouvelOnglet === !!reglages.nouvelOnglet) return reglages;
+    if (changements.nouvelOnglet) suivant.nouvelOnglet = true;
+    else delete suivant.nouvelOnglet;
   }
   return suivant;
 }
@@ -134,7 +143,14 @@ export function validerReglages(reglages) {
   if (fond.type === "image" && (fond.ref || !fonds.some((f) => f.id === fond.id))) {
     fond = { type: "aucun" };
   }
-  return { ...r, theme: THEMES.includes(r.theme) ? r.theme : "auto", fond, fonds };
+  const { nouvelOnglet, ...reste } = r;
+  return {
+    ...reste,
+    theme: THEMES.includes(r.theme) ? r.theme : "auto",
+    fond,
+    fonds,
+    ...(nouvelOnglet === true ? { nouvelOnglet: true } : {}),
+  };
 }
 
 /** Forced number of columns of the home grid on this device (null: automatic). */

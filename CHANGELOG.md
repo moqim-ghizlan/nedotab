@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.3] - 2026-10-24
+
+### Ajouté
+
+- Réglage **Ouvrir les sites dans un nouvel onglet** (Réglages → Apparence → Sites),
+  synchronisé avec le compte : les icônes de la grille et des dossiers, et les sites choisis
+  dans la recherche, s'ouvrent dans un nouvel onglet et la page NedoTab reste ouverte.
+  Désactivé par défaut ; la clé `nouvelOnglet` n'est enregistrée que lorsqu'il est activé,
+  les réglages existants ne changent donc pas.
+
 ## [2.10.2] - 2026-10-24
 
 ### Modifié

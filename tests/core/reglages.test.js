@@ -51,6 +51,18 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ theme: "sombre" }).reglages.theme).toBe("sombre");
     expect(modifier({ theme: "rose" })).toBe(etat);
   });
+  it("ouvrir les sites dans un nouvel onglet : synchronisé, gardé seulement s'il est activé", () => {
+    const active = modifier({ nouvelOnglet: true });
+    expect(active.reglages.nouvelOnglet).toBe(true);
+    expect(active.reglagesAppareil).toEqual({});
+    const desactive = reduire(active, {
+      type: A.REGLAGES_MODIFIER,
+      changements: { nouvelOnglet: false },
+    });
+    expect("nouvelOnglet" in desactive.reglages).toBe(false);
+    expect(modifier({ nouvelOnglet: false })).toBe(etat);
+    expect(modifier({ nouvelOnglet: "oui" })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);
@@ -97,6 +109,17 @@ describe("migration des réglages", () => {
       fond: { type: "aucun" },
       fonds: [],
     });
+  });
+});
+
+describe("chargement de nouvelOnglet", () => {
+  it("vrai gardé, toute autre valeur retirée", () => {
+    const charger = (nouvelOnglet) =>
+      migrer({ ...etatInitial(), reglages: { ...etatInitial().reglages, nouvelOnglet } }).etat
+        .reglages;
+    expect(charger(true).nouvelOnglet).toBe(true);
+    expect("nouvelOnglet" in charger(false)).toBe(false);
+    expect("nouvelOnglet" in charger("oui")).toBe(false);
   });
 });
 

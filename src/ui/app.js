@@ -27,6 +27,7 @@ import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
 import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
+import { ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
 
 /** V2.9: operations that could not be applied after a change made on another device. */
@@ -411,11 +412,13 @@ export async function demarrerApp(racine) {
   let appliques = store.lire();
   appliquerReglages(visibles(appliques));
   appliquerAppareil(appliques.reglagesAppareil);
+  ouvrirSitesDansNouvelOnglet(appliques.reglages.nouvelOnglet);
   store.abonner((e) => {
     if (e.reglages !== appliques.reglages || e.reglagesAppareil !== appliques.reglagesAppareil) {
       appliques = e;
       appliquerReglages(visibles(e));
       appliquerAppareil(e.reglagesAppareil);
+      ouvrirSitesDansNouvelOnglet(e.reglages.nouvelOnglet);
       purgerCacheFonds();
     }
   });

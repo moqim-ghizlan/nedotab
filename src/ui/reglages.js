@@ -98,6 +98,14 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
 
+  // Synced: how the sites of the grid and of the search open.
+  const interrupteurOnglet = el("input", {
+    type: "checkbox",
+    role: "switch",
+    class: "interrupteur-bouton",
+    onchange: (e) => modifier({ nouvelOnglet: e.currentTarget.checked }),
+  });
+
   const nuancesCouleur = el(
     "div",
     { class: "nuancier nuancier--fond", role: "radiogroup", "aria-label": "Couleur du fond" },
@@ -307,6 +315,23 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         libelleAppareil("Colonnes"),
         colonnes.groupe,
       ),
+      section(
+        "Sites",
+        el(
+          "label",
+          { class: "interrupteur" },
+          el(
+            "span",
+            { class: "interrupteur-texte" },
+            el("span", { texte: "Ouvrir les sites dans un nouvel onglet" }),
+            el("span", {
+              class: "reglages-note",
+              texte: "Votre page NedoTab reste ouverte derrière.",
+            }),
+          ),
+          interrupteurOnglet,
+        ),
+      ),
     ],
     sauvegardes: session?.sauvegardes
       ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
@@ -485,6 +510,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       afficherPanneau(r.fond.type);
     }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
+    interrupteurOnglet.checked = !!r.nouvelOnglet;
     for (const b of nuancesCouleur.children) {
       b.setAttribute(
         "aria-checked",
