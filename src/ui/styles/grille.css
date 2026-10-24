@@ -80,3 +80,65 @@
   font-size: var(--taille-xs);
   opacity: 0.7;
 }
+
+.tuile--ajout {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tuile-icone--ajout {
+  border: 2px dashed var(--bordure);
+  box-shadow: none;
+  color: var(--texte-secondaire);
+  font-size: 1.75rem;
+  font-weight: 300;
+}
+
+.tuile--ajout:hover .tuile-icone--ajout {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.tuile--ajout .tuile-titre {
+  color: var(--texte-secondaire);
+}
+
+.vide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espace-4);
+  padding-top: 6vh;
+}
+
+.vide[hidden],
+.grille[hidden] {
+  display: none;
+}
+
+.vide-texte {
+  margin: 0;
+  font-size: var(--taille-l);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.vide-bouton {
+  width: 88px;
+  height: 88px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--rayon-grand);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 2.5rem;
+  font-weight: 300;
+  cursor: pointer;
+  transition: transform var(--duree) ease-out;
+}
+
+.vide-bouton:hover {
+  transform: scale(1.04);
+}

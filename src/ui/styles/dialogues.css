@@ -1,0 +1,165 @@
+.dialogue {
+  width: min(440px, calc(100vw - 2 * var(--espace-4)));
+  padding: var(--espace-5);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-grand);
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+}
+
+.dialogue::backdrop {
+  background: var(--voile);
+  backdrop-filter: blur(3px);
+}
+
+.dialogue-titre {
+  margin: 0 0 var(--espace-4);
+  font-size: var(--taille-l);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.formulaire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+}
+
+.champ {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+}
+
+.champ label {
+  font-size: var(--taille-s);
+  color: var(--texte-secondaire);
+}
+
+.champ input,
+.champ select {
+  width: 100%;
+  padding: 10px var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--fond);
+}
+
+.champ input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  border-color: transparent;
+}
+
+.champ input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.champ-erreur {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--taille-s);
+}
+
+.champ-erreur:empty {
+  display: none;
+}
+
+.champ-avertissement {
+  margin: 0;
+  padding: var(--espace-2) var(--espace-3);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+  font-size: var(--taille-s);
+}
+
+.champ-avertissement[hidden] {
+  display: none;
+}
+
+.dialogue-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espace-2);
+  margin-top: var(--espace-2);
+}
+
+.bouton {
+  padding: 9px var(--espace-4);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  cursor: pointer;
+}
+
+.bouton:hover {
+  background: var(--surface-2);
+}
+
+.bouton--principal {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-texte);
+  font-weight: 600;
+}
+
+.bouton--principal:hover {
+  background: var(--accent);
+  filter: brightness(1.08);
+}
+
+.bouton--danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: var(--espace-5);
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--espace-4));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-4);
+  padding: var(--espace-3) var(--espace-4);
+  border-radius: var(--rayon);
+  background: var(--texte);
+  color: var(--fond);
+  box-shadow: var(--ombre-forte);
+  font-size: var(--taille-s);
+}
+
+.toast--erreur {
+  background: var(--danger);
+  color: #fff;
+}
+
+.toast-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.bandeau {
+  margin: 0 0 var(--espace-5);
+  padding: var(--espace-3) var(--espace-4);
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+  border: 1px solid var(--bordure);
+  font-size: var(--taille-s);
+}

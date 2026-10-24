@@ -1,14 +1,38 @@
+import { el } from "./dom.js";
 import { creerTuile } from "./tuile.js";
 
-/** Rebuilds the whole grid in a fragment and swaps it in one go. */
-export function rendreGrille(conteneur, elements) {
+/**
+ * Rebuilds the whole grid in a fragment and swaps it in one go.
+ * The "+" tile is not part of the state: the renderer adds it at the end.
+ */
+export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
   const fragment = document.createDocumentFragment();
   for (const element of elements) {
     if (element.type !== "site") continue;
-    const li = document.createElement("li");
-    li.className = "case";
-    li.append(creerTuile(element));
-    fragment.append(li);
+    fragment.append(el("li", { class: "case" }, creerTuile(element)));
+  }
+  if (avecAjout) {
+    fragment.append(
+      el(
+        "li",
+        { class: "case" },
+        el(
+          "button",
+          {
+            type: "button",
+            class: "tuile tuile--ajout",
+            "aria-label": "Ajouter un site",
+            dataset: { action: "ajouter" },
+          },
+          el("span", {
+            class: "tuile-icone tuile-icone--ajout",
+            "aria-hidden": "true",
+            texte: "+",
+          }),
+          el("span", { class: "tuile-titre", texte: "Ajouter" }),
+        ),
+      ),
+    );
   }
   conteneur.replaceChildren(fragment);
 }
