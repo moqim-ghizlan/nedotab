@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
+import { activerAppCheck } from "./appCheck.js";
 import { lireConfig } from "./config.js";
 
 let instance = null;
@@ -10,6 +11,7 @@ export function obtenirApp() {
   if (instance) return instance;
   const { config, emulateurs } = lireConfig();
   const app = initializeApp(config);
+  activerAppCheck(app);
   const firestore = getFirestore(app);
   const stockage = getStorage(app);
   if (emulateurs) {

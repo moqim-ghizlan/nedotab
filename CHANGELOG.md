@@ -2,6 +2,35 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.2.0] - 2026-10-24
+
+### Ajouté
+
+- Règles Firestore par chemin explicite : chacun ne lit et n'écrit que `users/{son uid}`
+  et ses sauvegardes ; forme du document vérifiée (champs autorisés, types, heure serveur,
+  1 000 éléments au premier niveau) ; une sauvegarde ne se modifie jamais ; `config/` en
+  lecture seule pour les connectés ; `users/{uid}/prive/**` et tout le reste refusés.
+- Règles Storage : fonds d'écran dans `users/{uid}/fonds/` seulement, 5 Mo au plus,
+  WebP, JPEG ou PNG.
+- App Check prêt pour la PWA (reCAPTCHA Enterprise, mode surveillance), jamais activé dans
+  l'extension ; jeton de debug réservé au développement avec les émulateurs.
+- Arborescence des données de référence et décisions App Check dans `docs/firebase.md`.
+
+### En attente du propriétaire
+
+- Déploiement des règles (`npm run deployer:regles`) une fois le projet créé ; App Check :
+  enregistrer l'application Web, laisser le suivi des métriques non bloquant.
+- La conclusion App Check pour l'extension est à revérifier dans la documentation Firebase
+  à jour (recherche impossible pendant cette version).
+
+### Tests
+
+- 218 tests (+ App Check : jamais dans l'extension, jeton de debug seulement en dev).
+- Émulateurs : 30/30, dont 28 cas de règles positifs et négatifs (propriété, champs
+  inconnus, types, heure serveur, 1 001 éléments, sauvegardes immuables, `prive/` fermé
+  même au propriétaire, `config/`, Storage : 1 Mo accepté, 6 Mo, HTML, SVG, dossier d'un
+  autre et anonyme refusés).
+
 ## [2.1.0] - 2026-10-24
 
 ### Ajouté

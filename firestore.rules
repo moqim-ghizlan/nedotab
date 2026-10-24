@@ -1,9 +1,44 @@
 rules_version = '2';
-// V2.0: everything is closed until the real rules (V2.2).
+// Every allowed path is written explicitly: no recursive wildcard on users/{uid}, because
+// permissions add up and one would also open users/{uid}/prive/** (V4, functions only).
+// Deep validation of the grid (types, depth <= 3) is done by the app on every read
+// (valider()); these rules guarantee ownership and the general shape.
 service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+  match /databases/{db}/documents {
+
+    function connecte() { return request.auth != null; }
+    function proprietaire(uid) { return connecte() && request.auth.uid == uid; }
+
+    function grilleValide(d) {
+      return d.keys().hasOnly(['versionSchema', 'grille', 'reglages', 'majLe', 'majPar', 'revision'])
+        && d.versionSchema is int && d.versionSchema >= 1 && d.versionSchema <= 10
+        && d.grille is list && d.grille.size() <= 1000
+        && d.reglages is map
+        && d.majLe == request.time
+        && d.majPar is string && d.majPar.size() <= 64
+        && (!('revision' in d) || d.revision is int);
     }
+
+    match /users/{uid} {
+      allow read: if proprietaire(uid);
+      allow create, update: if proprietaire(uid) && grilleValide(request.resource.data);
+      allow delete: if proprietaire(uid);
+    }
+
+    match /users/{uid}/sauvegardes/{id} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['creeLe', 'type', 'nom', 'appareil', 'versionSchema', 'nbSites', 'nbDossiers', 'grille', 'reglages'])
+        && request.resource.data.type in ['auto', 'manuelle', 'avant-restauration']
+        && request.resource.data.creeLe == request.time;
+      allow update: if false; // a backup is never modified
+    }
+
+    match /config/{doc} {
+      allow read: if connecte();
+      allow write: if false;
+    }
+
+    // Everything else (including users/{uid}/prive/**) is denied by default.
   }
 }

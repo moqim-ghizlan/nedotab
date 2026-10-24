@@ -1,9 +1,14 @@
 rules_version = '2';
-// V2.0: everything is closed until the real rules (V2.2).
+// Backgrounds only, in the owner's folder, 5 MB max, raster images only.
+// The number of backgrounds (10 max) is enforced by the app: rules cannot count files.
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+    match /users/{uid}/fonds/{fichier} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(webp|jpeg|png)');
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
   }
 }
