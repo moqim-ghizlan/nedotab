@@ -6,9 +6,9 @@ describe("migration", () => {
   it("null donne l'état initial", () => {
     expect(migrer(null)).toEqual({ etat: etatInitial(), lectureSeule: false });
   });
-  it("sans versionSchema : migré vers la version 1", () => {
+  it("sans versionSchema : migré jusqu'à la version 2", () => {
     const { etat } = migrer({ grille: [] });
-    expect(etat.versionSchema).toBe(1);
+    expect(etat.versionSchema).toBe(2);
   });
   it("version future : lecture seule, données conservées", () => {
     const r = migrer({

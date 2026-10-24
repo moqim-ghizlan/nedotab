@@ -11,6 +11,7 @@ import { scenarioFusion } from "./scenarios/fusion.mjs";
 import { scenarioApparence } from "./scenarios/apparence.mjs";
 import { scenarioRecherche } from "./scenarios/recherche.mjs";
 import { scenarioCompte } from "./scenarios/compte.mjs";
+import { scenarioSynchro } from "./scenarios/synchro.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -550,6 +551,22 @@ if (seulement === "compte") {
     });
   } finally {
     await nav8.fermer();
+  }
+}
+
+// V2.3 — first synchronisation (only with the emulators: npm run verifier:compte)
+if (seulement === "compte" || seulement === "synchro") {
+  const nav9 = await lancerChrome();
+  try {
+    const id = await nav9.chargerExtension();
+    await scenarioSynchro({
+      nav: nav9,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav9.fermer();
   }
 }
 

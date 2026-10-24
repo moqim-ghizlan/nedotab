@@ -85,3 +85,42 @@ export function validerReglages(reglages) {
     fond: validerFond(r.fond) ?? { type: "aucun" },
   };
 }
+
+/** Device-only settings: only a local picture background is accepted. */
+export function validerReglagesAppareil(r) {
+  const fond = validerFond(r?.fond);
+  return fond?.type === "image" ? { fond } : {};
+}
+
+/** Background shown on this device: the local picture if any, else the synced one. */
+export function fondEffectif(etat) {
+  return etat.reglagesAppareil?.fond ?? etat.reglages.fond;
+}
+
+/**
+ * REGLAGES_MODIFIER on the whole state: a picture background is device-only
+ * (reglagesAppareil); any other background is synced and replaces the local picture.
+ */
+export function modifierReglagesEtat(etat, changements) {
+  const fond = changements?.fond;
+  if (fond?.type === "image") {
+    const autres = { ...changements };
+    delete autres.fond;
+    const valide = validerFond(fond);
+    if (!valide) return etat;
+    const reglages = Object.keys(autres).length
+      ? modifierReglages(etat.reglages, autres)
+      : etat.reglages;
+    if (Object.keys(autres).length && reglages === etat.reglages) return etat;
+    return { ...etat, reglages, reglagesAppareil: { ...etat.reglagesAppareil, fond: valide } };
+  }
+  const reglages = modifierReglages(etat.reglages, changements);
+  if (reglages === etat.reglages) return etat;
+  const suivant = { ...etat, reglages };
+  if (fond && etat.reglagesAppareil?.fond) {
+    const appareil = { ...etat.reglagesAppareil };
+    delete appareil.fond;
+    suivant.reglagesAppareil = appareil;
+  }
+  return suivant;
+}

@@ -341,3 +341,71 @@ body.fond-sombre {
   color: var(--danger);
   font-size: var(--taille-s);
 }
+
+.compte-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.bouton-compte.en-synchro {
+  border-color: var(--accent);
+  animation: pulsation 1.2s ease-in-out infinite;
+}
+
+@keyframes pulsation {
+  50% {
+    border-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bouton-compte.en-synchro {
+    animation: none;
+  }
+}
+
+/* --- first synchronisation choice -------------------------------------------------- */
+
+.choix-synchro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espace-4);
+}
+
+.choix-cote {
+  padding: var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--fond);
+}
+
+.choix-cote h3 {
+  margin: 0 0 var(--espace-1);
+  font-size: var(--taille-m);
+}
+
+.choix-apercu {
+  display: grid;
+  grid-template-columns: repeat(4, 28px);
+  gap: 6px;
+  margin-top: var(--espace-2);
+}
+
+.choix-apercu .tuile-icone {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  box-shadow: none;
+}
+
+.choix-apercu .tuile-icone--image {
+  padding: 4px;
+}
+
+@media (max-width: 480px) {
+  .choix-synchro {
+    grid-template-columns: 1fr;
+  }
+}

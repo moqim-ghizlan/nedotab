@@ -8,7 +8,7 @@
  * @typedef {{ id: string, type: "dossier", titre: string, items: Element[], creeLe: number }} Dossier
  * @typedef {Site | Dossier} Element
  * @typedef {{ theme: "auto"|"clair"|"sombre", fond: object }} Reglages
- * @typedef {{ versionSchema: number, grille: Element[], reglages: Reglages }} Etat
+ * @typedef {{ versionSchema: number, grille: Element[], reglages: Reglages, reglagesAppareil: { fond?: object } }} Etat
  */
 import { VERSION_SCHEMA } from "./constantes.js";
 import { couleurDepuisTexte } from "./couleurs.js";
@@ -52,5 +52,7 @@ export function etatInitial() {
     versionSchema: VERSION_SCHEMA,
     grille: [],
     reglages: { theme: "auto", fond: { type: "aucun" } },
+    // Settings of this device only, never synced (local picture background).
+    reglagesAppareil: {},
   };
 }

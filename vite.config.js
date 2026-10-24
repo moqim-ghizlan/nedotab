@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => {
       outDir: "dist/extension",
       emptyOutDir: true,
       sourcemap: true,
+      // The Firebase chunk (Auth + Firestore + Storage) is ~500 KB, loaded only with an account.
+      chunkSizeWarningLimit: 700,
       modulePreload: { polyfill: false },
       rollupOptions: { input: { newtab: "newtab.html" } },
     },

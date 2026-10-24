@@ -22,11 +22,12 @@ describe("modele", () => {
     expect(d.type).toBe("dossier");
     expect(d.items).not.toBe(items);
   });
-  it("etatInitial a versionSchema 1", () => {
+  it("etatInitial a versionSchema 2 et des réglages propres à l'appareil", () => {
     expect(etatInitial()).toEqual({
-      versionSchema: 1,
+      versionSchema: 2,
       grille: [],
       reglages: { theme: "auto", fond: { type: "aucun" } },
+      reglagesAppareil: {},
     });
   });
 });

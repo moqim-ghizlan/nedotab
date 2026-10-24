@@ -53,3 +53,14 @@ export async function obtenirJetonGoogle() {
 }
 
 export async function oublierJetonGoogle() {}
+
+export const copies = {
+  async enregistrer() {},
+  async lister() {
+    return [];
+  },
+};
+
+export async function idAppareil() {
+  return "pwa";
+}

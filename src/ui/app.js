@@ -3,9 +3,10 @@ import { listerDossiers } from "../core/arbre.js";
 import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
+import { fondEffectif } from "../core/reglages.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
-import { demanderNomDossier } from "./dialogues/commun.js";
+import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
@@ -15,6 +16,8 @@ import { creerRecherche } from "./recherche.js";
 import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
 import { creerCompte } from "./services/compte.js";
+import { creerSynchro } from "./services/synchro.js";
+import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -75,7 +78,7 @@ export async function demarrerApp(racine) {
     "aria-label": "Réglages",
     title: "Réglages",
     texte: "⚙",
-    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages, compte }),
+    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages, session }),
   });
   // Account: Firebase is only loaded when a user signed in before (indicator) or signs in.
   const compte = creerCompte();
@@ -83,7 +86,7 @@ export async function demarrerApp(racine) {
     type: "button",
     class: "bouton-compte",
     hidden: true,
-    onclick: () => ouvrirReglages(store, { retourFocus: boutonCompte, compte }),
+    onclick: () => ouvrirReglages(store, { retourFocus: boutonCompte, session }),
   });
   compte.abonner((e) => {
     const connecte = e.statut === "connecte" && e.profil;
@@ -93,7 +96,63 @@ export async function demarrerApp(racine) {
       boutonCompte.replaceChildren(creerAvatar(e.profil, { taille: 30 }));
     }
   });
-  compte.demarrer();
+  const synchro = creerSynchro({
+    store,
+    compte,
+    demanderChoix: demanderChoixPremiereSynchro,
+    informer: (message) => toast(message, { duree: 6000 }),
+    lireMajLocale: async () => (await stockage.lire().catch(() => null))?.meta?.majLe ?? null,
+  });
+  synchro.abonner((e) => boutonCompte.classList.toggle("en-synchro", e.enCours));
+  synchro.abonner((e) => {
+    if (e.erreur && !e.enCours) {
+      toast(e.erreur, {
+        type: "erreur",
+        cle: "synchro",
+        duree: 8000,
+        action: { libelle: "Réessayer", onClic: () => synchro.lancerPremiereSynchro() },
+      });
+    }
+  });
+  /** Actions of the account section: sign-in chains the first synchronisation. */
+  const session = {
+    compte,
+    synchro,
+    async connecter() {
+      if (await compte.connecter()) await synchro.lancerPremiereSynchro();
+    },
+    synchroniser: () => synchro.lancerPremiereSynchro(),
+    async deconnecter() {
+      const garder = await demander({
+        titre: "Se déconnecter",
+        message: "Garder une copie de vos sites sur cet ordinateur ?",
+        boutons: [
+          { libelle: "Annuler", valeur: null },
+          { libelle: "Non, vider cet ordinateur", valeur: "non" },
+          { libelle: "Oui, garder une copie", valeur: "oui", principal: true },
+        ],
+      });
+      if (!garder) return;
+      await synchro.quitter({ garderCopie: garder === "oui" });
+      await compte.deconnecter();
+    },
+    async restaurerCopie() {
+      const ok = await demander({
+        titre: "Restaurer la copie de cet ordinateur",
+        message:
+          "Vos sites seront remplacés par la dernière copie faite avant une synchronisation.",
+        boutons: [
+          { libelle: "Annuler", valeur: false },
+          { libelle: "Restaurer", valeur: true, principal: true },
+        ],
+      });
+      if (!ok) return;
+      toast(
+        (await synchro.restaurerCopie()) ? "Copie restaurée" : "Aucune copie sur cet ordinateur",
+      );
+    },
+  };
+  compte.demarrer().then(() => synchro.demarrer());
   const barre = el("div", { class: "barre-haut" }, boutonCompte, boutonReglages);
   racine.replaceChildren(barre, page, pied, annonces);
   const annoncer = (texte) => {
@@ -169,12 +228,14 @@ export async function demarrerApp(racine) {
   performance.measure("nedotab:premier-rendu", "nedotab:debut", "nedotab:grille");
 
   // Theme and background follow the settings (also when another tab changes them).
-  let reglagesAppliques = store.lire().reglages;
-  appliquerReglages(reglagesAppliques);
+  // The background shown is the device's local picture if any, else the synced one.
+  const visibles = (e) => ({ ...e.reglages, fond: fondEffectif(e) });
+  let appliques = store.lire();
+  appliquerReglages(visibles(appliques));
   store.abonner((e) => {
-    if (e.reglages !== reglagesAppliques) {
-      reglagesAppliques = e.reglages;
-      appliquerReglages(e.reglages);
+    if (e.reglages !== appliques.reglages || e.reglagesAppareil !== appliques.reglagesAppareil) {
+      appliques = e;
+      appliquerReglages(visibles(e));
     }
   });
 

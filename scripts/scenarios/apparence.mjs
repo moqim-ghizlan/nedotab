@@ -25,7 +25,10 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
       `(() => { const s = getComputedStyle(document.getElementById("fond")); return { couleur: s.backgroundColor, image: s.backgroundImage, classe: document.body.className }; })()`,
     );
   const etatReglages = () =>
-    p.eval(`chrome.storage.local.get("etat").then(({ etat }) => etat.reglages)`);
+    // The picture background is device-only (reglagesAppareil, schema 2).
+    p.eval(
+      `chrome.storage.local.get("etat").then(({ etat }) => ({ ...etat.reglages, fond: etat.reglagesAppareil?.fond ?? etat.reglages.fond }))`,
+    );
 
   // Panel
   await p.eval(`document.querySelector(".bouton-reglages").click()`);

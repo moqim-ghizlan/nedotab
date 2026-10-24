@@ -1,7 +1,7 @@
 import { A } from "../core/actions.js";
 import { parcourir } from "../core/arbre.js";
 import { URL_SITE } from "../core/constantes.js";
-import { FLOU_MAX, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
+import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { sectionCompte } from "./reglages/compte.js";
@@ -47,12 +47,12 @@ function section(titre, ...contenu) {
  * shows live, without a "Save" button). Built as independent sections so that later
  * versions can add theirs (account, AI…).
  */
-export function ouvrirReglages(store, { retourFocus, compte } = {}) {
+export function ouvrirReglages(store, { retourFocus, session } = {}) {
   if (ouvert) {
     ouvert.fermer();
     return null;
   }
-  const lire = () => store.lire().reglages;
+  const lire = () => ({ ...store.lire().reglages, fond: fondEffectif(store.lire()) });
   const modifier = (changements) => store.envoyer({ type: A.REGLAGES_MODIFIER, changements });
 
   // --- Apparence -------------------------------------------------------------------------
@@ -244,7 +244,7 @@ export function ouvrirReglages(store, { retourFocus, compte } = {}) {
   };
 
   // --- Compte (account) -----------------------------------------------------------------
-  const compteUi = compte ? sectionCompte(compte) : null;
+  const compteUi = session ? sectionCompte(session) : null;
 
   // --- panel ---------------------------------------------------------------------------
   const panneau = el(

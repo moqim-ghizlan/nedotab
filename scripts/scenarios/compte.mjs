@@ -98,6 +98,10 @@ export async function scenarioCompte({ nav, url, verifier, dossier }) {
   await p.eval(
     `[...document.querySelectorAll(".compte button")].find((b) => b.textContent === "Se déconnecter").click()`,
   );
+  await attendre(300);
+  await p.eval(
+    `[...document.querySelectorAll("dialog[open] button")].find((b) => b.textContent.startsWith("Oui")).click()`,
+  );
   await attendre(800);
   verifier(
     "Déconnexion : avatar retiré",

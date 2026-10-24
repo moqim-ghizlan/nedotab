@@ -101,3 +101,38 @@ export function oublierJetonGoogle(token) {
   if (EMULATEURS) return Promise.resolve();
   return chrome.identity.removeCachedAuthToken({ token });
 }
+
+const PREFIXE_COPIE = "copieAvantSynchro:";
+
+/**
+ * Safety copies of the local state, written before any synchronisation step
+ * (the 3 most recent are kept). Returned newest first: [{ cle, date, etat }].
+ */
+export const copies = {
+  async enregistrer(etat) {
+    const cle = `${PREFIXE_COPIE}${new Date().toISOString()}`;
+    await chrome.storage.local.set({ [cle]: etat });
+    const toutes = (await copies.lister()).map((c) => c.cle);
+    const anciennes = toutes.slice(3);
+    if (anciennes.length) await chrome.storage.local.remove(anciennes);
+    return cle;
+  },
+  async lister() {
+    const tout = await chrome.storage.local.get(null);
+    return Object.keys(tout)
+      .filter((k) => k.startsWith(PREFIXE_COPIE))
+      .sort()
+      .reverse()
+      .map((cle) => ({ cle, date: Date.parse(cle.slice(PREFIXE_COPIE.length)), etat: tout[cle] }));
+  },
+};
+
+/** Persistent id of this installation (not of the tab): who wrote the account's data. */
+export async function idAppareil() {
+  let id = await preferences.lire("idAppareil");
+  if (!id) {
+    id = globalThis.crypto.randomUUID();
+    await preferences.ecrire("idAppareil", id);
+  }
+  return id;
+}

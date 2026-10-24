@@ -16,7 +16,7 @@ import {
   trouver,
 } from "./arbre.js";
 import { PROFONDEUR_MAX } from "./constantes.js";
-import { modifierReglages } from "./reglages.js";
+import { modifierReglagesEtat } from "./reglages.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -31,6 +31,7 @@ export const A = {
   GRILLE_REMPLACER: "GRILLE_REMPLACER",
   FUSIONNER: "FUSIONNER",
   REGLAGES_MODIFIER: "REGLAGES_MODIFIER",
+  SYNCHRO_APPLIQUER: "SYNCHRO_APPLIQUER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -152,9 +153,13 @@ export function reduire(etat, action) {
     case A.DOSSIER_SUPPRIMER:
       return avecGrille(etat, supprimerDossier(etat.grille, action));
     case A.REGLAGES_MODIFIER: {
-      const reglages = modifierReglages(etat.reglages, action.changements);
-      return reglages === etat.reglages ? etat : { ...etat, reglages };
+      return modifierReglagesEtat(etat, action.changements);
     }
+    case A.SYNCHRO_APPLIQUER:
+      // State chosen during a synchronisation (already migrated and validated): it is a
+      // local change, saved and shown in the other tabs. Device-only settings are kept.
+      if (!Array.isArray(action.grille) || !action.reglages) return etat;
+      return { ...etat, grille: action.grille, reglages: action.reglages };
     case A.FUSIONNER:
       return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:

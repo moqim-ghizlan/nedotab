@@ -36,8 +36,13 @@ function logoGoogle() {
   return svg;
 }
 
-/** "Compte" section of the settings panel. Returns the section and a teardown. */
-export function sectionCompte(compte) {
+/**
+ * "Compte" section of the settings panel. `session` gathers the account (compte), the
+ * synchronisation (synchro) and the actions that chain them (connecter, deconnecter,
+ * synchroniser, restaurerCopie). Returns the section and a teardown.
+ */
+export function sectionCompte(session) {
+  const { compte, synchro } = session;
   const contenu = el("div", { class: "compte" });
   const section = el(
     "section",
@@ -45,9 +50,25 @@ export function sectionCompte(compte) {
     el("h3", { id: "titre-compte", texte: "Compte" }),
     contenu,
   );
+  const bouton = (texte, onclick, classe = "bouton") =>
+    el("button", { type: "button", class: classe, texte, onclick });
+  const erreurAvecReessai = (message, reessayer) =>
+    el(
+      "p",
+      { class: "compte-erreur", role: "alert" },
+      el("span", { texte: message }),
+      bouton("Réessayer", reessayer, "lien-discret"),
+    );
 
-  const rendre = (etat) => {
+  const rendre = () => {
+    const etat = compte.lire();
+    const sync = synchro?.lire() ?? { mode: "local" };
     if (etat.statut === "connecte" && etat.profil) {
+      const etatSynchro = sync.enCours
+        ? "Synchronisation…"
+        : sync.mode === "compte"
+          ? "Synchronisation activée : vos sites sont enregistrés sur votre compte."
+          : "Synchronisation non activée : vos sites restent sur cet ordinateur.";
       contenu.replaceChildren(
         el(
           "div",
@@ -60,17 +81,21 @@ export function sectionCompte(compte) {
             etat.profil.nom ? el("span", { texte: etat.profil.email }) : null,
           ),
         ),
-        el("p", {
-          class: "reglages-note",
-          texte:
-            "Vos sites restent pour l'instant sur cet ordinateur ; la synchronisation arrive bientôt.",
-        }),
-        el("button", {
-          type: "button",
-          class: "bouton",
-          texte: "Se déconnecter",
-          onclick: () => compte.deconnecter(),
-        }),
+        el("p", { class: "reglages-note", "aria-live": "polite", texte: etatSynchro }),
+        ...(sync.erreur ? [erreurAvecReessai(sync.erreur, () => session.synchroniser())] : []),
+        el(
+          "div",
+          { class: "compte-actions" },
+          sync.mode !== "compte" && !sync.enCours
+            ? bouton(
+                "Synchroniser maintenant",
+                () => session.synchroniser(),
+                "bouton bouton--principal",
+              )
+            : null,
+          bouton("Restaurer la copie de cet ordinateur", () => session.restaurerCopie()),
+          bouton("Se déconnecter", () => session.deconnecter()),
+        ),
       );
       return;
     }
@@ -78,7 +103,7 @@ export function sectionCompte(compte) {
     contenu.replaceChildren(
       el("p", {
         class: "reglages-note",
-        texte: "Connectez-vous pour synchroniser vos sites entre vos appareils (bientôt).",
+        texte: "Connectez-vous pour retrouver vos sites sur vos autres ordinateurs.",
       }),
       el(
         "button",
@@ -86,29 +111,15 @@ export function sectionCompte(compte) {
           type: "button",
           class: "bouton-google",
           disabled: enCours,
-          onclick: () => compte.connecter(),
+          onclick: () => session.connecter(),
         },
         logoGoogle(),
         el("span", { texte: enCours ? "Connexion…" : "Se connecter avec Google" }),
       ),
-      ...(etat.erreur
-        ? [
-            el(
-              "p",
-              { class: "compte-erreur", role: "alert" },
-              el("span", { texte: etat.erreur }),
-              el("button", {
-                type: "button",
-                class: "lien-discret",
-                texte: "Réessayer",
-                onclick: () => compte.connecter(),
-              }),
-            ),
-          ]
-        : []),
+      ...(etat.erreur ? [erreurAvecReessai(etat.erreur, () => session.connecter())] : []),
     );
   };
-  rendre(compte.lire());
-  const arreter = compte.abonner(rendre);
-  return { section, arreter };
+  rendre();
+  const arrets = [compte.abonner(rendre), synchro?.abonner(rendre)].filter(Boolean);
+  return { section, arreter: () => arrets.forEach((a) => a()) };
 }

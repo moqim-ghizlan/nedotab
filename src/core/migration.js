@@ -1,10 +1,24 @@
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { etatInitial } from "./modele.js";
-import { validerReglages } from "./reglages.js";
+import { validerReglages, validerReglagesAppareil } from "./reglages.js";
 
 /** Successive migrations: MIGRATIONS[n] turns schema n into schema n + 1. */
 const MIGRATIONS = {
   0: (brut) => ({ ...brut, versionSchema: 1 }),
+  // 1 → 2: settings split. A local picture background is never synced: it moves to
+  // reglagesAppareil (this device only); the synced reglages keep everything else.
+  1: (brut) => {
+    const reglages = brut.reglages && typeof brut.reglages === "object" ? brut.reglages : {};
+    if (reglages.fond?.type === "image") {
+      return {
+        ...brut,
+        versionSchema: 2,
+        reglages: { ...reglages, fond: { type: "aucun" } },
+        reglagesAppareil: { fond: reglages.fond },
+      };
+    }
+    return { ...brut, versionSchema: 2, reglagesAppareil: brut.reglagesAppareil ?? {} };
+  },
 };
 
 /**
@@ -99,5 +113,6 @@ export function valider(
     versionSchema: etat?.versionSchema ?? base.versionSchema,
     grille,
     reglages: validerReglages({ ...base.reglages, ...etat?.reglages }),
+    reglagesAppareil: validerReglagesAppareil(etat?.reglagesAppareil),
   };
 }

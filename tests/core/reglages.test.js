@@ -10,7 +10,7 @@ import {
 } from "../../src/core/couleurs.js";
 import { migrer } from "../../src/core/migration.js";
 import { etatInitial } from "../../src/core/modele.js";
-import { validerFond } from "../../src/core/reglages.js";
+import { fondEffectif, validerFond } from "../../src/core/reglages.js";
 import { DEGRADES } from "../../src/ui/fonds.js";
 
 describe("luminance et choix du texte", () => {
@@ -65,7 +65,7 @@ describe("REGLAGES_MODIFIER", () => {
   it("borne voile et flou", () => {
     const fond = modifier({
       fond: { type: "image", ref: "local:x", dominante: "#123456", voile: 3, flou: 99 },
-    }).reglages.fond;
+    }).reglagesAppareil.fond;
     expect(fond).toMatchObject({ voile: 0.7, flou: 20 });
     expect(validerFond({ type: "image", ref: "local:x", voile: -1, flou: -5 })).toMatchObject({
       voile: 0,
@@ -95,5 +95,48 @@ describe("migration des réglages", () => {
       theme: "auto",
       fond: { type: "aucun" },
     });
+  });
+});
+
+describe("schéma 2 : réglages de l'appareil", () => {
+  it("migration 1 → 2 : un fond image local passe dans reglagesAppareil", () => {
+    const fond = { type: "image", ref: "local:x", dominante: "#123456", voile: 0.2, flou: 0 };
+    const { etat } = migrer({ versionSchema: 1, grille: [], reglages: { theme: "sombre", fond } });
+    expect(etat.versionSchema).toBe(2);
+    expect(etat.reglages).toEqual({ theme: "sombre", fond: { type: "aucun" } });
+    expect(etat.reglagesAppareil.fond).toMatchObject({ ref: "local:x" });
+  });
+  it("migration 1 → 2 sans image : reglagesAppareil vide", () => {
+    const { etat } = migrer({
+      versionSchema: 1,
+      grille: [],
+      reglages: { theme: "auto", fond: { type: "degrade", valeur: "nuit" } },
+    });
+    expect(etat.reglages.fond).toEqual({ type: "degrade", valeur: "nuit" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
+  it("choisir une image : appareil seulement ; choisir un dégradé : synchronisé et l'image locale est retirée", () => {
+    let etat = etatInitial();
+    etat = reduire(etat, {
+      type: A.REGLAGES_MODIFIER,
+      changements: { fond: { type: "image", ref: "local:y", dominante: "#000000" } },
+    });
+    expect(etat.reglages.fond).toEqual({ type: "aucun" });
+    expect(fondEffectif(etat).type).toBe("image");
+    etat = reduire(etat, {
+      type: A.REGLAGES_MODIFIER,
+      changements: { fond: { type: "degrade", valeur: "lagon" } },
+    });
+    expect(etat.reglagesAppareil).toEqual({});
+    expect(fondEffectif(etat)).toEqual({ type: "degrade", valeur: "lagon" });
+  });
+  it("reglagesAppareil invalide au chargement : ignoré", () => {
+    const { etat } = migrer({
+      versionSchema: 2,
+      grille: [],
+      reglages: {},
+      reglagesAppareil: { fond: { type: "couleur", valeur: "#000000" } },
+    });
+    expect(etat.reglagesAppareil).toEqual({});
   });
 });

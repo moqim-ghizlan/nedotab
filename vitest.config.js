@@ -28,6 +28,8 @@ export default defineConfig({
               test: {
                 name: "regles",
                 env: { VITE_UTILISER_EMULATEURS: "true" },
+                // The files share the emulators and clear them: one at a time.
+                fileParallelism: false,
                 environment: "node",
                 include: ["tests/regles/**/*.test.js"],
                 testTimeout: 20000,

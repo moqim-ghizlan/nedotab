@@ -2,6 +2,48 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.3.0] - 2026-10-24
+
+### Ajouté
+
+- Première synchronisation à la connexion (ou « Synchroniser maintenant »), sans perte
+  possible :
+  - rien des deux côtés : le document du compte est créé ;
+  - sites sur cet ordinateur seulement : ils sont envoyés (« Vos 42 sites sont maintenant
+    sur votre compte ») ;
+  - sites sur le compte seulement : ils sont récupérés ;
+  - sites des deux côtés et différents : fenêtre « Des sites existent déjà sur votre
+    compte » avec nombres de sites et dossiers, dates et aperçu des icônes ; choix entre
+    garder ceux du compte, garder ceux de cet ordinateur (le compte est d'abord
+    sauvegardé, type « avant-restauration ») ou **fusionner** (mis en avant : les sites de
+    cet ordinateur absents du compte vont dans « Importé de cet ordinateur — JJ/MM/AAAA »,
+    sans doublon d'adresse, dossiers trop profonds aplatis). Annuler = rester en local.
+- Copie de sécurité de l'état local avant toute étape (3 gardées) et « Restaurer la copie
+  de cet ordinateur » dans Réglages → Compte.
+- Mode compte : chaque modification locale est aussi écrite en ligne, regroupée 1,5 s
+  après la dernière action ; seuls les champs autorisés par les règles sont envoyés.
+- Déconnexion : « Garder une copie de vos sites sur cet ordinateur ? » (Oui par défaut ;
+  Non vide la grille, utile sur un ordinateur partagé).
+- Schéma 2 : `reglagesAppareil` (propres à l'appareil, jamais envoyés) reçoit le fond
+  image local ; migration 1 → 2 testée.
+- Identifiant d'appareil persistant (`majPar`), indicateur « Synchronisation… » sur
+  l'avatar, erreurs réseau : retour en mode local avec « Réessayer ».
+
+### Remarques
+
+- La réception des changements faits sur un autre appareil arrive en V2.4.
+- La page Confidentialité du site sera réécrite en V2.10 (données envoyées au compte).
+
+### Tests
+
+- 230 tests (fusion, comparaison, migration 1 → 2, réglages de l'appareil).
+- Émulateurs : 42/42, dont les 4 cas de première connexion et les 3 choix, Annuler,
+  données d'une version future non écrasées, écritures regroupées, double clic, déconnexion
+  et restauration de la copie.
+- Navigateur avec émulateurs : 29/29, dont deux « ordinateurs » sur le même compte (envoi,
+  champs autorisés seulement, modification envoyée, fenêtre de choix, fusion sans doublon,
+  déconnexion sans copie) ; sans émulateur : 149/149.
+
 ## [2.2.0] - 2026-10-24
 
 ### Ajouté
