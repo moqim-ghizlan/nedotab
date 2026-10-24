@@ -111,3 +111,30 @@ export function deplacer(grille, id, versParentId = null, versIndex) {
   const sans = retirer(grille, id).grille;
   return inserer(sans, r.element, versParentId, index);
 }
+
+/** The first `n` sites of a folder, depth-first (sub-folders themselves are skipped). */
+export function apercuDossier(dossier, n = 4) {
+  const sites = [];
+  for (const e of parcourir(dossier.items)) {
+    if (e.type === "site") sites.push(e);
+    if (sites.length >= n) break;
+  }
+  return sites;
+}
+
+/** Total number of sites in a folder, all levels. */
+export function compterSites(dossier) {
+  let n = 0;
+  for (const e of parcourir(dossier.items)) if (e.type === "site") n++;
+  return n;
+}
+
+/** Every folder of the grid with its depth (1 = in the home grid), depth-first. */
+export function listerDossiers(grille, niveau = 1, acc = []) {
+  for (const e of grille) {
+    if (e.type !== "dossier") continue;
+    acc.push({ dossier: e, niveau });
+    listerDossiers(e.items, niveau + 1, acc);
+  }
+  return acc;
+}

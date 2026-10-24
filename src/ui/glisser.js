@@ -10,9 +10,9 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").match
  * line with the state. Renders requested during a drag are deferred until the drop.
  *
  * @param {HTMLElement} conteneur persistent list element (never recreated by the renderer)
- * @param {{ parentId?: string|null, rendre: () => void }} options
+ * @param {{ parentId?: () => string|null, rendre: () => void }} options parentId gives the level shown
  */
-export function activerGlisser(store, conteneur, { parentId = null, rendre }) {
+export function activerGlisser(store, conteneur, { parentId = () => null, rendre }) {
   let glisserEnCours = false;
 
   const sortable = Sortable.create(conteneur, {
@@ -36,7 +36,7 @@ export function activerGlisser(store, conteneur, { parentId = null, rendre }) {
         store.envoyer({
           type: A.ELEMENT_DEPLACER,
           id,
-          versParentId: parentId,
+          versParentId: parentId(),
           versIndex: evt.newDraggableIndex,
         });
       }

@@ -1,19 +1,30 @@
 import { el } from "./dom.js";
 import { creerTuile } from "./tuile.js";
+import { creerTuileDossier } from "./tuileDossier.js";
 
 /**
- * Rebuilds the whole grid in a fragment and swaps it in one go.
- * The "+" tile is not part of the state: the renderer adds it at the end.
+ * Rebuilds a grid level in a fragment and swaps it in one go. Sites and folders share the
+ * same cell; the "+" tile is not part of the state: the renderer adds it at the end.
  */
-export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
+export function rendreGrille(
+  conteneur,
+  elements,
+  { avecAjout = false, libelleAjout = "Ajouter un site" } = {},
+) {
   const fragment = document.createDocumentFragment();
   for (const element of elements) {
-    if (element.type !== "site") continue;
+    const tuile =
+      element.type === "dossier"
+        ? creerTuileDossier(element)
+        : element.type === "site"
+          ? creerTuile(element)
+          : null;
+    if (!tuile) continue;
     fragment.append(
       el(
         "li",
         { class: "case case--element" },
-        creerTuile(element),
+        tuile,
         el("button", {
           type: "button",
           class: "tuile-plus",
@@ -34,7 +45,7 @@ export function rendreGrille(conteneur, elements, { avecAjout = false } = {}) {
           {
             type: "button",
             class: "tuile tuile--ajout",
-            "aria-label": "Ajouter un site",
+            "aria-label": libelleAjout,
             dataset: { action: "ajouter" },
           },
           el("span", {
@@ -61,7 +72,8 @@ const DEPLACEMENTS = { ArrowLeft: -1, ArrowRight: 1 };
 export function activerClavierGrille(conteneur) {
   conteneur.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea, select, [contenteditable]")) return;
-    if (e.altKey || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
     const tuiles = [...conteneur.querySelectorAll(".tuile")];
     const actuel = tuiles.indexOf(document.activeElement);
     if (actuel < 0) return;

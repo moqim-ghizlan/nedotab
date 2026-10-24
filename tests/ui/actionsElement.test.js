@@ -35,6 +35,8 @@ describe("menu contextuel", () => {
       "ModifierF2",
       "Ouvrir dans un nouvel onglet",
       "Copier le lien",
+      "Déplacer vers…",
+      "Créer un dossier avec ce site",
       "SupprimerSuppr",
     ]);
     menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));

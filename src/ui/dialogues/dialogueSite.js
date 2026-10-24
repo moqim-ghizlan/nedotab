@@ -78,7 +78,7 @@ function blocPermission({ onAccordee }) {
 }
 
 /** "Ajouter un site" dialog (native <dialog>, focus and Escape handled by the browser). */
-export function ouvrirAjoutSite(store, { apresAjout } = {}) {
+export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
   const champUrl = el("input", {
     id: "ajout-url",
     name: "url",
@@ -229,7 +229,7 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
     }
     const titreSaisi = champTitre.value.trim();
     const site = creerSite({ titre: titreSaisi || domaine(r.url), url: r.url });
-    store.envoyer({ type: A.SITE_AJOUTER, site, parentId: null });
+    store.envoyer({ type: A.SITE_AJOUTER, site, parentId });
     const enCours = recherche;
     enCours?.promesse.then((res) => {
       const changements = { icone: res.icone };

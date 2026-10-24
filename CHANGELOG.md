@@ -2,6 +2,37 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.6.0] - 2026-10-24
+
+### Ajouté
+
+- Dossiers (un niveau) : création depuis « + » (menu Ajouter un site / Nouveau dossier) ou
+  par « Créer un dossier avec ce site » (le dossier prend la place du site).
+- Tuile dossier : aperçu 2 × 2 des quatre premiers sites, fond translucide, libellé
+  accessible « Dossier Travail, 7 éléments » ; dossier vide dessiné à part.
+- Fenêtre de dossier : même grille que l'accueil (glisser, Alt+flèches, menus), titre
+  modifiable sur place (Entrée valide, Échap annule), « + » ajoute un site dans le dossier,
+  fermeture par Échap, bouton ou clic sur le fond, focus rendu à la tuile du dossier.
+  Elle suit les changements faits dans un autre onglet et se ferme si le dossier disparaît.
+- « Déplacer vers… » (Accueil et dossiers, emplacement actuel grisé).
+- Menu d'un dossier : Ouvrir, Renommer, Supprimer. Suppression d'un dossier non vide avec
+  confirmation : garder les sites dans l'accueil (à la place du dossier) ou tout supprimer,
+  puis « Annuler ».
+- Dossier vidé par un déplacement ou une suppression : toast « Le dossier … est vide —
+  Supprimer le dossier » (jamais supprimé d'office).
+- Actions `DOSSIER_CREER`, `DOSSIER_RENOMMER` (1 à 40 caractères, « Dossier » si vide),
+  `DOSSIER_SUPPRIMER` (deux modes), `GRILLE_REMPLACER` (annulation).
+- Plusieurs toasts peuvent coexister (annulation + dossier vide) ; dans une fenêtre ouverte,
+  ils s'affichent dans la fenêtre pour rester cliquables.
+
+### Tests
+
+- 128 tests, dont 1 500 opérations aléatoires (créer, supprimer, déplacer) sans perte ni
+  doublon, aperçu et comptage sur des arbres imbriqués.
+- Navigateur : 70/70, dont le nouveau scénario dossiers (19 vérifications : deux modes de
+  création, aperçu, fenêtre au clavier, renommage sur place, ajout dans le dossier, fenêtre
+  synchronisée entre onglets, suppression dans les deux modes avec annulation, dossier vidé).
+
 ## [1.5.0] - 2026-10-24
 
 ### Ajouté

@@ -2,7 +2,15 @@
  * Actions are plain JSON objects ({ type, ...data }). The reducer is the only way to change
  * the state: it never mutates its input and returns a new object along the modified path.
  */
-import { deplacer, inserer, remplacer, retirer, trouver } from "./arbre.js";
+import {
+  deplacer,
+  inserer,
+  modifierListe,
+  parcourir,
+  remplacer,
+  retirer,
+  trouver,
+} from "./arbre.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -11,7 +19,62 @@ export const A = {
   ELEMENT_SUPPRIMER: "ELEMENT_SUPPRIMER",
   ELEMENT_RESTAURER: "ELEMENT_RESTAURER",
   ELEMENT_DEPLACER: "ELEMENT_DEPLACER",
+  DOSSIER_CREER: "DOSSIER_CREER",
+  DOSSIER_RENOMMER: "DOSSIER_RENOMMER",
+  DOSSIER_SUPPRIMER: "DOSSIER_SUPPRIMER",
+  GRILLE_REMPLACER: "GRILLE_REMPLACER",
 };
+
+export const TITRE_DOSSIER_MAX = 40;
+
+/** Folder title: trimmed, 1 to 40 characters, "Dossier" when empty. */
+export function nettoyerTitreDossier(titre) {
+  const t = String(titre ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return t ? [...t].slice(0, TITRE_DOSSIER_MAX).join("") : "Dossier";
+}
+
+/**
+ * Creates `dossier` in `parentId` at `index` and moves the elements listed in
+ * `idsAInclure` into it, in grid order. `index` is the position in the list as it is
+ * before the move; elements taken from before that position are accounted for.
+ */
+function creerDossier(grille, { dossier, parentId = null, index, idsAInclure = [] }) {
+  if (trouver(grille, dossier.id)) return grille;
+  if (parentId != null && trouver(grille, parentId)?.element.type !== "dossier") return grille;
+  const voulus = new Set(idsAInclure.filter((id) => id !== parentId));
+  const inclus = [...parcourir(grille)].filter((e) => voulus.has(e.id));
+  // An element inside another included folder moves with it.
+  const racines = inclus.filter(
+    (e) => !inclus.some((d) => d !== e && d.type === "dossier" && trouver(d.items, e.id)),
+  );
+  if (
+    racines.some(
+      (e) =>
+        e.type === "dossier" && (e.id === parentId || (parentId && trouver(e.items, parentId))),
+    )
+  ) {
+    return grille;
+  }
+  const liste = parentId == null ? grille : trouver(grille, parentId).element.items;
+  let position = index ?? liste.length;
+  for (let i = 0; i < Math.min(position, liste.length); i++) {
+    if (racines.includes(liste[i])) position--;
+  }
+  let g = grille;
+  for (const e of racines) g = retirer(g, e.id).grille;
+  return inserer(g, { ...dossier, items: [...dossier.items, ...racines] }, parentId, position);
+}
+
+function supprimerDossier(grille, { id, mode }) {
+  const r = trouver(grille, id);
+  if (r?.element.type !== "dossier") return grille;
+  if (mode !== "viderDansParent") return retirer(grille, id).grille;
+  return modifierListe(grille, r.parent?.id ?? null, (liste) =>
+    liste.flatMap((e) => (e.id === id ? e.items : [e])),
+  );
+}
 
 /** Fields of a site that SITE_MODIFIER may change. */
 const CHAMPS_SITE = ["titre", "url", "icone"];
@@ -62,6 +125,21 @@ export function reduire(etat, action) {
         etat,
         deplacer(etat.grille, action.id, action.versParentId ?? null, action.versIndex),
       );
+    case A.DOSSIER_CREER:
+      return avecGrille(etat, creerDossier(etat.grille, action));
+    case A.DOSSIER_RENOMMER: {
+      const titre = nettoyerTitreDossier(action.titre);
+      return avecGrille(
+        etat,
+        remplacer(etat.grille, action.id, (e) =>
+          e.type === "dossier" && e.titre !== titre ? { ...e, titre } : e,
+        ),
+      );
+    }
+    case A.DOSSIER_SUPPRIMER:
+      return avecGrille(etat, supprimerDossier(etat.grille, action));
+    case A.GRILLE_REMPLACER:
+      return Array.isArray(action.grille) ? avecGrille(etat, action.grille) : etat;
     default:
       return etat;
   }

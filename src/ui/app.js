@@ -1,15 +1,21 @@
-import { reduire } from "../core/actions.js";
+import { A, reduire } from "../core/actions.js";
+import { listerDossiers } from "../core/arbre.js";
 import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
+import { creerDossier } from "../core/modele.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
+import { demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
-import { brancherActionsElements } from "./actionsElement.js";
-import { activerDeplacementClavier, activerGlisser } from "./glisser.js";
-import { activerClavierGrille, colonnes, rendreGrille } from "./grille.js";
+import { ouvrirFenetreDossier } from "./fenetreDossier.js";
+import { ouvrirMenu } from "./menuContextuel.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
+import { creerVueGrille } from "./vueGrille.js";
+
+/** Actions after which a folder that became empty is reported (not remote loads or undo). */
+const ACTIONS_LOCALES = new Set([A.ELEMENT_SUPPRIMER, A.ELEMENT_DEPLACER]);
 
 export async function demarrerApp(racine) {
   const stockage = plateforme.stockage();
@@ -60,40 +66,86 @@ export async function demarrerApp(racine) {
     requestAnimationFrame(() => (annonces.textContent = texte));
   };
 
-  const rendre = (e = store.lire()) => {
-    const estVide = e.grille.length === 0;
-    // The grid is rebuilt: remember which tile had the focus and give it back.
-    const focusId = grilleEl.contains(document.activeElement)
-      ? document.activeElement.closest("[data-id], [data-action]")
-      : null;
-    const cle = focusId?.dataset.id ?? focusId?.dataset.action;
+  const ouvrirDossier = (id, tuile) =>
+    ouvrirFenetreDossier(store, id, {
+      retourFocus: tuile,
+      lectureSeule: () => lectureSeule,
+      annoncer,
+    });
+
+  const nouveauDossier = async (retourFocus) => {
+    const titre = await demanderNomDossier({ retourFocus });
+    if (titre == null) return;
+    const dossier = creerDossier({ titre: titre.trim() || "Dossier" });
+    store.envoyer({ type: A.DOSSIER_CREER, dossier, parentId: null });
+    accueil.focaliser(dossier.id);
+  };
+
+  /** The home "+" offers a site or a folder. */
+  const menuAjout = (bouton) => {
+    const rect = bouton.getBoundingClientRect();
+    ouvrirMenu({
+      x: rect.left,
+      y: rect.bottom + 4,
+      retourFocus: bouton,
+      libelle: "Ajouter",
+      entrees: [
+        {
+          libelle: "Ajouter un site",
+          onChoix: () =>
+            ouvrirAjoutSite(store, { apresAjout: (site) => accueil.focaliser(site.id) }),
+        },
+        { libelle: "Nouveau dossier", onChoix: () => nouveauDossier(bouton) },
+      ],
+    });
+  };
+
+  const accueil = creerVueGrille({
+    store,
+    conteneur: grilleEl,
+    lectureSeule: () => lectureSeule,
+    annoncer,
+    ouvrirDossier,
+    ajouter: menuAjout,
+    libelleAjout: "Ajouter un site ou un dossier",
+  });
+  vide
+    .querySelector("button")
+    .addEventListener("click", (e) => !lectureSeule && menuAjout(e.currentTarget));
+
+  const rendre = () => {
+    const estVide = store.lire().grille.length === 0;
     vide.hidden = !estVide;
     grilleEl.hidden = estVide;
-    rendreGrille(grilleEl, e.grille, { avecAjout: !lectureSeule });
-    if (cle) {
-      grilleEl
-        .querySelector(`[data-id="${CSS.escape(cle)}"], [data-action="${CSS.escape(cle)}"]`)
-        ?.focus();
-    }
+    accueil.demanderRendu();
   };
   rendre();
-  const glisser = lectureSeule
-    ? { demanderRendu: () => rendre() }
-    : activerGlisser(store, grilleEl, { rendre });
-  store.abonner(() => glisser.demanderRendu());
-  activerClavierGrille(grilleEl);
-  if (!lectureSeule) {
-    activerDeplacementClavier(store, grilleEl, { annoncer, colonnes: () => colonnes(grilleEl) });
-  }
-  brancherActionsElements(store, grilleEl, { lectureSeule: () => lectureSeule });
 
-  const focaliser = (site) =>
-    requestAnimationFrame(() =>
-      grilleEl.querySelector(`[data-id="${CSS.escape(site.id)}"]`)?.focus(),
+  // A folder emptied by a local action: offer to delete it (never automatically).
+  let precedent = store.lire().grille;
+  store.abonner((etatCourant, action) => {
+    rendre();
+    const avant = precedent;
+    precedent = etatCourant.grille;
+    if (!ACTIONS_LOCALES.has(action.type)) return;
+    const pleins = new Set(
+      listerDossiers(avant)
+        .filter((d) => d.dossier.items.length)
+        .map((d) => d.dossier.id),
     );
-  page.addEventListener("click", (e) => {
-    if (e.target.closest("[data-action='ajouter']") && !lectureSeule) {
-      ouvrirAjoutSite(store, { apresAjout: focaliser });
+    const vides = listerDossiers(etatCourant.grille).filter(
+      (d) => d.dossier.items.length === 0 && pleins.has(d.dossier.id),
+    );
+    for (const { dossier } of vides) {
+      toast(`Le dossier « ${dossier.titre} » est vide`, {
+        cle: "dossierVide",
+        duree: 8000,
+        action: {
+          libelle: "Supprimer le dossier",
+          onClic: () =>
+            store.envoyer({ type: A.DOSSIER_SUPPRIMER, id: dossier.id, mode: "avecContenu" }),
+        },
+      });
     }
   });
 

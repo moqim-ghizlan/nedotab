@@ -1,0 +1,220 @@
+/* --- folder tile ------------------------------------------------------------------- */
+
+.tuile--dossier {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.tuile-icone--dossier {
+  display: grid;
+  grid-template-columns: repeat(2, 22px);
+  grid-template-rows: repeat(2, 22px);
+  gap: 4px;
+  place-content: center;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.tuile-icone--dossier .mini {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.tuile-icone--dossier .mini .tuile-icone {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 0.625rem;
+  box-shadow: none;
+}
+
+.tuile-icone--dossier .mini .tuile-icone--image {
+  padding: 3px;
+}
+
+.tuile-icone--dossier .mini--vide {
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bordure) 35%, transparent);
+}
+
+.tuile-icone--dossier-vide {
+  display: grid;
+  place-items: center;
+}
+
+.tuile-icone--dossier-vide::before {
+  content: "";
+  width: 26px;
+  height: 20px;
+  border: 2px solid var(--texte-secondaire);
+  border-radius: 3px 6px 4px 4px;
+  opacity: 0.6;
+}
+
+/* --- folder window ------------------------------------------------------------------ */
+
+.fenetre-dossier {
+  width: min(640px, calc(100vw - 2 * var(--espace-4)));
+  max-height: 80vh;
+  padding: 0;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-grand);
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+  overflow: hidden;
+}
+
+.fenetre-dossier[open] {
+  display: flex;
+  flex-direction: column;
+  animation: apparaitre 160ms ease-out;
+}
+
+.fenetre-dossier::backdrop {
+  background: var(--voile);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes apparaitre {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fenetre-dossier[open] {
+    animation: none;
+  }
+}
+
+.fenetre-entete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-4) var(--espace-4) var(--espace-2) var(--espace-5);
+}
+
+.fenetre-titre,
+.fenetre-titre-champ {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 4px var(--espace-2);
+  border: 1px solid transparent;
+  border-radius: var(--rayon-petit);
+  background: none;
+  font-size: var(--taille-l);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fenetre-titre {
+  cursor: text;
+}
+
+.fenetre-titre:hover {
+  border-color: var(--bordure);
+}
+
+.fenetre-titre-champ {
+  border-color: var(--accent);
+  background: var(--fond);
+}
+
+.fenetre-titre[hidden],
+.fenetre-titre-champ[hidden],
+.fenetre-vide[hidden] {
+  display: none;
+}
+
+.fenetre-fermer {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fenetre-fermer:hover {
+  background: var(--surface-2);
+  color: var(--texte);
+}
+
+.fenetre-corps {
+  padding: var(--espace-3) var(--espace-5) var(--espace-5);
+  overflow-y: auto;
+}
+
+.fenetre-vide {
+  margin: var(--espace-2) 0 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+/* --- "Déplacer vers…" and confirmations --------------------------------------------- */
+
+.dialogue-message {
+  margin: 0;
+  color: var(--texte-secondaire);
+}
+
+.dialogue-actions--empile {
+  flex-wrap: wrap;
+}
+
+.destinations {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.destination {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: 9px var(--espace-3);
+  border: 0;
+  border-radius: var(--rayon-petit);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.destination:hover:not([disabled]),
+.destination:focus-visible {
+  background: var(--surface-2);
+}
+
+.destination[disabled] {
+  color: var(--texte-secondaire);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.destination-icone {
+  width: 1.2em;
+  color: var(--accent);
+  text-align: center;
+}
+
+.destination-note {
+  margin-left: auto;
+  font-size: var(--taille-xs);
+}
