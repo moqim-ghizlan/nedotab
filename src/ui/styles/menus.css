@@ -9,6 +9,14 @@
   box-shadow: var(--ombre-forte);
 }
 
+/* Shown as a popover (top layer): undo the browser's centred popover layout. */
+.menu[popover] {
+  inset: auto;
+  margin: 0;
+  color: inherit;
+  overflow: visible;
+}
+
 .menu:focus {
   outline: none;
 }

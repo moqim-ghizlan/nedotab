@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.9.2] - 2026-10-24
+
+### Corrigé
+
+- Menu « ⋯ » (et clic droit) d'un site dans un dossier ou un sous-dossier : il s'ouvrait
+  derrière la fenêtre du dossier et n'était pas cliquable. Il est maintenant placé dans la
+  fenêtre ouverte et affiché au premier plan (popover).
+
+### Tests
+
+- Navigateur : « menu ⋯ dans un dossier au premier plan », « Échap ferme le menu, la
+  fenêtre du dossier reste ouverte ».
+
 ## [2.9.1] - 2026-10-24
 
 ### Corrigé

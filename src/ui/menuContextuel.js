@@ -71,6 +71,7 @@ export function ouvrirMenu({ x, y, entrees, retourFocus, libelle = "Actions" }) 
   function fermer(rendreFocus) {
     if (ouvert?.menu !== menu) return;
     ouvert = null;
+    if (menu.matches?.(":popover-open")) menu.hidePopover();
     menu.remove();
     document.removeEventListener("pointerdown", surClicDehors, true);
     document.removeEventListener("contextmenu", surClicDehors, true);
@@ -81,7 +82,16 @@ export function ouvrirMenu({ x, y, entrees, retourFocus, libelle = "Actions" }) 
   }
 
   menu.addEventListener("keydown", surTouche);
-  document.body.append(menu);
+  // Inside a modal window (folder window, dialog) the menu must belong to it: the rest of
+  // the page is inert there and the window is in the top layer, above any z-index. As a
+  // popover, the menu also goes to the top layer, above the window.
+  const modales = document.querySelectorAll("dialog[open]");
+  const parent = [...modales].reverse().find((d) => d.matches(":modal")) ?? document.body;
+  parent.append(menu);
+  if (typeof menu.showPopover === "function") {
+    menu.popover = "manual";
+    menu.showPopover();
+  }
   const { width, height } = menu.getBoundingClientRect();
   const marge = 8;
   menu.style.left = `${Math.max(marge, Math.min(x, innerWidth - width - marge))}px`;

@@ -132,6 +132,27 @@ export async function scenarioDossiers({ nav, url, verifier, dossier }) {
   verifier("Site ajouté dans le dossier", (await dedans()).split(",").length === 4);
   await p.capture(`${dossier}/fenetre-dossier.png`);
 
+  // "⋯" menu of a tile inside the folder window: shown above the window, and usable
+  await p.eval(`document.querySelector(".fenetre-dossier[open] .tuile-plus").click()`);
+  await attendre(200);
+  const menuDevant = await p.eval(`(() => {
+    const m = document.querySelector(".menu");
+    if (!m) return "aucun menu";
+    const r = m.getBoundingClientRect();
+    const dessus = document.elementFromPoint(r.left + r.width / 2, r.top + 12);
+    return m.contains(dessus) ? "ok" : (dessus?.className || dessus?.tagName);
+  })()`);
+  verifier("Menu « ⋯ » dans un dossier : au premier plan", menuDevant === "ok", menuDevant);
+  await p.capture(`${dossier}/menu-dans-dossier.png`);
+  await p.touche("Escape", { vk: 27 });
+  await attendre(150);
+  verifier(
+    "Échap ferme le menu, la fenêtre du dossier reste ouverte",
+    await p.eval(
+      `!document.querySelector(".menu") && !!document.querySelector(".fenetre-dossier[open]")`,
+    ),
+  );
+
   // Second tab: the open folder follows changes made in the first one
   const p2 = await nav.ouvrir(url);
   await attendre(300);
