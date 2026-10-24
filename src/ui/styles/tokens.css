@@ -1,0 +1,63 @@
+/*
+ * Design tokens. Direction "lichen": a calm mineral grey-green surface, pine ink,
+ * one deep teal accent. Every colour of the app goes through these variables.
+ */
+:root {
+  color-scheme: light dark;
+
+  --fond: #e4e8e1;
+  --surface: #f5f7f2;
+  --surface-2: #ecefe8;
+  --bordure: #cdd4ca;
+  --texte: #1d2a23;
+  --texte-secondaire: #58665d;
+  --accent: #2c6b5a;
+  --accent-texte: #ffffff;
+  --danger: #a33a2c;
+  --voile: rgb(20 30 25 / 0.38);
+
+  --police: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --taille-xs: 0.75rem;
+  --taille-s: 0.8125rem;
+  --taille-m: 0.9375rem;
+  --taille-l: 1.25rem;
+  --taille-xl: 2rem;
+
+  --rayon: 14px;
+  --rayon-petit: 8px;
+  --rayon-grand: 20px;
+
+  --espace-1: 4px;
+  --espace-2: 8px;
+  --espace-3: 12px;
+  --espace-4: 16px;
+  --espace-5: 24px;
+  --espace-6: 40px;
+
+  --ombre: 0 1px 2px rgb(29 42 35 / 0.08), 0 6px 18px rgb(29 42 35 / 0.1);
+  --ombre-forte: 0 2px 6px rgb(29 42 35 / 0.12), 0 18px 48px rgb(29 42 35 / 0.22);
+  --duree: 120ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #161d19;
+    --surface: #212a25;
+    --surface-2: #29332d;
+    --bordure: #36423b;
+    --texte: #e3e9e2;
+    --texte-secondaire: #9aa89f;
+    --accent: #78c2aa;
+    --accent-texte: #0f1c16;
+    --danger: #f08a7a;
+    --voile: rgb(0 0 0 / 0.55);
+    --ombre: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
+    --ombre-forte: 0 2px 6px rgb(0 0 0 / 0.35), 0 18px 48px rgb(0 0 0 / 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duree: 0ms;
+  }
+}

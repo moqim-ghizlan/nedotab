@@ -1,0 +1,29 @@
+{
+  "name": "nedotab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
+  "scripts": {
+    "dev:extension": "vite build --mode extension --watch",
+    "build:extension": "vite build --mode extension",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "icones": "node scripts/generer-icones.js",
+    "verifier": "node scripts/verifier-code-distant.js dist/extension",
+    "package": "npm run build:extension && npm run verifier && node scripts/empaqueter.js",
+    "verifier:navigateur": "node scripts/verifier-navigateur.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "happy-dom": "^21.0.4",
+    "prettier": "^3.9.10",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

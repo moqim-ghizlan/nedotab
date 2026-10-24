@@ -1,0 +1,56 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police);
+  font-size: var(--taille-m);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+#app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18vh var(--espace-4) var(--espace-6);
+}
+
+.marque {
+  margin: 0;
+  font-size: var(--taille-xl);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.version {
+  margin: var(--espace-2) 0 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  font-variant-numeric: tabular-nums;
+}
