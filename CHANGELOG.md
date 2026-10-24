@@ -2,6 +2,35 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.7.0] - 2026-10-24
+
+### Ajouté
+
+- Sauvegarde automatique du compte : au plus une par jour, une fois la synchronisation
+  établie, vérifiée au plus une fois par heure et par appareil (plusieurs onglets ne
+  multiplient pas les requêtes) ; jamais pour une grille vide ni pour une grille identique
+  à la dernière (empreinte stable) ; 30 gardées (rotation).
+- Sauvegarde manuelle nommée (« Sauvegarder maintenant », nom facultatif de 60 caractères
+  au plus), jamais effacée automatiquement ; 50 au plus, avec un message clair au-delà.
+- Réglages → **Sauvegardes** : liste par date décroissante (date et heure locales, type,
+  nom, appareil, nombre de sites et de dossiers), filtre Toutes / Automatiques / Manuelles,
+  pages de 20, suppression d'une sauvegarde manuelle avec confirmation. Sans compte : « Connectez-vous pour activer les sauvegardes automatiques. »
+- Règles : nom, appareil, compteurs et types vérifiés à la création ; index composite
+  (type, date) versionné dans `firestore.indexes.json`.
+
+### En attente du propriétaire
+
+- Déployer l'index avec les règles quand le projet existera.
+
+### Tests
+
+- 264 tests (empreinte, décision de sauvegarde, rotation 35 + 5 → 5 supprimées, identifiant,
+  nom, date).
+- Émulateurs : 61/61, dont une seule automatique par jour, grille vide ignorée, rotation à 30
+  avec manuelle intacte, limite de 50, pages de 20, nom de 200 caractères refusé.
+- Navigateur avec émulateurs : 76/76, dont 10 vérifications de sauvegardes (automatique après la synchro,
+  une seule pour 4 onglets, manuelle nommée, liste, filtre, suppression).
+
 ## [2.6.0] - 2026-10-24
 
 ### Ajouté

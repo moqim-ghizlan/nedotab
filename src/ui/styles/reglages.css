@@ -522,3 +522,55 @@ body.fond-sombre {
 .bibliotheque-fonds [hidden] {
   display: none;
 }
+
+/* --- backups --------------------------------------------------------------------------- */
+
+.sauvegardes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espace-3);
+}
+
+.sauvegardes .segments {
+  width: 100%;
+}
+
+.liste-sauvegardes {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sauvegarde {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  padding: var(--espace-2) 0;
+  border-bottom: 1px solid var(--bordure);
+  font-size: var(--taille-s);
+}
+
+.sauvegarde-type {
+  flex: none;
+  width: 1.4em;
+  color: var(--accent);
+  text-align: center;
+}
+
+.sauvegarde-texte {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sauvegarde-texte span {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.sauvegardes [hidden] {
+  display: none;
+}

@@ -31,7 +31,7 @@ const sauvegarde = (extra = {}) => ({
   creeLe: serverTimestamp(),
   type: "manuelle",
   nom: "Avant rangement",
-  appareil: "PC",
+  appareil: "extension",
   versionSchema: 1,
   nbSites: 1,
   nbDossiers: 0,
@@ -96,6 +96,21 @@ describe("users/{uid}/sauvegardes", () => {
   it("création valide acceptée et relue", async () => {
     await assertSucceeds(setDoc(doc(db("A"), "users/A/sauvegardes/s1"), sauvegarde()));
     await assertSucceeds(getDoc(doc(db("A"), "users/A/sauvegardes/s1")));
+  });
+  it("nom de 200 caractères refusé, nom vide refusé, sans nom accepté", async () => {
+    await assertFails(
+      setDoc(doc(db("A"), "users/A/sauvegardes/s1"), sauvegarde({ nom: "x".repeat(200) })),
+    );
+    await assertFails(setDoc(doc(db("A"), "users/A/sauvegardes/s2"), sauvegarde({ nom: "" })));
+    await assertSucceeds(
+      setDoc(doc(db("A"), "users/A/sauvegardes/s3"), sauvegarde({ nom: null, type: "auto" })),
+    );
+  });
+  it("appareil inconnu ou compteurs non entiers refusés", async () => {
+    await assertFails(
+      setDoc(doc(db("A"), "users/A/sauvegardes/s1"), sauvegarde({ appareil: "pirate" })),
+    );
+    await assertFails(setDoc(doc(db("A"), "users/A/sauvegardes/s2"), sauvegarde({ nbSites: "1" })));
   });
   it("type inconnu refusé", async () => {
     await assertFails(

@@ -30,7 +30,16 @@ service cloud.firestore {
       allow create: if proprietaire(uid)
         && request.resource.data.keys().hasOnly(['creeLe', 'type', 'nom', 'appareil', 'versionSchema', 'nbSites', 'nbDossiers', 'grille', 'reglages'])
         && request.resource.data.type in ['auto', 'manuelle', 'avant-restauration']
-        && request.resource.data.creeLe == request.time;
+        && request.resource.data.creeLe == request.time
+        && (request.resource.data.nom == null
+            || (request.resource.data.nom is string
+                && request.resource.data.nom.size() >= 1
+                && request.resource.data.nom.size() <= 60))
+        && request.resource.data.appareil in ['extension', 'pwa']
+        && request.resource.data.nbSites is int
+        && request.resource.data.nbDossiers is int
+        && request.resource.data.grille is list
+        && request.resource.data.reglages is map;
       allow update: if false; // a backup is never modified
     }
 

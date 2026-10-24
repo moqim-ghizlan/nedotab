@@ -5,14 +5,7 @@
 export { obtenirApp } from "./app.js";
 export { lireConfig } from "./config.js";
 export { connecter, deconnecter, ecouterUtilisateur, obtenirAuth, profil } from "./auth.js";
-export {
-  ecouterDocument,
-  ecrireDocument,
-  effacerCache,
-  reseau,
-  lireDocument,
-  sauvegarderAvantRemplacement,
-} from "./donnees.js";
+export { ecouterDocument, ecrireDocument, effacerCache, reseau, lireDocument } from "./donnees.js";
 export {
   cheminFond,
   envoyerFond,
@@ -20,3 +13,12 @@ export {
   supprimerFondStockage,
   telechargerFond,
 } from "./fichiers.js";
+export {
+  compterManuelles,
+  creerSauvegarde,
+  derniereAuto,
+  listerSauvegardes,
+  rotation,
+  sauvegarderAvantRemplacement,
+  supprimerSauvegarde,
+} from "./sauvegardes.js";

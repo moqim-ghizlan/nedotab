@@ -7,6 +7,7 @@ import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { sectionCompte } from "./reglages/compte.js";
+import { sectionSauvegardes } from "./reglages/sauvegardes.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -279,6 +280,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "div",
       { class: "reglages-corps" },
       compteUi?.section,
+      session?.sauvegardes ? sectionSauvegardes(session.sauvegardes).section : null,
       section(
         "Apparence",
         el("p", { class: "reglages-libelle", texte: "Thème" }),

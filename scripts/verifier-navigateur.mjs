@@ -15,6 +15,7 @@ import { scenarioSynchro } from "./scenarios/synchro.mjs";
 import { scenarioTempsReel } from "./scenarios/temps-reel.mjs";
 import { scenarioHorsLigne } from "./scenarios/hors-ligne.mjs";
 import { scenarioFondsCompte } from "./scenarios/fonds-compte.mjs";
+import { scenarioSauvegardes } from "./scenarios/sauvegardes.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -618,6 +619,22 @@ if (seulement === "compte" || seulement === "fonds") {
     });
   } finally {
     await nav12.fermer();
+  }
+}
+
+// V2.7 — backups (emulators)
+if (seulement === "compte" || seulement === "sauvegardes") {
+  const nav13 = await lancerChrome();
+  try {
+    const id = await nav13.chargerExtension();
+    await scenarioSauvegardes({
+      nav: nav13,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav13.fermer();
   }
 }
 

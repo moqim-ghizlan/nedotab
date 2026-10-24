@@ -1,7 +1,5 @@
 import {
-  addDoc,
   clearIndexedDbPersistence,
-  collection,
   disableNetwork,
   doc,
   enableNetwork,
@@ -11,7 +9,6 @@ import {
   setDoc,
   terminate,
 } from "firebase/firestore";
-import { compter } from "../core/fusion.js";
 import { obtenirApp } from "./app.js";
 
 /** Plain JSON copy (Firestore refuses `undefined`). */
@@ -40,22 +37,6 @@ export async function ecrireDocument(uid, etat, idAppareil, revision) {
     majLe: serverTimestamp(),
     majPar: idAppareil,
     revision,
-  });
-}
-
-/** Backup of the account's data before it is replaced (type "avant-restauration"). */
-export async function sauvegarderAvantRemplacement(uid, etat, appareil) {
-  const { sites, dossiers } = compter(etat.grille);
-  await addDoc(collection(obtenirApp().firestore, "users", uid, "sauvegardes"), {
-    creeLe: serverTimestamp(),
-    type: "avant-restauration",
-    nom: "Avant remplacement par un autre appareil",
-    appareil,
-    versionSchema: etat.versionSchema,
-    nbSites: sites,
-    nbDossiers: dossiers,
-    grille: json(etat.grille),
-    reglages: json(etat.reglages),
   });
 }
 

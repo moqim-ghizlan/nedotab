@@ -18,6 +18,7 @@ import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
 import { creerCompte } from "./services/compte.js";
 import { creerSynchro } from "./services/synchro.js";
+import { creerSauvegardes } from "./services/sauvegardes.js";
 import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
@@ -171,10 +172,18 @@ export async function demarrerApp(racine) {
       );
     },
   };
+  session.sauvegardes = creerSauvegardes({ store, session });
+  // Automatic backup: once the account is synced (first server snapshot), at most daily.
+  let sauvegardeVerifiee = false;
+  synchro.abonner((e) => {
+    if (e.mode !== "compte" || e.statut !== "synchronise" || sauvegardeVerifiee) return;
+    sauvegardeVerifiee = true;
+    session.sauvegardes.verifierAuto().catch(() => (sauvegardeVerifiee = false));
+  });
   compte.demarrer().then(() => synchro.demarrer());
   // Test builds against the emulators only: inspection hook for the browser scenarios.
   if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
-    globalThis.__nedotab = { store, synchro, compte, firebase: chargerFirebase };
+    globalThis.__nedotab = { store, synchro, compte, session, firebase: chargerFirebase };
   const groupeCompte = el(
     "span",
     { class: "compte-avatar" },
