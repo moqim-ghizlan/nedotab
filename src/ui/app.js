@@ -11,6 +11,7 @@ import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages } from "./apparence.js";
+import { creerRecherche } from "./recherche.js";
 import { ouvrirReglages } from "./reglages.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
@@ -61,7 +62,11 @@ export async function demarrerApp(racine) {
     : null;
   const page = el("main", { class: "page" }, bandeau, vide, grilleEl);
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });
-  const annonces = el("div", { class: "visuellement-cache", "aria-live": "polite" });
+  const annonces = el("div", {
+    id: "annonces",
+    class: "visuellement-cache",
+    "aria-live": "polite",
+  });
   const boutonReglages = el("button", {
     type: "button",
     class: "bouton-reglages",
@@ -82,6 +87,10 @@ export async function demarrerApp(racine) {
       lectureSeule: () => lectureSeule,
       annoncer,
     });
+
+  // Search bar above the grid; a folder found opens directly at its level.
+  const recherche = creerRecherche(store, { ouvrirDossier: (id) => ouvrirDossier(id) });
+  page.insertBefore(recherche.racine, vide);
 
   const nouveauDossier = async (retourFocus) => {
     const titre = await demanderNomDossier({ retourFocus });

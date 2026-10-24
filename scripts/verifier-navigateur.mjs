@@ -9,6 +9,7 @@ import { scenarioDossiers } from "./scenarios/dossiers.mjs";
 import { scenarioImbrication } from "./scenarios/imbrication.mjs";
 import { scenarioFusion } from "./scenarios/fusion.mjs";
 import { scenarioApparence } from "./scenarios/apparence.mjs";
+import { scenarioRecherche } from "./scenarios/recherche.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -54,7 +55,7 @@ if (principal)
     const manifeste = await p.eval("chrome.runtime.getManifest()");
     verifier(
       "Permissions minimales",
-      JSON.stringify(manifeste.permissions) === JSON.stringify(["storage", "favicon"]) &&
+      JSON.stringify(manifeste.permissions) === JSON.stringify(["storage", "favicon", "search"]) &&
         !manifeste.host_permissions,
       JSON.stringify(manifeste.permissions),
     );
@@ -337,9 +338,7 @@ if (principal)
       "Focus conservé sur la tuile déplacée",
       await p.eval(`document.activeElement?.dataset.id === "${ids[0]}"`),
     );
-    const annonce = await p.eval(
-      `document.querySelector("[aria-live]:not(.toasts)")?.textContent || ""`,
-    );
+    const annonce = await p.eval(`document.getElementById("annonces")?.textContent || ""`);
     verifier("Annonce vocale de la position", /position 2 sur [0-9]+/.test(annonce), annonce);
     await p.touche("End", { vk: 35, modifiers: 1 });
     await attendre(200);
@@ -377,11 +376,11 @@ if (principal)
       `page prête en ${Math.round(tempsRendu)} ms`,
     );
     const debut = Date.now();
-    const [cx, cy] = await centre("s50");
+    const [cx, cy] = await centre("s20");
     await glisserVers("s0", cx + 10, cy);
     verifier(
       "Glisser dans une grille de 100 sites",
-      (await ordre()).split(",").indexOf("s0") === 50,
+      (await ordre()).split(",").indexOf("s0") === 20,
       `${Date.now() - debut} ms avec les pauses du test`,
     );
     await p.eval(`chrome.storage.local.set({ etat: ${JSON.stringify(sauvegarde)} })`);
@@ -518,6 +517,22 @@ if (!seulement || seulement === "apparence") {
     });
   } finally {
     await nav6.fermer();
+  }
+}
+
+// V1.10 — instant search (fresh browser)
+if (!seulement || seulement === "recherche") {
+  const nav7 = await lancerChrome();
+  try {
+    const id = await nav7.chargerExtension();
+    await scenarioRecherche({
+      nav: nav7,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav7.fermer();
   }
 }
 

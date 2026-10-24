@@ -2,6 +2,38 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.10.0] - 2026-10-24
+
+### Ajouté
+
+- Barre de recherche au-dessus de la grille : résultats instantanés parmi tous les sites et
+  dossiers, à tous les niveaux, avec icône, titre surligné, domaine et chemin
+  (`Accueil › Travail › Clients`). Aucun appel réseau pendant la frappe.
+- Correspondance tolérante : majuscules, accents, ordre des mots ; initiales (« gh » →
+  GitHub). Critères pondérés dans un tableau (`CRITERES`) prêt pour les tags en V4.7.
+- Raccourcis `/` et Ctrl/Cmd+K (ignorés pendant une saisie), ↑ ↓ (en boucle), Entrée,
+  Ctrl/Cmd+Entrée (nouvel onglet), clic molette, Échap (vide puis quitte).
+- Entrée sur un dossier : la fenêtre s'ouvre directement à ce niveau, fil d'Ariane complet.
+- Adresse tapée (`wikipedia.org/wiki/Paris`) : « Aller sur… » proposé en premier.
+- Rien de trouvé : Entrée lance la recherche avec le **moteur par défaut** de l'utilisateur
+  (`chrome.search.query`, permission `search`), sans jamais le changer.
+- Accessibilité : combobox + listbox, option active annoncée, nombre de résultats annoncé.
+- Mise en évidence construite avec des nœuds texte et `<mark>` (jamais `innerHTML`).
+
+### Remarque
+
+- À l'ouverture d'un nouvel onglet, Chrome garde le focus dans la barre d'adresse : cliquer
+  dans la page (ou Tab) avant `/`. Comportement voulu par Chrome, non contourné.
+
+### Tests
+
+- 200 tests, dont la recherche : accents, « git » (GitHub et GitLab avant Digital),
+  « trav cli », initiales, mot absent, plages surlignées sur le titre affiché, ordre stable,
+  index mémoïsé, 2 000 éléments en moins de 5 ms par frappe.
+- Navigateur : 21 vérifications de recherche (raccourcis, résultats, chemin, titre HTML
+  inoffensif, dossier ouvert à son niveau, adresse, Échap, `/` dans un autre champ,
+  Ctrl+Entrée, site ouvert, moteur par défaut) ; ensemble 149/149.
+
 ## [1.9.0] - 2026-10-24
 
 ### Ajouté

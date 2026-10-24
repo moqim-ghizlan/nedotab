@@ -38,7 +38,7 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 18vh var(--espace-4) var(--espace-6);
+  padding: 14vh var(--espace-4) var(--espace-6);
 }
 
 .visuellement-cache {

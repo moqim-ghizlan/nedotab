@@ -44,3 +44,11 @@ export function urlFaviconNavigateur(pageUrl, taille = 64) {
 }
 
 export { fichiers } from "./fichiers.js";
+
+/** Web search with the user's default engine (never changes it). */
+export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
+  return chrome.search.query({
+    text: texte,
+    disposition: nouvelOnglet ? "NEW_TAB" : "CURRENT_TAB",
+  });
+}

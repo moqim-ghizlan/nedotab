@@ -36,3 +36,10 @@ export function urlFaviconNavigateur() {
 }
 
 export { fichiers } from "./fichiers.js";
+
+/** No access to the default engine from a web page: Google search URL. */
+export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
+  const url = `https://www.google.com/search?q=${encodeURIComponent(texte)}`;
+  if (nouvelOnglet) window.open(url, "_blank", "noopener");
+  else location.assign(url);
+}
