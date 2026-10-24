@@ -4,13 +4,17 @@
  */
 import {
   deplacer,
+  hauteur,
   inserer,
   modifierListe,
+  niveauEmplacement,
   parcourir,
+  peutCreerDossierDans,
   remplacer,
   retirer,
   trouver,
 } from "./arbre.js";
+import { PROFONDEUR_MAX } from "./constantes.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -42,7 +46,7 @@ export function nettoyerTitreDossier(titre) {
  */
 function creerDossier(grille, { dossier, parentId = null, index, idsAInclure = [] }) {
   if (trouver(grille, dossier.id)) return grille;
-  if (parentId != null && trouver(grille, parentId)?.element.type !== "dossier") return grille;
+  if (!peutCreerDossierDans(grille, parentId)) return grille;
   const voulus = new Set(idsAInclure.filter((id) => id !== parentId));
   const inclus = [...parcourir(grille)].filter((e) => voulus.has(e.id));
   // An element inside another included folder moves with it.
@@ -57,6 +61,8 @@ function creerDossier(grille, { dossier, parentId = null, index, idsAInclure = [
   ) {
     return grille;
   }
+  const nouveau = { ...dossier, items: [...dossier.items, ...racines] };
+  if (niveauEmplacement(grille, parentId) + hauteur(nouveau) > PROFONDEUR_MAX) return grille;
   const liste = parentId == null ? grille : trouver(grille, parentId).element.items;
   let position = index ?? liste.length;
   for (let i = 0; i < Math.min(position, liste.length); i++) {
@@ -64,7 +70,7 @@ function creerDossier(grille, { dossier, parentId = null, index, idsAInclure = [
   }
   let g = grille;
   for (const e of racines) g = retirer(g, e.id).grille;
-  return inserer(g, { ...dossier, items: [...dossier.items, ...racines] }, parentId, position);
+  return inserer(g, nouveau, parentId, position);
 }
 
 function supprimerDossier(grille, { id, mode }) {
@@ -116,8 +122,11 @@ export function reduire(etat, action) {
     case A.ELEMENT_RESTAURER: {
       if (trouver(etat.grille, action.element.id)) return etat;
       // The original folder may have disappeared meanwhile: fall back to the root.
+      const niveau = niveauEmplacement(etat.grille, action.parentId ?? null);
       const parentId =
-        action.parentId != null && trouver(etat.grille, action.parentId) ? action.parentId : null;
+        niveau >= 0 && niveau + hauteur(action.element) <= PROFONDEUR_MAX
+          ? (action.parentId ?? null)
+          : null;
       return avecGrille(etat, inserer(etat.grille, action.element, parentId, action.index));
     }
     case A.ELEMENT_DEPLACER:

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { genererImagesTest } from "./generer-images-test.mjs";
 import { lancerChrome, attendre } from "./navigateur.mjs";
 import { scenarioDossiers } from "./scenarios/dossiers.mjs";
+import { scenarioImbrication } from "./scenarios/imbrication.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -466,6 +467,22 @@ if (!seulement || seulement === "dossiers") {
     });
   } finally {
     await nav3.fermer();
+  }
+}
+
+// V1.7 — nested folders (fresh browser)
+if (!seulement || seulement === "imbrication") {
+  const nav4 = await lancerChrome();
+  try {
+    const id = await nav4.chargerExtension();
+    await scenarioImbrication({
+      nav: nav4,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav4.fermer();
   }
 }
 

@@ -1,7 +1,21 @@
 /**
  * Pure helpers on the grid tree. A grid is an array of elements; a folder holds `items`
  * with the same shape. Every function returns new arrays along the modified path only.
+ *
+ * Definitions (used everywhere in the code and the comments):
+ * - Level of a place: home = 0; content of a home folder = 1; content of a sub-folder = 2;
+ *   content of a sub-sub-folder = 3.
+ * - A folder put in a place of level n creates a place of level n + 1.
+ * - PROFONDEUR_MAX = 3: folders may exist at levels 0, 1 and 2; never at level 3.
+ * - Height of a folder: 1 + the largest height of its sub-folders (no sub-folder = 1;
+ *   a site counts 0).
+ * - A folder X may go in a place of level n when n + hauteur(X) <= PROFONDEUR_MAX.
+ * - No loop: a folder X never goes into X itself nor into one of its descendants.
  */
+import { PROFONDEUR_MAX } from "./constantes.js";
+
+/** Safety bound for recursion: the depth is guaranteed by valider(), this is a backstop. */
+const BORNE = 10;
 
 /**
  * @returns {{ element: object, parent: object|null, index: number, chemin: object[] } | null}
@@ -82,11 +96,73 @@ export function inserer(grille, element, parentId = null, index) {
 }
 
 /** Depth-first iteration over every element. */
-export function* parcourir(grille) {
+export function* parcourir(grille, profondeur = 0) {
+  if (profondeur > BORNE) return;
   for (const e of grille) {
     yield e;
-    if (e.type === "dossier") yield* parcourir(e.items);
+    if (e.type === "dossier") yield* parcourir(e.items, profondeur + 1);
   }
+}
+
+/** Every element with the folders leading to it: [{ element, chemin }] (search, V1.10). */
+export function aplatir(grille, chemin = [], acc = []) {
+  if (chemin.length > BORNE) return acc;
+  for (const element of grille) {
+    acc.push({ element, chemin });
+    if (element.type === "dossier") aplatir(element.items, [...chemin, element], acc);
+  }
+  return acc;
+}
+
+/** Ancestor folders of `id`, from home down: [] at home, null when not found. */
+export function cheminVers(grille, id) {
+  const r = trouver(grille, id);
+  return r ? r.chemin : null;
+}
+
+/** Level of the place inside `parentId` (null = home = 0). -1 when the folder is unknown. */
+export function niveauEmplacement(grille, parentId) {
+  if (parentId == null) return 0;
+  const r = trouver(grille, parentId);
+  if (r?.element.type !== "dossier") return -1;
+  return r.chemin.length + 1;
+}
+
+/** 0 for a site, 1 + the largest height of the sub-folders for a folder. */
+export function hauteur(element, profondeur = 0) {
+  if (element?.type !== "dossier" || profondeur > BORNE) return 0;
+  let max = 0;
+  for (const e of element.items) max = Math.max(max, hauteur(e, profondeur + 1));
+  return 1 + max;
+}
+
+/** True when `id` is inside folder `ancetreId` (at any depth). */
+export function estDescendant(grille, ancetreId, id) {
+  const chemin = cheminVers(grille, id);
+  return !!chemin && chemin.some((d) => d.id === ancetreId);
+}
+
+/**
+ * The single rule used by both the interface and the reducer.
+ * @returns {{ ok: true } | { ok: false, raison: "BOUCLE" | "PROFONDEUR" | "INTROUVABLE" }}
+ */
+export function peutPlacer(grille, elementId, versParentId) {
+  const r = trouver(grille, elementId);
+  if (!r) return { ok: false, raison: "INTROUVABLE" };
+  const niveau = niveauEmplacement(grille, versParentId);
+  if (niveau < 0) return { ok: false, raison: "INTROUVABLE" };
+  if (r.element.type !== "dossier") return { ok: true };
+  if (versParentId === elementId || estDescendant(grille, elementId, versParentId)) {
+    return { ok: false, raison: "BOUCLE" };
+  }
+  if (niveau + hauteur(r.element) > PROFONDEUR_MAX) return { ok: false, raison: "PROFONDEUR" };
+  return { ok: true };
+}
+
+/** A new (empty) folder may be created in `parentId` when its level is below the maximum. */
+export function peutCreerDossierDans(grille, parentId) {
+  const niveau = niveauEmplacement(grille, parentId);
+  return niveau >= 0 && niveau < PROFONDEUR_MAX;
 }
 
 /**
@@ -98,11 +174,9 @@ export function deplacer(grille, id, versParentId = null, versIndex) {
   const r = trouver(grille, id);
   if (!r) return grille;
   const deParentId = r.parent?.id ?? null;
-  if (versParentId != null) {
-    if (versParentId === id) return grille;
-    const cible = trouver(grille, versParentId);
-    if (!cible || cible.element.type !== "dossier") return grille;
-    if (r.element.type === "dossier" && cible.chemin.some((d) => d.id === id)) return grille;
+  if (deParentId !== versParentId && !peutPlacer(grille, id, versParentId).ok) return grille;
+  if (versParentId != null && trouver(grille, versParentId)?.element.type !== "dossier") {
+    return grille;
   }
   const destination = versParentId == null ? grille : trouver(grille, versParentId).element.items;
   const longueurApres = destination.length - (deParentId === versParentId ? 1 : 0);

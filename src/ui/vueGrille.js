@@ -47,7 +47,6 @@ export function creerVueGrille({
   }
   const actions = brancherActionsElements(store, conteneur, {
     lectureSeule,
-    parentId,
     ouvrirDossier,
   });
 

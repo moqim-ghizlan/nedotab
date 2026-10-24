@@ -81,7 +81,7 @@ export async function scenarioDossiers({ nav, url, verifier, dossier }) {
     await cliquerMenu("Déplacer vers");
     await attendre(150);
     await p.eval(
-      `[...document.querySelectorAll(".destination")].find((b) => b.textContent.includes("Travail")).click()`,
+      `[...document.querySelectorAll(".arbre-noeud")].find((b) => b.textContent.includes("Travail")).click()`,
     );
     await attendre(150);
   }
@@ -123,6 +123,8 @@ export async function scenarioDossiers({ nav, url, verifier, dossier }) {
     (await p.eval(`document.querySelector(".fenetre-titre").textContent`)) === "Boulot",
   );
   await p.eval(`document.querySelector(".grille--dossier .tuile--ajout").click()`);
+  await attendre(100);
+  await cliquerMenu("Ajouter un site");
   await attendre(200);
   await p.taper("meteofrance.com");
   await p.touche("Enter", { vk: 13, texte: "\r" });

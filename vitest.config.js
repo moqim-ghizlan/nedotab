@@ -19,5 +19,11 @@ export default defineConfig({
         test: { name: "ui", environment: "happy-dom", include: ["tests/ui/**/*.test.js"] },
       },
     ],
+    coverage: {
+      provider: "v8",
+      include: ["src/core/**"],
+      reporter: ["text-summary", "text"],
+      thresholds: { lines: 90 },
+    },
   },
 });

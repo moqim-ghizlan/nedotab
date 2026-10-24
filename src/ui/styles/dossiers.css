@@ -95,9 +95,111 @@
 
 .fenetre-entete {
   display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  padding: var(--espace-4) var(--espace-4) var(--espace-2) var(--espace-5);
+}
+
+.fenetre-ligne {
+  display: flex;
   align-items: center;
   gap: var(--espace-2);
-  padding: var(--espace-4) var(--espace-4) var(--espace-2) var(--espace-5);
+  min-width: 0;
+}
+
+.fenetre-retour {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--texte);
+  cursor: pointer;
+}
+
+.fenetre-retour[hidden] {
+  display: none;
+}
+
+.fenetre-ariane {
+  min-width: 0;
+}
+
+.ariane {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--taille-s);
+}
+
+.ariane-element {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ariane-element + .ariane-element::before {
+  content: "›";
+  padding: 0 6px;
+  color: var(--texte-secondaire);
+}
+
+.ariane-segment {
+  max-width: 14em;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--accent);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ariane-segment:hover {
+  background: var(--surface-2);
+}
+
+.ariane-courant {
+  padding: 2px 6px;
+  color: var(--texte-secondaire);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fenetre-corps--droite {
+  animation: glisser-droite 160ms ease-out;
+}
+
+.fenetre-corps--gauche {
+  animation: glisser-gauche 160ms ease-out;
+}
+
+@keyframes glisser-droite {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+
+@keyframes glisser-gauche {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fenetre-corps--droite,
+  .fenetre-corps--gauche {
+    animation: none;
+  }
 }
 
 .fenetre-titre,
@@ -217,4 +319,87 @@
 .destination-note {
   margin-left: auto;
   font-size: var(--taille-xs);
+}
+
+.arbre {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.arbre-noeud {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: 8px var(--espace-3);
+  border-radius: var(--rayon-petit);
+  cursor: pointer;
+}
+
+.arbre-noeud[hidden] {
+  display: none;
+}
+
+.arbre-noeud:hover:not([aria-disabled="true"]),
+.arbre-noeud:focus-visible {
+  background: var(--surface-2);
+}
+
+.arbre-noeud:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.arbre-noeud[aria-disabled="true"] {
+  color: var(--texte-secondaire);
+  cursor: not-allowed;
+}
+
+.arbre-noeud[aria-disabled="true"] .destination-icone {
+  color: inherit;
+}
+
+.arbre-fleche {
+  width: 1em;
+  color: var(--texte-secondaire);
+  text-align: center;
+}
+
+.arbre-titre {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* A folder holding sub-folders shows a folded corner. */
+.tuile-icone--avec-sous {
+  position: relative;
+}
+
+.tuile-icone--avec-sous::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 0 var(--rayon) 0 4px;
+  background: linear-gradient(225deg, var(--fond) 50%, var(--bordure) 50%);
+}
+
+.arbre-titre {
+  flex: none;
+  max-width: 50%;
+}
+
+.arbre-noeud .destination-note {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
 }

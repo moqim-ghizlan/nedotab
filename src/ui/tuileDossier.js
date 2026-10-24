@@ -12,10 +12,12 @@ export function libelleDossier(dossier) {
 export function creerIconeDossier(dossier) {
   const sites = apercuDossier(dossier, 4);
   const icone = el("span", { class: "tuile-icone tuile-icone--dossier", "aria-hidden": "true" });
-  if (sites.length === 0 && dossier.items.length === 0) {
+  if (sites.length === 0) {
     icone.classList.add("tuile-icone--dossier-vide");
     return icone;
   }
+  if (dossier.items.some((e) => e.type === "dossier"))
+    icone.classList.add("tuile-icone--avec-sous");
   for (let i = 0; i < 4; i++) {
     const site = sites[i];
     icone.append(

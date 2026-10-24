@@ -1,9 +1,10 @@
 import { A } from "../core/actions.js";
-import { compterSites, trouver } from "../core/arbre.js";
+import { compterSites, peutCreerDossierDans, trouver } from "../core/arbre.js";
 import { creerDossier } from "../core/modele.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
-import { ouvrirDeplacerVers } from "./dialogues/deplacerVers.js";
+import { ouvrirDeplacerVers } from "./dialogues/deplacerVersArbre.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
+import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { toast } from "./toast.js";
 
@@ -16,7 +17,7 @@ const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 export function brancherActionsElements(
   store,
   conteneur,
-  { lectureSeule = () => false, parentId = () => null, ouvrirDossier } = {},
+  { lectureSeule = () => false, ouvrirDossier } = {},
 ) {
   const tuileDe = (id) => conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);
   const focaliser = (id) => requestAnimationFrame(() => tuileDe(id)?.focus());
@@ -154,10 +155,18 @@ export function brancherActionsElements(
     const e = r.element;
     const modifiable = !lectureSeule();
     const entrees = [];
+    const deplacerVers = {
+      libelle: "Déplacer vers…",
+      onChoix: () => ouvrirDeplacerVers(store, id, { retourFocus: tuileDe(id) }),
+    };
     if (e.type === "dossier") {
       entrees.push({ libelle: "Ouvrir", onChoix: () => ouvrirDossier?.(id, tuileDe(id)) });
-      if (modifiable)
-        entrees.push({ libelle: "Renommer", raccourci: "F2", onChoix: () => renommerDossier(e) });
+      if (modifiable) {
+        entrees.push(
+          { libelle: "Renommer", raccourci: "F2", onChoix: () => renommerDossier(e) },
+          deplacerVers,
+        );
+      }
     } else {
       if (modifiable)
         entrees.push({ libelle: "Modifier", raccourci: "F2", onChoix: () => modifier(id) });
@@ -169,17 +178,12 @@ export function brancherActionsElements(
         { libelle: "Copier le lien", onChoix: () => copierLien(e.url) },
       );
       if (modifiable) {
-        entrees.push({
-          libelle: "Déplacer vers…",
-          onChoix: () => ouvrirDeplacerVers(store, id, { retourFocus: tuileDe(id) }),
+        entrees.push(deplacerVers, {
+          libelle: "Créer un dossier avec ce site",
+          desactive: !peutCreerDossierDans(store.lire().grille, r.parent?.id ?? null),
+          info: PROFONDEUR_ATTEINTE,
+          onChoix: () => creerDossierAvec(r),
         });
-        // One level of folders for now: no folder inside a folder.
-        if (parentId() == null) {
-          entrees.push({
-            libelle: "Créer un dossier avec ce site",
-            onChoix: () => creerDossierAvec(r),
-          });
-        }
       }
     }
     if (modifiable) {

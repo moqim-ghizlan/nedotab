@@ -203,3 +203,13 @@
     0 0 0 2px var(--surface),
     0 0 0 4px var(--texte);
 }
+
+.menu-entree[aria-disabled="true"] {
+  color: var(--texte-secondaire);
+  cursor: not-allowed;
+}
+
+.menu-info {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}

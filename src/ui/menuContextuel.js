@@ -26,12 +26,17 @@ export function ouvrirMenu({ x, y, entrees, retourFocus, libelle = "Actions" }) 
           class: `menu-entree${e.danger ? " menu-entree--danger" : ""}`,
           role: "menuitem",
           tabindex: "-1",
+          // A disabled entry stays focusable so that its explanation can be read.
+          "aria-disabled": e.desactive ? "true" : null,
+          title: e.desactive ? e.info : null,
           onclick: () => {
+            if (e.desactive) return;
             fermer(false);
             e.onChoix();
           },
         },
         el("span", { texte: e.libelle }),
+        e.desactive && e.info ? el("small", { class: "menu-info", texte: e.info }) : null,
         e.raccourci ? el("kbd", { class: "menu-raccourci", texte: e.raccourci }) : null,
       );
       boutons.push(bouton);

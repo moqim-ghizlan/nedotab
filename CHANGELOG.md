@@ -2,6 +2,37 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.7.0] - 2026-10-24
+
+### Ajouté
+
+- Dossiers imbriqués sur 3 niveaux (Accueil › Travail › Clients › Projets), dans une seule
+  fenêtre : ouvrir un sous-dossier remplace le contenu (courte transition latérale).
+- Fil d'Ariane cliquable (segments du milieu repliés en « … » sur écran étroit),
+  `aria-current="location"` sur l'emplacement courant, bouton « ← » dès le niveau 2,
+  Échap qui remonte d'un niveau puis ferme, focus rendu au dossier d'où l'on vient.
+- « + » dans un dossier : Ajouter un site / Nouveau dossier ; au niveau 3, « Nouveau
+  dossier » (et « Créer un dossier avec ce site ») est désactivé avec « 3 niveaux maximum ».
+- « Déplacer vers… » en arbre (Accueil + tous les dossiers) : destinations impossibles
+  grisées avec leur raison (« Un dossier ne peut pas aller dans lui-même », « Dépasserait
+  3 niveaux »), emplacement actuel marqué, clavier ↑ ↓ → ← Entrée. Les dossiers aussi
+  peuvent être déplacés.
+- Coin replié sur la tuile d'un dossier qui contient des sous-dossiers.
+- Règles centralisées dans `arbre.js` (`peutPlacer`, `peutCreerDossierDans`, `hauteur`,
+  `niveauEmplacement`, `cheminVers`, `estDescendant`, `aplatir`), utilisées par l'interface
+  **et** par le réducteur, qui refuse toute opération interdite (état inchangé).
+- Chargement : un dossier trop profond est aplati (ses sites prennent sa place) et un id
+  dupliqué est renommé — rien n'est supprimé, une alerte est écrite en console.
+
+### Tests
+
+- 159 tests : table de 17 cas de placement (profondeur, boucle, introuvable), réducteur qui
+  refuse, données invalides corrigées, et 3 × 2 000 opérations aléatoires (ajout, création
+  de dossier, déplacement, renommage, suppression, restauration) avec invariants vérifiés
+  après chacune sur un état gelé.
+- Couverture de `src/core` : 98,5 % des lignes (`npm run test:couverture`, seuil 90 %).
+- Navigateur : 89/89, dont le scénario imbrication (19 vérifications).
+
 ## [1.6.0] - 2026-10-24
 
 ### Ajouté
