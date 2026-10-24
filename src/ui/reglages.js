@@ -538,12 +538,40 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       fermer();
     }
   };
+  /**
+   * A press outside the panel closes it, and that press does nothing else (no site opened
+   * by mistake). Dialogs opened from the panel, toasts and menus count as inside; the
+   * settings button closes it by itself.
+   */
+  const surPressionExterieure = (e) => {
+    if (
+      panneau.contains(e.target) ||
+      document.querySelector("dialog[open]:modal") ||
+      e.target.closest?.(".toasts, [role='menu'], .bouton-reglages")
+    ) {
+      return;
+    }
+    fermer();
+    const avaler = (c) => {
+      c.preventDefault();
+      c.stopPropagation();
+    };
+    document.addEventListener("click", avaler, { capture: true, once: true });
+    // The click follows the release at once; a press that never becomes a click (a drag)
+    // must not swallow a later one.
+    document.addEventListener(
+      "pointerup",
+      () => setTimeout(() => document.removeEventListener("click", avaler, true)),
+      { capture: true, once: true },
+    );
+  };
   function fermer() {
     desabonner();
     compteUi?.arreter();
     bibliotheque?.arreter();
     observateur?.disconnect();
     document.removeEventListener("keydown", surTouche);
+    document.removeEventListener("pointerdown", surPressionExterieure, true);
     ouvert = null;
     retourFocus?.focus();
     // Short exit slide, then the panel leaves the page.
@@ -554,6 +582,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     }, SORTIE_MS);
   }
   document.addEventListener("keydown", surTouche);
+  document.addEventListener("pointerdown", surPressionExterieure, true);
 
   document.body.append(panneau);
   afficherPanneau(lire().fond.type);

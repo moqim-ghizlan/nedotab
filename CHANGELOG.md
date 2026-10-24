@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.4] - 2026-10-24
+
+### Modifié
+
+- Cliquer en dehors du panneau Réglages le ferme. Ce clic ne fait rien d'autre (aucun site
+  ouvert par erreur). Les fenêtres ouvertes depuis le panneau (confirmation, aperçu),
+  les messages en bas de l'écran et les menus ne le ferment pas.
+
 ## [2.10.3] - 2026-10-24
 
 ### Ajouté
