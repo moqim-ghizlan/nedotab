@@ -34,4 +34,8 @@ describe("configuration Firebase", () => {
     expect(r.emulateurs).toBe(true);
     expect(r.config.projectId).toBe(PROJET_DEMO);
   });
+  it("émulateurs avec un vrai projet configuré : toujours le projet de démonstration", () => {
+    const r = lireConfig({ ...complet, VITE_UTILISER_EMULATEURS: "true" });
+    expect(r.config.projectId).toBe(PROJET_DEMO);
+  });
 });

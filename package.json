@@ -23,9 +23,10 @@
     "publier": "node scripts/publier.js",
     "verifier:site": "node scripts/verifier-site.mjs",
     "emulateurs": "firebase emulators:start --import=./.emulateurs --export-on-exit",
-    "deployer:regles": "firebase deploy --only firestore:rules,storage",
+    "deployer:regles": "firebase deploy --project prod --only firestore:rules,firestore:indexes",
     "test:regles": "firebase emulators:exec --only auth,firestore,storage \"vitest run --project regles\"",
-    "verifier:compte": "firebase emulators:exec --only auth,firestore,storage \"node scripts/verifier-navigateur.mjs --seulement=compte\""
+    "verifier:compte": "firebase emulators:exec --only auth,firestore,storage \"node scripts/verifier-navigateur.mjs --seulement=compte\"",
+    "deployer:stockage": "firebase deploy --project prod --only storage"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

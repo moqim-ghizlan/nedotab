@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-nedotab"
+    "default": "demo-nedotab",
+    "prod": "nedotab-app"
   }
 }

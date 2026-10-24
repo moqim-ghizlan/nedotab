@@ -23,8 +23,9 @@ const vrai = (v) => v === true || v === "true";
  */
 export function lireConfig(env = import.meta.env) {
   const emulateurs = vrai(env.VITE_UTILISER_EMULATEURS);
-  const manquants = Object.values(CHAMPS).filter((cle) => !env[cle]);
-  if (emulateurs && manquants.length === Object.keys(CHAMPS).length) {
+  // The emulators always use the local demo project, even when .env.local holds a real one:
+  // a test run can never reach real data.
+  if (emulateurs) {
     return {
       emulateurs,
       config: {
@@ -37,6 +38,7 @@ export function lireConfig(env = import.meta.env) {
       },
     };
   }
+  const manquants = Object.values(CHAMPS).filter((cle) => !env[cle]);
   if (manquants.length) {
     throw new Error(
       `Configuration Firebase incomplète : ${manquants.join(", ")} manquante(s). ` +
