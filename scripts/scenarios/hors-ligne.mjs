@@ -56,7 +56,9 @@ export async function scenarioHorsLigne({ nav, url, verifier, dossier }) {
   const uid = await p.eval(
     `chrome.storage.local.get("pref:compte").then((r) => r["pref:compte"].uid)`,
   );
-  verifier("Connecté et synchronisé", (await indicateur(p)) === "synchronise");
+  // The first snapshot comes from the cache: wait for the server's answer (at most 10 s).
+  for (let i = 0; i < 40 && (await indicateur(p)) !== "synchronise"; i++) await attendre(250);
+  verifier("Connecté et synchronisé", (await indicateur(p)) === "synchronise", await indicateur(p));
 
   // Offline: badge, changes kept locally
   await horsLigne(p, true);

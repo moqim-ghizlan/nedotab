@@ -14,6 +14,15 @@ import { poidsDataUrl } from "./services/imageIcone.js";
 
 let ouvert = null;
 
+/** Label of a setting kept on this device only (never synced, V2.9). */
+const libelleAppareil = (texte) =>
+  el(
+    "p",
+    { class: "reglages-libelle" },
+    texte,
+    el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
+  );
+
 const ko = (octets) => `${(octets / 1024).toFixed(octets < 10240 ? 1 : 0)} Ko`;
 
 /** A row of mutually exclusive buttons (radio group). */
@@ -68,6 +77,14 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     ],
     lire().theme,
     (v) => modifier({ theme: v }),
+  );
+
+  // Device-only: forced number of columns of the home grid (automatic by default).
+  const colonnes = segments(
+    "Colonnes",
+    [["auto", "Auto"], ...["4", "5", "6", "7", "8"].map((n) => [n, n])],
+    String(store.lire().reglagesAppareil?.colonnes ?? "auto"),
+    (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
 
   const nuancesCouleur = el(
@@ -183,6 +200,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       // Account mode: the pictures go to the account's library (Storage), else stay local.
       bibliotheque ? bibliotheque.racine : fichier,
       bibliotheque ? null : etatImage,
+      bibliotheque
+        ? null
+        : el("p", { class: "reglages-note", texte: "Image gardée sur cet appareil uniquement." }),
       el("label", { for: "reglage-voile", texte: "Voile" }),
       voile,
       el("label", { for: "reglage-flou", texte: "Flou" }),
@@ -290,6 +310,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         el("p", { class: "reglages-libelle", texte: "Fond" }),
         typeFond.groupe,
         ...Object.values(panneaux),
+        libelleAppareil("Colonnes"),
+        colonnes.groupe,
       ),
       section("Autorisations", etatPermission, boutonPermission),
       section("Stockage", etatStockage),
@@ -299,6 +321,17 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
           class: "reglages-note",
           texte: `Version installée : ${plateforme.getVersion()}`,
         }),
+        el(
+          "label",
+          { class: "reglages-case" },
+          el("input", {
+            type: "checkbox",
+            checked: !!store.lire().reglagesAppareil?.debug,
+            onchange: (e) => modifier({ debug: e.currentTarget.checked }),
+          }),
+          el("span", { texte: "Journal de débogage dans la console" }),
+          el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
+        ),
         el(
           "p",
           { class: "reglages-liens" },
@@ -318,6 +351,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     const r = lire();
     theme.maj(r.theme);
     typeFond.maj(r.fond.type);
+    colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     for (const b of nuancesCouleur.children) {
       b.setAttribute(
         "aria-checked",

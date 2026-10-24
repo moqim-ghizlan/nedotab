@@ -21,7 +21,12 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if proprietaire(uid);
-      allow create, update: if proprietaire(uid) && grilleValide(request.resource.data);
+      allow create: if proprietaire(uid) && grilleValide(request.resource.data);
+      // V2.9: every write is above the revision it was computed from (transaction).
+      allow update: if proprietaire(uid) && grilleValide(request.resource.data)
+        && (!('revision' in resource.data)
+            || (request.resource.data.revision is int
+                && request.resource.data.revision > resource.data.revision));
       allow delete: if proprietaire(uid);
     }
 

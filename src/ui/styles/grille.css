@@ -13,6 +13,11 @@
   gap: var(--espace-4) var(--espace-3);
 }
 
+/* Columns forced on this device (V2.9): the home grid only, folders stay automatic. */
+:root[data-colonnes] .grille:not(.grille--dossier) {
+  grid-template-columns: repeat(var(--colonnes), minmax(0, 1fr));
+}
+
 .case {
   display: flex;
   justify-content: center;

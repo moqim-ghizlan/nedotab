@@ -25,6 +25,41 @@ export const preferences = {
   },
 };
 
+const PREFIXE_OPERATIONS = "operationsEnAttente:";
+
+/**
+ * Pending sync operations (V2.9), one queue per open tab: two tabs never overwrite each
+ * other's queue. They survive closing the browser.
+ */
+export const operations = {
+  async ecrire(idOnglet, valeur) {
+    await chrome.storage.local.set({ [PREFIXE_OPERATIONS + idOnglet]: valeur });
+  },
+  async supprimer(idOnglet) {
+    await chrome.storage.local.remove(PREFIXE_OPERATIONS + idOnglet);
+  },
+  async toutes() {
+    const tout = await chrome.storage.local.get(null);
+    return Object.fromEntries(
+      Object.entries(tout)
+        .filter(([cle]) => cle.startsWith(PREFIXE_OPERATIONS))
+        .map(([cle, v]) => [cle.slice(PREFIXE_OPERATIONS.length), v]),
+    );
+  },
+  /** callback(idOnglet, valeur | null) when another tab changes its queue. */
+  surChangement(callback) {
+    const ecouteur = (changements, zone) => {
+      if (zone !== "local") return;
+      for (const [cle, { newValue }] of Object.entries(changements)) {
+        if (cle.startsWith(PREFIXE_OPERATIONS))
+          callback(cle.slice(PREFIXE_OPERATIONS.length), newValue ?? null);
+      }
+    };
+    chrome.storage.onChanged.addListener(ecouteur);
+    return () => chrome.storage.onChanged.removeListener(ecouteur);
+  },
+};
+
 const ORIGINES_SITES = { origins: ["https://*/*", "http://*/*"] };
 
 export const permissionsSites = {

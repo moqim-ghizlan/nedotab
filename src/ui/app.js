@@ -3,6 +3,7 @@ import { listerDossiers } from "../core/arbre.js";
 import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
+import { expliquer, messageIgnorees } from "../core/rejeu.js";
 import { fondEffectif, fondsAPurger } from "../core/reglages.js";
 import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
@@ -23,8 +24,32 @@ import { creerRestauration } from "./services/restauration.js";
 import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
+import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
 import { creerVueGrille } from "./vueGrille.js";
+
+/** V2.9: operations that could not be applied after a change made on another device. */
+function signalerIgnorees(ignorees) {
+  toast(messageIgnorees(ignorees.length), {
+    cle: "ignorees",
+    duree: 10000,
+    action: {
+      libelle: "Détails",
+      onClic: () =>
+        demander({
+          titre: "Modifications non appliquées",
+          contenu: [
+            el(
+              "ul",
+              { class: "liste-ignorees" },
+              ignorees.map((i) => el("li", { texte: expliquer(i) })),
+            ),
+          ],
+          boutons: [{ libelle: "Fermer", valeur: true, principal: true }],
+        }),
+    },
+  });
+}
 
 /** Actions after which a folder that became empty is reported (not remote loads or undo). */
 const ACTIONS_LOCALES = new Set([A.ELEMENT_SUPPRIMER, A.ELEMENT_DEPLACER]);
@@ -105,6 +130,7 @@ export async function demarrerApp(racine) {
     compte,
     demanderChoix: demanderChoixPremiereSynchro,
     informer: (message) => toast(message, { duree: 6000 }),
+    signalerIgnorees,
     lireMajLocale: async () => (await stockage.lire().catch(() => null))?.meta?.majLe ?? null,
   });
   synchro.abonner((e) => boutonCompte.classList.toggle("en-synchro", e.enCours));
@@ -277,12 +303,26 @@ export async function demarrerApp(racine) {
   };
   // The background shown is the device's local picture if any, else the synced one.
   const visibles = (e) => ({ ...e.reglages, fond: fondEffectif(e) });
+  /** Device-only settings (V2.9): forced columns of the home grid, debug log. */
+  const appliquerAppareil = (r = {}) => {
+    const racineDoc = document.documentElement;
+    if (r.colonnes) {
+      racineDoc.dataset.colonnes = String(r.colonnes);
+      racineDoc.style.setProperty("--colonnes", String(r.colonnes));
+    } else {
+      delete racineDoc.dataset.colonnes;
+      racineDoc.style.removeProperty("--colonnes");
+    }
+    activerJournal(r.debug);
+  };
   let appliques = store.lire();
   appliquerReglages(visibles(appliques));
+  appliquerAppareil(appliques.reglagesAppareil);
   store.abonner((e) => {
     if (e.reglages !== appliques.reglages || e.reglagesAppareil !== appliques.reglagesAppareil) {
       appliques = e;
       appliquerReglages(visibles(e));
+      appliquerAppareil(e.reglagesAppareil);
       purgerCacheFonds();
     }
   });

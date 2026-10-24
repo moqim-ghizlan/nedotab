@@ -98,5 +98,8 @@ export function creerRestauration({
     };
   }
 
-  return { preparer, restaurer, horsLigne, enCompte };
+  /** Local changes not yet sent: a restoration drops them (V2.9). */
+  const nonEnvoyees = () => (enCompte() ? (session.synchro.modificationsNonEnvoyees?.() ?? 0) : 0);
+
+  return { preparer, restaurer, horsLigne, enCompte, nonEnvoyees };
 }

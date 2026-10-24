@@ -5,6 +5,7 @@ import {
   enableNetwork,
   getDoc,
   onSnapshot,
+  runTransaction,
   serverTimestamp,
   setDoc,
   terminate,
@@ -25,19 +26,22 @@ export async function lireDocument(uid) {
   return { brut: donnees, majLe: donnees.majLe?.toMillis?.() ?? null };
 }
 
+/** Fields of users/{uid}, exactly those allowed by the rules (device-only settings never). */
+const champs = (etat, idAppareil, revision) => ({
+  versionSchema: etat.versionSchema,
+  grille: json(etat.grille),
+  reglages: json(etat.reglages),
+  majLe: serverTimestamp(),
+  majPar: idAppareil,
+  revision,
+});
+
 /**
- * Writes users/{uid} with exactly the fields allowed by the rules: the device-only
- * settings (local picture background) are never sent.
+ * Writes users/{uid} without reading it: only for the first synchronisation (V2.3), when
+ * this device's state is chosen. Every later change goes through ecrireParTransaction.
  */
 export async function ecrireDocument(uid, etat, idAppareil, revision) {
-  await setDoc(doc(obtenirApp().firestore, "users", uid), {
-    versionSchema: etat.versionSchema,
-    grille: json(etat.grille),
-    reglages: json(etat.reglages),
-    majLe: serverTimestamp(),
-    majPar: idAppareil,
-    revision,
-  });
+  await setDoc(doc(obtenirApp().firestore, "users", uid), champs(etat, idAppareil, revision));
 }
 
 /**
@@ -71,4 +75,21 @@ export async function effacerCache() {
   const db = obtenirApp().firestore;
   await terminate(db);
   await clearIndexedDbPersistence(db);
+}
+
+/**
+ * V2.9: reads users/{uid} and writes `calculer(brut).etat` in one transaction (Firestore
+ * runs it again if the document changed meanwhile, so `calculer` must be pure). Online only.
+ * @param {(brut: object|null) => { etat, ignorees, revision }} calculer
+ * @returns {Promise<{ etat, ignorees, revision }>}
+ */
+export async function ecrireParTransaction(uid, calculer, idAppareil) {
+  const db = obtenirApp().firestore;
+  const ref = doc(db, "users", uid);
+  return runTransaction(db, async (t) => {
+    const instantane = await t.get(ref);
+    const r = calculer(instantane.exists() ? instantane.data() : null);
+    t.set(ref, champs(r.etat, idAppareil, r.revision));
+    return r;
+  });
 }

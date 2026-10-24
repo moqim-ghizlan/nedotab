@@ -44,11 +44,15 @@ afterEach(async () => {
   while (actifs.length) await actifs.pop().quitter({ garderCopie: true });
 });
 
-function appareil(nom, grille = [], delai = 300) {
+function appareil(nom, grille = [], delai = 300, signalerIgnorees = () => {}) {
   const store = creerStore({ ...etatInitial(), grille }, reduire);
   const prefs = {};
   const ecritures = vi.fn();
-  const fbCompte = { ...fb, ecrireDocument: (...a) => (ecritures(), fb.ecrireDocument(...a)) };
+  const fbCompte = {
+    ...fb,
+    ecrireDocument: (...a) => (ecritures(), fb.ecrireDocument(...a)),
+    ecrireParTransaction: (...a) => (ecritures(), fb.ecrireParTransaction(...a)),
+  };
   const synchro = creerSynchro({
     store,
     compte: { lire: () => ({ profil: { uid } }) },
@@ -60,6 +64,8 @@ function appareil(nom, grille = [], delai = 300) {
       idAppareil: async () => nom,
     },
     delai,
+    signalerIgnorees,
+    verrous: null,
   });
   actifs.push(synchro);
   const charges = vi.fn();
@@ -110,7 +116,6 @@ describe("synchronisation en temps réel (émulateurs)", () => {
     const a = appareil("A", [site("x")]);
     await a.synchro.lancerPremiereSynchro();
     // B writes later than A (longer debounce): its change is still pending when A's arrives.
-    // (Two writes at the very same time are the conflicts of V2.9: here the last one wins.)
     const b = appareil("B", [], 2000);
     await b.synchro.lancerPremiereSynchro();
     a.store.envoyer({ type: A.SITE_AJOUTER, site: site("deA") });
@@ -137,5 +142,53 @@ describe("synchronisation en temps réel (émulateurs)", () => {
     await vi.waitFor(() => expect(b.store.lire().reglages.theme).toBe("sombre"), { timeout: 3000 });
     expect(b.store.lire().reglagesAppareil).toEqual({});
     expect((await fb.lireDocument(uid)).brut.reglages.fond).toEqual({ type: "aucun" });
+  });
+
+  it("V2.9 : deux transactions lancées en même temps → les deux modifications présentes", async () => {
+    const a = appareil("A", [site("x"), site("y")]);
+    await a.synchro.lancerPremiereSynchro();
+    const b = appareil("B");
+    await b.synchro.lancerPremiereSynchro();
+    // Same debounce: both devices write at the same moment, each from its own view.
+    a.store.envoyer({ type: A.SITE_AJOUTER, site: site("deA") });
+    b.store.envoyer({ type: A.SITE_MODIFIER, id: "y", changements: { titre: "renommé par B" } });
+    await vi.waitFor(
+      async () => {
+        const brut = (await fb.lireDocument(uid)).brut;
+        expect(brut.grille.map((e) => e.id)).toEqual(["x", "y", "deA"]);
+        expect(brut.grille[1].titre).toBe("renommé par B");
+        expect(brut.revision).toBeGreaterThanOrEqual(3);
+      },
+      { timeout: 6000, interval: 100 },
+    );
+    for (const d of [a, b]) {
+      await vi.waitFor(() => expect(titres(d.store)).toBe("x,y,deA"), { timeout: 3000 });
+    }
+  });
+
+  it("V2.9 : renommer un site supprimé ailleurs → ignoré et signalé, rien d'autre perdu", async () => {
+    const signalees = vi.fn();
+    const a = appareil("A", [site("x"), site("y")]);
+    await a.synchro.lancerPremiereSynchro();
+    const b = appareil("B", [], 1500, signalees);
+    await b.synchro.lancerPremiereSynchro();
+    b.store.envoyer({ type: A.SITE_MODIFIER, id: "x", changements: { titre: "GitHub" } });
+    b.store.envoyer({ type: A.SITE_AJOUTER, site: site("deB") });
+    a.store.envoyer({ type: A.ELEMENT_SUPPRIMER, id: "x" }); // written first (300 ms)
+    await vi.waitFor(() => expect(signalees).toHaveBeenCalledTimes(1), { timeout: 5000 });
+    expect(signalees.mock.calls[0][0].map((i) => i.raison)).toEqual(["INTROUVABLE"]);
+    await vi.waitFor(async () => expect(await enLigne()).toBe("y,deB"), { timeout: 3000 });
+    await vi.waitFor(() => expect(titres(a.store)).toBe("y,deB"), { timeout: 3000 });
+  });
+
+  it("V2.9 : une écriture aveugle avec une révision dépassée est refusée par les règles", async () => {
+    const a = appareil("A", [site("x")]);
+    await a.synchro.lancerPremiereSynchro();
+    a.store.envoyer({ type: A.SITE_AJOUTER, site: site("y") });
+    await vi.waitFor(async () => expect(await enLigne()).toBe("x,y"), { timeout: 3000 });
+    await expect(
+      fb.ecrireDocument(uid, { ...etatInitial(), grille: [] }, "ancien", 1),
+    ).rejects.toMatchObject({ code: "permission-denied" });
+    expect(await enLigne()).toBe("x,y");
   });
 });

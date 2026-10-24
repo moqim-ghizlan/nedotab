@@ -254,3 +254,12 @@
   text-underline-offset: 2px;
   cursor: pointer;
 }
+
+/* Operations not applied after a change made on another device (V2.9). */
+.liste-ignorees {
+  margin: 0;
+  padding-left: var(--espace-4);
+  display: grid;
+  gap: var(--espace-1);
+  font-size: var(--taille-s);
+}

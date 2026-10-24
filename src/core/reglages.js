@@ -137,10 +137,39 @@ export function validerReglages(reglages) {
   return { ...r, theme: THEMES.includes(r.theme) ? r.theme : "auto", fond, fonds };
 }
 
-/** Device-only settings: only a local picture background is accepted. */
+/** Forced number of columns of the home grid on this device (null: automatic). */
+export const COLONNES_MIN = 3;
+export const COLONNES_MAX = 10;
+const colonnesValides = (n) => Number.isInteger(n) && n >= COLONNES_MIN && n <= COLONNES_MAX;
+
+/** Settings of this device only, never synced (V2.9). */
+export const CLES_APPAREIL = ["colonnes", "debug"];
+
+/** Device-only settings: local picture background, forced columns, debug log. */
 export function validerReglagesAppareil(r) {
+  const resultat = {};
   const fond = validerFond(r?.fond);
-  return fond?.type === "image" && fond.ref ? { fond } : {};
+  if (fond?.type === "image" && fond.ref) resultat.fond = fond;
+  if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
+  if (r?.debug === true) resultat.debug = true;
+  return resultat;
+}
+
+/** Applies device-only changes (colonnes: null = automatic, debug: boolean). */
+function modifierAppareil(etat, changements) {
+  const appareil = { ...etat.reglagesAppareil };
+  if ("colonnes" in changements) {
+    if (changements.colonnes == null) delete appareil.colonnes;
+    else if (colonnesValides(changements.colonnes)) appareil.colonnes = changements.colonnes;
+    else return etat;
+  }
+  if ("debug" in changements) {
+    if (changements.debug) appareil.debug = true;
+    else delete appareil.debug;
+  }
+  return JSON.stringify(appareil) === JSON.stringify(etat.reglagesAppareil ?? {})
+    ? etat
+    : { ...etat, reglagesAppareil: appareil };
 }
 
 /**
@@ -161,6 +190,11 @@ export function fondEffectif(etat) {
  * (reglagesAppareil); any other background is synced and replaces the local picture.
  */
 export function modifierReglagesEtat(etat, changements) {
+  const cles = Object.keys(changements ?? {});
+  if (cles.length && cles.every((c) => CLES_APPAREIL.includes(c))) {
+    return modifierAppareil(etat, changements);
+  }
+  if (cles.some((c) => CLES_APPAREIL.includes(c))) return etat; // never mixed with synced ones
   const fond = changements?.fond;
   if (fond?.type === "image" && fond.id) {
     // A library picture is synced; it replaces a device-only picture on this device.

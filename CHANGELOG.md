@@ -2,6 +2,50 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.9.0] - 2026-10-24
+
+### Modifié
+
+- **Plus aucune modification perdue entre deux appareils.** Chaque changement local devient
+  une opération dans une file gardée sur l'appareil (`chrome.storage.local`, une file par
+  onglet). 1,5 s après le dernier, une **transaction** lit la version en ligne, y rejoue les
+  opérations avec le même réducteur que l'interface et écrit le résultat (révision + 1) :
+  ce qui a été fait ailleurs entre-temps n'est plus écrasé.
+- L'état affiché est toujours la dernière version connue du compte avec les opérations en
+  attente rejouées par-dessus : un changement d'un autre appareil apparaît tout de suite
+  sans effacer les modifications locales pas encore envoyées.
+- Hors ligne, aucune transaction n'est tentée : la file attend le retour du réseau. Une
+  file laissée par un onglet fermé (ou Chrome fermé hors ligne) est reprise par l'onglet
+  suivant et envoyée. Échec d'envoi : nouvel essai après 1 s, 2 s, 4 s… (60 s au plus).
+- Déplacer un élément vers un dossier supprimé ailleurs le place à la fin de son dossier
+  d'origine ; créer un dossier avec des sites supprimés ailleurs n'inclut que ceux qui
+  restent ; tout rejeu impossible est ignoré, jamais bloquant.
+- Règles Firestore : une écriture doit dépasser la révision en ligne (une ancienne écriture
+  « aveugle » est refusée).
+- La restauration vide la file des opérations antérieures ; la confirmation le signale.
+
+### Ajouté
+
+- Toast « 2 modifications n'ont pas pu être appliquées car les éléments ont été modifiés
+  sur un autre appareil » avec « Détails » (« Renommer « GitHub » → ignoré, site supprimé
+  ailleurs »). Aucun toast quand tout a été appliqué.
+- Réglages propres à l'appareil, jamais envoyés et marqués « Sur cet appareil
+  uniquement » : nombre de colonnes forcé de l'accueil (Auto, 4 à 8) et journal de
+  débogage dans la console. Thème, fond, bibliothèque, voile et flou restent synchronisés.
+
+### Tests
+
+- Déterminisme de chaque action (rejouée deux fois), table de robustesse, 6 scénarios de
+  conflit, propriété « deux appareils, deux ordres de rejeu » (aucune exception, aucun id
+  dupliqué, profondeur respectée).
+- Émulateurs : deux transactions lancées en même temps → les deux modifications présentes ;
+  renommage d'un site supprimé ailleurs signalé ; écriture à révision dépassée refusée.
+  67 tests sur les émulateurs, 343 tests unitaires.
+- Navigateur : 149/149 sans émulateurs ; 101/101 avec les émulateurs, dont le scénario
+  « conflits » 16/16 (deux ordinateurs, l'un hors ligne, toast et détails, thème
+  synchronisé, colonnes locales, file reprise après fermeture hors ligne).
+- Corrigé : le scénario « sauvegardes » comptait aussi la liste des copies locales (V2.8).
+
 ## [2.8.0] - 2026-10-24
 
 ### Ajouté
@@ -30,8 +74,6 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
   écrite en ligne → annulation.
 - Navigateur : 149/149 sans émulateurs ; 85/85 avec les émulateurs (scénario restauration
   9/9 : aperçu, confirmation, annuler, retour depuis « avant restauration », hors ligne).
-- Navigateur avec émulateurs : 9 vérifications de restauration (aperçu, confirmation,
-  grille restaurée, Annuler, restauration plus tard, hors ligne).
 
 ## [2.7.0] - 2026-10-24
 

@@ -103,10 +103,16 @@ export async function ouvrirApercu(restauration, { titre, sous, source }) {
     ],
   });
   if (!choix) return null;
+  const perdues = restauration.nonEnvoyees?.() ?? 0;
+  const abandon =
+    perdues === 1
+      ? " 1 modification pas encore envoyée sur votre compte sera abandonnée."
+      : perdues > 1
+        ? ` ${perdues} modifications pas encore envoyées sur votre compte seront abandonnées.`
+        : "";
   const ok = await demander({
     titre: "Restaurer cette version",
-    message:
-      "Votre grille actuelle sera remplacée. Une copie en sera gardée et vous pourrez annuler.",
+    message: `Votre grille actuelle sera remplacée. Une copie en sera gardée et vous pourrez annuler.${abandon}`,
     boutons: [
       { libelle: "Annuler", valeur: false },
       { libelle: "Restaurer", valeur: true, principal: true },

@@ -137,11 +137,15 @@ export function reduire(etat, action) {
           : null;
       return avecGrille(etat, inserer(etat.grille, action.element, parentId, action.index));
     }
-    case A.ELEMENT_DEPLACER:
-      return avecGrille(
-        etat,
-        deplacer(etat.grille, action.id, action.versParentId ?? null, action.versIndex),
-      );
+    case A.ELEMENT_DEPLACER: {
+      const vers = action.versParentId ?? null;
+      const r = trouver(etat.grille, action.id);
+      // Target folder deleted elsewhere (replay, V2.9): to the end of its own place.
+      if (r && vers != null && trouver(etat.grille, vers)?.element.type !== "dossier") {
+        return avecGrille(etat, deplacer(etat.grille, action.id, r.parent?.id ?? null));
+      }
+      return avecGrille(etat, deplacer(etat.grille, action.id, vers, action.versIndex));
+    }
     case A.DOSSIER_CREER:
       return avecGrille(etat, creerDossier(etat.grille, action));
     case A.DOSSIER_RENOMMER: {

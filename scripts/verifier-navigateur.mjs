@@ -17,6 +17,7 @@ import { scenarioHorsLigne } from "./scenarios/hors-ligne.mjs";
 import { scenarioFondsCompte } from "./scenarios/fonds-compte.mjs";
 import { scenarioSauvegardes } from "./scenarios/sauvegardes.mjs";
 import { scenarioRestauration } from "./scenarios/restauration.mjs";
+import { scenarioConflits } from "./scenarios/conflits.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -652,6 +653,22 @@ if (seulement === "compte" || seulement === "restauration") {
     });
   } finally {
     await nav14.fermer();
+  }
+}
+
+// V2.9 — conflicts between devices, synced and device-only settings (emulators)
+if (seulement === "compte" || seulement === "conflits") {
+  const nav15 = await lancerChrome();
+  try {
+    const id = await nav15.chargerExtension();
+    await scenarioConflits({
+      nav: nav15,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav15.fermer();
   }
 }
 

@@ -201,6 +201,29 @@ body.fond-sombre {
   font-size: var(--taille-s);
 }
 
+/* A device-only setting: said quietly next to its label. */
+.mention-appareil {
+  margin-left: var(--espace-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--bordure);
+  background: var(--surface-2);
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+}
+
+.reglages-case {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.reglages-case .mention-appareil {
+  margin-left: 0;
+}
+
 .reglages-note {
   margin: 0;
   color: var(--texte-secondaire);

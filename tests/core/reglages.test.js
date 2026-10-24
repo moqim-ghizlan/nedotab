@@ -142,3 +142,40 @@ describe("schéma 2 : réglages de l'appareil", () => {
     expect(etat.reglagesAppareil).toEqual({});
   });
 });
+
+describe("réglages propres à l'appareil (V2.9)", () => {
+  const modifier = (etat, changements) => reduire(etat, { type: A.REGLAGES_MODIFIER, changements });
+  it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
+    let etat = modifier(etatInitial(), { colonnes: 6 });
+    expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });
+    expect(etat.reglages).not.toHaveProperty("colonnes");
+    expect(modifier(etat, { colonnes: 11 })).toBe(etat);
+    expect(modifier(etat, { colonnes: 2.5 })).toBe(etat);
+    etat = modifier(etat, { colonnes: null });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
+  it("journal de débogage : local, et jamais mêlé à un réglage synchronisé", () => {
+    const etat = modifier(etatInitial(), { debug: true });
+    expect(etat.reglagesAppareil).toEqual({ debug: true });
+    expect(modifier(etat, { debug: true })).toBe(etat);
+    expect(modifier(etat, { debug: true, theme: "sombre" })).toBe(etat);
+    expect(modifier(etat, { debug: false }).reglagesAppareil).toEqual({});
+  });
+  it("chargement : colonnes et debug validés", () => {
+    const { etat } = migrer({
+      versionSchema: 2,
+      grille: [],
+      reglages: {},
+      reglagesAppareil: { colonnes: 7, debug: true, autre: 1 },
+    });
+    expect(etat.reglagesAppareil).toEqual({ colonnes: 7, debug: true });
+    expect(
+      migrer({
+        versionSchema: 2,
+        grille: [],
+        reglages: {},
+        reglagesAppareil: { colonnes: 99, debug: "oui" },
+      }).etat.reglagesAppareil,
+    ).toEqual({});
+  });
+});

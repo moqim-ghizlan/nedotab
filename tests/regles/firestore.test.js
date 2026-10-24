@@ -90,6 +90,17 @@ describe("users/{uid}", () => {
     await assertSucceeds(setDoc(doc(db("A"), "users/A"), etat({ revision: 3 })));
     await assertFails(setDoc(doc(db("A"), "users/A"), etat({ revision: "3" })));
   });
+  it("V2.9 : une écriture doit dépasser la révision en ligne", async () => {
+    await assertSucceeds(setDoc(doc(db("A"), "users/A"), etat({ revision: 3 })));
+    await assertFails(setDoc(doc(db("A"), "users/A"), etat({ revision: 3 })));
+    await assertFails(setDoc(doc(db("A"), "users/A"), etat({ revision: 2 })));
+    await assertFails(setDoc(doc(db("A"), "users/A"), etat()));
+    await assertSucceeds(setDoc(doc(db("A"), "users/A"), etat({ revision: 4 })));
+  });
+  it("document d'avant les révisions : la première révision est acceptée", async () => {
+    await assertSucceeds(setDoc(doc(db("A"), "users/A"), etat()));
+    await assertSucceeds(setDoc(doc(db("A"), "users/A"), etat({ revision: 1 })));
+  });
 });
 
 describe("users/{uid}/sauvegardes", () => {
