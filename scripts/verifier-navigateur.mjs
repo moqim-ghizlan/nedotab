@@ -310,7 +310,8 @@ if (principal)
     const lireMajLe = () => p.eval(`chrome.storage.local.get("etat").then((r) => r.etat.majLe)`);
     let ids = (await ordre()).split(",");
     const [dernierX, dernierY] = await centre(ids.at(-1));
-    await glisserVers(ids[0], dernierX + 24, dernierY);
+    // Released past the last icon (on the icon itself would aim at it, V2.9.3).
+    await glisserVers(ids[0], dernierX + 56, dernierY);
     let apresGlisser = (await ordre()).split(",");
     verifier("Glisser le premier à la fin", apresGlisser.at(-1) === ids[0], `${ids.length} tuiles`);
     verifier(
@@ -327,7 +328,7 @@ if (principal)
     );
     ids = apresGlisser;
     const [premierX, premierY] = await centre(ids[0]);
-    await glisserVers(ids.at(-1), premierX - 24, premierY);
+    await glisserVers(ids.at(-1), premierX - 45, premierY);
     verifier("Glisser le dernier au début", (await ordre()).split(",")[0] === ids.at(-1));
     await attendre(500);
     const avantSurPlace = await lireMajLe();

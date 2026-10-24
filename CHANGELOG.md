@@ -2,6 +2,25 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.9.3] - 2026-10-24
+
+### Corrigé
+
+- Glisser une icône sur une autre pour créer un dossier (ou la déposer dans un dossier) :
+  il fallait viser le centre exact de la cible avec le pointeur. Ce qui compte maintenant,
+  c'est l'icône glissée elle-même : la cible a une zone de capture (son icône + 25 % de
+  marge), et la tuile dont la zone contient le plus de l'icône glissée (au moins 30 %)
+  devient la cible après 0,5 s. Une fois visée 0,2 s, la grille ne se réorganise plus sous
+  l'icône (la cible ne s'enfuit plus). Un passage rapide sur les tuiles réorganise toujours.
+- Le dépôt était annulé au lâcher même quand le halo était affiché.
+- Réglages ouverts pendant qu'un autre appareil ou onglet change le fond : le panneau du
+  fond (couleurs, dégradés…) suit maintenant le type choisi.
+
+### Tests
+
+- Navigateur : icône attrapée par un coin et décalée de 60 % sur la cible → dossier créé ;
+  panneau du fond qui suit un changement venu d'un autre onglet. 361 tests unitaires.
+
 ## [2.9.2] - 2026-10-24
 
 ### Corrigé

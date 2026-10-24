@@ -270,5 +270,29 @@ export async function scenarioFusion({ nav, url, verifier, dossier: evidence }) 
   await attendre(300);
   verifier("Rechargement : tout est conservé", (await structure()) === avantRechargement);
   await p.capture(`${evidence}/apres-manipulations.png`);
+
+  // 10. Icon grabbed by a corner and held partly over another one (offset by 60 %), the
+  // pointer itself outside the target: what counts is the dragged icon, so a folder.
+  await p.eval(
+    `chrome.storage.local.set({ etat: { ...${JSON.stringify(etatDeDepart())}, ecritPar: "test2", majLe: 2 } })`,
+  );
+  await p.aller(url);
+  await attendre(400);
+  const boiteIcone = (id) =>
+    p.eval(
+      `(() => { const r = document.querySelector('.grille:not(.grille--dossier) .tuile[data-id="${id}"] .tuile-icone').getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()`,
+    );
+  const [mx, my] = await boiteIcone("monde");
+  const [ox, oy, ow, oh] = await boiteIcone("osm");
+  const prise = [mx + 6, my + 6]; // near the top-left corner of the dragged icon
+  const lacher = [ox - 0.6 * ow + 6, oy + 0.6 * oh + 6]; // dragged icon 60 % left and down
+  await glisser(prise, lacher, 800);
+  const fusionCoin = await structure();
+  verifier(
+    "Icône attrapée par un coin, à moitié sur la cible : dossier créé",
+    ["Dossier[monde osm]", "Dossier[osm monde]"].some((d) => fusionCoin.includes(d)),
+    fusionCoin,
+  );
+  await fermerFenetre();
   verifier("Aucune erreur console (fusion)", p.erreurs.length === 0, p.erreurs.join(" | "));
 }

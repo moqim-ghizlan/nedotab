@@ -233,6 +233,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   const afficherPanneau = (type) => {
     for (const [t, p] of Object.entries(panneaux)) p.hidden = t !== type;
   };
+  // Type of the background last applied: a change coming from elsewhere (another device,
+  // another tab) also switches the panel; a click on a type keeps its own panel.
+  let typeApplique = lire().fond.type;
 
   // --- Autorisations -------------------------------------------------------------------
   const etatPermission = el("p", { class: "reglages-note" });
@@ -351,6 +354,10 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     const r = lire();
     theme.maj(r.theme);
     typeFond.maj(r.fond.type);
+    if (r.fond.type !== typeApplique) {
+      typeApplique = r.fond.type;
+      afficherPanneau(r.fond.type);
+    }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     for (const b of nuancesCouleur.children) {
       b.setAttribute(

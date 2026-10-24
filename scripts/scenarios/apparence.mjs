@@ -183,6 +183,40 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
     temps[Math.floor(temps.length / 2)] < 100,
     `médiane ${temps[Math.floor(temps.length / 2)]?.toFixed(1)} ms, max ${temps.at(-1)?.toFixed(1)} ms`,
   );
+
+  // Background changed elsewhere while the settings are open: the panel follows the type
+  await p.premierPlan();
+  await p.aller(url);
+  await attendre(400);
+  await p.eval(`document.querySelector(".bouton-reglages").click()`);
+  await attendre(300);
+  const autre = await nav.ouvrir(url);
+  await attendre(400);
+  await autre.eval(`document.querySelector(".bouton-reglages").click()`);
+  await attendre(300);
+  const typeVoulu =
+    (await p.eval(
+      `document.querySelector('[aria-label="Type de fond"] [aria-checked="true"]').dataset.valeur`,
+    )) === "degrade"
+      ? "couleur"
+      : "degrade";
+  await autre.eval(
+    `document.querySelector('[aria-label="Type de fond"] [data-valeur="${typeVoulu}"]').click()`,
+  );
+  await attendre(1200);
+  await p.premierPlan();
+  const panneau = await p.eval(`({
+    choisi: document.querySelector('[aria-label="Type de fond"] [aria-checked="true"]').dataset.valeur,
+    couleur: !document.querySelector(".nuancier--fond").closest("[hidden]"),
+    degrade: !document.querySelector(".degrades").hidden,
+  })`);
+  verifier(
+    "Fond changé dans un autre onglet, réglages ouverts : le bon panneau s'affiche",
+    panneau.choisi === typeVoulu &&
+      panneau[typeVoulu] &&
+      !panneau[typeVoulu === "degrade" ? "couleur" : "degrade"],
+    JSON.stringify(panneau),
+  );
   verifier("Aucune erreur console (apparence)", p.erreurs.length === 0, p.erreurs.join(" | "));
   return { temps };
 }

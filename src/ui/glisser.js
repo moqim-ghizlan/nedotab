@@ -45,8 +45,9 @@ export function activerGlisser(
       intention?.demarrer(evt.item.querySelector("[data-id]")?.dataset.id);
       document.addEventListener("pointermove", suivre, true);
     },
-    // While a drop target is active, SortableJS must not reorder.
-    onMove: () => !intention?.actif(),
+    // While a drop target is active, or the dragged icon is well over a tile (it may become
+    // one), SortableJS must not reorder: the target would move away under the icon.
+    onMove: () => !intention?.actif() && !intention?.retient?.(),
     onEnd(evt) {
       document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
