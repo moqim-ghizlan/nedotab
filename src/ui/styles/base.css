@@ -40,17 +40,3 @@ textarea {
   align-items: center;
   padding: 18vh var(--espace-4) var(--espace-6);
 }
-
-.marque {
-  margin: 0;
-  font-size: var(--taille-xl);
-  font-weight: 750;
-  letter-spacing: -0.03em;
-}
-
-.version {
-  margin: var(--espace-2) 0 0;
-  color: var(--texte-secondaire);
-  font-size: var(--taille-xs);
-  font-variant-numeric: tabular-nums;
-}

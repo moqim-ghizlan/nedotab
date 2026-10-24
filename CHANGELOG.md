@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.1.0] - 2026-10-24
+
+### Ajouté
+
+- Modèle de données (site, dossier, état avec ) documenté en JSDoc.
+- Store central : actions JSON → réducteur pur → abonnés ; état gelé en développement.
+- Grille adaptative de tuiles (pastille lettre colorée + titre), données d'exemple.
+- Navigation au clavier (Tab, flèches), focus visible, liste accessible.
+- Palette de 12 couleurs de pastille, choisie par un hash stable du domaine.
+
+### Tests
+
+- 20 tests (modèle, couleurs, store, réducteur sans mutation, rendu sans injection HTML).
+- Navigateur : 6/6 (grille, flèches, 400 px sans défilement horizontal, console propre).
+
 ## [1.0.0] - 2026-10-24
 
 ### Ajouté

@@ -18,7 +18,23 @@ try {
   const p = await nav.ouvrir(`chrome-extension://${id}/newtab.html`);
   await attendre(400);
   const texte = await p.eval("document.body.innerText");
-  verifier("Nom et version affichés", texte.includes("NedoTab") && texte.includes(version));
+  verifier("Version affichée", texte.includes(version));
+  verifier("Grille de tuiles", (await p.eval("document.querySelectorAll('.tuile').length")) >= 6);
+  await p.eval("document.querySelector('.tuile').focus()");
+  await p.touche("ArrowRight", { vk: 39 });
+  verifier(
+    "Flèche droite déplace le focus",
+    await p.eval("document.activeElement === document.querySelectorAll('.tuile')[1]"),
+  );
+  await p.taille(400, 800);
+  await attendre(200);
+  verifier(
+    "Pas de défilement horizontal à 400 px",
+    await p.eval("document.documentElement.scrollWidth <= 400"),
+  );
+  await p.capture(`${dossier}/mobile-400.png`);
+  await p.taille(1280, 800);
+  await p.sombre(false);
   await p.capture(`${dossier}/clair.png`);
   await p.sombre(true);
   await p.capture(`${dossier}/sombre.png`);
