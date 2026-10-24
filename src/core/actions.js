@@ -16,6 +16,7 @@ import {
   trouver,
 } from "./arbre.js";
 import { PROFONDEUR_MAX } from "./constantes.js";
+import { modifierReglages } from "./reglages.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -29,6 +30,7 @@ export const A = {
   DOSSIER_SUPPRIMER: "DOSSIER_SUPPRIMER",
   GRILLE_REMPLACER: "GRILLE_REMPLACER",
   FUSIONNER: "FUSIONNER",
+  REGLAGES_MODIFIER: "REGLAGES_MODIFIER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -149,6 +151,10 @@ export function reduire(etat, action) {
     }
     case A.DOSSIER_SUPPRIMER:
       return avecGrille(etat, supprimerDossier(etat.grille, action));
+    case A.REGLAGES_MODIFIER: {
+      const reglages = modifierReglages(etat.reglages, action.changements);
+      return reglages === etat.reglages ? etat : { ...etat, reglages };
+    }
     case A.FUSIONNER:
       return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:

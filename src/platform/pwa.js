@@ -20,6 +20,7 @@ export const permissionsSites = {
   disponible: false,
   contient: async () => false,
   demander: async () => false,
+  retirer: async () => false,
 };
 
 export async function lirePage() {
@@ -33,3 +34,5 @@ export async function lireJson() {
 export function urlFaviconNavigateur() {
   return null;
 }
+
+export { fichiers } from "./fichiers.js";

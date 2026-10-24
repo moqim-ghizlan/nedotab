@@ -49,3 +49,12 @@ describe("utilitaires", () => {
     expect(compterGraphemes("👩‍👩‍👧A")).toBe(2);
   });
 });
+
+describe("fond : dimensions", async () => {
+  const { dimensionsReduites } = await import("../../src/ui/services/imageFond.js");
+  it("le plus grand côté fait au plus 2560 px", () => {
+    expect(dimensionsReduites(4032, 3024)).toEqual({ largeur: 2560, hauteur: 1920 });
+    expect(dimensionsReduites(1000, 3000)).toEqual({ largeur: 853, hauteur: 2560 });
+    expect(dimensionsReduites(800, 600)).toEqual({ largeur: 800, hauteur: 600 });
+  });
+});

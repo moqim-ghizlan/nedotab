@@ -8,6 +8,7 @@ import { lancerChrome, attendre } from "./navigateur.mjs";
 import { scenarioDossiers } from "./scenarios/dossiers.mjs";
 import { scenarioImbrication } from "./scenarios/imbrication.mjs";
 import { scenarioFusion } from "./scenarios/fusion.mjs";
+import { scenarioApparence } from "./scenarios/apparence.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -501,6 +502,22 @@ if (!seulement || seulement === "fusion") {
     });
   } finally {
     await nav5.fermer();
+  }
+}
+
+// V1.9 — settings, themes and backgrounds (fresh browser)
+if (!seulement || seulement === "apparence") {
+  const nav6 = await lancerChrome();
+  try {
+    const id = await nav6.chargerExtension();
+    await scenarioApparence({
+      nav: nav6,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav6.fermer();
   }
 }
 

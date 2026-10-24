@@ -39,8 +39,29 @@
   --duree: 120ms;
 }
 
+/* Dark theme: chosen in the settings (data-theme), or the system's when none is set yet. */
+:root[data-theme="sombre"] {
+  color-scheme: dark;
+  --fond: #161d19;
+  --surface: #212a25;
+  --surface-2: #29332d;
+  --bordure: #36423b;
+  --texte: #e3e9e2;
+  --texte-secondaire: #9aa89f;
+  --accent: #78c2aa;
+  --accent-texte: #0f1c16;
+  --danger: #f08a7a;
+  --voile: rgb(0 0 0 / 0.55);
+  --ombre: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
+  --ombre-forte: 0 2px 6px rgb(0 0 0 / 0.35), 0 18px 48px rgb(0 0 0 / 0.5);
+}
+
+:root[data-theme="clair"] {
+  color-scheme: light;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --fond: #161d19;
     --surface: #212a25;
     --surface-2: #29332d;

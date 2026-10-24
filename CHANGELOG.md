@@ -2,6 +2,49 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.9.0] - 2026-10-24
+
+### Ajouté
+
+- Panneau **Réglages** (bouton ⚙ en haut à droite), latéral et non modal : changements
+  appliqués en direct, sans bouton « Enregistrer ». Sections Apparence, Autorisations,
+  Stockage, À propos, prêtes à accueillir les suivantes.
+- Thème automatique, clair ou sombre (`data-theme`), qui suit le système en direct en mode
+  automatique.
+- Fonds : aucun, couleur unie (10 pastilles + sélecteur natif), 8 dégradés intégrés
+  (aucune image réseau), image importée. L'image est réduite à 2 560 px au plus grand côté,
+  remise droite selon l'EXIF, réencodée en WebP 0,85 (repli JPEG), refusée au-delà de
+  25 Mo, rangée dans **IndexedDB** (l'état ne garde que `local:<id>` et la couleur
+  dominante). Une seule image : l'ancienne est supprimée au remplacement.
+- Voile d'assombrissement (0 à 0,7) et flou (0 à 20 px) réglables en direct.
+- Lisibilité : la couleur du texte posé sur le fond (titres des tuiles, pied de page) suit
+  la clarté du fond, avec une ombre légère.
+- Démarrage sans flash : thème et couleur de fond lus d'un petit cache local synchrone,
+  puis l'image arrive en fondu.
+- Autorisations : accorder ou retirer l'accès aux sites. Stockage : taille des données et
+  des icônes personnalisées. À propos : version.
+- Action `REGLAGES_MODIFIER` (liste blanche, couleurs hexadécimales, voile et flou bornés) ;
+  réglages invalides au chargement remplacés par les valeurs par défaut.
+
+### Écart au plan
+
+- Pas de dépendance `idb-keyval` : CLAUDE.md limite les dépendances autorisées. Un accès
+  IndexedDB de 40 lignes (`src/platform/fichiers.js`) la remplace.
+- Dégradé « Lagon » assombri pour que chaque couleur du dégradé atteigne 4,5:1.
+
+### Mesure
+
+- Premier rendu de la grille (du début du script à la grille affichée), 10 onglets ouverts
+  à la suite : **médiane 7,2 ms, maximum 11,7 ms** (objectif < 100 ms).
+
+### Tests
+
+- 187 tests : luminance, contraste ≥ 4,5:1 de chaque couleur des 8 dégradés avec le texte
+  choisi, `REGLAGES_MODIFIER`, migration des réglages, dimensions d'image.
+- Navigateur : 128/128, dont 21 vérifications d'apparence (thèmes, système en direct,
+  couleur, dégradé, image dans IndexedDB et pas dans `chrome.storage`, remplacement,
+  voile et flou, couleur de fond présente dès l'ouverture de 10 onglets).
+
 ## [1.8.0] - 2026-10-24
 
 ### Ajouté

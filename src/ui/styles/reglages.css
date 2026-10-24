@@ -1,0 +1,244 @@
+/* --- background layer ------------------------------------------------------------- */
+
+#fond {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--fond);
+  background-position: center;
+  background-size: cover;
+  transition: background-color var(--duree) ease-out;
+}
+
+#fond[data-type="image"] {
+  filter: blur(var(--flou-fond, 0px));
+  transform: scale(1.05);
+}
+
+#fond[data-type="image"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: var(--voile-fond, 0);
+}
+
+#fond.fond-image--visible {
+  animation: fondu 150ms ease-out;
+}
+
+@keyframes fondu {
+  from {
+    opacity: 0.6;
+  }
+}
+
+body {
+  background: transparent;
+}
+
+html {
+  background: var(--fond);
+}
+
+/* Text drawn directly on the background follows its lightness, not the theme. */
+body.fond-clair {
+  --texte-sur-fond: #14201a;
+  --texte-sur-fond-2: #3c4a42;
+  --ombre-texte: 0 1px 2px rgb(255 255 255 / 0.35);
+}
+
+body.fond-sombre {
+  --texte-sur-fond: #ffffff;
+  --texte-sur-fond-2: #dfe6e1;
+  --ombre-texte: 0 1px 3px rgb(0 0 0 / 0.55);
+}
+
+.page > .grille .tuile-titre,
+.vide-texte,
+.pied {
+  color: var(--texte-sur-fond, var(--texte));
+  text-shadow: var(--ombre-texte, none);
+}
+
+.page > .grille .tuile--ajout .tuile-titre,
+.pied {
+  color: var(--texte-sur-fond-2, var(--texte-secondaire));
+}
+
+/* --- settings button and panel --------------------------------------------------------- */
+
+.bouton-reglages {
+  position: fixed;
+  top: var(--espace-4);
+  right: var(--espace-4);
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--texte);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.bouton-reglages:hover {
+  background: var(--surface);
+}
+
+.reglages {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 40;
+  width: min(380px, 100vw);
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--bordure);
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+  overflow-y: auto;
+}
+
+.reglages[open] {
+  display: flex;
+  flex-direction: column;
+  animation: entrer-droite 180ms ease-out;
+}
+
+@keyframes entrer-droite {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reglages[open] {
+    animation: none;
+  }
+}
+
+.reglages-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--espace-4) var(--espace-4) var(--espace-2) var(--espace-5);
+}
+
+.reglages-entete h2 {
+  margin: 0;
+  font-size: var(--taille-l);
+  font-weight: 650;
+}
+
+.reglages-corps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-5);
+  padding: var(--espace-2) var(--espace-5) var(--espace-6);
+}
+
+.reglages-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.reglages-section + .reglages-section {
+  padding-top: var(--espace-5);
+  border-top: 1px solid var(--bordure);
+}
+
+.reglages-section h3 {
+  margin: 0;
+  font-size: var(--taille-m);
+  font-weight: 650;
+}
+
+.reglages-libelle {
+  margin: var(--espace-1) 0 -4px;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.reglages-note {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.reglages-note:empty {
+  display: none;
+}
+
+.reglages [hidden] {
+  display: none;
+}
+
+.reglages .segments {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+.reglages-ligne {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.nuancier--fond {
+  grid-template-columns: repeat(5, 28px);
+}
+
+.nuancier--fond .nuance {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--bordure);
+}
+
+.choix-couleur {
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--fond);
+  cursor: pointer;
+}
+
+.degrades {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espace-2);
+}
+
+.degrade {
+  height: 48px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  cursor: pointer;
+}
+
+.degrade[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--texte);
+}
+
+.reglages-image {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.reglages-image input[type="range"] {
+  accent-color: var(--accent);
+}

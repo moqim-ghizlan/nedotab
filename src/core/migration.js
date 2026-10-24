@@ -1,5 +1,6 @@
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { etatInitial } from "./modele.js";
+import { validerReglages } from "./reglages.js";
 
 /** Successive migrations: MIGRATIONS[n] turns schema n into schema n + 1. */
 const MIGRATIONS = {
@@ -93,11 +94,10 @@ export function valider(
   const grille = Array.isArray(etat?.grille) ? filtrer(etat.grille, 0, ctx) : [];
   if (ctx.ignores.length) onIgnore(ctx.ignores);
   if (ctx.corrections.length) onCorriger(ctx.corrections);
-  const reglages = etat?.reglages && typeof etat.reglages === "object" ? etat.reglages : {};
   return {
     ...etat,
     versionSchema: etat?.versionSchema ?? base.versionSchema,
     grille,
-    reglages: { ...base.reglages, ...reglages },
+    reglages: validerReglages({ ...base.reglages, ...etat?.reglages }),
   };
 }

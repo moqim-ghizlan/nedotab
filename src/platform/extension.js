@@ -32,6 +32,7 @@ export const permissionsSites = {
   contient: () => chrome.permissions.contains(ORIGINES_SITES),
   /** Must be called synchronously from a click handler (user gesture). */
   demander: () => chrome.permissions.request(ORIGINES_SITES),
+  retirer: () => chrome.permissions.remove(ORIGINES_SITES),
 };
 
 /** Chrome's own favicon cache (needs the "favicon" permission). */
@@ -41,3 +42,5 @@ export function urlFaviconNavigateur(pageUrl, taille = 64) {
   url.searchParams.set("size", String(taille));
   return url.href;
 }
+
+export { fichiers } from "./fichiers.js";

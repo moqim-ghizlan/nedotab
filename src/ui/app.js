@@ -10,6 +10,8 @@ import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
+import { appliquerReglages } from "./apparence.js";
+import { ouvrirReglages } from "./reglages.js";
 import { brancherPersistance } from "./persistance.js";
 import { toast } from "./toast.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -60,7 +62,15 @@ export async function demarrerApp(racine) {
   const page = el("main", { class: "page" }, bandeau, vide, grilleEl);
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });
   const annonces = el("div", { class: "visuellement-cache", "aria-live": "polite" });
-  racine.replaceChildren(page, pied, annonces);
+  const boutonReglages = el("button", {
+    type: "button",
+    class: "bouton-reglages",
+    "aria-label": "Réglages",
+    title: "Réglages",
+    texte: "⚙",
+    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages }),
+  });
+  racine.replaceChildren(boutonReglages, page, pied, annonces);
   const annoncer = (texte) => {
     annonces.textContent = "";
     requestAnimationFrame(() => (annonces.textContent = texte));
@@ -126,6 +136,18 @@ export async function demarrerApp(racine) {
     accueil.demanderRendu();
   };
   rendre();
+  performance.mark("nedotab:grille");
+  performance.measure("nedotab:premier-rendu", "nedotab:debut", "nedotab:grille");
+
+  // Theme and background follow the settings (also when another tab changes them).
+  let reglagesAppliques = store.lire().reglages;
+  appliquerReglages(reglagesAppliques);
+  store.abonner((e) => {
+    if (e.reglages !== reglagesAppliques) {
+      reglagesAppliques = e.reglages;
+      appliquerReglages(e.reglages);
+    }
+  });
 
   // A folder emptied by a local action: offer to delete it (never automatically).
   let precedent = store.lire().grille;
