@@ -1,6 +1,13 @@
 /** Extension implementation of the platform layer (chrome.*). */
 import { lireJson, lirePage } from "./reseau.js";
 import { creerStockage } from "./stockageChrome.js";
+import {
+  creerNonce,
+  estGoogleChrome,
+  FluxAnnule,
+  lireReponse,
+  urlAutorisation,
+} from "./fluxGoogle.js";
 
 export { lireJson, lirePage };
 
@@ -112,9 +119,9 @@ export async function obtenirJetonGoogle(interactif) {
     });
     return { idToken };
   }
-  if (typeof chrome.identity?.getAuthToken !== "function" || !clientOauth()) {
-    throw new ConnexionIndisponible("chrome.identity indisponible");
-  }
+  const chromeGoogle =
+    estGoogleChrome() && typeof chrome.identity?.getAuthToken === "function" && clientOauth();
+  if (!chromeGoogle) return jetonParFenetre(interactif);
   try {
     const r = await chrome.identity.getAuthToken({ interactive: interactif });
     const token = typeof r === "string" ? r : r?.token;
@@ -128,6 +135,40 @@ export async function obtenirJetonGoogle(interactif) {
     if (/not supported|unsupported|not available/i.test(message)) {
       throw new ConnexionIndisponible(message);
     }
+    throw e;
+  }
+}
+
+/**
+ * Other browsers (Brave, Edge…): a Google window with an OAuth client of type "Web
+ * application" (VITE_OAUTH_CLIENT_ID_WEB). Only interactive: there is no cached token.
+ */
+async function jetonParFenetre(interactif) {
+  const clientWeb = import.meta.env.VITE_OAUTH_CLIENT_ID_WEB;
+  if (typeof chrome.identity?.launchWebAuthFlow !== "function" || !clientWeb) {
+    throw new ConnexionIndisponible("connexion par fenêtre indisponible");
+  }
+  if (!interactif) throw new ConnexionAnnulee("pas de jeton gardé");
+  const nonce = creerNonce();
+  let retour;
+  try {
+    retour = await chrome.identity.launchWebAuthFlow({
+      url: urlAutorisation({
+        clientId: clientWeb,
+        redirection: chrome.identity.getRedirectURL(),
+        nonce,
+      }),
+      interactive: true,
+    });
+  } catch (e) {
+    // Window closed by the user (Chromium reports it as an error).
+    throw new ConnexionAnnulee(String(e?.message ?? e));
+  }
+  if (!retour) throw new ConnexionAnnulee("fenêtre fermée");
+  try {
+    return lireReponse(retour, nonce);
+  } catch (e) {
+    if (e instanceof FluxAnnule) throw new ConnexionAnnulee(e.message);
     throw e;
   }
 }

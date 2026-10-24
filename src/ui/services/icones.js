@@ -1,6 +1,6 @@
 import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { classerIcones, extraireInfos, iconesDuManifeste } from "../../core/infosPage.js";
-import { domaine } from "../../core/url.js";
+import { domaine, domainesParents } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
 
 const DEBUG = import.meta.env.DEV && globalThis.localStorage?.getItem?.("debug") === "1";
@@ -57,7 +57,7 @@ async function iconeValide(src, options) {
 
 let empreinteGlobe;
 /** Fingerprint of Chrome's generic globe, computed once from a non-existent address. */
-function globeNavigateur() {
+export function globeNavigateur() {
   empreinteGlobe ??= (async () => {
     const src = plateforme.urlFaviconNavigateur("https://inconnu.invalid");
     const img = src && (await chargerImage(src));
@@ -97,16 +97,21 @@ async function depuisNavigateur(url, signal) {
   return { type: "url", valeur: src, source: "chrome" };
 }
 
-export function urlFaviconGoogle(url) {
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domaine(url))}&sz=128`;
+export function urlFaviconGoogle(url, nom = domaine(url)) {
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(nom)}&sz=128`;
 }
 
+/** Google's icon URLs to try: the site's domain, then its parent domains. */
+export const urlsFaviconGoogle = (url) => domainesParents(url).map((d) => urlFaviconGoogle(url, d));
+
 async function depuisGoogle(url, signal) {
-  const src = urlFaviconGoogle(url);
-  const img = await chargerImage(src, { signal });
-  // Google answers its 16 px default icon when it knows nothing: treat it as "no icon".
-  if (!img || img.naturalWidth < 32) return null;
-  return { type: "url", valeur: src, source: "google" };
+  for (const src of urlsFaviconGoogle(url)) {
+    if (signal?.aborted) return null;
+    const img = await chargerImage(src, { signal });
+    // Google answers its 16 px default icon when it knows nothing: treat it as "no icon".
+    if (img && img.naturalWidth >= 32) return { type: "url", valeur: src, source: "google" };
+  }
+  return null;
 }
 
 /**

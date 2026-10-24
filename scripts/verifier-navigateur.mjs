@@ -544,6 +544,34 @@ if (!seulement || seulement === "recherche") {
   }
 }
 
+// Icon from the browser's favicon cache for a site never visited in this browser (synced
+// grid, other browser): never the generic globe, Google's service or the letter instead.
+if (!seulement || seulement === "icones") {
+  const nav8 = await lancerChrome();
+  try {
+    const id = await nav8.chargerExtension();
+    const url = `chrome-extension://${id}/newtab.html`;
+    const p = await nav8.ouvrir(url);
+    const cache = `chrome-extension://${id}/_favicon/?pageUrl=https%3A%2F%2Fjamais-visite.example%2F&size=64`;
+    await p.eval(
+      `chrome.storage.local.set({ etat: { versionSchema: 2, grille: [{ id: "x", type: "site", titre: "Jamais visité", url: "https://jamais-visite.example/", icone: { type: "url", valeur: ${JSON.stringify(cache)}, source: "chrome" }, creeLe: 0 }], reglages: { theme: "auto", fond: { type: "aucun" }, fonds: [] }, reglagesAppareil: {}, ecritPar: "t", majLe: Date.now() } })`,
+    );
+    await p.aller(url);
+    await attendre(3000);
+    const icone = await p.eval(
+      `(() => { const i = document.querySelector('.tuile[data-id="x"] .tuile-icone'); return { lettre: i.classList.contains("tuile-icone--lettre"), src: i.querySelector("img")?.src ?? null }; })()`,
+    );
+    verifier(
+      "Icône du cache d'un autre navigateur : pas de globe générique",
+      icone.lettre || (icone.src && !icone.src.includes("/_favicon/")),
+      JSON.stringify(icone),
+    );
+    verifier("Aucune erreur console (icônes)", p.erreurs.length === 0, p.erreurs.join(" | "));
+  } finally {
+    await nav8.fermer();
+  }
+}
+
 // V2.1 — Google account (only with the emulators: npm run verifier:compte)
 if (seulement === "compte") {
   const nav8 = await lancerChrome();

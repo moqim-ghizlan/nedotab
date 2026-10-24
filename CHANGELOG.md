@@ -2,6 +2,26 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.9.1] - 2026-10-24
+
+### Corrigé
+
+- Connexion Google dans **Brave, Edge et Opera** : ces navigateurs n'ont pas le compte
+  Google intégré de Chrome. Une fenêtre Google classique s'ouvre (client OAuth « Application
+  Web », jeton d'identité vérifié par un nonce). Google Chrome garde sa connexion intégrée.
+- Icônes venues du cache d'icônes du navigateur : sur un autre appareil ou navigateur (où le
+  site n'a jamais été visité), le globe générique est remplacé par l'icône du service de
+  Google, ou par la pastille avec la lettre.
+- Icônes par le service de Google : un sous-domaine inconnu essaie ses domaines parents
+  (`console.cloud.google.com` → `cloud.google.com`).
+- Premier vrai projet Firebase (`nedotab-app`, alias `prod`) ; les émulateurs utilisent
+  toujours le projet local de démonstration, même si `.env.local` contient le vrai.
+
+### Tests
+
+- 354 tests unitaires (détection du navigateur, URL et réponse de la fenêtre Google, nonce,
+  domaines parents). Navigateur : vérification « icône du cache d'un autre navigateur ».
+
 ## [2.9.0] - 2026-10-24
 
 ### Modifié

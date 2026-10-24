@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleUrl, domaine, normaliserUrl } from "../../src/core/url.js";
+import { cleUrl, domaine, domainesParents, normaliserUrl } from "../../src/core/url.js";
 
 const ok = (saisie, url) =>
   it(`accepte ${JSON.stringify(saisie)}`, () =>
@@ -49,5 +49,20 @@ describe("cleUrl et domaine", () => {
   });
   it("domaine sans www", () => {
     expect(domaine("https://www.wikipedia.org/wiki")).toBe("wikipedia.org");
+  });
+});
+
+describe("domainesParents", () => {
+  it("sous-domaine puis domaines parents, jusqu'à deux niveaux", () => {
+    expect(domainesParents("https://console.cloud.google.com/auth")).toEqual([
+      "console.cloud.google.com",
+      "cloud.google.com",
+      "google.com",
+    ]);
+    expect(domainesParents("https://www.github.com")).toEqual(["github.com"]);
+  });
+  it("adresse IP, localhost : seuls", () => {
+    expect(domainesParents("http://192.168.1.10:8080")).toEqual(["192.168.1.10"]);
+    expect(domainesParents("http://localhost:3000")).toEqual(["localhost"]);
   });
 });

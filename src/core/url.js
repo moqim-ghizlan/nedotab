@@ -60,3 +60,17 @@ export function domaine(url) {
     return String(url ?? "");
   }
 }
+
+/**
+ * The site's domain then its parent domains, down to two labels (icon lookup: Google's
+ * service often knows "cloud.google.com" but not "console.cloud.google.com").
+ * IP addresses and single-label hosts are returned alone.
+ */
+export function domainesParents(url) {
+  const d = domaine(url);
+  if (/^[\d.]+$/.test(d) || d.startsWith("[")) return [d];
+  const etiquettes = d.split(".");
+  const resultat = [];
+  for (let i = 0; i <= etiquettes.length - 2; i++) resultat.push(etiquettes.slice(i).join("."));
+  return resultat.length ? resultat : [d];
+}
