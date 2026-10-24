@@ -38,7 +38,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   );
   verifier(
     "Panneau Réglages en sections",
-    sections === "Compte, Sauvegardes, Mes données, Apparence, Autorisations, Stockage, À propos",
+    sections === "Compte, Apparence, Sauvegardes, Mes données, Autorisations, Stockage, À propos",
     sections,
   );
   verifier(
@@ -156,7 +156,7 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   );
   verifier("Stockage : taille des données", /Données : [\d.,]+ Ko/.test(stockage), stockage);
   await p.touche("Escape", { vk: 27 });
-  await attendre(150);
+  await attendre(300);
   verifier("Échap ferme le panneau", await p.eval(`!document.querySelector(".reglages")`));
 
   // Startup: theme + dominant colour applied at once, image afterwards; display time

@@ -2,6 +2,23 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.2] - 2026-10-24
+
+### Modifié
+
+- Panneau Réglages redessiné : feuille flottante translucide qui laisse voir le fond, avec
+  une carte du compte en tête dessinée sur une copie floutée de votre propre fond d'écran
+  (mise à jour en direct quand vous le changez), et un état de synchronisation lisible
+  d'un coup d'œil (« Synchronisé », « Pas encore synchronisé »).
+- Le contenu est rangé en quatre onglets (Apparence, Sauvegardes, Données, Avancé) au lieu
+  d'une longue liste ; le dernier onglet ouvert est retenu sur cet appareil. Flèches
+  gauche/droite pour passer d'un onglet à l'autre.
+- « Supprimer mon compte » est replié au bas de l'onglet Données, à côté de l'export.
+- Animations : entrée du panneau en glissé puis carte, onglets et contenu posés tour à
+  tour, curseur d'onglet qui glisse, contenu qui arrive du côté de l'onglet choisi, sortie
+  courte, zone de suppression qui se déplie. Tout est coupé si le système demande moins
+  d'animations.
+
 ## [2.10.1] - 2026-10-24
 
 ### Modifié

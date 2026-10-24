@@ -71,11 +71,7 @@ export async function scenarioSynchro({ nav, url, verifier, dossier }) {
     Object.keys(doc.fields).join(),
   );
   const statut = await p.eval(`document.querySelector(".compte")?.textContent ?? ""`);
-  verifier(
-    "Réglages : synchronisation activée",
-    statut.includes("Synchronisation activée"),
-    statut,
-  );
+  verifier("Réglages : synchronisation activée", statut.includes("Synchronisé :"), statut);
   await p.capture(`${dossier}/synchro-activee.png`);
 
   // A local change is written online ~1.5 s later

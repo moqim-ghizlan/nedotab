@@ -1,5 +1,6 @@
 import { el } from "../dom.js";
 import { creerAvatar } from "../avatar.js";
+import { icone } from "../icones.js";
 import { URL_SITE } from "../../core/constantes.js";
 
 /** What happens to the account's data: the privacy page of the site (V2.10). */
@@ -47,21 +48,31 @@ function logoGoogle() {
 }
 
 /**
- * "Compte" section of the settings panel. `session` gathers the account (compte), the
- * synchronisation (synchro) and the actions that chain them (connecter, deconnecter,
- * synchroniser, restaurerCopie). Returns the section and a teardown.
+ * "Compte" of the settings panel: a card at the top drawn over a copy of the user's own
+ * background. `session` gathers the account (compte), the synchronisation (synchro) and the
+ * actions that chain them (connecter, deconnecter, synchroniser, restaurerCopie). Returns
+ * the card, the account deletion zone (shown elsewhere in the panel), the privacy link and
+ * a teardown.
  */
 export function sectionCompte(session) {
   const { compte, synchro } = session;
   const contenu = el("div", { class: "compte" });
   const section = el(
     "section",
-    { class: "reglages-section", "aria-labelledby": "titre-compte" },
-    el("h3", { id: "titre-compte", texte: "Compte" }),
+    { class: "reglages-section carte-compte", "aria-labelledby": "titre-compte" },
+    el("h3", { id: "titre-compte", class: "visuellement-cache", texte: "Compte" }),
     contenu,
   );
+  const danger = el("div", { class: "zone-danger-conteneur" });
   const bouton = (texte, onclick, classe = "bouton") =>
     el("button", { type: "button", class: classe, texte, onclick });
+  const action = (nom, texte, onclick, classe = "") =>
+    el(
+      "button",
+      { type: "button", class: `carte-action ${classe}`.trim(), onclick },
+      icone(nom, { taille: 16 }),
+      el("span", { texte }),
+    );
   const erreurAvecReessai = (message, reessayer) =>
     el(
       "p",
@@ -74,16 +85,16 @@ export function sectionCompte(session) {
     const etat = compte.lire();
     const sync = synchro?.lire() ?? { mode: "local" };
     if (etat.statut === "connecte" && etat.profil) {
-      const etatSynchro = sync.enCours
-        ? "Synchronisation…"
+      const [statut, court, detail] = sync.enCours
+        ? ["en-cours", "Synchronisation…", "Synchronisation en cours."]
         : sync.mode === "compte"
-          ? "Synchronisation activée : vos sites sont enregistrés sur votre compte."
-          : "Synchronisation non activée : vos sites restent sur cet ordinateur.";
+          ? ["actif", "Synchronisé", "Vos sites sont enregistrés sur votre compte."]
+          : ["local", "Pas encore synchronisé", "Vos sites restent sur cet ordinateur."];
       contenu.replaceChildren(
         el(
           "div",
           { class: "compte-profil" },
-          creerAvatar(etat.profil, { taille: 44 }),
+          creerAvatar(etat.profil, { taille: 52 }),
           el(
             "div",
             { class: "compte-identite" },
@@ -91,46 +102,63 @@ export function sectionCompte(session) {
             etat.profil.nom ? el("span", { texte: etat.profil.email }) : null,
           ),
         ),
-        el("p", { class: "reglages-note", "aria-live": "polite", texte: etatSynchro }),
+        el(
+          "p",
+          { class: "compte-statut", dataset: { statut }, title: detail, "aria-live": "polite" },
+          el("span", { class: "compte-statut-point", "aria-hidden": "true" }),
+          el("span", { texte: court }),
+          el("span", { class: "visuellement-cache", texte: ` : ${detail}` }),
+        ),
         ...(sync.erreur ? [erreurAvecReessai(sync.erreur, () => session.synchroniser())] : []),
         el(
           "div",
           { class: "compte-actions" },
           sync.mode !== "compte" && !sync.enCours
-            ? bouton(
+            ? action(
+                "synchroniser",
                 "Synchroniser maintenant",
                 () => session.synchroniser(),
-                "bouton bouton--principal",
+                "carte-action--principale",
               )
             : null,
-          bouton("Restaurer la copie de cet ordinateur", () => session.restaurerCopie()),
-          bouton("Se déconnecter", () => session.deconnecter()),
+          action("restaurer", "Restaurer la copie de cet ordinateur", () =>
+            session.restaurerCopie(),
+          ),
+          action("deconnexion", "Se déconnecter", () => session.deconnecter()),
         ),
-        el("p", { class: "reglages-liens" }, lienConfidentialite()),
-        session.supprimerCompte
-          ? el(
-              "div",
-              { class: "zone-danger" },
-              el("strong", { texte: "Supprimer mon compte" }),
-              el("p", {
-                class: "reglages-note",
-                texte:
-                  "Supprime définitivement votre compte et tout ce qui y est enregistré (sites, réglages, sauvegardes, fonds d'écran).",
-              }),
-              bouton(
-                "Supprimer mon compte…",
-                () => session.supprimerCompte(),
-                "bouton bouton--danger",
+      );
+      danger.replaceChildren(
+        ...(session.supprimerCompte
+          ? [
+              el(
+                "details",
+                { class: "zone-danger" },
+                el("summary", { texte: "Supprimer mon compte" }),
+                el(
+                  "div",
+                  { class: "zone-danger-corps" },
+                  el("p", {
+                    class: "reglages-note",
+                    texte:
+                      "Supprime définitivement votre compte et tout ce qui y est enregistré (sites, réglages, sauvegardes, fonds d'écran).",
+                  }),
+                  bouton(
+                    "Supprimer mon compte…",
+                    () => session.supprimerCompte(),
+                    "bouton bouton--danger",
+                  ),
+                ),
               ),
-            )
-          : null,
+            ]
+          : []),
       );
       return;
     }
+    danger.replaceChildren();
     const enCours = etat.statut === "connexion";
     contenu.replaceChildren(
       el("p", {
-        class: "reglages-note",
+        class: "compte-invitation",
         texte: "Connectez-vous pour retrouver vos sites sur vos autres ordinateurs.",
       }),
       el(
@@ -145,10 +173,14 @@ export function sectionCompte(session) {
         el("span", { texte: enCours ? "Connexion…" : "Se connecter avec Google" }),
       ),
       ...(etat.erreur ? [erreurAvecReessai(etat.erreur, () => session.connecter())] : []),
-      el("p", { class: "reglages-liens" }, lienConfidentialite()),
     );
   };
   rendre();
   const arrets = [compte.abonner(rendre), synchro?.abonner(rendre)].filter(Boolean);
-  return { section, arreter: () => arrets.forEach((a) => a()) };
+  return {
+    section,
+    danger,
+    confidentialite: el("p", { class: "reglages-liens" }, lienConfidentialite()),
+    arreter: () => arrets.forEach((a) => a()),
+  };
 }

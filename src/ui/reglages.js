@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
+import { icone } from "./icones.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { sectionSauvegardes } from "./reglages/sauvegardes.js";
@@ -14,6 +15,15 @@ import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
 
 let ouvert = null;
+
+const ONGLETS = [
+  ["apparence", "Apparence"],
+  ["sauvegardes", "Sauvegardes"],
+  ["donnees", "Données"],
+  ["avance", "Avancé"],
+];
+const CLE_ONGLET = "nedotab:onglet-reglages";
+const SORTIE_MS = 140;
 
 /** Label of a setting kept on this device only (never synced, V2.9). */
 const libelleAppareil = (texte) =>
@@ -284,33 +294,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   // --- Compte (account) -----------------------------------------------------------------
   const compteUi = session ? sectionCompte(session) : null;
 
-  // --- panel ---------------------------------------------------------------------------
-  const panneau = el(
-    "dialog",
-    { class: "reglages", "aria-labelledby": "reglages-titre" },
-    el(
-      "header",
-      { class: "reglages-entete" },
-      el("h2", { id: "reglages-titre", texte: "Réglages" }),
-      el("button", {
-        type: "button",
-        class: "fenetre-fermer",
-        "aria-label": "Fermer les réglages",
-        texte: "×",
-        onclick: () => fermer(),
-      }),
-    ),
-    el(
-      "div",
-      { class: "reglages-corps" },
-      compteUi?.section,
-      session?.sauvegardes
-        ? sectionSauvegardes(session.sauvegardes, session.restauration).section
-        : null,
-      session?.donnees
-        ? sectionDonnees({ donnees: session.donnees, restauration: session.restauration, store })
-            .section
-        : null,
+  // --- panel: account card on top, then one tab at a time -----------------------------------
+  const contenus = {
+    apparence: [
       section(
         "Apparence",
         el("p", { class: "reglages-libelle", texte: "Thème" }),
@@ -321,6 +307,19 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         libelleAppareil("Colonnes"),
         colonnes.groupe,
       ),
+    ],
+    sauvegardes: session?.sauvegardes
+      ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
+      : null,
+    donnees: session?.donnees
+      ? [
+          sectionDonnees({ donnees: session.donnees, restauration: session.restauration, store })
+            .section,
+          compteUi?.confidentialite,
+          compteUi?.danger,
+        ]
+      : null,
+    avance: [
       section("Autorisations", etatPermission, boutonPermission),
       section("Stockage", etatStockage),
       section(
@@ -352,8 +351,130 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
           }),
         ),
       ),
+    ],
+  };
+  const onglets = ONGLETS.filter(([cle]) => contenus[cle]);
+  const panneauxOnglets = Object.fromEntries(
+    onglets.map(([cle, libelle]) => [
+      cle,
+      el(
+        "div",
+        {
+          class: "onglet-panneau",
+          id: `onglet-panneau-${cle}`,
+          role: "tabpanel",
+          "aria-label": libelle,
+          hidden: true,
+        },
+        ...contenus[cle],
+      ),
+    ]),
+  );
+  const curseur = el("span", { class: "onglets-curseur", "aria-hidden": "true" });
+  const barreOnglets = el(
+    "div",
+    { class: "reglages-onglets", role: "tablist", "aria-label": "Rubriques des réglages" },
+    curseur,
+    onglets.map(([cle, libelle]) =>
+      el(
+        "button",
+        {
+          type: "button",
+          class: "onglet",
+          role: "tab",
+          id: `onglet-${cle}`,
+          "aria-controls": `onglet-panneau-${cle}`,
+          dataset: { onglet: cle },
+          onclick: () => choisirOnglet(cle),
+        },
+        icone(cle),
+        el("span", { texte: libelle }),
+      ),
     ),
   );
+  barreOnglets.addEventListener("keydown", (e) => {
+    const sens = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!sens) return;
+    e.preventDefault();
+    const i = onglets.findIndex(([cle]) => cle === ongletActif);
+    const [suivant] = onglets[(i + sens + onglets.length) % onglets.length];
+    choisirOnglet(suivant);
+    barreOnglets.querySelector(`[data-onglet="${suivant}"]`).focus();
+  });
+  const corps = el("div", { class: "reglages-corps" }, Object.values(panneauxOnglets));
+
+  let ongletActif = null;
+  function choisirOnglet(cle) {
+    if (cle === ongletActif) return;
+    const ordre = onglets.map(([c]) => c);
+    const sens =
+      ongletActif && ordre.indexOf(cle) < ordre.indexOf(ongletActif) ? "gauche" : "droite";
+    const premier = ongletActif === null;
+    ongletActif = cle;
+    for (const b of barreOnglets.querySelectorAll(".onglet")) {
+      const actif = b.dataset.onglet === cle;
+      b.setAttribute("aria-selected", String(actif));
+      b.tabIndex = actif ? 0 : -1;
+    }
+    for (const [c, p] of Object.entries(panneauxOnglets)) {
+      p.hidden = c !== cle;
+      if (c === cle && !premier) p.dataset.entree = sens;
+    }
+    corps.scrollTop = 0;
+    placerCurseur();
+    try {
+      localStorage.setItem(CLE_ONGLET, cle);
+    } catch {
+      /* the remembered tab is only a convenience */
+    }
+  }
+  function placerCurseur() {
+    const b = barreOnglets.querySelector(`[data-onglet="${ongletActif}"]`);
+    if (!b) return;
+    curseur.style.setProperty("--x", `${b.offsetLeft}px`);
+    curseur.style.setProperty("--l", `${b.offsetWidth}px`);
+  }
+
+  const panneau = el(
+    "dialog",
+    { class: "reglages", "aria-labelledby": "reglages-titre", tabindex: "-1" },
+    el(
+      "header",
+      { class: "reglages-entete" },
+      el("h2", { id: "reglages-titre", texte: "Réglages" }),
+      el(
+        "button",
+        {
+          type: "button",
+          class: "reglages-fermer",
+          "aria-label": "Fermer les réglages",
+          onclick: () => fermer(),
+        },
+        icone("fermer"),
+      ),
+    ),
+    compteUi?.section,
+    barreOnglets,
+    corps,
+  );
+
+  // The account card shows a copy of the user's own background, kept in step with it. Only
+  // the values set on the layer are copied: without any, the card follows the theme's colour.
+  const calque = document.getElementById("fond");
+  const copierFond = () => {
+    if (!compteUi) return;
+    const s = compteUi.section.style;
+    const fond = calque?.style;
+    const visible = fond && calque.dataset.type !== "aucun";
+    if (visible && fond.backgroundColor) s.setProperty("--carte-couleur", fond.backgroundColor);
+    else s.removeProperty("--carte-couleur");
+    if (visible && fond.backgroundImage) s.setProperty("--carte-image", fond.backgroundImage);
+    else if (visible) s.setProperty("--carte-image", "none");
+    else s.removeProperty("--carte-image");
+    s.setProperty("--carte-voile", (visible && fond.getPropertyValue("--voile-fond")) || "0");
+  };
+  const observateur = calque ? new MutationObserver(copierFond) : null;
+  observateur?.observe(calque, { attributes: true });
 
   const actualiser = () => {
     const r = lire();
@@ -395,20 +516,36 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     desabonner();
     compteUi?.arreter();
     bibliotheque?.arreter();
+    observateur?.disconnect();
     document.removeEventListener("keydown", surTouche);
-    panneau.close();
-    panneau.remove();
     ouvert = null;
     retourFocus?.focus();
+    // Short exit slide, then the panel leaves the page.
+    panneau.classList.add("reglages--sortie");
+    setTimeout(() => {
+      panneau.close();
+      panneau.remove();
+    }, SORTIE_MS);
   }
   document.addEventListener("keydown", surTouche);
 
   document.body.append(panneau);
   afficherPanneau(lire().fond.type);
   actualiser();
+  copierFond();
   majPermission();
   panneau.show();
-  panneau.querySelector(".segment[aria-checked='true']")?.focus();
+  let memorise = null;
+  try {
+    memorise = localStorage.getItem(CLE_ONGLET);
+  } catch {
+    /* no remembered tab */
+  }
+  choisirOnglet(onglets.some(([c]) => c === memorise) ? memorise : onglets[0][0]);
+  // The tab cursor only glides once it has found its first place.
+  requestAnimationFrame(() => barreOnglets.classList.add("reglages-onglets--pret"));
+  // Focus goes to the panel itself: Tab then reaches its controls in order.
+  panneau.focus({ preventScroll: true });
   ouvert = { fermer };
   return ouvert;
 }
