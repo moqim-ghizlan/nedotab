@@ -574,3 +574,63 @@ body.fond-sombre {
 .sauvegardes [hidden] {
   display: none;
 }
+
+.sauvegarde--avant strong {
+  color: var(--accent);
+}
+
+.sauvegarde .lien-discret {
+  margin-right: 0;
+}
+
+/* --- backup preview --------------------------------------------------------------- */
+
+.apercu-resume {
+  margin: 0;
+  font-weight: 600;
+}
+
+.apercu-differences summary,
+.apercu-contenu summary {
+  cursor: pointer;
+  font-size: var(--taille-s);
+}
+
+.apercu-differences ul {
+  margin: var(--espace-1) 0 0;
+  padding-left: var(--espace-5);
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: var(--taille-s);
+}
+
+.apercu-arbre {
+  margin: var(--espace-1) 0 0;
+  padding-left: var(--espace-4);
+  list-style: none;
+  font-size: var(--taille-s);
+}
+
+.apercu-contenu > .apercu-arbre {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.apercu-site {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: 2px 0;
+}
+
+.apercu-icone .tuile-icone {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  font-size: 0.55rem;
+  box-shadow: none;
+}
+
+.apercu-icone .tuile-icone--image {
+  padding: 2px;
+}

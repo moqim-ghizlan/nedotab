@@ -16,6 +16,7 @@ import { scenarioTempsReel } from "./scenarios/temps-reel.mjs";
 import { scenarioHorsLigne } from "./scenarios/hors-ligne.mjs";
 import { scenarioFondsCompte } from "./scenarios/fonds-compte.mjs";
 import { scenarioSauvegardes } from "./scenarios/sauvegardes.mjs";
+import { scenarioRestauration } from "./scenarios/restauration.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -635,6 +636,22 @@ if (seulement === "compte" || seulement === "sauvegardes") {
     });
   } finally {
     await nav13.fermer();
+  }
+}
+
+// V2.8 — restoration (emulators)
+if (seulement === "compte" || seulement === "restauration") {
+  const nav14 = await lancerChrome();
+  try {
+    const id = await nav14.chargerExtension();
+    await scenarioRestauration({
+      nav: nav14,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav14.fermer();
   }
 }
 

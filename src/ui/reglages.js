@@ -280,7 +280,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "div",
       { class: "reglages-corps" },
       compteUi?.section,
-      session?.sauvegardes ? sectionSauvegardes(session.sauvegardes).section : null,
+      session?.sauvegardes
+        ? sectionSauvegardes(session.sauvegardes, session.restauration).section
+        : null,
       section(
         "Apparence",
         el("p", { class: "reglages-libelle", texte: "Thème" }),

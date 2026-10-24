@@ -19,6 +19,7 @@ import { creerAvatar } from "./avatar.js";
 import { creerCompte } from "./services/compte.js";
 import { creerSynchro } from "./services/synchro.js";
 import { creerSauvegardes } from "./services/sauvegardes.js";
+import { creerRestauration } from "./services/restauration.js";
 import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
@@ -173,6 +174,7 @@ export async function demarrerApp(racine) {
     },
   };
   session.sauvegardes = creerSauvegardes({ store, session });
+  session.restauration = creerRestauration({ store, session });
   // Automatic backup: once the account is synced (first server snapshot), at most daily.
   let sauvegardeVerifiee = false;
   synchro.abonner((e) => {

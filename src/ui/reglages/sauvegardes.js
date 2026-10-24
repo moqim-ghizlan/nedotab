@@ -1,5 +1,7 @@
 import { dateHeure, NOM_MAX } from "../../core/sauvegardes.js";
+import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
+import { ouvrirApercu } from "./apercuSauvegarde.js";
 import { el } from "../dom.js";
 import { toast } from "../toast.js";
 
@@ -16,7 +18,7 @@ const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
  * maintenant", filter All / Automatic / Manual, pages of 20, deletion of manual backups.
  * The list is only loaded when the section is opened (each backup is a full document).
  */
-export function sectionSauvegardes(service) {
+export function sectionSauvegardes(service, restauration) {
   const contenu = el("div", { class: "sauvegardes" });
   const section = el(
     "section",
@@ -35,11 +37,57 @@ export function sectionSauvegardes(service) {
   });
   const etat = el("p", { class: "reglages-note", "aria-live": "polite" });
 
+  /** "Aperçu" button: preview, then restore (the list reloads: a safety copy was added). */
+  const boutonApercu = (titre, sous, source, apres) =>
+    el("button", {
+      type: "button",
+      class: "lien-discret",
+      texte: "Aperçu",
+      "aria-label": `Aperçu de ${titre}`,
+      onclick: async () => {
+        const r = await ouvrirApercu(restauration, { titre, sous, source });
+        if (r?.ok) apres();
+      },
+    });
+
+  /** Copies of this computer (V2.3): same preview and restore. */
+  const copies = el("ul", { class: "liste-sauvegardes liste-copies" });
+  const titreCopies = el("p", {
+    class: "reglages-libelle",
+    texte: "Copies sur cet ordinateur",
+    hidden: true,
+  });
+  const chargerCopies = async () => {
+    const liste = await plateforme.copies.lister().catch(() => []);
+    titreCopies.hidden = liste.length === 0;
+    copies.replaceChildren(
+      ...liste.map((c) => {
+        const sous = `Copie du ${dateHeure(c.date)}`;
+        return el(
+          "li",
+          { class: "sauvegarde" },
+          el("span", { class: "sauvegarde-type", "aria-hidden": "true", texte: "⌂" }),
+          el("div", { class: "sauvegarde-texte" }, el("strong", { texte: sous })),
+          restauration
+            ? boutonApercu("Copie de cet ordinateur", sous, { ...c.etat, creeLe: c.date }, () => {
+                chargerCopies();
+                if (service.enCompte()) charger(true);
+              })
+            : null,
+        );
+      }),
+    );
+  };
+
   const ligne = (s) => {
     const t = TYPES[s.type] ?? TYPES.auto;
+    const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${s.appareil === "pwa" ? "iPhone / iPad" : "Chrome"}`;
     return el(
       "li",
-      { class: "sauvegarde", dataset: { id: s.id } },
+      {
+        class: `sauvegarde${s.type === "avant-restauration" ? " sauvegarde--avant" : ""}`,
+        dataset: { id: s.id },
+      },
       el("span", {
         class: "sauvegarde-type",
         title: t.libelle,
@@ -54,6 +102,7 @@ export function sectionSauvegardes(service) {
           texte: `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${s.appareil === "pwa" ? "iPhone / iPad" : "Chrome"}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
         }),
       ),
+      restauration ? boutonApercu(s.nom || t.libelle, sous, s, () => charger(true)) : null,
       s.type === "manuelle"
         ? el("button", {
             type: "button",
@@ -159,6 +208,8 @@ export function sectionSauvegardes(service) {
         class: "reglages-note",
         texte: "Connectez-vous pour activer les sauvegardes automatiques.",
       }),
+      titreCopies,
+      copies,
     );
   } else {
     contenu.append(
@@ -177,8 +228,11 @@ export function sectionSauvegardes(service) {
       liste,
       plus,
       etat,
+      titreCopies,
+      copies,
     );
     charger(true);
   }
+  chargerCopies();
   return { section };
 }

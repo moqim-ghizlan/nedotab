@@ -60,10 +60,12 @@ export async function scenarioSauvegardes({ nav, url, verifier, dossier }) {
   await attendre(1500);
   await p.eval(`document.querySelector(".bouton-reglages").click()`);
   await attendre(1500);
-  const lignes = await p.eval(`document.querySelectorAll(".liste-sauvegardes .sauvegarde").length`);
+  const lignes = await p.eval(
+    `document.querySelectorAll(".liste-sauvegardes:not(.liste-copies) .sauvegarde").length`,
+  );
   verifier("Réglages : la liste montre la sauvegarde automatique", lignes === 1, `${lignes}`);
   const texte = await p.eval(
-    `document.querySelector(".liste-sauvegardes .sauvegarde")?.textContent ?? ""`,
+    `document.querySelector(".liste-sauvegardes:not(.liste-copies) .sauvegarde")?.textContent ?? ""`,
   );
   verifier(
     "Date, appareil et contenu affichés",
@@ -84,7 +86,7 @@ export async function scenarioSauvegardes({ nav, url, verifier, dossier }) {
     liste.some((s) => s.type === "manuelle" && s.nom === "Avant grand rangement"),
   );
   const premiere = await p.eval(
-    `document.querySelector(".liste-sauvegardes .sauvegarde strong")?.textContent`,
+    `document.querySelector(".liste-sauvegardes:not(.liste-copies) .sauvegarde strong")?.textContent`,
   );
   verifier("Visible en tête de liste", premiere === "Avant grand rangement", premiere);
   await p.capture(`${dossier}/sauvegardes.png`);
@@ -96,9 +98,13 @@ export async function scenarioSauvegardes({ nav, url, verifier, dossier }) {
   await attendre(1500);
   verifier(
     "Filtre « Manuelles »",
-    (await p.eval(`document.querySelectorAll(".liste-sauvegardes .sauvegarde").length`)) === 1,
+    (await p.eval(
+      `document.querySelectorAll(".liste-sauvegardes:not(.liste-copies) .sauvegarde").length`,
+    )) === 1,
   );
-  await p.eval(`document.querySelector(".liste-sauvegardes .sauvegarde button").click()`);
+  await p.eval(
+    `document.querySelector(".liste-sauvegardes:not(.liste-copies) .sauvegarde button[aria-label^='Supprimer']").click()`,
+  );
   await attendre(300);
   await p.eval(`document.querySelector("dialog[open] .bouton--principal").click()`);
   await attendre(2000);

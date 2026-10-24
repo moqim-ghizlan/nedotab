@@ -2,6 +2,37 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.8.0] - 2026-10-24
+
+### Ajouté
+
+- Restauration d'une sauvegarde depuis Réglages → Sauvegardes → « Aperçu » : en-tête (date,
+  appareil, nombre de sites et dossiers), **différences avec maintenant** (« +3 sites,
+  −12 sites, 4 déplacés », listes des sites qui reviennent, disparaissent, sont déplacés ou
+  renommés), contenu en arbre repliable, puis « Restaurer cette version » avec confirmation.
+- Jamais sans copie de sécurité confirmée : une sauvegarde « avant restauration » est
+  d'abord enregistrée en ligne (10 gardées) ; si elle échoue, rien n'est modifié.
+- La restauration est écrite en ligne aussitôt (sans regroupement) et propagée aux autres
+  appareils ; toast « Version du 18/10 restaurée — Annuler » pendant 10 s (sans nouvelle
+  copie de sécurité), puis retour possible plus tard depuis « Avant la restauration du … »,
+  mise en évidence dans la liste.
+- Sauvegardes d'un schéma ancien migrées avant l'aperçu ; d'une version plus récente :
+  restauration désactivée et expliquée. Hors ligne : restauration désactivée.
+- Fond d'écran supprimé depuis la sauvegarde : fond « aucun » et message.
+- « Copies sur cet ordinateur » (copies de sécurité locales) : même aperçu, même restauration,
+  aussi sans compte.
+
+### Tests
+
+- 278 tests (différences sur 3 niveaux, restaurer puis annuler identique, schéma ancien,
+  version future, échec de la copie de sécurité, hors ligne, mode local, fond supprimé).
+- Émulateurs : 62/62, dont la séquence complète sauvegarde → modifications → restauration
+  écrite en ligne → annulation.
+- Navigateur : 149/149 sans émulateurs ; 85/85 avec les émulateurs (scénario restauration
+  9/9 : aperçu, confirmation, annuler, retour depuis « avant restauration », hors ligne).
+- Navigateur avec émulateurs : 9 vérifications de restauration (aperçu, confirmation,
+  grille restaurée, Annuler, restauration plus tard, hors ligne).
+
 ## [2.7.0] - 2026-10-24
 
 ### Ajouté

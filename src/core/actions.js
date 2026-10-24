@@ -34,6 +34,7 @@ export const A = {
   SYNCHRO_APPLIQUER: "SYNCHRO_APPLIQUER",
   FOND_AJOUTER: "FOND_AJOUTER",
   FOND_SUPPRIMER: "FOND_SUPPRIMER",
+  GRILLE_RESTAURER: "GRILLE_RESTAURER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -178,6 +179,10 @@ export function reduire(etat, action) {
         reglages: { ...etat.reglages, fond, fonds: fonds.filter((f) => f.id !== action.id) },
       };
     }
+    case A.GRILLE_RESTAURER:
+      // A backup put back (already migrated and validated): grid and synced settings.
+      if (!Array.isArray(action.etat?.grille) || !action.etat.reglages) return etat;
+      return { ...etat, grille: action.etat.grille, reglages: action.etat.reglages };
     case A.SYNCHRO_APPLIQUER:
       // State chosen during a synchronisation (already migrated and validated): it is a
       // local change, saved and shown in the other tabs. Device-only settings are kept.

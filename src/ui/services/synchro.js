@@ -121,6 +121,12 @@ export function creerSynchro({
     if (enAttente.length === 0) plat.preferences.ecrire("synchroEnAttente", true);
     enAttente.push(action);
     majStatut();
+    // A restoration is written at once: another device's change must not slip in between.
+    if (action.type === A.GRILLE_RESTAURER) {
+      clearTimeout(minuteur);
+      ecrire();
+      return;
+    }
     planifier();
   });
   if (typeof window !== "undefined") {
