@@ -1,5 +1,6 @@
 import { A } from "../core/actions.js";
 import { parcourir } from "../core/arbre.js";
+import { URL_SITE } from "../core/constantes.js";
 import { FLOU_MAX, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
@@ -272,7 +273,21 @@ export function ouvrirReglages(store, { retourFocus } = {}) {
       section("Stockage", etatStockage),
       section(
         "À propos",
-        el("p", { class: "reglages-note", texte: `NedoTab ${plateforme.getVersion()}` }),
+        el("p", {
+          class: "reglages-note",
+          texte: `Version installée : ${plateforme.getVersion()}`,
+        }),
+        el(
+          "p",
+          { class: "reglages-liens" },
+          el("a", { href: URL_SITE, target: "_blank", rel: "noopener", texte: "Site du projet" }),
+          el("a", {
+            href: `${URL_SITE}mise-a-jour.html`,
+            target: "_blank",
+            rel: "noopener",
+            texte: "Guide de mise à jour",
+          }),
+        ),
       ),
     ),
   );

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Mettre à jour NedoTab — NedoTab</title>
+    <meta
+      name="description"
+      content="Installer une nouvelle version de NedoTab sans perdre vos sites, et la liste des versions."
+    />
+    <link rel="canonical" href="%CANONICAL%" />
+    <link rel="icon" href="./icones/32.png" />
+    <meta property="og:title" content="Mettre à jour NedoTab" />
+    <meta property="og:image" content="%URL_PUBLIQUE%captures/og-image.png" />
+    <script type="module" src="./src/site.js"></script>
+  </head>
+  <body>
+    <!-- @entete -->
+    <main id="contenu" class="page">
+      <h1>Mettre à jour NedoTab</h1>
+      <p class="chapo">
+        Installé depuis un dossier, NedoTab ne se met pas à jour tout seul. La dernière version est
+        la %VERSION%, du %DATE_VERSION%.
+      </p>
+
+      <aside class="encadre encadre--alerte" aria-labelledby="ne-pas-supprimer">
+        <h2 id="ne-pas-supprimer">Ne supprimez pas l'extension pour la réinstaller</h2>
+        <p>
+          Vos sites sont enregistrés uniquement sur votre ordinateur, avec l'extension. La supprimer
+          efface aussi vos sites. Remplacez simplement le contenu de son dossier : l'identifiant de
+          l'extension ne change pas, et Chrome garde vos sites.
+        </p>
+      </aside>
+
+      <ol class="etapes">
+        <li>
+          <h2>Téléchargez la nouvelle version</h2>
+          <p>
+            <a href="./telechargement/%ZIP_NOM%" download>Télécharger NedoTab %VERSION%</a>
+            (%ZIP_TAILLE%).
+          </p>
+          <p class="empreinte">Empreinte SHA-256 : <code>%ZIP_SHA256%</code></p>
+        </li>
+        <li>
+          <h2>Remplacez le contenu du dossier</h2>
+          <p>
+            Décompressez le fichier, puis copiez son contenu dans le dossier où NedoTab est déjà
+            installé (par exemple <code>Documents/NedoTab</code>), en acceptant de remplacer les
+            fichiers.
+          </p>
+        </li>
+        <li>
+          <h2>Rechargez l'extension</h2>
+          <p>
+            Ouvrez <code>chrome://extensions</code> et cliquez sur la flèche circulaire ↻ de la
+            carte NedoTab. Ouvrez un nouvel onglet : vos sites sont là, avec la nouvelle version.
+          </p>
+          <p class="copie">
+            <code>chrome://extensions</code>
+            <button type="button" data-copier="chrome://extensions">Copier</button>
+          </p>
+        </li>
+      </ol>
+
+      <h2>Les versions</h2>
+      <div class="versions">
+        <!-- @versions -->
+      </div>
+    </main>
+    <!-- @pied -->
+  </body>
+</html>

@@ -13,7 +13,12 @@ const CANDIDATS = [
   "/usr/bin/google-chrome",
 ].filter(Boolean);
 
-export async function lancerChrome({ headless = true, largeur = 1280, hauteur = 800 } = {}) {
+export async function lancerChrome({
+  headless = true,
+  largeur = 1280,
+  hauteur = 800,
+  langue,
+} = {}) {
   const exe = CANDIDATS.find((c) => existsSync(c));
   if (!exe) throw new Error("Chrome introuvable (définir CHROME_PATH)");
   const profil = mkdtempSync(join(tmpdir(), "nedotab-chrome-"));
@@ -26,6 +31,7 @@ export async function lancerChrome({ headless = true, largeur = 1280, hauteur = 
     `--window-size=${largeur},${hauteur}`,
   ];
   if (headless) args.push("--headless=new");
+  if (langue) args.push(`--lang=${langue}`, `--accept-lang=${langue}`);
   const proc = spawn(exe, args, { stdio: ["ignore", "ignore", "ignore", "pipe", "pipe"] });
   const ecriture = proc.stdio[3];
   const lecture = proc.stdio[4];
@@ -128,8 +134,12 @@ function creerPage(envoyer, sessionId, targetId, ecouteurs) {
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description);
       return r.result.value;
     },
-    async capture(fichier) {
-      const { data } = await page.envoyer("Page.captureScreenshot", { format: "png" });
+    async capture(fichier, { qualite } = {}) {
+      const format = fichier.endsWith(".webp") ? "webp" : fichier.endsWith(".jpg") ? "jpeg" : "png";
+      const { data } = await page.envoyer("Page.captureScreenshot", {
+        format,
+        ...(format === "png" ? {} : { quality: qualite ?? 82 }),
+      });
       const { writeFileSync, mkdirSync } = await import("node:fs");
       const { dirname } = await import("node:path");
       mkdirSync(dirname(fichier), { recursive: true });

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Confidentialité — NedoTab</title>
+    <meta
+      name="description"
+      content="NedoTab ne collecte, n'envoie ni ne vend aucune donnée. Ce qui reste sur votre ordinateur et les rares appels faits pour afficher les icônes."
+    />
+    <link rel="canonical" href="%CANONICAL%" />
+    <link rel="icon" href="./icones/32.png" />
+    <meta property="og:title" content="Confidentialité de NedoTab" />
+    <meta property="og:image" content="%URL_PUBLIQUE%captures/og-image.png" />
+    <script type="module" src="./src/site.js"></script>
+  </head>
+  <body>
+    <!-- @entete -->
+    <main id="contenu" class="page">
+      <h1>Confidentialité</h1>
+      <p class="chapo">
+        NedoTab ne collecte, n'envoie ni ne vend aucune donnée. Il n'y a pas de compte, pas d'outil
+        de mesure d'audience et pas de publicité.
+      </p>
+
+      <h2>Ce qui reste sur votre ordinateur</h2>
+      <p>
+        Vos sites, vos dossiers, vos icônes personnalisées et vos réglages sont enregistrés par
+        Chrome sur votre ordinateur (stockage local de l'extension). L'image de fond que vous
+        importez est gardée dans la base locale du navigateur (IndexedDB). Rien de tout cela n'est
+        copié ailleurs.
+      </p>
+
+      <h2>Les seuls échanges avec Internet</h2>
+      <p>
+        Quand vous ajoutez un site ou demandez sa nouvelle icône, NedoTab cherche son nom et son
+        icône :
+      </p>
+      <ul>
+        <li>
+          <strong>auprès du site lui-même</strong>, seulement si vous avez accordé l'accès aux sites
+          (facultatif, modifiable dans les réglages) ; la requête est faite sans vos cookies ;
+        </li>
+        <li><strong>dans le cache d'icônes de Chrome</strong>, sans échange réseau ;</li>
+        <li>
+          <strong>auprès du service d'icônes de Google</strong>, qui reçoit alors le nom de domaine
+          du site ajouté (par exemple <code>wikipedia.org</code>).
+        </li>
+      </ul>
+      <p>
+        Les icônes ainsi trouvées sont ensuite chargées depuis leur adresse à chaque affichage,
+        comme une image de page web.
+      </p>
+      <p>
+        La barre de recherche cherche d'abord dans vos sites, sans rien envoyer. Si vous appuyez sur
+        Entrée sans résultat, votre texte est transmis au moteur de recherche choisi dans votre
+        navigateur, comme si vous l'aviez tapé dans la barre d'adresse.
+      </p>
+
+      <h2>Ce site</h2>
+      <p>
+        Ce site ne dépose pas de cookie et ne charge aucun script ni police de tiers. Son hébergeur
+        (%HEBERGEUR_NOM%%HEBERGEUR_NOTE%) peut conserver des journaux techniques des visites, comme
+        tout hébergeur web.
+      </p>
+
+      <aside class="encadre">
+        <p>
+          Cette page décrit la version %VERSION%, qui fonctionne sans compte. Elle sera mise à jour
+          avant l'arrivée de la synchronisation entre appareils.
+        </p>
+      </aside>
+    </main>
+    <!-- @pied -->
+  </body>
+</html>

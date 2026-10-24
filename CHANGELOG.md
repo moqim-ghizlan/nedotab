@@ -2,6 +2,40 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.11.0] - 2026-10-24
+
+### Ajouté
+
+- Site vitrine (`site/`, build séparé vers `dist/site/`) : Accueil, Installation, Mise à
+  jour, Questions fréquentes, Confidentialité, Mentions légales. Polices système, aucun
+  script, police, cookie ou traceur de tiers ; clair et sombre ; responsive.
+- Guide d'installation pas à pas (bouton « Copier » pour `chrome://extensions`, capture
+  annotée de la page des extensions, dépannage) et guide de mise à jour qui avertit de ne
+  pas supprimer l'extension. Liste des versions générée depuis ce CHANGELOG.
+- Captures réelles de l'extension (`npm run captures`), sites génériques uniquement.
+- Téléchargement servi par le site, avec version, taille et empreinte SHA-256.
+- `npm run publier` : build, vérification du code distant, zip contrôlé (manifeste à la
+  racine, bonne version), copie dans le site, build du site. Rien n'est mis en ligne.
+- Réglages → À propos : version installée, liens « Site du projet » et « Guide de mise à
+  jour ».
+
+### Décisions en attente (plan V1.11)
+
+- Domaine et hébergement du site : adresse GitHub Pages du dépôt utilisée par défaut,
+  hébergeur marqué « à confirmer ».
+- Emplacement des zips : servis par le site, comme dans la pratique décrite par le
+  propriétaire.
+- Mentions légales : éditeur et contact affichés « À COMPLÉTER » (`site/site.config.js`).
+
+### Tests
+
+- 204 tests, dont les liens du site et la conversion du CHANGELOG (HTML échappé).
+- Site dans Chrome : 17/17 — 6 pages (langue, titre unique, textes alternatifs,
+  description, hiérarchie des titres), aucun défilement horizontal à 390 px, aucune
+  requête vers un domaine tiers, console propre, bouton de téléchargement, et mise à jour
+  simulée depuis le zip du site (même identifiant, nouvelle version, sites conservés).
+- Lighthouse n'a pas été lancé (outil non installé) : à faire à la mise en ligne.
+
 ## [1.10.0] - 2026-10-24
 
 ### Ajouté

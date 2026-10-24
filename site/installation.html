@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Installer NedoTab dans Chrome — NedoTab</title>
+    <meta
+      name="description"
+      content="Installer NedoTab pas à pas sur Windows ou macOS : télécharger, décompresser, activer le mode développeur, charger l'extension."
+    />
+    <link rel="canonical" href="%CANONICAL%" />
+    <link rel="icon" href="./icones/32.png" />
+    <meta property="og:title" content="Installer NedoTab dans Chrome" />
+    <meta property="og:image" content="%URL_PUBLIQUE%captures/og-image.png" />
+    <script type="module" src="./src/site.js"></script>
+  </head>
+  <body>
+    <!-- @entete -->
+    <main id="contenu" class="page">
+      <h1>Installer NedoTab</h1>
+      <p class="chapo">
+        Cinq minutes, sur Windows comme sur macOS. Vous avez seulement besoin de Google Chrome.
+      </p>
+
+      <ol class="etapes">
+        <li>
+          <h2>Téléchargez le fichier</h2>
+          <p>
+            <a href="./telechargement/%ZIP_NOM%" download>Télécharger NedoTab %VERSION%</a>
+            (fichier .zip de %ZIP_TAILLE%).
+          </p>
+          <p class="empreinte">Empreinte SHA-256 : <code>%ZIP_SHA256%</code></p>
+        </li>
+        <li>
+          <h2>Décompressez-le dans un dossier que vous garderez</h2>
+          <p>
+            Sur Windows : clic droit sur le fichier, puis <strong>Extraire tout</strong>. Sur macOS
+            : double-clic sur le fichier.
+          </p>
+          <p>
+            Placez le dossier obtenu à un endroit où il restera, par exemple
+            <code>Documents/NedoTab</code>. Chrome lit l'extension dans ce dossier à chaque
+            démarrage : s'il est supprimé ou déplacé, l'extension cesse de fonctionner.
+          </p>
+        </li>
+        <li>
+          <h2>Ouvrez la page des extensions de Chrome</h2>
+          <p>
+            Copiez cette adresse, collez-la dans la barre d'adresse de Chrome et appuyez sur Entrée.
+            (Une page web ne peut pas ouvrir cette adresse directement.)
+          </p>
+          <p class="copie">
+            <code>chrome://extensions</code>
+            <button type="button" data-copier="chrome://extensions">Copier</button>
+          </p>
+        </li>
+        <li>
+          <h2>Activez le mode développeur</h2>
+          <p>L'interrupteur se trouve en haut à droite de la page.</p>
+          <figure class="capture capture-annotee">
+            <img
+              src="./captures/installation-extensions.webp"
+              width="1280"
+              height="800"
+              loading="lazy"
+              alt="La page des extensions de Chrome. En haut à droite, l'interrupteur Mode développeur est activé ; en haut à gauche apparaît le bouton Charger l'extension non empaquetée."
+            />
+            <span class="repere" style="left: 94.6%; top: 1.4%; width: 4.6%; height: 5.2%"></span>
+            <span class="repere" style="left: 1.6%; top: 8%; width: 20.2%; height: 5.2%"></span>
+          </figure>
+        </li>
+        <li>
+          <h2>Chargez l'extension</h2>
+          <p>
+            Cliquez sur <strong>Charger l'extension non empaquetée</strong>, puis choisissez le
+            dossier décompressé à l'étape 2 : celui qui contient le fichier
+            <code>manifest.json</code>. NedoTab apparaît dans la liste.
+          </p>
+        </li>
+        <li>
+          <h2>Ouvrez un nouvel onglet</h2>
+          <p>
+            Appuyez sur <kbd>Ctrl</kbd> + <kbd>T</kbd> (<kbd>⌘</kbd> + <kbd>T</kbd> sur Mac). Chrome
+            demande s'il faut revenir à la page de Google : choisissez <strong>Conserver</strong>.
+          </p>
+        </li>
+        <li>
+          <h2>Ajoutez vos sites</h2>
+          <p>
+            Cliquez sur <strong>+</strong> pour ajouter un site. Pour chercher, cliquez dans la page
+            puis tapez <kbd>/</kbd> : à l'ouverture d'un onglet, Chrome place d'abord le curseur
+            dans sa barre d'adresse.
+          </p>
+        </li>
+      </ol>
+
+      <aside class="encadre" aria-labelledby="pourquoi-dev">
+        <h2 id="pourquoi-dev">Pourquoi le mode développeur ?</h2>
+        <p>
+          NedoTab n'est pas publié sur le Chrome Web Store. Le mode développeur est la façon prévue
+          par Chrome pour installer une extension depuis un dossier de votre ordinateur.
+        </p>
+        <p>
+          Chrome peut afficher de temps en temps un avertissement au sujet des extensions en mode
+          développeur. Il ne signale pas un problème avec NedoTab : vous pouvez le fermer.
+        </p>
+      </aside>
+
+      <h2>Un souci ?</h2>
+      <h3>« Le fichier manifeste est introuvable »</h3>
+      <p>
+        Le dossier choisi n'est pas le bon. Choisissez le dossier qui contient directement
+        <code>manifest.json</code>, pas un dossier au-dessus.
+      </p>
+      <h3>Mon nouvel onglet n'a pas changé</h3>
+      <p>
+        Vous avez probablement répondu « Revenir » à la question de Chrome. Ouvrez
+        <code>chrome://extensions</code>, désactivez puis réactivez NedoTab, ouvrez un nouvel onglet
+        et choisissez <strong>Conserver</strong>.
+      </p>
+      <h3>Je ne vois pas « Mode développeur »</h3>
+      <p>
+        Votre Chrome est sans doute géré par une entreprise ou une école, qui a désactivé cette
+        option. Seul l'administrateur peut l'autoriser.
+      </p>
+      <p>
+        Pour installer une nouvelle version plus tard, suivez le
+        <a href="./mise-a-jour.html">guide de mise à jour</a>.
+      </p>
+    </main>
+    <!-- @pied -->
+  </body>
+</html>

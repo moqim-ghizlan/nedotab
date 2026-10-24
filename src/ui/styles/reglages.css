@@ -242,3 +242,16 @@ body.fond-sombre {
 .reglages-image input[type="range"] {
   accent-color: var(--accent);
 }
+
+.reglages-liens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-4);
+  margin: 0;
+  font-size: var(--taille-s);
+}
+
+.reglages-liens a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}

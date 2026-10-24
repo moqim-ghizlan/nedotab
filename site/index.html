@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>NedoTab — votre page Nouvel onglet, rangée comme vous voulez</title>
+    <meta
+      name="description"
+      content="Extension gratuite pour Google Chrome : vos sites en icônes, des dossiers sur trois niveaux, une recherche instantanée. Sans compte, sans publicité, rien n'est envoyé."
+    />
+    <link rel="canonical" href="%CANONICAL%" />
+    <link rel="icon" href="./icones/32.png" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="NedoTab — votre page Nouvel onglet, rangée comme vous voulez"
+    />
+    <meta
+      property="og:description"
+      content="Vos sites en icônes, des dossiers sur trois niveaux, une recherche instantanée. Pour Google Chrome."
+    />
+    <meta property="og:image" content="%URL_PUBLIQUE%captures/og-image.png" />
+    <meta property="og:url" content="%CANONICAL%" />
+    <script type="module" src="./src/site.js"></script>
+  </head>
+  <body>
+    <!-- @entete -->
+    <main id="contenu">
+      <section class="heros" aria-labelledby="titre-heros">
+        <div>
+          <h1 id="titre-heros">Votre page Nouvel onglet, rangée comme vous voulez.</h1>
+          <p class="chapo">
+            Chaque nouvel onglet de Chrome affiche vos sites sous forme d'icônes. Rangez-les dans
+            des dossiers, et des dossiers dans des dossiers.
+          </p>
+          <ol class="piste" aria-label="Exemple de rangement sur trois niveaux">
+            <li><span>Accueil</span></li>
+            <li><span>Travail</span></li>
+            <li><span>Clients</span></li>
+            <li><span>Projets</span></li>
+          </ol>
+          <div class="actions">
+            <a class="bouton-principal" href="./telechargement/%ZIP_NOM%" download>
+              Télécharger pour Chrome
+              <small>Version %VERSION%, fichier .zip de %ZIP_TAILLE%</small>
+            </a>
+            <a href="./installation.html">Comment l'installer</a>
+          </div>
+        </div>
+        <figure class="capture">
+          <div class="capture-barre" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <picture>
+            <source srcset="./captures/accueil-sombre.webp" media="(prefers-color-scheme: dark)" />
+            <img
+              src="./captures/accueil-clair.webp"
+              width="1024"
+              height="640"
+              alt="La page Nouvel onglet de NedoTab : une barre de recherche, puis une grille d'icônes de sites et deux dossiers, Travail et Loisirs, qui montrent un aperçu de leurs sites."
+              fetchpriority="high"
+            />
+          </picture>
+        </figure>
+      </section>
+
+      <section class="bande bande--surface" aria-labelledby="titre-fonctions">
+        <div class="interieur">
+          <h2 id="titre-fonctions">Ce que vous pouvez faire</h2>
+
+          <article class="fonction">
+            <div>
+              <h3>Des dossiers dans des dossiers</h3>
+              <p>
+                Jusqu'à trois niveaux, comme Accueil › Travail › Clients. Un dossier s'ouvre
+                par-dessus la page, avec un fil d'Ariane pour remonter d'un clic, et sa tuile montre
+                les quatre premiers sites qu'il contient.
+              </p>
+            </div>
+            <figure class="capture">
+              <img
+                src="./captures/dossiers.webp"
+                width="1024"
+                height="640"
+                loading="lazy"
+                alt="Le dossier Clients ouvert dans le dossier Travail, avec le fil d'Ariane Accueil, Travail, Clients en haut de la fenêtre."
+              />
+            </figure>
+          </article>
+
+          <article class="fonction">
+            <div>
+              <h3>Rangez à la souris</h3>
+              <p>
+                Glissez une icône pour la déplacer. Maintenez-la une demi-seconde sur une autre
+                icône : un dossier se crée avec les deux. Lâchez-la sur un dossier pour l'y ranger.
+                Chaque rangement peut être annulé.
+              </p>
+            </div>
+            <figure class="capture">
+              <img
+                src="./captures/glisser.webp"
+                width="1024"
+                height="640"
+                loading="lazy"
+                alt="Une icône glissée au-dessus de l'icône Météo, entourée d'un halo : en la relâchant, un dossier sera créé."
+              />
+            </figure>
+          </article>
+
+          <article class="fonction">
+            <div>
+              <h3>Retrouvez tout au clavier</h3>
+              <p>
+                Appuyez sur <kbd>/</kbd> et tapez quelques lettres : sites et dossiers apparaissent
+                aussitôt, même rangés au troisième niveau. Entrée ouvre le site. Si rien ne
+                correspond, Entrée lance la recherche avec le moteur de votre navigateur.
+              </p>
+            </div>
+            <figure class="capture">
+              <img
+                src="./captures/recherche.webp"
+                width="1024"
+                height="640"
+                loading="lazy"
+                alt="La recherche avec les lettres re : Recettes, Refonte 2026 et d'autres résultats, avec leur emplacement dans les dossiers."
+              />
+            </figure>
+          </article>
+
+          <div class="autres">
+            <div>
+              <h3>Icônes automatiques</h3>
+              <p>
+                Tapez l'adresse d'un site : son nom et son icône sont trouvés tout seuls. Vous
+                pouvez aussi choisir une lettre, un emoji, une couleur ou votre propre image.
+              </p>
+            </div>
+            <div>
+              <h3>Fonds et thèmes</h3>
+              <p>
+                Thème clair, sombre ou automatique, couleur unie, dégradé ou votre photo, avec un
+                voile pour garder les titres lisibles.
+              </p>
+            </div>
+            <div>
+              <h3>Accessible</h3>
+              <p>
+                Flèches pour se déplacer, <kbd>F2</kbd> pour modifier, <kbd>Suppr</kbd> pour
+                supprimer, <kbd>Alt</kbd> + flèches pour réordonner. Les lecteurs d'écran sont pris
+                en charge.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="bande" aria-labelledby="titre-difference">
+        <h2 id="titre-difference">Pensé pour rester chez vous</h2>
+        <div class="engagements">
+          <p>
+            <strong>Aucun compte</strong>
+            Vos sites sont enregistrés dans Chrome, sur votre ordinateur. Rien à créer, rien à
+            retenir.
+          </p>
+          <p>
+            <strong>Rien n'est envoyé</strong>
+            L'extension ne collecte aucune donnée et ne contient aucun outil de mesure d'audience.
+            <a href="./confidentialite.html">Ce qui se passe exactement</a>.
+          </p>
+          <p>
+            <strong>Pas de publicité</strong>
+            Pas de bannière, pas de liens sponsorisés, pas de moteur de recherche imposé.
+          </p>
+        </div>
+      </section>
+
+      <section class="bande bande--surface" aria-labelledby="titre-bientot">
+        <div class="interieur">
+          <h2 id="titre-bientot">En préparation</h2>
+          <p class="chapo">
+            Ces fonctions sont prévues ; elles arriveront quand elles seront prêtes.
+          </p>
+          <ul class="bientot">
+            <li>
+              Retrouver ses sites sur plusieurs ordinateurs, avec un compte Google facultatif.
+            </li>
+            <li>La même page sur iPhone et iPad.</li>
+            <li>Un assistant pour ranger et retrouver ses sites, avec votre propre clé d'IA.</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+    <!-- @pied -->
+  </body>
+</html>
