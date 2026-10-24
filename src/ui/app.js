@@ -12,9 +12,12 @@ import { toast } from "./toast.js";
 export async function demarrerApp(racine) {
   const stockage = plateforme.stockage();
   let brut = null;
+  let versionConnue = null;
   let chargementRate = false;
   try {
-    brut = await stockage.charger();
+    const lu = await stockage.lire();
+    brut = lu.etat;
+    versionConnue = lu.meta?.majLe ?? null;
   } catch (e) {
     console.error("Lecture du stockage impossible", e);
     chargementRate = true;
@@ -52,9 +55,19 @@ export async function demarrerApp(racine) {
 
   const rendre = (e) => {
     const estVide = e.grille.length === 0;
+    // The grid is rebuilt: remember which tile had the focus and give it back.
+    const focusId = grilleEl.contains(document.activeElement)
+      ? document.activeElement.closest("[data-id], [data-action]")
+      : null;
+    const cle = focusId?.dataset.id ?? focusId?.dataset.action;
     vide.hidden = !estVide;
     grilleEl.hidden = estVide;
     rendreGrille(grilleEl, e.grille, { avecAjout: !lectureSeule });
+    if (cle) {
+      grilleEl
+        .querySelector(`[data-id="${CSS.escape(cle)}"], [data-action="${CSS.escape(cle)}"]`)
+        ?.focus();
+    }
   };
   store.abonner(rendre);
   rendre(store.lire());
@@ -71,6 +84,8 @@ export async function demarrerApp(racine) {
   });
 
   brancherPersistance(store, stockage, {
+    reduire,
+    versionConnue,
     lectureSeule: () => lectureSeule,
     onErreur: (e) => {
       console.error(e);

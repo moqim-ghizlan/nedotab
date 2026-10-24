@@ -1,7 +1,11 @@
 import { A } from "../../core/actions.js";
+import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { creerSite } from "../../core/modele.js";
 import { cleUrl, domaine, normaliserUrl } from "../../core/url.js";
+import { plateforme } from "../../platform/index.js";
 import { el } from "../dom.js";
+import { trouverIconeEtTitre } from "../services/icones.js";
+import { creerIcone } from "../tuile.js";
 
 function urlsDe(elements, acc = new Set()) {
   for (const e of elements) {
@@ -9,6 +13,67 @@ function urlsDe(elements, acc = new Set()) {
     else if (e.items) urlsDe(e.items, acc);
   }
   return acc;
+}
+
+/**
+ * Explains and asks for the optional "read sites" permission. chrome.permissions.request is
+ * called directly in the click handler (no await before it), otherwise Chrome refuses.
+ */
+function blocPermission({ onAccordee }) {
+  const bloc = el(
+    "div",
+    { class: "permission", hidden: true },
+    el("p", {
+      texte: "Autoriser l'accès aux sites pour récupérer automatiquement leur nom et leur icône ?",
+    }),
+  );
+  const boutons = el(
+    "div",
+    { class: "permission-actions" },
+    el("button", {
+      type: "button",
+      class: "bouton",
+      texte: "Plus tard",
+      onclick: () => {
+        bloc.hidden = true;
+        plateforme.preferences.ecrire("permissionSitesPlusTard", true);
+        lien.hidden = false;
+      },
+    }),
+    el("button", {
+      type: "button",
+      class: "bouton bouton--principal",
+      texte: "Autoriser",
+      onclick: () => {
+        plateforme.permissionsSites.demander().then((ok) => {
+          bloc.hidden = true;
+          lien.hidden = ok;
+          if (ok) onAccordee();
+        });
+      },
+    }),
+  );
+  bloc.append(boutons);
+  const lien = el("button", {
+    type: "button",
+    class: "lien-discret",
+    hidden: true,
+    texte: "Autoriser l'accès aux sites pour de meilleures icônes",
+    onclick: () => {
+      plateforme.permissionsSites.demander().then((ok) => {
+        lien.hidden = ok;
+        if (ok) onAccordee();
+      });
+    },
+  });
+  (async () => {
+    if (!plateforme.permissionsSites.disponible) return;
+    if (await plateforme.permissionsSites.contient().catch(() => true)) return;
+    const plusTard = await plateforme.preferences.lire("permissionSitesPlusTard");
+    if (plusTard) lien.hidden = false;
+    else bloc.hidden = false;
+  })();
+  return [bloc, lien];
 }
 
 /** "Ajouter un site" dialog (native <dialog>, focus and Escape handled by the browser). */
@@ -32,19 +97,69 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
     autocomplete: "off",
     maxlength: "60",
   });
+  const apercu = el("div", { class: "apercu", "aria-hidden": "true" });
   const avertissement = el("p", { class: "champ-avertissement", hidden: true });
   const boutonAjouter = el("button", {
     type: "submit",
     class: "bouton bouton--principal",
     texte: "Ajouter",
   });
+
+  // --- automatic title and icon -------------------------------------------------------
+  let titreModifie = false;
+  let recherche = null; // { url, controleur, promesse }
+  const lettre = (url) => ({ type: "lettre", couleur: couleurDepuisTexte(url) });
+  const montrerApercu = (url, icone, enCours) => {
+    apercu.replaceChildren(
+      creerIcone({ titre: champTitre.value || domaine(url), url, icone }),
+      ...(enCours ? [el("span", { class: "apercu-attente" })] : []),
+    );
+    apercu.classList.toggle("apercu--vide", !url);
+  };
+  const lancerRecherche = () => {
+    const r = normaliserUrl(champUrl.value);
+    if (!r.ok) return;
+    if (recherche?.url === r.url) return;
+    recherche?.controleur.abort();
+    const controleur = new AbortController();
+    montrerApercu(r.url, lettre(r.url), true);
+    const promesse = trouverIconeEtTitre(r.url, { signal: controleur.signal });
+    recherche = { url: r.url, controleur, promesse };
+    promesse.then((res) => {
+      if (recherche?.url !== r.url || controleur.signal.aborted) return;
+      if (!titreModifie) champTitre.value = res.titre;
+      montrerApercu(r.url, res.icone, false);
+    });
+  };
+  let minuteur;
+  champUrl.addEventListener("input", () => {
+    clearTimeout(minuteur);
+    minuteur = setTimeout(lancerRecherche, 600);
+  });
+  champUrl.addEventListener("blur", lancerRecherche);
+  champUrl.addEventListener("paste", () => setTimeout(lancerRecherche, 0));
+  champTitre.addEventListener("input", () => {
+    titreModifie = champTitre.value.trim() !== "";
+  });
+  const [permission, lienPermission] = blocPermission({
+    onAccordee: () => {
+      recherche = null;
+      lancerRecherche();
+    },
+  });
+
   const dialogue = el(
     "dialog",
     { class: "dialogue", "aria-labelledby": "ajout-titre-dialogue" },
     el(
       "form",
       { method: "dialog", novalidate: true, class: "formulaire" },
-      el("h2", { id: "ajout-titre-dialogue", class: "dialogue-titre", texte: "Ajouter un site" }),
+      el(
+        "div",
+        { class: "dialogue-entete" },
+        apercu,
+        el("h2", { id: "ajout-titre-dialogue", class: "dialogue-titre", texte: "Ajouter un site" }),
+      ),
       el(
         "div",
         { class: "champ" },
@@ -58,10 +173,12 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
         el("label", { for: "ajout-titre", texte: "Nom (facultatif)" }),
         champTitre,
       ),
+      permission,
       avertissement,
       el(
         "div",
         { class: "dialogue-actions" },
+        lienPermission,
         el("button", {
           type: "button",
           class: "bouton",
@@ -72,9 +189,10 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
       ),
     ),
   );
+  montrerApercu("", lettre(""), false);
 
   let doublonAccepte = null;
-  const majApercu = () => {
+  champUrl.addEventListener("input", () => {
     const r = normaliserUrl(champUrl.value);
     champTitre.placeholder = r.ok ? domaine(r.url) : "";
     erreurUrl.textContent = "";
@@ -83,8 +201,7 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
       avertissement.hidden = true;
       boutonAjouter.textContent = "Ajouter";
     }
-  };
-  champUrl.addEventListener("input", majApercu);
+  });
 
   dialogue.querySelector("form").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -104,12 +221,29 @@ export function ouvrirAjoutSite(store, { apresAjout } = {}) {
       boutonAjouter.focus();
       return;
     }
-    const site = creerSite({ titre: champTitre.value.trim() || domaine(r.url), url: r.url });
+    // Adding never waits for the network: the search goes on and updates the tile later.
+    if (recherche?.url !== r.url) {
+      recherche = null;
+      lancerRecherche();
+    }
+    const titreSaisi = champTitre.value.trim();
+    const site = creerSite({ titre: titreSaisi || domaine(r.url), url: r.url });
     store.envoyer({ type: A.SITE_AJOUTER, site, parentId: null });
+    const enCours = recherche;
+    enCours?.promesse.then((res) => {
+      const changements = { icone: res.icone };
+      if (!titreSaisi) changements.titre = res.titre;
+      store.envoyer({ type: A.SITE_MODIFIER, id: site.id, changements });
+    });
+    recherche = null; // keep the search running after the dialog closes
     dialogue.close();
     apresAjout?.(site);
   });
-  dialogue.addEventListener("close", () => dialogue.remove());
+  dialogue.addEventListener("close", () => {
+    recherche?.controleur.abort();
+    clearTimeout(minuteur);
+    dialogue.remove();
+  });
   document.body.append(dialogue);
   dialogue.showModal();
   champUrl.focus();

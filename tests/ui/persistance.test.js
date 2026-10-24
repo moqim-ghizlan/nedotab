@@ -49,3 +49,56 @@ describe("persistance", () => {
     expect(stockage.sauvegarder).not.toHaveBeenCalled();
   });
 });
+
+describe("deux onglets qui écrivent presque en même temps", () => {
+  function fauxChromeLent() {
+    let donnees;
+    const ecouteurs = new Set();
+    return {
+      zone: {
+        async get(cle) {
+          return { [cle]: donnees && structuredClone(donnees) };
+        },
+        async set(obj) {
+          donnees = structuredClone(obj.etat);
+          // Notifications reach the other tabs late, like a busy browser.
+          setTimeout(
+            () => ecouteurs.forEach((f) => f({ etat: { newValue: donnees } }, "local")),
+            50,
+          );
+        },
+      },
+      evenements: {
+        addListener: (f) => ecouteurs.add(f),
+        removeListener: (f) => ecouteurs.delete(f),
+      },
+    };
+  }
+
+  it("aucun site n'est perdu", async () => {
+    vi.useFakeTimers();
+    const { creerStockage } = await import("../../src/platform/stockageChrome.js");
+    const chrome = fauxChromeLent();
+    const onglet = (id) => {
+      const store = creerStore(etatInitial(), reduire);
+      brancherPersistance(store, creerStockage(chrome.zone, chrome.evenements, id), {
+        reduire,
+        delai: 10,
+      });
+      return store;
+    };
+    const a = onglet("A");
+    const b = onglet("B");
+    a.envoyer({ type: A.SITE_AJOUTER, site: creerSite({ titre: "A", url: "https://a.com" }) });
+    await vi.advanceTimersByTimeAsync(20); // A writes, B not notified yet
+    b.envoyer({ type: A.SITE_AJOUTER, site: creerSite({ titre: "B", url: "https://b.com" }) });
+    await vi.advanceTimersByTimeAsync(500);
+    const titres = (s) =>
+      s
+        .lire()
+        .grille.map((x) => x.titre)
+        .sort();
+    expect(titres(a)).toEqual(["A", "B"]);
+    expect(titres(b)).toEqual(["A", "B"]);
+  });
+});

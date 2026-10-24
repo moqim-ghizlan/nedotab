@@ -1,6 +1,8 @@
 // Loads dist/extension in a real Chrome (headless), runs the end-to-end checks and saves
 // screenshots to docs/v<x.y>/evidence/. Usage: npm run verifier:navigateur [-- --visible]
-import { readFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { lancerChrome, attendre } from "./navigateur.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
@@ -40,7 +42,8 @@ try {
   const manifeste = await p.eval("chrome.runtime.getManifest()");
   verifier(
     "Permissions minimales",
-    JSON.stringify(manifeste.permissions) === JSON.stringify(["storage"]),
+    JSON.stringify(manifeste.permissions) === JSON.stringify(["storage", "favicon"]) &&
+      !manifeste.host_permissions,
     JSON.stringify(manifeste.permissions),
   );
 
@@ -106,6 +109,32 @@ try {
   await attendre(300);
   verifier("Rechargement : sites conservés", (await nombreTuiles(p)) === 7);
 
+  // V1.3 — icons without the site permission (Google, then letter badge)
+  const blocPermission = await p.eval(`(async () => {
+    document.querySelector("[data-action='ajouter']").click();
+    await new Promise((r) => setTimeout(r, 300));
+    const visible = !document.querySelector(".permission").hidden;
+    document.querySelector("dialog").close();
+    return visible;
+  })()`);
+  verifier("Permission des sites proposée (non demandée à l'installation)", blocPermission);
+  await attendre(6000);
+  const sourceGithub = await p.eval(
+    `[...document.querySelectorAll(".tuile--site")].find((t) => t.href.includes("github"))?.querySelector("img")?.src || ""`,
+  );
+  verifier(
+    "Sans permission : icône via Google",
+    sourceGithub.includes("google.com/s2/favicons"),
+    sourceGithub,
+  );
+  await ajouterSite(p, "nexistepas.invalid");
+  await attendre(3000);
+  verifier(
+    "Site inexistant : pastille lettre",
+    await p.eval(
+      `!!document.querySelector(".tuile--site:last-of-type, .case:nth-last-child(2) .tuile-icone--lettre")`,
+    ),
+  );
   await p.capture(`${dossier}/clair.png`);
   await p.sombre(true);
   await p.capture(`${dossier}/sombre.png`);
@@ -126,6 +155,52 @@ try {
   );
 } finally {
   await nav.fermer();
+}
+
+// V1.3 — with the site permission granted (test copy with host_permissions)
+{
+  const copie = mkdtempSync(join(tmpdir(), "nedotab-ext-"));
+  cpSync("dist/extension", copie, { recursive: true });
+  const m = JSON.parse(readFileSync(join(copie, "manifest.json"), "utf8"));
+  m.host_permissions = m.optional_host_permissions;
+  writeFileSync(join(copie, "manifest.json"), JSON.stringify(m));
+  const nav2 = await lancerChrome();
+  try {
+    const id = await nav2.chargerExtension(copie);
+    const p = await nav2.ouvrir(`chrome-extension://${id}/newtab.html`);
+    await p.sombre(false);
+    await attendre(300);
+    await p.eval(`document.querySelector("[data-action='ajouter']").click()`);
+    await attendre(150);
+    await p.taper("lemonde.fr");
+    await p.eval(`document.getElementById("ajout-url").blur()`);
+    await attendre(5000);
+    const titre = await p.eval(`document.getElementById("ajout-titre").value`);
+    verifier("Avec permission : titre lu dans la page", titre === "Le Monde.fr", titre);
+    await p.capture(`${dossier}/apercu-lemonde.png`);
+    await p.eval(`document.querySelector("dialog form").requestSubmit()`);
+    for (const site of ["github.com", "wikipedia.org", "youtube.com"]) {
+      await ajouterSite(p, site);
+    }
+    await attendre(7000);
+    const sources = await p.eval(
+      `[...document.querySelectorAll(".tuile--site")].map((t) => [t.textContent, t.querySelector("img")?.src || "lettre"])`,
+    );
+    for (const [nom, src] of sources) console.log(`      ${nom} → ${src}`);
+    verifier(
+      "Avec permission : icônes des sites eux-mêmes",
+      sources.filter(([, src]) => src !== "lettre" && !src.includes("google.com/s2")).length >= 3,
+    );
+    await p.capture(`${dossier}/icones-reelles.png`);
+    verifier(
+      "Aucune erreur console (avec permission)",
+      p.erreurs.length === 0,
+      p.erreurs.join(" | "),
+    );
+  } finally {
+    await nav2.fermer();
+    rmSync(copie, { recursive: true, force: true });
+  }
 }
 const echecs = resultats.filter((r) => !r.ok).length;
 console.log(`${resultats.length - echecs}/${resultats.length} vérifications réussies.`);

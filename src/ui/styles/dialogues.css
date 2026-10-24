@@ -163,3 +163,94 @@
   border: 1px solid var(--bordure);
   font-size: var(--taille-s);
 }
+
+.dialogue-entete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+}
+
+.dialogue-entete .dialogue-titre {
+  margin: 0;
+}
+
+.apercu {
+  position: relative;
+  flex: none;
+  transition: opacity var(--duree) ease-out;
+}
+
+.apercu .tuile-icone {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  font-size: 1.2rem;
+  box-shadow: var(--ombre);
+}
+
+.apercu .tuile-icone--image {
+  padding: 7px;
+}
+
+.apercu--vide {
+  opacity: 0.35;
+}
+
+.apercu-attente {
+  position: absolute;
+  inset: -4px;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  border-radius: 14px;
+  animation: tourner 0.8s linear infinite;
+}
+
+@keyframes tourner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apercu-attente {
+    animation-duration: 2.4s;
+  }
+}
+
+.permission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+  font-size: var(--taille-s);
+}
+
+.permission p {
+  margin: 0;
+}
+
+.permission[hidden],
+.lien-discret[hidden] {
+  display: none;
+}
+
+.permission-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espace-2);
+}
+
+.lien-discret {
+  margin-right: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}

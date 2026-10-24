@@ -42,7 +42,7 @@ describe("stockage chrome", () => {
     const stop = b.surChangementExterne(fb);
     await a.sauvegarder({ grille: [1] });
     expect(fa).not.toHaveBeenCalled();
-    expect(fb).toHaveBeenCalledWith({ grille: [1] });
+    expect(fb).toHaveBeenCalledWith({ grille: [1] }, expect.objectContaining({ ecritPar: "A" }));
     stop();
     await a.sauvegarder({ grille: [2] });
     expect(fb).toHaveBeenCalledTimes(1);

@@ -7,3 +7,29 @@ export function getVersion() {
 export function stockage() {
   throw new Error("Stockage PWA prévu en V3");
 }
+
+export const preferences = {
+  async lire() {
+    return undefined;
+  },
+  async ecrire() {},
+};
+
+/** A web page cannot read other sites (CORS): no site permission in the PWA. */
+export const permissionsSites = {
+  disponible: false,
+  contient: async () => false,
+  demander: async () => false,
+};
+
+export async function lirePage() {
+  return null;
+}
+
+export async function lireJson() {
+  return null;
+}
+
+export function urlFaviconNavigateur() {
+  return null;
+}

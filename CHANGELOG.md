@@ -2,6 +2,56 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [1.3.0] - 2026-10-24
+
+### Ajouté
+
+- Titre et icône trouvés automatiquement à la saisie de l'adresse, avec aperçu en direct.
+  Chaîne : page du site (si autorisé) → service Google → cache d'icônes de Chrome →
+  pastille lettre. Durée plafonnée à 8 s, l'ajout n'attend jamais le réseau (la tuile se met
+  à jour ensuite).
+- Lecture de la page : `<title>`, `og:site_name`, `apple-touch-icon`, SVG, PNG par taille,
+  icônes du manifeste web, `/favicon.ico` ; titres longs raccourcis, pages de connexion ou de
+  consentement remplacées par le domaine.
+- Permission d'accès aux sites **facultative**, demandée dans la fenêtre d'ajout avec
+  explication (« Autoriser » / « Plus tard »), jamais à l'installation.
+- Permission `favicon` ; icônes affichées sur fond blanc arrondi, repli lettre si l'image
+  ne charge plus.
+
+### Corrigé
+
+- Deux onglets qui écrivaient presque en même temps pouvaient perdre le site ajouté dans
+  l'un d'eux : les actions locales non encore enregistrées sont désormais rejouées sur l'état
+  de l'autre onglet (à la réception et juste avant chaque écriture).
+- Le focus reste sur la tuile active quand la grille se redessine.
+
+### Écart au plan
+
+- Google passe **avant** le cache d'icônes de Chrome : l'adresse `chrome-extension://…/_favicon`
+  ne fonctionne que dans ce navigateur, elle serait inutilisable sur iPhone après la synchro
+  (V2–V3). Le cache de Chrome reste utilisé quand rien d'autre n'est trouvé.
+
+### Sites testés (`node scripts/tester-sites.mjs`, permission accordée)
+
+| Site                         | Titre trouvé    | Icône                   | Résultat        |
+| ---------------------------- | --------------- | ----------------------- | --------------- |
+| github.com                   | GitHub          | SVG du site             | icône du site   |
+| wikipedia.org                | Wikipedia       | apple-touch-icon        | icône du site   |
+| youtube.com                  | YouTube         | PNG 144 px              | icône du site   |
+| notion.so                    | notion.so       | page refusée (anti-bot) | icône Google    |
+| lemonde.fr                   | Le Monde.fr     | apple-touch-icon 180    | icône du site   |
+| mail.google.com              | mail.google.com | favicon.ico             | icône du site   |
+| example.com (sans icône)     | Example Domain  | aucune                  | pastille lettre |
+| http://github.com (redirige) | GitHub          | SVG du site             | icône du site   |
+| nexistepas.invalid           | domaine         | aucune                  | pastille lettre |
+
+### Tests
+
+- 86 tests dont 12 pages HTML de référence, 11 cas de nettoyage de titre, ordre des icônes,
+  et deux onglets qui écrivent en même temps sans perte.
+- Navigateur : 23/23 (sans permission : icône Google et pastille ; avec permission : titre
+  « Le Monde.fr » lu dans la page et icônes des sites eux-mêmes).
+
 ## [1.2.0] - 2026-10-24
 
 ### Ajouté

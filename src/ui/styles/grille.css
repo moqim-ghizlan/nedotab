@@ -142,3 +142,15 @@
 .vide-bouton:hover {
   transform: scale(1.04);
 }
+
+.tuile-icone--image {
+  padding: 9px;
+  background: #fff;
+}
+
+.tuile-icone--image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+}
