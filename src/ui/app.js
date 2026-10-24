@@ -124,6 +124,17 @@ export async function demarrerApp(racine) {
     },
     synchroniser: () => synchro.lancerPremiereSynchro(),
     async deconnecter() {
+      if (synchro.modificationsNonEnvoyees() > 0) {
+        const quand = await demander({
+          titre: "Se déconnecter",
+          message: "Des modifications n'ont pas encore été envoyées. Se déconnecter quand même ?",
+          boutons: [
+            { libelle: "Annuler", valeur: false },
+            { libelle: "Se déconnecter quand même", valeur: true, danger: true },
+          ],
+        });
+        if (!quand) return;
+      }
       const garder = await demander({
         titre: "Se déconnecter",
         message: "Garder une copie de vos sites sur cet ordinateur ?",
@@ -136,6 +147,12 @@ export async function demarrerApp(racine) {
       if (!garder) return;
       await synchro.quitter({ garderCopie: garder === "oui" });
       await compte.deconnecter();
+      // Without a copy, Firestore's cache was erased and Firestore stopped: start afresh,
+      // once the emptied grid is really saved (the debounced save would be lost on reload).
+      if (garder === "non") {
+        await stockage.sauvegarder(store.lire());
+        location.reload();
+      }
     },
     async restaurerCopie() {
       const ok = await demander({

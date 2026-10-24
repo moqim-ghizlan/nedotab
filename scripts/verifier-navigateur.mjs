@@ -13,6 +13,7 @@ import { scenarioRecherche } from "./scenarios/recherche.mjs";
 import { scenarioCompte } from "./scenarios/compte.mjs";
 import { scenarioSynchro } from "./scenarios/synchro.mjs";
 import { scenarioTempsReel } from "./scenarios/temps-reel.mjs";
+import { scenarioHorsLigne } from "./scenarios/hors-ligne.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -584,6 +585,22 @@ if (seulement === "compte" || seulement === "temps-reel") {
     });
   } finally {
     await nav10.fermer();
+  }
+}
+
+// V2.5 — offline (emulators)
+if (seulement === "compte" || seulement === "hors-ligne") {
+  const nav11 = await lancerChrome();
+  try {
+    const id = await nav11.chargerExtension();
+    await scenarioHorsLigne({
+      nav: nav11,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav11.fermer();
   }
 }
 

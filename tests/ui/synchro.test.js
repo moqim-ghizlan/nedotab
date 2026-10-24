@@ -136,6 +136,6 @@ describe("démarrage après une fermeture pendant un envoi", () => {
     });
     await synchro.demarrer();
     expect(ordre).toEqual(["ecrire", "ecouter"]);
-    expect(prefs.synchroEnAttente).toBe(false);
+    await vi.waitFor(() => expect(prefs.synchroEnAttente).toBe(false));
   });
 });

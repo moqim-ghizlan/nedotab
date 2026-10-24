@@ -3,12 +3,17 @@ import { el } from "./dom.js";
 const ETATS = {
   synchronise: { symbole: "✓", libelle: "Synchronisé" },
   attente: { symbole: "⟳", libelle: "Envoi en attente" },
+  "hors-ligne": {
+    symbole: "○",
+    libelle: "Hors ligne — vos modifications seront envoyées au retour du réseau",
+  },
   erreur: { symbole: "⚠", libelle: "Synchronisation impossible" },
 };
 
 /**
- * Small badge on the account avatar: ✓ synced, ⟳ write pending, ⚠ error (message on hover,
- * retry on click). No permanent animation.
+ * Small badge on the account avatar: ✓ synced, ⟳ write pending, ○ offline (a normal
+ * situation, never shown as an error), ⚠ error (message on hover, retry on click).
+ * No permanent animation.
  */
 export function creerIndicateurSynchro(synchro) {
   const pastille = el("button", { type: "button", class: "indicateur-synchro", hidden: true });

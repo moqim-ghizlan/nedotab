@@ -2,6 +2,35 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.5.0] - 2026-10-24
+
+### Ajouté
+
+- Mode hors ligne complet en mode compte : cache persistant de Firestore (IndexedDB),
+  partagé par tous les onglets ouverts (`persistentMultipleTabManager`).
+- Les modifications faites hors ligne sont confiées à la file d'attente de Firestore :
+  gardées même si l'onglet ou Chrome est fermé, envoyées automatiquement au retour du réseau.
+- Indicateur « ○ Hors ligne — vos modifications seront envoyées au retour du réseau »,
+  calculé à partir du navigateur **et** de l'origine des données (cache), jamais affiché
+  comme une erreur ; puis ⟳ et ✓ au retour.
+- Déconnexion avec des modifications non envoyées : « Des modifications n'ont pas encore
+  été envoyées. Se déconnecter quand même ? » ; sans copie locale, le cache de Firestore est
+  aussi effacé.
+
+### Remarque
+
+- Deux appareils modifiés hors ligne en même temps : la dernière écriture arrivée gagne
+  (conflits traités en V2.9).
+
+### Tests
+
+- 243 tests, dont la table des 8 cas de l'indicateur (en ligne × cache × envoi en attente).
+- Émulateurs : 47/47, dont une écriture hors ligne mise en file puis reçue par le serveur.
+- Navigateur avec émulateurs : coupure réseau, 3 ajouts et 2 déplacements hors ligne,
+  avertissement à la déconnexion, onglet fermé puis rouvert hors ligne (modifications
+  présentes), retour du réseau (modifications sur le serveur, ✓), 4 onglets sans
+  `failed-precondition`.
+
 ## [2.4.0] - 2026-10-24
 
 ### Ajouté

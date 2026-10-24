@@ -1,6 +1,7 @@
 import { A, reduire } from "../../core/actions.js";
 import { etatInitial, genererIdParDefaut } from "../../core/modele.js";
 import { compter, fusionnerImport, grillesIdentiques } from "../../core/fusion.js";
+import { etatIndicateur } from "../../core/etatSynchro.js";
 import { migrer } from "../../core/migration.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
@@ -15,7 +16,7 @@ const journal = (...a) => DEBUG && console.debug(`[synchro ${new Date().toISOStr
  * Account synchronisation: the first contact between the local grid and the account (V2.3),
  * then live sync (V2.4): local changes are written online 1.5 s after the last one, and the
  * account's document is listened to (onSnapshot) to receive the other devices' changes.
- * statut: "synchronise" | "attente" | "erreur".
+ * statut: "synchronise" | "attente" | "hors-ligne" | "erreur" (see core/etatSynchro.js).
  *
  * mode "local": as in V1. mode "compte": the account is the reference; local storage is a
  * cache. A safety copy of the local state is written before any step, never overwritten.
@@ -43,42 +44,63 @@ export function creerSynchro({
   let revision = 0; // highest revision written or seen: new writes go above it
   let fb = null;
   let appareil = null;
-  let enVol = false; // one write at a time
-  let enAttente = []; // local actions not yet written online
+  let enAttente = []; // local actions not yet handed to Firestore
+  let nonConfirmees = 0; // writes handed to Firestore, not yet confirmed by the server
   let arreterEcoute = null;
   let ecritures = 0;
+  let enLigne = typeof navigator === "undefined" ? true : navigator.onLine !== false;
+  let depuisCache = false;
+  let erreurEcriture = null;
 
-  const ecrire = async () => {
+  /** Badge state from the network, the cache and the writes in progress. */
+  const majStatut = () => {
+    if (etat.mode !== "compte") return;
+    const statut = etatIndicateur({
+      enLigne,
+      depuisCache,
+      enAttente: enAttente.length > 0 || nonConfirmees > 0,
+      erreur: !!erreurEcriture,
+    });
+    if (statut !== etat.statut || erreurEcriture !== etat.erreur) {
+      changer({ statut, erreur: erreurEcriture });
+    }
+  };
+
+  const messageErreur = (e) =>
+    e?.code === "permission-denied"
+      ? "Accès refusé par le compte : reconnectez-vous."
+      : e?.code === "resource-exhausted"
+        ? "Limite d'utilisation atteinte pour aujourd'hui."
+        : "Synchronisation impossible pour l'instant";
+
+  /**
+   * Hands the current state to Firestore. With the persistent cache the write is kept in
+   * IndexedDB and sent when the network allows it, even after Chrome was closed: it is not
+   * awaited before handing the next one.
+   */
+  const ecrire = () => {
     minuteur = null;
     if (etat.mode !== "compte" || enAttente.length === 0) return;
-    if (enVol) {
-      planifier(); // a write is in flight: another one right after
-      return;
-    }
-    enVol = true;
-    const envoyees = enAttente.length;
-    changer({ statut: "attente" });
-    try {
-      await fb.ecrireDocument(etat.uid, store.lire(), appareil, ++revision);
-      ecritures++;
-      enAttente = enAttente.slice(envoyees);
-      if (enAttente.length === 0) plat.preferences.ecrire("synchroEnAttente", false);
-      changer({ statut: enAttente.length ? "attente" : "synchronise", erreur: null });
-    } catch (e) {
-      journal("écriture refusée", e);
-      const refus = e?.code === "permission-denied";
-      changer({
-        statut: "erreur",
-        erreur: refus
-          ? "Accès refusé par le compte : reconnectez-vous."
-          : e?.code === "resource-exhausted"
-            ? "Limite d'utilisation atteinte pour aujourd'hui."
-            : "Synchronisation impossible pour l'instant",
+    enAttente = [];
+    nonConfirmees++;
+    ecritures++;
+    fb.ecrireDocument(etat.uid, store.lire(), appareil, ++revision)
+      .then(() => {
+        erreurEcriture = null;
+      })
+      .catch((e) => {
+        journal("écriture refusée", e);
+        erreurEcriture = messageErreur(e);
+        enAttente.push({ type: "REPRISE" }); // rewritten on retry
+      })
+      .finally(() => {
+        nonConfirmees--;
+        if (enAttente.length === 0 && nonConfirmees === 0) {
+          plat.preferences.ecrire("synchroEnAttente", false);
+        }
+        majStatut();
       });
-    } finally {
-      enVol = false;
-    }
-    if (enAttente.length && !minuteur && etat.statut !== "erreur") planifier();
+    majStatut();
   };
   function planifier() {
     clearTimeout(minuteur);
@@ -93,11 +115,11 @@ export function creerSynchro({
   // another device — never trigger a write: no ping-pong between devices.
   store.abonner((_e, action) => {
     if (etat.mode !== "compte" || action.type === A.CHARGER) return;
-    // Remembered on this device: a write started while closing the page may not reach the
-    // server; the next start sends the local state before listening.
+    // Remembered on this device until the server confirms: the next start sends the local
+    // state before listening if a write could not even be handed to Firestore.
     if (enAttente.length === 0) plat.preferences.ecrire("synchroEnAttente", true);
     enAttente.push(action);
-    changer({ statut: "attente" });
+    majStatut();
     planifier();
   });
   if (typeof window !== "undefined") {
@@ -105,10 +127,14 @@ export function creerSynchro({
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") ecrireMaintenant();
     });
+    window.addEventListener("online", () => ((enLigne = true), majStatut()));
+    window.addEventListener("offline", () => ((enLigne = false), majStatut()));
   }
 
   /** A change of the account's document, from this device or another one. */
-  const recevoir = (brut, { ecritureEnAttente }) => {
+  const recevoir = (brut, { ecritureEnAttente, depuisCache: cache = false }) => {
+    depuisCache = cache;
+    majStatut();
     if (ecritureEnAttente || !brut) return; // our own write, not yet confirmed
     if (Number.isInteger(brut.revision)) {
       if (brut.majPar === appareil && brut.revision <= revision) return; // echo
@@ -116,13 +142,11 @@ export function creerSynchro({
     }
     const { etat: distant, lectureSeule } = migrer(brut);
     if (lectureSeule) {
-      changer({
-        statut: "erreur",
-        erreur: "Données du compte d'une version plus récente : mettez à jour NedoTab.",
-      });
+      erreurEcriture = "Données du compte d'une version plus récente : mettez à jour NedoTab.";
+      majStatut();
       return;
     }
-    // Local changes not yet written are replayed on top: nothing typed here is lost.
+    // Local changes not yet handed to Firestore are replayed on top: nothing is lost.
     let suivant = { ...distant, reglagesAppareil: store.lire().reglagesAppareil };
     for (const action of enAttente) suivant = reduire(suivant, action);
     const courant = store.lire();
@@ -140,7 +164,8 @@ export function creerSynchro({
     arreterEcoute?.();
     arreterEcoute = fb.ecouterDocument(etat.uid, recevoir, (e) => {
       journal("écoute interrompue", e);
-      changer({ statut: "erreur", erreur: "Synchronisation impossible pour l'instant" });
+      erreurEcriture = messageErreur(e);
+      majStatut();
     });
   };
 
@@ -171,7 +196,7 @@ export function creerSynchro({
         // The last local changes may not have been sent: send them first, so that the
         // (older) online state does not replace them.
         enAttente = [{ type: "REPRISE" }];
-        await ecrire();
+        ecrire();
       }
       ecouter();
     },
@@ -179,7 +204,8 @@ export function creerSynchro({
     /** After an error: listen again and send what is pending. */
     reessayer() {
       if (etat.mode !== "compte") return this.lancerPremiereSynchro();
-      changer({ erreur: null, statut: enAttente.length ? "attente" : "synchronise" });
+      erreurEcriture = null;
+      majStatut();
       ecouter();
       if (enAttente.length) planifier();
     },
@@ -188,10 +214,13 @@ export function creerSynchro({
     statistiques: () => ({
       ecritures,
       enAttente: enAttente.length,
-      enVol,
+      nonConfirmees,
       minuteur: minuteur !== null,
       revision,
     }),
+
+    /** Local changes not yet confirmed by the server (sign-out warning). */
+    modificationsNonEnvoyees: () => enAttente.length + nonConfirmees + (minuteur ? 1 : 0),
 
     /**
      * First synchronisation (at sign-in, or on demand). Never leaves a half state:
@@ -277,7 +306,7 @@ export function creerSynchro({
      */
     async quitter({ garderCopie }) {
       clearTimeout(minuteur);
-      if (etat.mode === "compte" && minuteur !== null) await ecrire();
+      if (etat.mode === "compte" && minuteur !== null) ecrire();
       minuteur = null;
       arreterEcoute?.();
       arreterEcoute = null;
@@ -287,6 +316,9 @@ export function creerSynchro({
       if (!garderCopie) {
         await plat.copies.enregistrer(store.lire());
         appliquer(etatInitial());
+        // Firestore's own cache holds the account's data too: erase it on a shared computer.
+        // Firestore is stopped by this: the page reloads after the sign-out.
+        await fb?.effacerCache?.().catch((e) => journal("effacement du cache", e));
       }
     },
 

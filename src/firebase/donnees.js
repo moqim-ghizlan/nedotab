@@ -1,11 +1,15 @@
 import {
   addDoc,
+  clearIndexedDbPersistence,
   collection,
+  disableNetwork,
   doc,
+  enableNetwork,
   getDoc,
   onSnapshot,
   serverTimestamp,
   setDoc,
+  terminate,
 } from "firebase/firestore";
 import { compter } from "../core/fusion.js";
 import { obtenirApp } from "./app.js";
@@ -66,7 +70,24 @@ export function ecouterDocument(uid, callback, surErreur) {
     (instantane) =>
       callback(instantane.exists() ? instantane.data() : null, {
         ecritureEnAttente: instantane.metadata.hasPendingWrites,
+        depuisCache: instantane.metadata.fromCache,
       }),
     surErreur,
   );
+}
+
+/** Network on/off for Firestore (tests and diagnostics). */
+export function reseau(actif) {
+  const db = obtenirApp().firestore;
+  return actif ? enableNetwork(db) : disableNetwork(db);
+}
+
+/**
+ * Erases Firestore's local cache (sign-out without keeping a copy on this computer). The
+ * Firestore instance is stopped: the page must be reloaded before using it again.
+ */
+export async function effacerCache() {
+  const db = obtenirApp().firestore;
+  await terminate(db);
+  await clearIndexedDbPersistence(db);
 }

@@ -163,7 +163,9 @@ export async function scenarioSynchro({ nav, url, verifier, dossier }) {
       "Déconnexion « Non » : grille vide",
       (await q.eval(`document.querySelectorAll(".tuile--site, .tuile--dossier").length`)) === 0,
     );
-    // The settings panel is still open after signing out.
+    // The page reloads after a sign-out without copy: open the settings again.
+    await q.eval(`document.querySelector(".bouton-reglages").click()`);
+    await attendre(300);
     await attendre(200);
     verifier(
       "Déconnecté : la section propose de se connecter",

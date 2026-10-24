@@ -1,5 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { activerAppCheck } from "./appCheck.js";
 import { lireConfig } from "./config.js";
@@ -12,7 +17,15 @@ export function obtenirApp() {
   const { config, emulateurs } = lireConfig();
   const app = initializeApp(config);
   activerAppCheck(app);
-  const firestore = getFirestore(app);
+  // Persistent cache shared by all the open tabs (V2.5): offline writes are kept in
+  // IndexedDB and sent when the network is back, even after Chrome was closed. Must be the
+  // very first Firestore call. Without IndexedDB (tests in Node) the memory cache is used.
+  const firestore = initializeFirestore(
+    app,
+    typeof indexedDB === "undefined"
+      ? {}
+      : { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) },
+  );
   const stockage = getStorage(app);
   if (emulateurs) {
     connectFirestoreEmulator(firestore, "127.0.0.1", 8080);

@@ -451,3 +451,9 @@ body.fond-sombre {
 .reglages-note--alerte {
   color: var(--danger);
 }
+
+.indicateur-synchro[data-statut="hors-ligne"] {
+  background: var(--surface);
+  color: var(--texte-secondaire);
+  border-color: var(--bordure);
+}

@@ -8,6 +8,8 @@ export { connecter, deconnecter, ecouterUtilisateur, obtenirAuth, profil } from 
 export {
   ecouterDocument,
   ecrireDocument,
+  effacerCache,
+  reseau,
   lireDocument,
   sauvegarderAvantRemplacement,
 } from "./donnees.js";
