@@ -56,7 +56,8 @@ function monter(grilleLocale, choix = null) {
     store,
     compte: { lire: () => ({ profil: { uid } }) },
     demanderChoix,
-    charger: async () => fb,
+    // Erasing the cache stops Firestore for the whole test file: not here.
+    charger: async () => ({ ...fb, effacerCache: async () => {} }),
     plat,
     delai: 10,
   });
@@ -184,5 +185,76 @@ describe("première synchronisation (émulateurs)", () => {
     expect(m.synchro.lire().mode).toBe("local");
     expect(await m.synchro.restaurerCopie()).toBe(true);
     expect(ids(m.store.lire().grille)).toBe("a");
+  });
+});
+
+describe("première synchronisation : réglages du compte jamais perdus", () => {
+  it("compte sans site mais avec une bibliothèque de fonds, ordinateur vide : récupérée", async () => {
+    const fond = {
+      id: "f1",
+      chemin: `users/${uid}/fonds/f1.webp`,
+      dominante: "#123456",
+      largeur: 1,
+      hauteur: 1,
+      taille: 1,
+      ajouteLe: 1,
+    };
+    await fb.ecrireDocument(
+      uid,
+      {
+        ...etat([]),
+        reglages: { theme: "sombre", fond: { type: "image", id: "f1" }, fonds: [fond] },
+      },
+      "autre",
+      1,
+    );
+    const m = monter([]);
+    expect(await m.synchro.lancerPremiereSynchro()).toBe("recupere");
+    expect(m.store.lire().reglages.fonds).toHaveLength(1);
+    expect((await enLigne()).reglages.fonds).toHaveLength(1);
+  });
+  it("compte sans site avec réglages, ordinateur avec sites : sites envoyés, réglages du compte gardés", async () => {
+    const fond = {
+      id: "f1",
+      chemin: `users/${uid}/fonds/f1.webp`,
+      dominante: "#123456",
+      largeur: 1,
+      hauteur: 1,
+      taille: 1,
+      ajouteLe: 1,
+    };
+    await fb.ecrireDocument(
+      uid,
+      { ...etat([]), reglages: { theme: "sombre", fond: { type: "aucun" }, fonds: [fond] } },
+      "autre",
+      1,
+    );
+    const m = monter([site("a")]);
+    expect(await m.synchro.lancerPremiereSynchro()).toBe("envoye");
+    const d = await enLigne();
+    expect(ids(d.grille)).toBe("a");
+    expect(d.reglages).toMatchObject({ theme: "sombre", fonds: [{ id: "f1" }] });
+  });
+  it("« Garder ceux de cet ordinateur » garde la bibliothèque du compte", async () => {
+    const fond = {
+      id: "f1",
+      chemin: `users/${uid}/fonds/f1.webp`,
+      dominante: "#123456",
+      largeur: 1,
+      hauteur: 1,
+      taille: 1,
+      ajouteLe: 1,
+    };
+    await fb.ecrireDocument(
+      uid,
+      { ...etat([site("x")]), reglages: { theme: "auto", fond: { type: "aucun" }, fonds: [fond] } },
+      "autre",
+      1,
+    );
+    const m = monter([site("a")], "local");
+    expect(await m.synchro.lancerPremiereSynchro()).toBe("local");
+    const d = await enLigne();
+    expect(ids(d.grille)).toBe("a");
+    expect(d.reglages.fonds).toHaveLength(1);
   });
 });

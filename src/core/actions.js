@@ -16,7 +16,7 @@ import {
   trouver,
 } from "./arbre.js";
 import { PROFONDEUR_MAX } from "./constantes.js";
-import { modifierReglagesEtat } from "./reglages.js";
+import { FONDS_MAX, modifierReglagesEtat, validerEntreeFond } from "./reglages.js";
 
 export const A = {
   CHARGER: "CHARGER",
@@ -32,6 +32,8 @@ export const A = {
   FUSIONNER: "FUSIONNER",
   REGLAGES_MODIFIER: "REGLAGES_MODIFIER",
   SYNCHRO_APPLIQUER: "SYNCHRO_APPLIQUER",
+  FOND_AJOUTER: "FOND_AJOUTER",
+  FOND_SUPPRIMER: "FOND_SUPPRIMER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -154,6 +156,27 @@ export function reduire(etat, action) {
       return avecGrille(etat, supprimerDossier(etat.grille, action));
     case A.REGLAGES_MODIFIER: {
       return modifierReglagesEtat(etat, action.changements);
+    }
+    case A.FOND_AJOUTER: {
+      // Added only once the file is in Storage. At most 10 pictures.
+      const entree = validerEntreeFond(action.fond);
+      const fonds = etat.reglages.fonds ?? [];
+      if (!entree || fonds.length >= FONDS_MAX || fonds.some((f) => f.id === entree.id))
+        return etat;
+      const avecFond = { ...etat, reglages: { ...etat.reglages, fonds: [...fonds, entree] } };
+      if (!action.activer) return avecFond;
+      return modifierReglagesEtat(avecFond, {
+        fond: { type: "image", id: entree.id, voile: action.voile ?? 0.25, flou: action.flou ?? 0 },
+      });
+    }
+    case A.FOND_SUPPRIMER: {
+      const fonds = etat.reglages.fonds ?? [];
+      if (!fonds.some((f) => f.id === action.id)) return etat;
+      const fond = etat.reglages.fond?.id === action.id ? { type: "aucun" } : etat.reglages.fond;
+      return {
+        ...etat,
+        reglages: { ...etat.reglages, fond, fonds: fonds.filter((f) => f.id !== action.id) },
+      };
     }
     case A.SYNCHRO_APPLIQUER:
       // State chosen during a synchronisation (already migrated and validated): it is a

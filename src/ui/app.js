@@ -3,7 +3,8 @@ import { listerDossiers } from "../core/arbre.js";
 import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
-import { fondEffectif } from "../core/reglages.js";
+import { fondEffectif, fondsAPurger } from "../core/reglages.js";
+import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
@@ -11,7 +12,7 @@ import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
-import { appliquerReglages } from "./apparence.js";
+import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerRecherche } from "./recherche.js";
 import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
@@ -173,7 +174,7 @@ export async function demarrerApp(racine) {
   compte.demarrer().then(() => synchro.demarrer());
   // Test builds against the emulators only: inspection hook for the browser scenarios.
   if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
-    globalThis.__nedotab = { store, synchro, compte };
+    globalThis.__nedotab = { store, synchro, compte, firebase: chargerFirebase };
   const groupeCompte = el(
     "span",
     { class: "compte-avatar" },
@@ -255,6 +256,14 @@ export async function demarrerApp(racine) {
   performance.measure("nedotab:premier-rendu", "nedotab:debut", "nedotab:grille");
 
   // Theme and background follow the settings (also when another tab changes them).
+  let fondsCompteConfigures = false;
+  /** Cached pictures that left the library (deleted here or on another device). */
+  const purgerCacheFonds = async () => {
+    const enCache = await plateforme.fichiers.listerCacheFonds().catch(() => []);
+    for (const id of fondsAPurger(enCache, store.lire().reglages)) {
+      plateforme.fichiers.supprimerCacheFond(id).catch(() => {});
+    }
+  };
   // The background shown is the device's local picture if any, else the synced one.
   const visibles = (e) => ({ ...e.reglages, fond: fondEffectif(e) });
   let appliques = store.lire();
@@ -263,7 +272,16 @@ export async function demarrerApp(racine) {
     if (e.reglages !== appliques.reglages || e.reglagesAppareil !== appliques.reglagesAppareil) {
       appliques = e;
       appliquerReglages(visibles(e));
+      purgerCacheFonds();
     }
+  });
+
+  // Account mode: library pictures are downloaded from Storage (once, then cached).
+  synchro.abonner((e) => {
+    if (e.mode !== "compte" || fondsCompteConfigures) return;
+    fondsCompteConfigures = true;
+    configurerFondsCompte(async (chemin) => (await chargerFirebase()).telechargerFond(chemin));
+    appliquerReglages(visibles(store.lire()));
   });
 
   // A folder emptied by a local action: offer to delete it (never automatically).

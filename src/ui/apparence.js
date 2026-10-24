@@ -84,17 +84,38 @@ export function appliquerCacheDemarrage() {
   }
 }
 
+let telechargerFondCompte = null;
+/** Account mode: how to download a library picture (Firebase Storage, loaded on demand). */
+export function configurerFondsCompte(telecharger) {
+  telechargerFondCompte = telecharger;
+}
+
+/**
+ * Blob of a library picture: from the local cache, else downloaded ONCE and cached. Storage
+ * bandwidth is billed: the download URL is never used as the background of every tab.
+ */
+async function blobFondCompte(fond) {
+  const enCache = await plateforme.fichiers.lireCacheFond(fond.id).catch(() => null);
+  if (enCache) return enCache;
+  if (!telechargerFondCompte) return null;
+  const blob = await telechargerFondCompte(fond.chemin).catch(() => null);
+  if (blob) await plateforme.fichiers.ecrireCacheFond(fond.id, blob).catch(() => {});
+  return blob;
+}
+
 async function afficherImage(fond, calque) {
-  const id = fond.ref.slice("local:".length);
-  if (refImage === fond.ref && urlImage) {
+  const cle = fond.id ? `compte:${fond.id}` : fond.ref;
+  if (refImage === cle && urlImage) {
     calque.style.backgroundImage = `url("${urlImage}")`;
     return;
   }
-  const blob = await plateforme.fichiers.lireFond(id).catch(() => null);
+  const blob = fond.id
+    ? await blobFondCompte(fond)
+    : await plateforme.fichiers.lireFond(fond.ref.slice("local:".length)).catch(() => null);
   if (!blob) return;
   if (urlImage) URL.revokeObjectURL(urlImage);
   urlImage = URL.createObjectURL(blob);
-  refImage = fond.ref;
+  refImage = cle;
   const img = new Image();
   img.src = urlImage;
   await img.decode().catch(() => {});

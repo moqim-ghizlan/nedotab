@@ -31,6 +31,16 @@ export const fichiers = {
   enregistrerFond: (id, blob) => transaction("readwrite", (s) => s.put(blob, `fond:${id}`)),
   lireFond: (id) => transaction("readonly", (s) => s.get(`fond:${id}`)),
   supprimerFond: (id) => transaction("readwrite", (s) => s.delete(`fond:${id}`)),
+  /** Local cache of the account's backgrounds (V2.6): downloaded once per device. */
+  lireCacheFond: (id) => transaction("readonly", (s) => s.get(`fond-cache:${id}`)),
+  ecrireCacheFond: (id, blob) => transaction("readwrite", (s) => s.put(blob, `fond-cache:${id}`)),
+  supprimerCacheFond: (id) => transaction("readwrite", (s) => s.delete(`fond-cache:${id}`)),
+  async listerCacheFonds() {
+    const cles = await transaction("readonly", (s) => s.getAllKeys());
+    return cles
+      .filter((c) => String(c).startsWith("fond-cache:"))
+      .map((c) => String(c).slice("fond-cache:".length));
+  },
   /** Keys present (tests, diagnostics). */
   cles: () => transaction("readonly", (s) => s.getAllKeys()),
 };

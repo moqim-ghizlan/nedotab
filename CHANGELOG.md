@@ -2,6 +2,42 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.6.0] - 2026-10-24
+
+### Ajouté
+
+- Fonds d'écran sur le compte (Firebase Storage, `users/{uid}/fonds/`) : bibliothèque de
+  10 fonds au plus dans Réglages → Apparence → Image (vignettes, « 4 / 10 fonds »), envoi
+  avec barre de progression et « Annuler l'envoi », fond actif synchronisé sur tous les
+  appareils.
+- Image préparée sur l'appareil (2 560 px, WebP) et refusée au-delà de 5 Mo, comme les
+  règles ; la bibliothèque n'est mise à jour qu'une fois le fichier envoyé.
+- Cache local par identifiant (IndexedDB) : chaque fond n'est téléchargé **qu'une fois par
+  appareil** (avec le SDK, jamais l'adresse de téléchargement en fond de page) ; affiché
+  hors ligne ; purgé quand il quitte la bibliothèque.
+- Suppression d'un fond : retiré aussitôt, « Annuler » pendant 5 s, fichier effacé de
+  Storage seulement ensuite. Fond actif supprimé → fond « aucun ».
+- Fichiers orphelins (envoyés mais absents de la bibliothèque) signalés avec « Nettoyer ».
+- Fond image propre à l'appareil (V1.9) : proposition de l'envoyer sur le compte ; s'il
+  reste local, il garde la priorité sur cet appareil.
+
+### Corrigé
+
+- Première synchronisation : un compte sans site mais avec des réglages (bibliothèque de
+  fonds) n'est plus écrasé par un ordinateur vide ; « Garder ceux de cet ordinateur » garde
+  la bibliothèque du compte.
+
+### Tests
+
+- 253 tests (bibliothèque : 11ᵉ fond refusé, suppression du fond actif, purge du cache,
+  priorité du fond local, validation au chargement).
+- Émulateurs : 54/54, dont envoi avec progression, liste et suppression dans Storage,
+  dossier d'un autre et plus de 5 Mo refusés, annulation d'envoi, réglages du compte gardés
+  à la première synchronisation.
+- Navigateur avec émulateurs : 66/66, dont 14 vérifications de fonds (fichier dans Storage, fond sur le
+  second ordinateur, onglets suivants et hors ligne depuis le cache, aucun nouveau
+  téléchargement, 10 / 10, suppression différée).
+
 ## [2.5.0] - 2026-10-24
 
 ### Ajouté

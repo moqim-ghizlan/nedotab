@@ -13,3 +13,10 @@ export {
   lireDocument,
   sauvegarderAvantRemplacement,
 } from "./donnees.js";
+export {
+  cheminFond,
+  envoyerFond,
+  listerFondsStockage,
+  supprimerFondStockage,
+  telechargerFond,
+} from "./fichiers.js";

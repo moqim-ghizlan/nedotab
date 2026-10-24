@@ -3,6 +3,7 @@ import { etatInitial, genererIdParDefaut } from "../../core/modele.js";
 import { compter, fusionnerImport, grillesIdentiques } from "../../core/fusion.js";
 import { etatIndicateur } from "../../core/etatSynchro.js";
 import { migrer } from "../../core/migration.js";
+import { validerReglages } from "../../core/reglages.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
 
@@ -247,15 +248,21 @@ export function creerSynchro({
           return "erreur";
         }
         const localVide = local.grille.length === 0;
-        const distantVide = !distant || distant.etat.grille.length === 0;
         let issue;
-        if (distantVide) {
-          // Nothing online: this device's state becomes the account's.
+        if (!distant) {
+          // No document yet: this device's state becomes the account's.
           await fb.ecrireDocument(uid, local, appareil, ++revision);
           issue = localVide ? "cree" : "envoye";
         } else if (localVide) {
+          // Nothing here: the account's sites AND settings (backgrounds library) are kept.
           appliquer(distant.etat);
           issue = "recupere";
+        } else if (distant.etat.grille.length === 0) {
+          // The account has no site but may have settings: send this device's sites and
+          // keep the account's settings (its backgrounds library is never lost).
+          appliquer({ grille: local.grille, reglages: distant.etat.reglages });
+          await fb.ecrireDocument(uid, store.lire(), appareil, ++revision);
+          issue = "envoye";
         } else if (grillesIdentiques(local.grille, distant.etat.grille)) {
           issue = "identique";
         } else {
@@ -273,7 +280,13 @@ export function creerSynchro({
             appliquer(distant.etat);
           } else if (choix === "local") {
             await fb.sauvegarderAvantRemplacement(uid, distant.etat, appareil);
-            await fb.ecrireDocument(uid, local, appareil, ++revision);
+            // This device's sites and settings, but the account's backgrounds library stays.
+            const reglages = validerReglages({
+              ...local.reglages,
+              fonds: distant.etat.reglages.fonds,
+            });
+            appliquer({ grille: local.grille, reglages });
+            await fb.ecrireDocument(uid, store.lire(), appareil, ++revision);
           } else {
             const { grille, ajoutes, aplati } = fusionnerImport(distant.etat.grille, local.grille, {
               dossierId: genererIdParDefaut(),

@@ -26,7 +26,7 @@ describe("modele", () => {
     expect(etatInitial()).toEqual({
       versionSchema: 2,
       grille: [],
-      reglages: { theme: "auto", fond: { type: "aucun" } },
+      reglages: { theme: "auto", fond: { type: "aucun" }, fonds: [] },
       reglagesAppareil: {},
     });
   });

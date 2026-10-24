@@ -457,3 +457,68 @@ body.fond-sombre {
   color: var(--texte-secondaire);
   border-color: var(--bordure);
 }
+
+/* --- account backgrounds library ---------------------------------------------------- */
+
+.bibliotheque-fonds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.bibliotheque {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--espace-2);
+}
+
+.bibliotheque:empty {
+  display: none;
+}
+
+.vignette-case {
+  position: relative;
+}
+
+.vignette {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background-position: center;
+  background-size: cover;
+  cursor: pointer;
+}
+
+.vignette[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--texte);
+}
+
+.vignette-supprimer {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--bordure);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--texte);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.progression {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.progression[hidden],
+.bibliotheque-fonds [hidden] {
+  display: none;
+}

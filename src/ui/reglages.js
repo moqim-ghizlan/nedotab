@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
+import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
@@ -169,6 +170,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     fichier.value = "";
   });
 
+  const bibliotheque =
+    session?.synchro?.lire().mode === "compte" ? creerBibliothequeFonds({ store, session }) : null;
   const panneaux = {
     aucun: el("p", { class: "reglages-note", texte: "Fond du thème." }),
     couleur: el("div", { class: "reglages-ligne" }, nuancesCouleur, choixCouleur),
@@ -176,8 +179,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     image: el(
       "div",
       { class: "reglages-image" },
-      fichier,
-      etatImage,
+      // Account mode: the pictures go to the account's library (Storage), else stay local.
+      bibliotheque ? bibliotheque.racine : fichier,
+      bibliotheque ? null : etatImage,
       el("label", { for: "reglage-voile", texte: "Voile" }),
       voile,
       el("label", { for: "reglage-flou", texte: "Flou" }),
@@ -202,7 +206,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       if (v === "degrade" && lire().fond.type !== "degrade") {
         modifier({ fond: { type: "degrade", valeur: NOMS_DEGRADES[0] } });
       }
-      if (v === "image" && lire().fond.type !== "image") fichier.click();
+      if (v === "image" && lire().fond.type !== "image" && !bibliotheque) fichier.click();
     },
   );
   const afficherPanneau = (type) => {
@@ -340,6 +344,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   function fermer() {
     desabonner();
     compteUi?.arreter();
+    bibliotheque?.arreter();
     document.removeEventListener("keydown", surTouche);
     panneau.close();
     panneau.remove();

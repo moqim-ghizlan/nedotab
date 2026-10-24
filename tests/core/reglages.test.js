@@ -85,6 +85,7 @@ describe("migration des réglages", () => {
     ).toEqual({
       theme: "sombre",
       fond: { type: "aucun" },
+      fonds: [],
     });
   });
   it("valeurs invalides remplacées par les valeurs par défaut", () => {
@@ -94,6 +95,7 @@ describe("migration des réglages", () => {
     ).toEqual({
       theme: "auto",
       fond: { type: "aucun" },
+      fonds: [],
     });
   });
 });
@@ -103,7 +105,7 @@ describe("schéma 2 : réglages de l'appareil", () => {
     const fond = { type: "image", ref: "local:x", dominante: "#123456", voile: 0.2, flou: 0 };
     const { etat } = migrer({ versionSchema: 1, grille: [], reglages: { theme: "sombre", fond } });
     expect(etat.versionSchema).toBe(2);
-    expect(etat.reglages).toEqual({ theme: "sombre", fond: { type: "aucun" } });
+    expect(etat.reglages).toEqual({ theme: "sombre", fond: { type: "aucun" }, fonds: [] });
     expect(etat.reglagesAppareil.fond).toMatchObject({ ref: "local:x" });
   });
   it("migration 1 → 2 sans image : reglagesAppareil vide", () => {

@@ -14,6 +14,7 @@ import { scenarioCompte } from "./scenarios/compte.mjs";
 import { scenarioSynchro } from "./scenarios/synchro.mjs";
 import { scenarioTempsReel } from "./scenarios/temps-reel.mjs";
 import { scenarioHorsLigne } from "./scenarios/hors-ligne.mjs";
+import { scenarioFondsCompte } from "./scenarios/fonds-compte.mjs";
 
 const version = JSON.parse(readFileSync("dist/extension/manifest.json", "utf8")).version;
 const dossier = `docs/v${version.split(".").slice(0, 2).join(".")}/evidence`;
@@ -601,6 +602,22 @@ if (seulement === "compte" || seulement === "hors-ligne") {
     });
   } finally {
     await nav11.fermer();
+  }
+}
+
+// V2.6 — account backgrounds (emulators)
+if (seulement === "compte" || seulement === "fonds") {
+  const nav12 = await lancerChrome();
+  try {
+    const id = await nav12.chargerExtension();
+    await scenarioFondsCompte({
+      nav: nav12,
+      url: `chrome-extension://${id}/newtab.html`,
+      verifier,
+      dossier,
+    });
+  } finally {
+    await nav12.fermer();
   }
 }
 

@@ -51,7 +51,7 @@ export function etatInitial() {
   return {
     versionSchema: VERSION_SCHEMA,
     grille: [],
-    reglages: { theme: "auto", fond: { type: "aucun" } },
+    reglages: { theme: "auto", fond: { type: "aucun" }, fonds: [] },
     // Settings of this device only, never synced (local picture background).
     reglagesAppareil: {},
   };
