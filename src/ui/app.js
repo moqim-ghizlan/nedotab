@@ -102,29 +102,30 @@ export async function demarrerApp(racine) {
     class: "visuellement-cache",
     "aria-live": "polite",
   });
-  const boutonReglages = el("button", {
-    type: "button",
-    class: "bouton-reglages",
-    "aria-label": "Réglages",
-    title: "Réglages",
-    texte: "⚙",
-    onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages, session }),
-  });
+  // One settings button: the gear alone, or the account avatar with the gear as a small badge.
+  const boutonCompte = el("span", { class: "bouton-compte", hidden: true });
+  const boutonReglages = el(
+    "button",
+    {
+      type: "button",
+      class: "bouton-reglages",
+      "aria-label": "Réglages",
+      title: "Réglages",
+      onclick: () => ouvrirReglages(store, { retourFocus: boutonReglages, session }),
+    },
+    boutonCompte,
+    el("span", { class: "reglages-symbole", "aria-hidden": "true", texte: "⚙" }),
+  );
   // Account: Firebase is only loaded when a user signed in before (indicator) or signs in.
   const compte = creerCompte();
-  const boutonCompte = el("button", {
-    type: "button",
-    class: "bouton-compte",
-    hidden: true,
-    onclick: () => ouvrirReglages(store, { retourFocus: boutonCompte, session }),
-  });
   compte.abonner((e) => {
     const connecte = e.statut === "connecte" && e.profil;
     boutonCompte.hidden = !connecte;
-    if (connecte) {
-      boutonCompte.setAttribute("aria-label", `Compte : ${e.profil.nom || e.profil.email}`);
-      boutonCompte.replaceChildren(creerAvatar(e.profil, { taille: 30 }));
-    }
+    boutonReglages.classList.toggle("avec-compte", !!connecte);
+    const libelle = connecte ? `Réglages — compte : ${e.profil.nom || e.profil.email}` : "Réglages";
+    boutonReglages.setAttribute("aria-label", libelle);
+    boutonReglages.title = libelle;
+    if (connecte) boutonCompte.replaceChildren(creerAvatar(e.profil, { taille: 32 }));
   });
   const synchro = creerSynchro({
     store,
@@ -307,10 +308,10 @@ export async function demarrerApp(racine) {
   const groupeCompte = el(
     "span",
     { class: "compte-avatar" },
-    boutonCompte,
+    boutonReglages,
     creerIndicateurSynchro(synchro),
   );
-  const barre = el("div", { class: "barre-haut" }, groupeCompte, boutonReglages);
+  const barre = el("div", { class: "barre-haut" }, groupeCompte);
   racine.replaceChildren(barre, page, pied, annonces);
   const annoncer = (texte) => {
     annonces.textContent = "";

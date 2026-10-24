@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.1] - 2026-10-24
+
+### Modifié
+
+- Un seul bouton en haut à droite au lieu de deux : connecté, l'avatar du compte ouvre les
+  réglages et porte un petit engrenage dans le coin inférieur gauche (l'indicateur de
+  synchronisation reste dans le coin inférieur droit) ; sans compte, l'engrenage seul.
+
 ## [2.10.0] - 2026-10-24
 
 Dernière version de la V2 : chacun garde le contrôle complet de ses données.

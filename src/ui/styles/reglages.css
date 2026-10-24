@@ -81,11 +81,8 @@ body.fond-sombre {
 .bouton-compte {
   display: grid;
   place-items: center;
-  padding: 0;
   border: 2px solid color-mix(in srgb, var(--surface) 80%, transparent);
   border-radius: 50%;
-  background: none;
-  cursor: pointer;
 }
 
 .bouton-compte[hidden] {
@@ -120,6 +117,36 @@ body.fond-sombre {
 
 .bouton-reglages:hover {
   background: var(--surface);
+}
+
+/* Signed in: the avatar fills the button, the gear becomes a badge in the bottom-left corner
+   (the sync indicator keeps the bottom-right one). */
+.bouton-reglages.avec-compte {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  backdrop-filter: none;
+}
+
+.bouton-reglages.avec-compte:hover .bouton-compte {
+  border-color: var(--surface);
+}
+
+.bouton-reglages.avec-compte .reglages-symbole {
+  position: absolute;
+  left: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--surface);
+  border-radius: 50%;
+  background: var(--texte);
+  color: var(--surface);
+  font-size: 12px;
+  line-height: 1;
 }
 
 .reglages {
