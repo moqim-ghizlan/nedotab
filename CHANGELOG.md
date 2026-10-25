@@ -2,6 +2,13 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.0.1] - 2026-10-25
+
+### Corrigé
+
+- Application web : la page d'accueil (`/`) n'est plus gardée une heure en cache par le
+  navigateur ; une nouvelle version déployée s'affiche au prochain chargement.
+
 ## [3.0.0] - 2026-10-25
 
 Deuxième plateforme : NedoTab devient aussi une application web, pour l'iPhone, l'iPad et
