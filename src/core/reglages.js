@@ -106,13 +106,20 @@ export function validerFond(fond) {
 }
 
 /**
- * Applies `changements` (whitelisted keys: theme, fond, nouvelOnglet) to `reglages`.
+ * Synced on/off settings, all off by default and stored only when on (settings saved before
+ * one existed stay unchanged): nouvelOnglet opens the grid's sites in a new tab (V2.10.3),
+ * rechercheNouvelOnglet the web searches of the search bar (V2.10.6).
+ */
+export const INTERRUPTEURS = ["nouvelOnglet", "rechercheNouvelOnglet"];
+
+/**
+ * Applies `changements` (whitelisted keys: theme, fond and the INTERRUPTEURS) to `reglages`.
  * Unknown keys and invalid values are refused: the same object is returned.
  */
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  if (cles.length === 0 || cles.some((c) => !["theme", "fond", "nouvelOnglet"].includes(c)))
+  if (cles.length === 0 || cles.some((c) => !["theme", "fond", ...INTERRUPTEURS].includes(c)))
     return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
@@ -124,13 +131,14 @@ export function modifierReglages(reglages, changements) {
     if (!fond) return reglages;
     suivant.fond = fond;
   }
-  if ("nouvelOnglet" in changements) {
-    // Stored only when on: settings saved before it existed stay unchanged.
-    if (typeof changements.nouvelOnglet !== "boolean") return reglages;
-    if (cles.length === 1 && changements.nouvelOnglet === !!reglages.nouvelOnglet) return reglages;
-    if (changements.nouvelOnglet) suivant.nouvelOnglet = true;
-    else delete suivant.nouvelOnglet;
+  for (const cle of INTERRUPTEURS.filter((c) => c in changements)) {
+    if (typeof changements[cle] !== "boolean") return reglages;
+    if (changements[cle]) suivant[cle] = true;
+    else delete suivant[cle];
   }
+  // A switch set to the value it already has changes nothing.
+  if (cles.every((c) => INTERRUPTEURS.includes(c) && changements[c] === !!reglages[c]))
+    return reglages;
   return suivant;
 }
 
@@ -143,14 +151,9 @@ export function validerReglages(reglages) {
   if (fond.type === "image" && (fond.ref || !fonds.some((f) => f.id === fond.id))) {
     fond = { type: "aucun" };
   }
-  const { nouvelOnglet, ...reste } = r;
-  return {
-    ...reste,
-    theme: THEMES.includes(r.theme) ? r.theme : "auto",
-    fond,
-    fonds,
-    ...(nouvelOnglet === true ? { nouvelOnglet: true } : {}),
-  };
+  const resultat = { ...r, theme: THEMES.includes(r.theme) ? r.theme : "auto", fond, fonds };
+  for (const cle of INTERRUPTEURS) if (resultat[cle] !== true) delete resultat[cle];
+  return resultat;
 }
 
 /** Forced number of columns of the home grid on this device (null: automatic). */

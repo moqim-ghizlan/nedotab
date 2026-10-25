@@ -63,6 +63,18 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ nouvelOnglet: false })).toBe(etat);
     expect(modifier({ nouvelOnglet: "oui" })).toBe(etat);
   });
+  it("recherches web dans un nouvel onglet : même règle, indépendant des sites", () => {
+    const active = modifier({ rechercheNouvelOnglet: true });
+    expect(active.reglages.rechercheNouvelOnglet).toBe(true);
+    expect("nouvelOnglet" in active.reglages).toBe(false);
+    const desactive = reduire(active, {
+      type: A.REGLAGES_MODIFIER,
+      changements: { rechercheNouvelOnglet: false },
+    });
+    expect("rechercheNouvelOnglet" in desactive.reglages).toBe(false);
+    expect(modifier({ rechercheNouvelOnglet: false })).toBe(etat);
+    expect(modifier({ rechercheNouvelOnglet: 1 })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);
@@ -120,6 +132,11 @@ describe("chargement de nouvelOnglet", () => {
     expect(charger(true).nouvelOnglet).toBe(true);
     expect("nouvelOnglet" in charger(false)).toBe(false);
     expect("nouvelOnglet" in charger("oui")).toBe(false);
+    const recherche = migrer({
+      ...etatInitial(),
+      reglages: { ...etatInitial().reglages, rechercheNouvelOnglet: true },
+    }).etat.reglages;
+    expect(recherche.rechercheNouvelOnglet).toBe(true);
   });
 });
 

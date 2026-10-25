@@ -166,14 +166,20 @@ export function creerRecherche(store, { ouvrirDossier }) {
     else location.assign(url);
   };
 
+  /** Web search: a new tab when asked (Ctrl, middle click) or chosen in the settings. */
+  const chercherSurLeWeb = (texte, nouvelOnglet) =>
+    plateforme.rechercherSurLeWeb(texte, {
+      nouvelOnglet: nouvelOnglet || !!store.lire().reglages.rechercheNouvelOnglet,
+    });
+
   function valider(i, { nouvelOnglet = false } = {}) {
     const o = options[i];
     if (!o) {
-      if (champ.value.trim()) plateforme.rechercherSurLeWeb(champ.value.trim(), { nouvelOnglet });
+      if (champ.value.trim()) chercherSurLeWeb(champ.value.trim(), nouvelOnglet);
       return;
     }
     if (o.type === "adresse") ouvrirUrl(o.url, nouvelOnglet);
-    else if (o.type === "web") plateforme.rechercherSurLeWeb(o.texte, { nouvelOnglet });
+    else if (o.type === "web") chercherSurLeWeb(o.texte, nouvelOnglet);
     else if (o.type === "site")
       ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet || sitesDansNouvelOnglet());
     else if (o.type === "dossier") {

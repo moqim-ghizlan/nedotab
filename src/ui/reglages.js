@@ -98,12 +98,38 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
 
-  // Synced: how the sites of the grid and of the search open.
-  const interrupteurOnglet = el("input", {
-    type: "checkbox",
-    role: "switch",
-    class: "interrupteur-bouton",
-    onchange: (e) => modifier({ nouvelOnglet: e.currentTarget.checked }),
+  // Synced switches: where links open (key of the settings, label, explanation).
+  const interrupteurs = [
+    [
+      "nouvelOnglet",
+      "Ouvrir les sites dans un nouvel onglet",
+      "Icônes de la grille et des dossiers, sites trouvés par la recherche.",
+    ],
+    [
+      "rechercheNouvelOnglet",
+      "Ouvrir les recherches web dans un nouvel onglet",
+      "Recherche lancée depuis la barre avec votre moteur habituel.",
+    ],
+  ].map(([cle, libelle, note]) => {
+    const bouton = el("input", {
+      type: "checkbox",
+      role: "switch",
+      class: "interrupteur-bouton",
+      dataset: { reglage: cle },
+      onchange: (e) => modifier({ [cle]: e.currentTarget.checked }),
+    });
+    const ligne = el(
+      "label",
+      { class: "interrupteur" },
+      el(
+        "span",
+        { class: "interrupteur-texte" },
+        el("span", { texte: libelle }),
+        el("span", { class: "reglages-note", texte: note }),
+      ),
+      bouton,
+    );
+    return { cle, bouton, ligne };
   });
 
   const nuancesCouleur = el(
@@ -316,21 +342,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         colonnes.groupe,
       ),
       section(
-        "Sites",
-        el(
-          "label",
-          { class: "interrupteur" },
-          el(
-            "span",
-            { class: "interrupteur-texte" },
-            el("span", { texte: "Ouvrir les sites dans un nouvel onglet" }),
-            el("span", {
-              class: "reglages-note",
-              texte: "Votre page NedoTab reste ouverte derrière.",
-            }),
-          ),
-          interrupteurOnglet,
-        ),
+        "Ouverture des liens",
+        el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
+        ...interrupteurs.map((i) => i.ligne),
       ),
     ],
     sauvegardes: session?.sauvegardes
@@ -510,7 +524,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       afficherPanneau(r.fond.type);
     }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
-    interrupteurOnglet.checked = !!r.nouvelOnglet;
+    for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
     for (const b of nuancesCouleur.children) {
       b.setAttribute(
         "aria-checked",

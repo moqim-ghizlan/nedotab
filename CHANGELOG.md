@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.6] - 2026-10-25
+
+### Ajouté
+
+- Réglage **Ouvrir les recherches web dans un nouvel onglet**, synchronisé comme celui des
+  sites : une recherche lancée depuis la barre (Entrée sans site trouvé, ou « Rechercher
+  sur le web ») s'ouvre dans un nouvel onglet avec le moteur habituel. Ctrl+Entrée et le
+  clic molette ouvrent toujours un nouvel onglet. Les deux interrupteurs sont regroupés
+  dans la section « Ouverture des liens » (Réglages → Apparence).
+
 ## [2.10.5] - 2026-10-24
 
 ### Modifié
