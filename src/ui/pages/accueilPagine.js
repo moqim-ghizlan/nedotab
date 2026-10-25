@@ -41,6 +41,7 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
   let pageCourante = 0;
   let cap = { colonnes: 1, lignes: 1, parPage: 4 };
   let glisserEn = null; // { pageDepart } during a drag
+  let posee = null; // id of the tile just dropped, shown by the next render
 
   const nbPages = () => pages.length;
   const derniere = () => (glisserEn ? nbPages() : nbPages() - 1);
@@ -90,6 +91,29 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
     if (focusDansLaGrille && !glisserEn) pages[cible]?.querySelector(".tuile")?.focus();
     zones.majDisponibles();
   }
+
+  /**
+   * After a drop, the page where the tile really is comes into view and the tile lights up.
+   * Pages are cut from one list: a tile dropped on a page that has no room before it (the
+   * page that only holds "+", or the empty page) goes to the end of the list, which may be
+   * on the previous page. The user must see where it went.
+   */
+  const montrerPosee = () => {
+    const tuile = piste.querySelector(`.tuile[data-id="${CSS.escape(posee)}"]`);
+    posee = null;
+    if (!tuile) return; // put into a folder
+    const page = pageDe(tuile);
+    if (page !== pageCourante) {
+      pageCourante = page;
+      appliquer(true);
+    }
+    tuile.classList.remove("tuile--posee");
+    void tuile.offsetWidth;
+    tuile.classList.add("tuile--posee");
+    tuile.addEventListener("animationend", () => tuile.classList.remove("tuile--posee"), {
+      once: true,
+    });
+  };
 
   const allerRelatif = (sens) => {
     const avant = pageCourante;
@@ -164,6 +188,7 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
       fenetre.style.setProperty("--page-lignes", String(cap.lignes));
       pageCourante = borner(pageCourante, nbPages());
       appliquer(false);
+      if (posee) montrerPosee();
     },
 
     listes: () => [...pages, temporaire],
@@ -196,8 +221,9 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
       zones.debut();
       document.addEventListener("pointermove", suivrePointeur, true);
     },
-    finGlisser({ annule }) {
+    finGlisser({ annule, id }) {
       const depart = glisserEn?.pageDepart ?? pageCourante;
+      posee = annule ? null : id;
       glisserEn = null;
       fenetre.classList.remove("accueil-pages--glisser");
       zones.fin();

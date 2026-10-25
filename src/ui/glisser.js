@@ -17,12 +17,13 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").match
  * of the whole list; `surDebut` / `surFin` let the pages show their edge zones.
  *
  * Escape during a drag cancels it: nothing moves (`surFin` receives { annule: true }).
+ * `surFin` also receives the id of the dragged element, before the render that follows.
  *
  * @param {HTMLElement} conteneur persistent element (never recreated by the renderer)
  * @param {{ parentId?: () => string|null, rendre: () => void, intention?: object,
  *           deposer?: (id: string, cible: object) => void, listes?: () => HTMLElement[],
  *           versIndex?: (evt: object) => number|null, surDebut?: () => void,
- *           surFin?: (infos: { annule: boolean }) => void, groupe?: string }} options parentId
+ *           surFin?: (infos: { annule: boolean, id?: string }) => void, groupe?: string }} options parentId
  *        gives the level shown; groupe: SortableJS group shared by the lists
  */
 export function activerGlisser(
@@ -83,6 +84,12 @@ export function activerGlisser(
     // While a drop target is active, or the dragged icon is well over a tile (it may become
     // one), SortableJS must not reorder: the target would move away under the icon.
     onMove: () => !intention?.actif() && !intention?.retient?.(),
+    // The "+" tile always stays last, also when SortableJS adds the tile at the end of a
+    // list: only the tiles count for the drop, the "+" is only put back in its place.
+    onChange(evt) {
+      const plus = evt.to.querySelector(":scope > .case--ajout");
+      if (plus?.nextElementSibling) evt.to.append(plus);
+    },
     onEnd(evt) {
       document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
@@ -97,7 +104,7 @@ export function activerGlisser(
       } else if (id && index != null) {
         store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: parentId(), versIndex: index });
       }
-      surFin?.({ annule });
+      surFin?.({ annule, id });
       // The click that ends a drag must not open the site. SortableJS also swallows the
       // next click after a drag; when the button is released over another element, no
       // click follows and the user's next real click would be lost: consume it now.

@@ -2,6 +2,18 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.11.1] - 2026-10-25
+
+### Corrigé
+
+- Glisser une tuile vers une autre page : la tuile semblait revenir à sa place. Elle était
+  bien déplacée, mais une page qui n'a pas de place devant elle (la page qui ne contient
+  que « + », ou la page vide de fin) la met à la fin de la liste, qui peut se trouver sur
+  la page précédente, et l'affichage restait sur l'autre page. Après un dépôt, la page où
+  la tuile se trouve vraiment s'affiche et la tuile s'illumine brièvement.
+- Pendant un glisser, la tuile n'apparaît plus après le « + » : il reste toujours la
+  dernière case.
+
 ## [2.11.0] - 2026-10-25
 
 ### Ajouté
