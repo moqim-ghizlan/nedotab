@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.10.7] - 2026-10-25
+
+### Ajouté
+
+- À l'ouverture d'un nouvel onglet, le curseur est placé dans la recherche NedoTab au lieu
+  de la barre d'adresse de Chrome : on peut taper tout de suite. Chrome garde toujours sa
+  barre pour lui sur une page « Nouvel onglet » ; l'extension remplace donc aussitôt cette
+  page par une copie qu'elle ouvre elle-même (`newtab.html?focus=1`, même position, même
+  groupe d'onglets). Conséquence : la barre de Chrome affiche l'adresse de NedoTab. Ni
+  rechargement ni retour arrière ne déclenchent de nouveau remplacement. Aucune permission
+  ajoutée.
+- Réglage **Curseur dans la recherche NedoTab** (Réglages → Apparence → Nouvel onglet),
+  activé par défaut, propre à cet appareil (non synchronisé) : désactivé, le curseur reste
+  dans la barre d'adresse de Chrome comme avant.
+
 ## [2.10.6] - 2026-10-25
 
 ### Ajouté

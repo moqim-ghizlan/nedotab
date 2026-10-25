@@ -87,6 +87,59 @@ export function urlFaviconNavigateur(pageUrl, taille = 64) {
 
 export { fichiers } from "./fichiers.js";
 
+const CLE_BARRE_CHROME = "nedotab:barre-chrome";
+
+/**
+ * Chrome always leaves the cursor in its address bar on a new tab page; a tab opened by the
+ * extension itself gives it to the page. So a new tab page is replaced at once by a copy
+ * opened with chrome.tabs (address "?focus=1", same place, same group), unless the user
+ * keeps Chrome's bar on this device. Resolves to true when this page is being replaced
+ * (nothing to draw), false otherwise, including when the replacement fails.
+ */
+export function prendreLeCurseur() {
+  const url = new URL(location.href);
+  if (url.searchParams.has("focus") || !globalThis.chrome?.tabs?.getCurrent)
+    return Promise.resolve(false);
+  try {
+    if (localStorage.getItem(CLE_BARRE_CHROME) === "1") return Promise.resolve(false);
+  } catch {
+    /* no setting readable: default behaviour */
+  }
+  // Only a page just opened, not a reload or a return with Back.
+  const navigation = performance.getEntriesByType?.("navigation")[0];
+  if (navigation && navigation.type !== "navigate") return Promise.resolve(false);
+  url.searchParams.set("focus", "1");
+  return (async () => {
+    try {
+      const actuel = await chrome.tabs.getCurrent();
+      if (!actuel) return false;
+      const copie = await chrome.tabs.create({
+        url: url.href,
+        index: actuel.index,
+        windowId: actuel.windowId,
+        active: true,
+        ...(actuel.openerTabId ? { openerTabId: actuel.openerTabId } : {}),
+      });
+      if (actuel.groupId > -1)
+        await chrome.tabs.group({ groupId: actuel.groupId, tabIds: copie.id }).catch(() => {});
+      await chrome.tabs.remove(actuel.id);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+}
+
+/** Device-only setting mirrored for the very start of the page (before the state loads). */
+export function garderBarreChrome(actif) {
+  try {
+    if (actif) localStorage.setItem(CLE_BARRE_CHROME, "1");
+    else localStorage.removeItem(CLE_BARRE_CHROME);
+  } catch {
+    /* private mode: the default behaviour stays */
+  }
+}
+
 /** Web search with the user's default engine (never changes it). */
 export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
   return chrome.search.query({

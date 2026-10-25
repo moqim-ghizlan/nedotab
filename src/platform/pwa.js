@@ -37,6 +37,10 @@ export function urlFaviconNavigateur() {
 
 export { fichiers } from "./fichiers.js";
 
+/** No browser address bar to take the cursor from in the installed app. */
+export const prendreLeCurseur = () => Promise.resolve(false);
+export function garderBarreChrome() {}
+
 /** No access to the default engine from a web page: Google search URL. */
 export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
   const url = `https://www.google.com/search?q=${encodeURIComponent(texte)}`;

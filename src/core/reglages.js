@@ -162,19 +162,23 @@ export const COLONNES_MAX = 10;
 const colonnesValides = (n) => Number.isInteger(n) && n >= COLONNES_MIN && n <= COLONNES_MAX;
 
 /** Settings of this device only, never synced (V2.9). */
-export const CLES_APPAREIL = ["colonnes", "debug"];
+export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome"];
 
-/** Device-only settings: local picture background, forced columns, debug log. */
+/**
+ * Device-only settings: local picture background, forced columns, debug log, and barreChrome
+ * (V2.10.7: leave the cursor in Chrome's address bar on a new tab, instead of the search).
+ */
 export function validerReglagesAppareil(r) {
   const resultat = {};
   const fond = validerFond(r?.fond);
   if (fond?.type === "image" && fond.ref) resultat.fond = fond;
   if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
   if (r?.debug === true) resultat.debug = true;
+  if (r?.barreChrome === true) resultat.barreChrome = true;
   return resultat;
 }
 
-/** Applies device-only changes (colonnes: null = automatic, debug: boolean). */
+/** Applies device-only changes (colonnes: null = automatic, debug and barreChrome: boolean). */
 function modifierAppareil(etat, changements) {
   const appareil = { ...etat.reglagesAppareil };
   if ("colonnes" in changements) {
@@ -182,9 +186,9 @@ function modifierAppareil(etat, changements) {
     else if (colonnesValides(changements.colonnes)) appareil.colonnes = changements.colonnes;
     else return etat;
   }
-  if ("debug" in changements) {
-    if (changements.debug) appareil.debug = true;
-    else delete appareil.debug;
+  for (const cle of ["debug", "barreChrome"].filter((c) => c in changements)) {
+    if (changements[cle]) appareil[cle] = true;
+    else delete appareil[cle];
   }
   return JSON.stringify(appareil) === JSON.stringify(etat.reglagesAppareil ?? {})
     ? etat

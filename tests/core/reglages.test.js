@@ -201,6 +201,18 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     expect(modifier(etat, { debug: true, theme: "sombre" })).toBe(etat);
     expect(modifier(etat, { debug: false }).reglagesAppareil).toEqual({});
   });
+  it("curseur à l'ouverture : laisser la barre de Chrome est local et gardé seulement s'il est choisi", () => {
+    const etat = modifier(etatInitial(), { barreChrome: true });
+    expect(etat.reglagesAppareil).toEqual({ barreChrome: true });
+    expect("barreChrome" in etat.reglages).toBe(false);
+    expect(modifier(etat, { barreChrome: true, theme: "sombre" })).toBe(etat);
+    expect(modifier(etat, { barreChrome: false }).reglagesAppareil).toEqual({});
+    const charge = migrer({
+      ...etatInitial(),
+      reglagesAppareil: { barreChrome: true },
+    }).etat.reglagesAppareil;
+    expect(charge).toEqual({ barreChrome: true });
+  });
   it("chargement : colonnes et debug validés", () => {
     const { etat } = migrer({
       versionSchema: 2,

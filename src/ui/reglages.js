@@ -132,6 +132,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne };
   });
 
+  // Device-only, extension only (V2.10.7): who gets the cursor when a new tab opens.
+  const curseurRecherche =
+    import.meta.env.VITE_TARGET === "pwa"
+      ? null
+      : el("input", {
+          type: "checkbox",
+          role: "switch",
+          class: "interrupteur-bouton",
+          dataset: { reglage: "curseurRecherche" },
+          onchange: (e) => modifier({ barreChrome: !e.currentTarget.checked }),
+        });
+
   const nuancesCouleur = el(
     "div",
     { class: "nuancier nuancier--fond", role: "radiogroup", "aria-label": "Couleur du fond" },
@@ -346,6 +358,30 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
         ...interrupteurs.map((i) => i.ligne),
       ),
+      curseurRecherche
+        ? section(
+            "Nouvel onglet",
+            el(
+              "label",
+              { class: "interrupteur" },
+              el(
+                "span",
+                { class: "interrupteur-texte" },
+                el(
+                  "span",
+                  { texte: "Curseur dans la recherche NedoTab" },
+                  el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
+                ),
+                el("span", {
+                  class: "reglages-note",
+                  texte:
+                    "Vous pouvez taper tout de suite. Chrome affiche alors l'adresse de NedoTab dans sa barre ; désactivé, le curseur reste dans la barre d'adresse.",
+                }),
+              ),
+              curseurRecherche,
+            ),
+          )
+        : null,
     ],
     sauvegardes: session?.sauvegardes
       ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
@@ -525,6 +561,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
+    if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {
       b.setAttribute(
         "aria-checked",

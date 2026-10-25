@@ -329,6 +329,8 @@ export async function demarrerApp(racine) {
   // Search bar above the grid; a folder found opens directly at its level.
   const recherche = creerRecherche(store, { ouvrirDossier: (id) => ouvrirDossier(id) });
   page.insertBefore(recherche.racine, vide);
+  // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
+  if (new URLSearchParams(location.search).has("focus")) recherche.champ.focus();
 
   const nouveauDossier = async (retourFocus) => {
     const titre = await demanderNomDossier({ retourFocus });
@@ -408,6 +410,7 @@ export async function demarrerApp(racine) {
       racineDoc.style.removeProperty("--colonnes");
     }
     activerJournal(r.debug);
+    plateforme.garderBarreChrome(!!r.barreChrome);
   };
   let appliques = store.lire();
   appliquerReglages(visibles(appliques));
