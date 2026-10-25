@@ -2,6 +2,39 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.0.0] - 2026-10-25
+
+Deuxième plateforme : NedoTab devient aussi une application web, pour l'iPhone, l'iPad et
+tout navigateur, à partir du même code que l'extension.
+
+### Ajouté
+
+- **Application web** (`npm run build:pwa` → `dist/pwa/`, `npm run dev:pwa` pour travailler
+  sur l'interface sans extension) : grille, dossiers, glisser, recherche, pages, fonds et
+  galerie, en mode local (sans compte), comme l'extension. Les icônes viennent du service
+  Google puis de la pastille lettre (une page web ne peut pas lire les autres sites) ; la
+  recherche web passe par Google.
+- Les données de l'application web sont dans IndexedDB ; deux onglets ouverts se tiennent
+  à jour l'un l'autre sans recharger (`BroadcastChannel`).
+- **Firebase Hosting** (`firebase.json`) : réécriture vers `index.html`, cache long des
+  fichiers versionnés, en-têtes de sécurité et Content-Security-Policy (scripts du site
+  seulement). Déploiement : `npm run deployer:pwa`.
+- Réglages → À propos, dans l'application web sur ordinateur : lien « Installer
+  l'extension Chrome ». Les réglages propres à l'extension (autorisations des sites,
+  curseur à l'ouverture d'un onglet, guide de mise à jour) n'y apparaissent pas.
+- FAQ du site : Safari peut effacer les données d'un site peu visité ; le compte Google les
+  protège.
+
+### Modifié
+
+- Couche plateforme : chaque cible ne contient que la sienne (résolue au build) et déclare
+  ses **capacités** ; l'interface lit ces capacités au lieu de tester la cible. ESLint
+  interdit `chrome` en dehors de `src/platform/extension.js`. Le stockage (état,
+  préférences, opérations en attente, copies de sécurité) est un code commun aux deux
+  plateformes. Détail : `docs/plateformes.md`.
+- Tests : `npm run test:cibles` lance toute la suite pour l'extension puis pour
+  l'application web.
+
 ## [2.13.1] - 2026-10-25
 
 ### Modifié

@@ -1,6 +1,6 @@
 /** Extension implementation of the platform layer (chrome.*). */
 import { lireJson, lirePage } from "./reseau.js";
-import { creerStockage } from "./stockageChrome.js";
+import { creerServicesStockage } from "./servicesStockage.js";
 import {
   creerNonce,
   estGoogleChrome,
@@ -11,61 +11,27 @@ import {
 
 export { lireJson, lirePage };
 
+/** What this platform can do: the interface adapts to it (see docs/plateformes.md). */
+export const capacites = {
+  nom: "extension",
+  lirePagesWeb: true,
+  permissionsSites: true,
+  barreAdresse: true,
+  proposerExtension: false,
+  miseAJourManuelle: true,
+};
+
 export function getVersion() {
   return chrome.runtime.getManifest().version;
 }
 
-let stockageCourant;
-export function stockage() {
-  stockageCourant ??= creerStockage(chrome.storage.local, chrome.storage.onChanged);
-  return stockageCourant;
-}
-
-/** Small per-device preferences, outside the synced state. */
-export const preferences = {
-  async lire(cle) {
-    const r = await chrome.storage.local.get(`pref:${cle}`);
-    return r[`pref:${cle}`];
-  },
-  async ecrire(cle, valeur) {
-    await chrome.storage.local.set({ [`pref:${cle}`]: valeur });
-  },
-};
-
-const PREFIXE_OPERATIONS = "operationsEnAttente:";
-
-/**
- * Pending sync operations (V2.9), one queue per open tab: two tabs never overwrite each
- * other's queue. They survive closing the browser.
- */
-export const operations = {
-  async ecrire(idOnglet, valeur) {
-    await chrome.storage.local.set({ [PREFIXE_OPERATIONS + idOnglet]: valeur });
-  },
-  async supprimer(idOnglet) {
-    await chrome.storage.local.remove(PREFIXE_OPERATIONS + idOnglet);
-  },
-  async toutes() {
-    const tout = await chrome.storage.local.get(null);
-    return Object.fromEntries(
-      Object.entries(tout)
-        .filter(([cle]) => cle.startsWith(PREFIXE_OPERATIONS))
-        .map(([cle, v]) => [cle.slice(PREFIXE_OPERATIONS.length), v]),
-    );
-  },
-  /** callback(idOnglet, valeur | null) when another tab changes its queue. */
-  surChangement(callback) {
-    const ecouteur = (changements, zone) => {
-      if (zone !== "local") return;
-      for (const [cle, { newValue }] of Object.entries(changements)) {
-        if (cle.startsWith(PREFIXE_OPERATIONS))
-          callback(cle.slice(PREFIXE_OPERATIONS.length), newValue ?? null);
-      }
-    };
-    chrome.storage.onChanged.addListener(ecouteur);
-    return () => chrome.storage.onChanged.removeListener(ecouteur);
-  },
-};
+// The state, preferences, pending operations, safety copies and the id of the installation
+// live in chrome.storage.local, through the code shared with the web app.
+const services = creerServicesStockage(
+  () => chrome.storage.local,
+  () => chrome.storage.onChanged,
+);
+export const { stockage, preferences, operations, copies, idAppareil } = services;
 
 const ORIGINES_SITES = { origins: ["https://*/*", "http://*/*"] };
 
@@ -231,43 +197,4 @@ async function jetonParFenetre(interactif) {
 export function oublierJetonGoogle(token) {
   if (EMULATEURS) return Promise.resolve();
   return chrome.identity.removeCachedAuthToken({ token });
-}
-
-const PREFIXE_COPIE = "copieAvantSynchro:";
-
-/**
- * Safety copies of the local state, written before any synchronisation step
- * (the 3 most recent are kept). Returned newest first: [{ cle, date, etat }].
- */
-export const copies = {
-  /** Every safety copy of this computer (account deletion, V2.10). */
-  async effacerTout() {
-    await chrome.storage.local.remove((await copies.lister()).map((c) => c.cle));
-  },
-  async enregistrer(etat) {
-    const cle = `${PREFIXE_COPIE}${new Date().toISOString()}`;
-    await chrome.storage.local.set({ [cle]: etat });
-    const toutes = (await copies.lister()).map((c) => c.cle);
-    const anciennes = toutes.slice(3);
-    if (anciennes.length) await chrome.storage.local.remove(anciennes);
-    return cle;
-  },
-  async lister() {
-    const tout = await chrome.storage.local.get(null);
-    return Object.keys(tout)
-      .filter((k) => k.startsWith(PREFIXE_COPIE))
-      .sort()
-      .reverse()
-      .map((cle) => ({ cle, date: Date.parse(cle.slice(PREFIXE_COPIE.length)), etat: tout[cle] }));
-  },
-};
-
-/** Persistent id of this installation (not of the tab): who wrote the account's data. */
-export async function idAppareil() {
-  let id = await preferences.lire("idAppareil");
-  if (!id) {
-    id = globalThis.crypto.randomUUID();
-    await preferences.ecrire("idAppareil", id);
-  }
-  return id;
 }

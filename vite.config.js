@@ -30,23 +30,40 @@ function manifestExtension(env) {
 }
 
 export default defineConfig(({ mode }) => {
-  if (mode === "pwa") throw new Error("Cible PWA prévue en V3.0");
-  if (mode !== "extension") throw new Error(`Mode inconnu : ${mode} (attendu : extension)`);
+  if (!["extension", "pwa"].includes(mode))
+    throw new Error(`Mode inconnu : ${mode} (attendu : extension ou pwa)`);
   const env = loadEnv(mode, process.cwd(), "VITE_");
+  const define = {
+    "import.meta.env.VITE_TARGET": JSON.stringify(mode),
+    "import.meta.env.VITE_VERSION": JSON.stringify(pkg.version),
+  };
+  // The platform layer of this target only (src/platform/index.js).
+  const resolve_ = { alias: { "#plateforme": resolve(`src/platform/${mode}.js`) } };
+  const build = {
+    emptyOutDir: true,
+    sourcemap: true,
+    // The Firebase chunk (Auth + Firestore + Storage) is ~500 KB, loaded only with an account.
+    chunkSizeWarningLimit: 700,
+    modulePreload: { polyfill: false },
+  };
+  // V3.0: the web app (iPhone, iPad, any browser), hosted on Firebase Hosting.
+  if (mode === "pwa") {
+    return {
+      base: "/",
+      publicDir: "public",
+      define,
+      resolve: resolve_,
+      build: { ...build, outDir: "dist/pwa", rollupOptions: { input: { index: "index.html" } } },
+    };
+  }
   return {
     base: "./",
     publicDir: false,
-    define: {
-      "import.meta.env.VITE_TARGET": JSON.stringify(mode),
-      "import.meta.env.VITE_VERSION": JSON.stringify(pkg.version),
-    },
+    define,
+    resolve: resolve_,
     build: {
+      ...build,
       outDir: "dist/extension",
-      emptyOutDir: true,
-      sourcemap: true,
-      // The Firebase chunk (Auth + Firestore + Storage) is ~500 KB, loaded only with an account.
-      chunkSizeWarningLimit: 700,
-      modulePreload: { polyfill: false },
       rollupOptions: { input: { newtab: "newtab.html" } },
     },
     plugins: [manifestExtension(env)],

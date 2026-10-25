@@ -1,6 +1,10 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
-const define = { "import.meta.env.VITE_TARGET": JSON.stringify("extension") };
+// V3.0: the whole suite runs for each target (`npm run test:cibles`): CIBLE=pwa vitest run.
+const cible = process.env.CIBLE === "pwa" ? "pwa" : "extension";
+const define = { "import.meta.env.VITE_TARGET": JSON.stringify(cible) };
+const resolve_ = { alias: { "#plateforme": resolve(`src/platform/${cible}.js`) } };
 
 // Security-rules tests need the Firebase emulators: `npm run test:regles` starts them and
 // sets FIRESTORE_EMULATOR_HOST, which enables the "regles" project.
@@ -8,10 +12,12 @@ const avecEmulateurs = !!process.env.FIRESTORE_EMULATOR_HOST;
 
 export default defineConfig({
   define,
+  resolve: resolve_,
   test: {
     projects: [
       {
         define,
+        resolve: resolve_,
         test: {
           name: "core",
           environment: "node",
@@ -20,11 +26,13 @@ export default defineConfig({
       },
       {
         define,
+        resolve: resolve_,
         test: { name: "ui", environment: "happy-dom", include: ["tests/ui/**/*.test.js"] },
       },
       ...(avecEmulateurs
         ? [
             {
+              resolve: resolve_,
               test: {
                 name: "regles",
                 env: { VITE_UTILISER_EMULATEURS: "true" },

@@ -183,17 +183,16 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne };
   });
 
-  // Device-only, extension only (V2.10.7): who gets the cursor when a new tab opens.
-  const curseurRecherche =
-    import.meta.env.VITE_TARGET === "pwa"
-      ? null
-      : el("input", {
-          type: "checkbox",
-          role: "switch",
-          class: "interrupteur-bouton",
-          dataset: { reglage: "curseurRecherche" },
-          onchange: (e) => modifier({ barreChrome: !e.currentTarget.checked }),
-        });
+  // Device-only (V2.10.7), where a browser address bar takes the cursor on a new tab.
+  const curseurRecherche = !plateforme.capacites.barreAdresse
+    ? null
+    : el("input", {
+        type: "checkbox",
+        role: "switch",
+        class: "interrupteur-bouton",
+        dataset: { reglage: "curseurRecherche" },
+        onchange: (e) => modifier({ barreChrome: !e.currentTarget.checked }),
+      });
 
   const nuancesCouleur = el(
     "div",
@@ -479,7 +478,10 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         ]
       : null,
     avance: [
-      section("Autorisations", etatPermission, boutonPermission),
+      // Reading other sites needs a permission in the extension only (V3.0: capabilities).
+      plateforme.capacites.permissionsSites
+        ? section("Autorisations", etatPermission, boutonPermission)
+        : null,
       section("Stockage", etatStockage),
       section(
         "À propos",
@@ -502,12 +504,24 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
           "p",
           { class: "reglages-liens" },
           el("a", { href: URL_SITE, target: "_blank", rel: "noopener", texte: "Site du projet" }),
-          el("a", {
-            href: `${URL_SITE}mise-a-jour.html`,
-            target: "_blank",
-            rel: "noopener",
-            texte: "Guide de mise à jour",
-          }),
+          // The extension is updated by hand (zip); the web app updates itself.
+          plateforme.capacites.miseAJourManuelle
+            ? el("a", {
+                href: `${URL_SITE}mise-a-jour.html`,
+                target: "_blank",
+                rel: "noopener",
+                texte: "Guide de mise à jour",
+              })
+            : null,
+          // Web app on a computer (V3.0): the extension does more (new tab, site icons).
+          plateforme.capacites.proposerExtension
+            ? el("a", {
+                href: URL_SITE,
+                target: "_blank",
+                rel: "noopener",
+                texte: "Installer l'extension Chrome",
+              })
+            : null,
         ),
       ),
     ],

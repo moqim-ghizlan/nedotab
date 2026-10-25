@@ -60,7 +60,7 @@ export function creerDonnees({
     }
     const contenu = creerExport(store.lire(), {
       version: plat.getVersion(),
-      plateforme: import.meta.env.VITE_TARGET === "pwa" ? "pwa" : "extension",
+      plateforme: plat.capacites?.nom ?? "extension",
       maintenant: maintenant.getTime(),
       sauvegardes,
     });
