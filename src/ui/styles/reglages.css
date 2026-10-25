@@ -54,14 +54,14 @@ body.fond-sombre {
   --ombre-texte: 0 1px 3px rgb(0 0 0 / 0.55);
 }
 
-.page > .grille .tuile-titre,
+.page .grille .tuile-titre,
 .vide-texte,
 .pied {
   color: var(--texte-sur-fond, var(--texte));
   text-shadow: var(--ombre-texte, none);
 }
 
-.page > .grille .tuile--ajout .tuile-titre,
+.page .grille .tuile--ajout .tuile-titre,
 .pied {
   color: var(--texte-sur-fond-2, var(--texte-secondaire));
 }

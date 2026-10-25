@@ -68,8 +68,15 @@ export function colonnes(conteneur) {
 
 const DEPLACEMENTS = { ArrowLeft: -1, ArrowRight: 1 };
 
-/** Arrow keys move the focus inside the grid (ignored while typing in a field). */
-export function activerClavierGrille(conteneur) {
+/**
+ * Arrow keys move the focus inside the grid (ignored while typing in a field). With pages
+ * (V2.11), ← and → go on to the next or previous page, ↑ and ↓ stay in the page; `montrer`
+ * brings the page of the next tile into view before it gets the focus.
+ */
+export function activerClavierGrille(
+  conteneur,
+  { nbColonnes = () => colonnes(conteneur), montrer = () => {} } = {},
+) {
   conteneur.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea, select, [contenteditable]")) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -77,10 +84,13 @@ export function activerClavierGrille(conteneur) {
     const tuiles = [...conteneur.querySelectorAll(".tuile")];
     const actuel = tuiles.indexOf(document.activeElement);
     if (actuel < 0) return;
-    const pas = DEPLACEMENTS[e.key] ?? (e.key === "ArrowUp" ? -1 : 1) * colonnes(conteneur);
+    const vertical = !(e.key in DEPLACEMENTS);
+    const pas = DEPLACEMENTS[e.key] ?? (e.key === "ArrowUp" ? -1 : 1) * nbColonnes();
     const cible = tuiles[actuel + pas];
-    if (cible) {
+    const memeListe = (a, b) => a.closest("ul") === b.closest("ul");
+    if (cible && (!vertical || memeListe(cible, tuiles[actuel]))) {
       e.preventDefault();
+      montrer(cible);
       cible.focus();
     }
   });

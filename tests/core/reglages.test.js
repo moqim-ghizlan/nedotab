@@ -213,6 +213,20 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     }).etat.reglagesAppareil;
     expect(charge).toEqual({ barreChrome: true });
   });
+  it("affichage de l'accueil : pages par défaut, défilement gardé sur cet appareil seulement", () => {
+    let etat = modifier(etatInitial(), { affichageAccueil: "defilement" });
+    expect(etat.reglagesAppareil).toEqual({ affichageAccueil: "defilement" });
+    expect("affichageAccueil" in etat.reglages).toBe(false);
+    expect(modifier(etat, { affichageAccueil: "colonnes" })).toBe(etat);
+    etat = modifier(etat, { affichageAccueil: "pages" });
+    expect(etat.reglagesAppareil).toEqual({});
+    expect(modifier(etatInitial(), { affichageAccueil: "pages" }).reglagesAppareil).toEqual({});
+    const charge = (affichageAccueil) =>
+      migrer({ ...etatInitial(), reglagesAppareil: { affichageAccueil } }).etat.reglagesAppareil;
+    expect(charge("defilement")).toEqual({ affichageAccueil: "defilement" });
+    expect(charge("pages")).toEqual({});
+    expect(charge(3)).toEqual({});
+  });
   it("chargement : colonnes et debug validés", () => {
     const { etat } = migrer({
       versionSchema: 2,

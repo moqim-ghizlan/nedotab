@@ -9,7 +9,7 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tuile-largeur-min), 1fr));
   gap: var(--espace-4) var(--espace-3);
 }
 

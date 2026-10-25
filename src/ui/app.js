@@ -29,6 +29,7 @@ import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
 import { ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
+import { creerAccueilPagine } from "./pages/accueilPagine.js";
 
 /** V2.9: operations that could not be applied after a change made on another device. */
 function signalerIgnorees(ignorees) {
@@ -74,7 +75,8 @@ export async function demarrerApp(racine) {
   const lectureSeule = versionFuture || chargementRate;
   const store = creerStore(etat, reduire);
 
-  const grilleEl = el("ul", { class: "grille", "aria-label": "Mes sites" });
+  // Home grid: pages (V2.11, default) or one scrolling grid, rebuilt when the setting changes.
+  const zoneAccueil = el("div", { class: "accueil" });
   const vide = el(
     "section",
     { class: "vide", hidden: true },
@@ -96,7 +98,7 @@ export async function demarrerApp(racine) {
           : "Vos données n'ont pas pu être lues. Lecture seule pour ne rien perdre.",
       })
     : null;
-  const page = el("main", { class: "page" }, bandeau, vide, grilleEl);
+  const page = el("main", { class: "page" }, bandeau, vide, zoneAccueil);
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });
   const annonces = el("div", {
     id: "annonces",
@@ -359,29 +361,54 @@ export async function demarrerApp(racine) {
     });
   };
 
-  const accueil = creerVueGrille({
-    store,
-    conteneur: grilleEl,
-    lectureSeule: () => lectureSeule,
-    annoncer,
-    ouvrirDossier,
-    apresFusion: (id) =>
-      ouvrirFenetreDossier(store, id, {
-        lectureSeule: () => lectureSeule,
-        annoncer,
-        editerTitre: true,
-      }),
-    ajouter: menuAjout,
-    libelleAjout: "Ajouter un site ou un dossier",
-  });
+  const estVide = () => store.lire().grille.length === 0;
+  let accueil = null;
+  let modeAccueil = null;
+  let conteneurAccueil = null;
+  /** Builds the home grid for `mode` ("pages" | "defilement"), replacing the previous one. */
+  const monterAccueil = (mode) => {
+    accueil?.detruire();
+    modeAccueil = mode;
+    const pagination =
+      mode === "pages"
+        ? creerAccueilPagine({
+            annoncer,
+            redessiner: () => accueil?.demanderRendu(),
+            actif: () => !estVide(),
+          })
+        : null;
+    conteneurAccueil = pagination
+      ? pagination.racine
+      : el("ul", { class: "grille", "aria-label": "Mes sites" });
+    zoneAccueil.replaceChildren(conteneurAccueil, ...(pagination ? [pagination.indicateur] : []));
+    document.documentElement.classList.toggle("accueil-en-pages", !!pagination);
+    accueil = creerVueGrille({
+      store,
+      conteneur: conteneurAccueil,
+      lectureSeule: () => lectureSeule,
+      annoncer,
+      ouvrirDossier,
+      apresFusion: (id) =>
+        ouvrirFenetreDossier(store, id, {
+          lectureSeule: () => lectureSeule,
+          annoncer,
+          editerTitre: true,
+        }),
+      ajouter: menuAjout,
+      libelleAjout: "Ajouter un site ou un dossier",
+      pagination,
+    });
+  };
+  const modeVoulu = () =>
+    store.lire().reglagesAppareil?.affichageAccueil === "defilement" ? "defilement" : "pages";
   vide
     .querySelector("button")
     .addEventListener("click", (e) => !lectureSeule && menuAjout(e.currentTarget));
 
   const rendre = () => {
-    const estVide = store.lire().grille.length === 0;
-    vide.hidden = !estVide;
-    grilleEl.hidden = estVide;
+    if (modeVoulu() !== modeAccueil) monterAccueil(modeVoulu());
+    vide.hidden = !estVide();
+    zoneAccueil.hidden = estVide();
     accueil.demanderRendu();
   };
   rendre();

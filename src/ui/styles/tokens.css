@@ -23,6 +23,9 @@
   --taille-l: 1.25rem;
   --taille-xl: 2rem;
 
+  /* Narrowest cell of the grid; the pages (V2.11) count their columns with it. */
+  --tuile-largeur-min: 96px;
+
   --rayon: 14px;
   --rayon-petit: 8px;
   --rayon-grand: 20px;

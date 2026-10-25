@@ -105,9 +105,11 @@ export function prendreLeCurseur() {
   } catch {
     /* no setting readable: default behaviour */
   }
-  // Only a page just opened, not a reload or a return with Back.
+  // Only a tab just opened (nothing before it in its history), not a reload, a return with
+  // Back, or the page reached from another one in the same tab.
   const navigation = performance.getEntriesByType?.("navigation")[0];
-  if (navigation && navigation.type !== "navigate") return Promise.resolve(false);
+  if ((navigation && navigation.type !== "navigate") || history.length > 1)
+    return Promise.resolve(false);
   url.searchParams.set("focus", "1");
   return (async () => {
     try {

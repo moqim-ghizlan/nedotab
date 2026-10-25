@@ -12,19 +12,51 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").match
  * Holding an element over a tile or a breadcrumb segment is handled by `intention`
  * (see intentionDepot.js); the drop on such a target is passed to `deposer`.
  *
- * @param {HTMLElement} conteneur persistent list element (never recreated by the renderer)
+ * Home grid in pages (V2.11): one list per page, all in the same group. `listes()` gives
+ * them (synchroniser() after each render) and `versIndex(evt)` turns the drop into an index
+ * of the whole list; `surDebut` / `surFin` let the pages show their edge zones.
+ *
+ * Escape during a drag cancels it: nothing moves (`surFin` receives { annule: true }).
+ *
+ * @param {HTMLElement} conteneur persistent element (never recreated by the renderer)
  * @param {{ parentId?: () => string|null, rendre: () => void, intention?: object,
- *           deposer?: (id: string, cible: object) => void }} options parentId gives the level shown
+ *           deposer?: (id: string, cible: object) => void, listes?: () => HTMLElement[],
+ *           versIndex?: (evt: object) => number|null, surDebut?: () => void,
+ *           surFin?: (infos: { annule: boolean }) => void, groupe?: string }} options parentId
+ *        gives the level shown; groupe: SortableJS group shared by the lists
  */
 export function activerGlisser(
   store,
   conteneur,
-  { parentId = () => null, rendre, intention, deposer },
+  {
+    parentId = () => null,
+    rendre,
+    intention,
+    deposer,
+    listes = () => [conteneur],
+    versIndex = (evt) =>
+      evt.oldDraggableIndex !== evt.newDraggableIndex ? evt.newDraggableIndex : null,
+    surDebut,
+    surFin,
+    groupe,
+  },
 ) {
   let glisserEnCours = false;
+  let annule = false;
   const suivre = (e) => intention?.suivre(e.clientX, e.clientY);
+  // Escape: end the drag where it is, then nothing is applied.
+  const surTouche = (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopPropagation();
+    annule = true;
+    for (const type of ["pointerup", "mouseup"])
+      document.dispatchEvent(new MouseEvent(type, { bubbles: true }));
+  };
 
-  const sortable = Sortable.create(conteneur, {
+  const options = {
+    // The pages of the home grid share a group: a tile can go from one page to another.
+    ...(groupe ? { group: groupe } : {}),
     animation: REDUIT ? 0 : 150,
     draggable: ".case--element",
     filter: ".case--ajout, .tuile-plus",
@@ -41,9 +73,12 @@ export function activerGlisser(
     invertedSwapThreshold: 0.7,
     onStart(evt) {
       glisserEnCours = true;
+      annule = false;
       document.body.classList.add("glisser-en-cours");
       intention?.demarrer(evt.item.querySelector("[data-id]")?.dataset.id);
       document.addEventListener("pointermove", suivre, true);
+      document.addEventListener("keydown", surTouche, true);
+      surDebut?.();
     },
     // While a drop target is active, or the dragged icon is well over a tile (it may become
     // one), SortableJS must not reorder: the target would move away under the icon.
@@ -51,18 +86,18 @@ export function activerGlisser(
     onEnd(evt) {
       document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
+      document.removeEventListener("keydown", surTouche, true);
       const id = evt.item.querySelector("[data-id]")?.dataset.id;
       const cible = intention?.terminer();
-      if (id && cible) {
+      const index = annule ? null : versIndex(evt);
+      if (annule) {
+        // Cancelled: the re-render below puts everything back.
+      } else if (id && cible) {
         deposer?.(id, cible);
-      } else if (id && evt.oldDraggableIndex !== evt.newDraggableIndex) {
-        store.envoyer({
-          type: A.ELEMENT_DEPLACER,
-          id,
-          versParentId: parentId(),
-          versIndex: evt.newDraggableIndex,
-        });
+      } else if (id && index != null) {
+        store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: parentId(), versIndex: index });
       }
+      surFin?.({ annule });
       // The click that ends a drag must not open the site. SortableJS also swallows the
       // next click after a drag; when the button is released over another element, no
       // click follows and the user's next real click would be lost: consume it now.
@@ -73,7 +108,22 @@ export function activerGlisser(
       // Always re-render: Sortable moved DOM nodes, the state decides where they go.
       rendre();
     },
-  });
+  };
+
+  // One SortableJS instance per list; lists added or removed by a render follow.
+  const instances = new Map();
+  const synchroniser = () => {
+    const voulues = new Set(listes());
+    for (const [liste, instance] of instances) {
+      if (voulues.has(liste) && liste.isConnected) continue;
+      instance.destroy();
+      instances.delete(liste);
+    }
+    for (const liste of voulues) {
+      if (!instances.has(liste)) instances.set(liste, Sortable.create(liste, options));
+    }
+  };
+  synchroniser();
 
   conteneur.addEventListener(
     "click",
@@ -92,7 +142,11 @@ export function activerGlisser(
       if (!glisserEnCours) rendre();
     },
     enCours: () => glisserEnCours,
-    detruire: () => sortable.destroy(),
+    synchroniser,
+    detruire: () => {
+      for (const instance of instances.values()) instance.destroy();
+      instances.clear();
+    },
   };
 }
 
@@ -100,7 +154,11 @@ export function activerGlisser(
  * Keyboard reordering on a focused tile: Alt+←/→ one cell, Alt+↑/↓ one row, Alt+Home/End.
  * Announces the new position in an aria-live region.
  */
-export function activerDeplacementClavier(store, conteneur, { annoncer, colonnes }) {
+export function activerDeplacementClavier(
+  store,
+  conteneur,
+  { annoncer, colonnes, montrer = () => {} },
+) {
   conteneur.addEventListener("keydown", (e) => {
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
     const tuile = e.target.closest(".tuile[data-id]");
@@ -123,7 +181,10 @@ export function activerDeplacementClavier(store, conteneur, { annoncer, colonnes
     if (versIndex === r.index) return;
     store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: r.parent?.id ?? null, versIndex });
     requestAnimationFrame(() => {
-      conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`)?.focus();
+      // With pages, the page follows the tile when it leaves the one shown.
+      const deplacee = conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);
+      if (deplacee) montrer(deplacee);
+      deplacee?.focus();
     });
     annoncer(`${r.element.titre} déplacé en position ${versIndex + 1} sur ${liste.length}`);
   });

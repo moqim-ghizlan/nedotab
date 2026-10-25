@@ -2,6 +2,40 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.11.0] - 2026-10-25
+
+### Ajouté
+
+- **Accueil en pages**, comme Infinity : chaque page montre autant de sites que l'écran
+  peut en afficher sans défiler (colonnes × lignes, recalculé au redimensionnement et au
+  zoom), les suivants passent sur la page d'après. La page n'a plus de barre de
+  défilement. Les pages sont une simple vue : la grille reste une seule liste, rien n'est
+  enregistré (ni synchronisé, ni sauvegardé, ni exporté), un nouvel onglet s'ouvre
+  toujours sur la page 1.
+- **Changer de page** : molette ou balayage du trackpad (une page par geste, l'inertie du
+  trackpad est absorbée), Page Suivante / Page Précédente, Ctrl + Début / Fin, flèches du
+  clavier qui passent d'une page à l'autre, Alt + flèches qui emmènent une tuile sur la
+  page voisine. Ctrl + molette reste le zoom de Chrome ; la molette ne change pas de page
+  au-dessus d'une fenêtre de dossier, des réglages ou des résultats de recherche.
+- **Indicateur de pages** en bas : un point par page (le point actif s'allonge), cliquable,
+  sur une pastille translucide lisible sur tous les fonds ; version « ‹ 3 / 14 › »
+  au-delà de 10 pages ; masqué quand il n'y a qu'une page.
+- **Glisser entre les pages** : pendant un glisser, des zones apparaissent aux bords gauche
+  et droit ; y maintenir la tuile fait monter une lumière le long du bord puis tourne la
+  page (0,6 s, puis toutes les 0,9 s). Au bord droit de la dernière page, une page vide
+  temporaire permet de placer la tuile à la fin. Survoler un point de l'indicateur mène
+  aussi à sa page. La création de dossier (site sur site) et le rangement dans un dossier
+  fonctionnent sur toutes les pages ; pas de dossier créé sous une zone de bord.
+  Échap pendant un glisser annule et revient à la page de départ.
+- Après l'ajout d'un site, on est conduit à la page qui le contient, focus dessus.
+- Réglage **Affichage de l'accueil** (Réglages → Apparence) : Pages (par défaut) ou
+  Défilement vertical, propre à cet appareil, appliqué sans recharger.
+
+### Corrigé
+
+- Curseur dans la recherche (2.10.7) : seul un onglet qui vient d'être ouvert est
+  remplacé ; une page NedoTab atteinte depuis une autre page du même onglet ne l'est plus.
+
 ## [2.10.7] - 2026-10-25
 
 ### Ajouté

@@ -98,6 +98,17 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
 
+  // Device-only (V2.11): the home grid in pages, or one grid that scrolls.
+  const affichageAccueil = segments(
+    "Affichage de l'accueil",
+    [
+      ["pages", "Pages"],
+      ["defilement", "Défilement vertical"],
+    ],
+    store.lire().reglagesAppareil?.affichageAccueil ?? "pages",
+    (v) => modifier({ affichageAccueil: v }),
+  );
+
   // Synced switches: where links open (key of the settings, label, explanation).
   const interrupteurs = [
     [
@@ -350,6 +361,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         el("p", { class: "reglages-libelle", texte: "Fond" }),
         typeFond.groupe,
         ...Object.values(panneaux),
+        libelleAppareil("Affichage de l'accueil"),
+        affichageAccueil.groupe,
         libelleAppareil("Colonnes"),
         colonnes.groupe,
       ),
@@ -560,6 +573,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       afficherPanneau(r.fond.type);
     }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
+    affichageAccueil.maj(store.lire().reglagesAppareil?.affichageAccueil ?? "pages");
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {

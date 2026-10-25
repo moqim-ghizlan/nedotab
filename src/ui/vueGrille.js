@@ -14,7 +14,8 @@ export const OUVRIR_APRES_FUSION = true;
 /**
  * One grid level, shared by the home page and the folder window: rendering, drag and drop
  * (reorder, drop into a folder, site + site → folder, breadcrumb), keyboard, context menus.
- * `parentId()` gives the folder shown (null = home).
+ * `parentId()` gives the folder shown (null = home). `pagination` (V2.11, home only) cuts
+ * the level into pages: see pages/accueilPagine.js.
  */
 export function creerVueGrille({
   store,
@@ -26,6 +27,7 @@ export function creerVueGrille({
   apresFusion,
   ajouter,
   libelleAjout,
+  pagination = null,
 }) {
   const grille = () => store.lire().grille;
   const elements = () => {
@@ -43,13 +45,20 @@ export function creerVueGrille({
       ? document.activeElement.closest("[data-id], [data-action]")
       : null;
     const cle = actif?.dataset.id ?? actif?.dataset.action;
-    rendreGrille(conteneur, liste, { avecAjout: !lectureSeule(), libelleAjout });
+    if (pagination) pagination.rendre(liste, { avecAjout: !lectureSeule(), libelleAjout });
+    else rendreGrille(conteneur, liste, { avecAjout: !lectureSeule(), libelleAjout });
+    glisser?.synchroniser();
     if (cle) {
-      conteneur
-        .querySelector(`.tuile[data-id="${CSS.escape(cle)}"], [data-action="${CSS.escape(cle)}"]`)
-        ?.focus();
+      const retrouve = conteneur.querySelector(
+        `.tuile[data-id="${CSS.escape(cle)}"], [data-action="${CSS.escape(cle)}"]`,
+      );
+      if (retrouve) montrer(retrouve);
+      retrouve?.focus();
     }
   };
+  /** Pages: the page holding `noeud` comes into view (it must be visible to get the focus). */
+  const montrer = (noeud) => pagination?.montrer(noeud);
+  const nbColonnes = () => pagination?.colonnes() ?? colonnes(conteneur);
 
   /** Runs `action`, then offers "Annuler" that puts the whole grid back. */
   const avecAnnulation = (message, action) => {
@@ -84,7 +93,8 @@ export function creerVueGrille({
       ? { ok: true }
       : { ok: false, raison: "PROFONDEUR" };
   };
-  const intention = creerIntentionDepot({ evaluer });
+  // Pages: the edge zones have priority, no folder is made under them.
+  const intention = creerIntentionDepot({ evaluer, exclure: pagination?.dansZoneBord });
   const intentionAvecSource = {
     ...intention,
     demarrer: (id) => {
@@ -138,10 +148,19 @@ export function creerVueGrille({
         rendre,
         intention: intentionAvecSource,
         deposer,
+        ...(pagination
+          ? {
+              groupe: "accueil",
+              listes: pagination.listes,
+              versIndex: pagination.versIndex,
+              surDebut: pagination.debutGlisser,
+              surFin: pagination.finGlisser,
+            }
+          : {}),
       });
-  activerClavierGrille(conteneur);
+  activerClavierGrille(conteneur, { nbColonnes, montrer });
   if (!lectureSeule()) {
-    activerDeplacementClavier(store, conteneur, { annoncer, colonnes: () => colonnes(conteneur) });
+    activerDeplacementClavier(store, conteneur, { annoncer, colonnes: nbColonnes, montrer });
   }
   const actions = brancherActionsElements(store, conteneur, { lectureSeule, ouvrirDossier });
 
@@ -186,9 +205,19 @@ export function creerVueGrille({
     elements,
     actions,
     focaliser: (id) =>
-      requestAnimationFrame(() =>
-        conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`)?.focus(),
-      ),
-    detruire: () => glisser?.detruire(),
+      requestAnimationFrame(() => {
+        const tuile = conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);
+        if (tuile) montrer(tuile);
+        tuile?.focus();
+      }),
+    /** Brings the page holding element `id` into view (search, V4.14). */
+    allerAElement: (id) => {
+      const tuile = conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);
+      if (tuile) montrer(tuile);
+    },
+    detruire: () => {
+      glisser?.detruire();
+      pagination?.detruire();
+    },
   };
 }

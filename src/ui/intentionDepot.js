@@ -54,9 +54,15 @@ export function dansZoneCentrale(rect, x, y, ratio = 0.5) {
 
 /**
  * @param {{ evaluer: (cible: {type: "fusion"|"niveau", id: string|null}) => {ok: boolean, raison?: string},
- *           racine?: Document }} options
+ *           racine?: Document, exclure?: (x: number, y: number) => boolean }} options exclure:
+ *        positions where no target is taken (edge zones of the home pages)
  */
-export function creerIntentionDepot({ evaluer, racine = document, horloge = () => Date.now() }) {
+export function creerIntentionDepot({
+  evaluer,
+  racine = document,
+  horloge = () => Date.now(),
+  exclure = () => false,
+}) {
   let sourceId = null;
   let candidat = null; // { type, id, el }
   let candidatDepuis = 0;
@@ -147,7 +153,8 @@ export function creerIntentionDepot({ evaluer, racine = document, horloge = () =
     suivre(x, y) {
       if (sourceId == null) return;
       dernier = { x, y };
-      const c = cibleSous(x, y);
+      // A page edge zone (V2.11) has priority over the tiles under it.
+      const c = exclure(x, y) ? null : cibleSous(x, y);
       sousLePointeur = c;
       if (meme(c, active) || meme(c, candidat)) return;
       effacer();

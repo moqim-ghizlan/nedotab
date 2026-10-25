@@ -162,11 +162,15 @@ export const COLONNES_MAX = 10;
 const colonnesValides = (n) => Number.isInteger(n) && n >= COLONNES_MIN && n <= COLONNES_MAX;
 
 /** Settings of this device only, never synced (V2.9). */
-export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome"];
+export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome", "affichageAccueil"];
+
+/** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
+export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
 
 /**
- * Device-only settings: local picture background, forced columns, debug log, and barreChrome
- * (V2.10.7: leave the cursor in Chrome's address bar on a new tab, instead of the search).
+ * Device-only settings: local picture background, forced columns, debug log, barreChrome
+ * (V2.10.7: leave the cursor in Chrome's address bar on a new tab, instead of the search) and
+ * affichageAccueil (V2.11: stored only when "defilement", pages being the default).
  */
 export function validerReglagesAppareil(r) {
   const resultat = {};
@@ -175,16 +179,25 @@ export function validerReglagesAppareil(r) {
   if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
+  if (r?.affichageAccueil === "defilement") resultat.affichageAccueil = "defilement";
   return resultat;
 }
 
-/** Applies device-only changes (colonnes: null = automatic, debug and barreChrome: boolean). */
+/**
+ * Applies device-only changes (colonnes: null = automatic, debug and barreChrome: boolean,
+ * affichageAccueil: "pages" | "defilement").
+ */
 function modifierAppareil(etat, changements) {
   const appareil = { ...etat.reglagesAppareil };
   if ("colonnes" in changements) {
     if (changements.colonnes == null) delete appareil.colonnes;
     else if (colonnesValides(changements.colonnes)) appareil.colonnes = changements.colonnes;
     else return etat;
+  }
+  if ("affichageAccueil" in changements) {
+    if (!AFFICHAGES_ACCUEIL.includes(changements.affichageAccueil)) return etat;
+    if (changements.affichageAccueil === "defilement") appareil.affichageAccueil = "defilement";
+    else delete appareil.affichageAccueil;
   }
   for (const cle of ["debug", "barreChrome"].filter((c) => c in changements)) {
     if (changements[cle]) appareil[cle] = true;

@@ -5,6 +5,7 @@ import "./ui/styles/dialogues.css";
 import "./ui/styles/menus.css";
 import "./ui/styles/dossiers.css";
 import "./ui/styles/reglages.css";
+import "./ui/styles/pages.css";
 import { appliquerCacheDemarrage } from "./ui/apparence.js";
 import { demarrerApp } from "./ui/app.js";
 import { plateforme } from "./platform/index.js";
