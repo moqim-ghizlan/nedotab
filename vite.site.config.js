@@ -11,6 +11,7 @@ const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), 
 const PAGES = [
   "index",
   "installation",
+  "installer-iphone",
   "mise-a-jour",
   "faq",
   "confidentialite",

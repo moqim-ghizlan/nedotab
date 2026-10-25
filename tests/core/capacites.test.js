@@ -25,6 +25,13 @@ describe("capacités des plateformes", () => {
     expect(await pwa.permissionsSites.contient()).toBe(false);
   });
 
+  it("ni l'extension ni l'application ouverte dans un onglet ne sont « installées »", () => {
+    expect(extension.estInstallee()).toBe(false);
+    expect(extension.capacites.installable).toBe(false);
+    expect(pwa.capacites.installable).toBe(true);
+    expect(pwa.estInstallee()).toBe(false);
+  });
+
   it("téléphone et tablette, y compris l'iPad qui se présente comme un Mac", () => {
     const ipad = {
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",

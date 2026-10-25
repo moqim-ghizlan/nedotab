@@ -2,6 +2,31 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.1.0] - 2026-10-25
+
+### Ajouté
+
+- **Installation sur l'écran d'accueil** de l'iPhone et de l'iPad : manifeste web
+  (`manifest.webmanifest`), icône iOS opaque de 180 px, icônes Android (dont une icône
+  « masquable »), titre « NedoTab ». Lancée depuis son icône, l'app s'ouvre en plein écran,
+  sans la barre de Safari ; la barre d'état de l'iPhone passe par-dessus le fond, et rien
+  n'est caché dessous ni sous la barre d'accueil (marges de sécurité).
+- Couleur de fond affichée dès l'ouverture (pas d'écran blanc), couleur de la barre du
+  navigateur assortie au thème clair ou sombre.
+- **Aide à l'installation** : dans Safari sur iPhone et iPad, un bandeau discret en bas
+  explique « Touchez Partager, puis Sur l'écran d'accueil ». Jamais sur ordinateur ni dans
+  l'app installée ; une fois fermé, il ne revient pas.
+- Site vitrine : page **« NedoTab sur iPhone et iPad »** (les étapes dans Safari), liens
+  depuis l'accueil et le pied de page ; FAQ : Safari et l'app de l'écran d'accueil gardent
+  leurs données séparément.
+- Les icônes sont toutes produites par `npm run icones` à partir d'un seul dessin, sans
+  dépendance ajoutée.
+
+### Corrigé
+
+- Accueil en pages, grille vide : une petite tuile « + » s'affichait sous l'invitation
+  « Ajoutez votre premier site ».
+
 ## [3.0.2] - 2026-10-25
 
 ### Corrigé

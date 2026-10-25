@@ -30,6 +30,7 @@ import { toast } from "./toast.js";
 import { ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
+import { monterBandeauInstallation } from "./bandeauInstallation.js";
 import { comptesDe, grilleAccueil } from "../core/pages.js";
 
 /** V2.9: operations that could not be applied after a change made on another device. */
@@ -306,6 +307,8 @@ export async function demarrerApp(racine) {
     session.sauvegardes.verifierAuto().catch(() => (sauvegardeVerifiee = false));
   });
   compte.demarrer().then(() => synchro.demarrer());
+  // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
+  monterBandeauInstallation();
   // Test builds against the emulators only: inspection hook for the browser scenarios.
   if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
     globalThis.__nedotab = { store, synchro, compte, session, firebase: chargerFirebase };

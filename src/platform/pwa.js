@@ -25,7 +25,14 @@ export const capacites = {
   proposerExtension: !estMobile(globalThis.navigator),
   /** Updated by hand from a zip: no, the web app always loads the deployed version. */
   miseAJourManuelle: false,
+  /** Can be added to the home screen (V3.1). */
+  installable: true,
 };
+
+/** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */
+export const estInstallee = () =>
+  !!globalThis.matchMedia?.("(display-mode: standalone)").matches ||
+  globalThis.navigator?.standalone === true;
 
 export function getVersion() {
   return import.meta.env.VITE_VERSION;

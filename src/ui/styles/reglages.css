@@ -68,10 +68,11 @@ body.fond-sombre {
 
 /* --- settings button and panel --------------------------------------------------------- */
 
+/* Below the iPhone's status bar and away from its rounded corners (V3.1, app installed). */
 .barre-haut {
   position: fixed;
-  top: var(--espace-4);
-  right: var(--espace-4);
+  top: calc(var(--espace-4) + env(safe-area-inset-top, 0px));
+  right: calc(var(--espace-4) + env(safe-area-inset-right, 0px));
   z-index: 10;
   display: flex;
   align-items: center;
@@ -488,6 +489,8 @@ body.fond-sombre {
 @media (max-width: 520px) {
   .reglages {
     --reglages-marge: 0px;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     border: 0;
     border-radius: 0;
   }
@@ -1521,6 +1524,8 @@ body.fond-clair .carte-action--principale {
 @media (max-width: 520px) {
   .galerie-fenetre {
     inset: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     border: 0;
     border-radius: 0;
   }

@@ -11,7 +11,8 @@ html.accueil-en-pages #app {
   height: 100vh;
   height: 100dvh;
   min-height: 0;
-  padding-bottom: var(--espace-3);
+  /* Above the iPhone's home bar when the app is installed (V3.1). */
+  padding-bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
 }
 
 /* The pages use 90 % of the window's width (the search bar keeps its own width). */
@@ -350,6 +351,12 @@ html.accueil-en-pages .accueil {
   min-height: 0;
 }
 
+/* An empty grid shows its own invitation: the pages stay hidden (the rule above must not
+   win over the hidden attribute). */
+html.accueil-en-pages .accueil[hidden] {
+  display: none;
+}
+
 /* The tile just dropped lights up where it really landed. */
 .tuile--posee .tuile-icone {
   animation: tuile-posee 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -378,5 +385,88 @@ html.accueil-en-pages .accueil {
         0 0 0 3px var(--accent),
         var(--ombre);
     }
+  }
+}
+
+/* --- help to add the web app to the home screen (V3.1, Safari on iPhone and iPad) -------- */
+
+.bandeau-installation {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  width: min(440px, calc(100vw - 2 * var(--espace-3)));
+  padding: 10px 8px 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(20px) saturate(1.4);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+  transform: translateX(-50%);
+  animation: bandeau-entree 420ms cubic-bezier(0.2, 0.9, 0.25, 1.04) both;
+}
+
+.bandeau-installation-icone {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.bandeau-installation p {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  font-size: var(--taille-s);
+}
+
+.bandeau-installation span {
+  color: var(--texte-secondaire);
+}
+
+.bandeau-installation-partage {
+  display: inline;
+  margin: 0 1px -3px;
+  color: var(--accent);
+}
+
+.bandeau-installation-fermer {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--texte-secondaire);
+  cursor: pointer;
+}
+
+.bandeau-installation--sortie {
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 180ms,
+    transform 180ms;
+}
+
+@keyframes bandeau-entree {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bandeau-installation {
+    animation: none;
   }
 }

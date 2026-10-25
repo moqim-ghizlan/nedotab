@@ -19,7 +19,11 @@ export const capacites = {
   barreAdresse: true,
   proposerExtension: false,
   miseAJourManuelle: true,
+  installable: false,
 };
+
+/** An extension is not added to a home screen. */
+export const estInstallee = () => false;
 
 export function getVersion() {
   return chrome.runtime.getManifest().version;

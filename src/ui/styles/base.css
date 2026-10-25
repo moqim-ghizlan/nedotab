@@ -55,7 +55,10 @@ textarea {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 14vh var(--espace-4) var(--espace-6);
+  /* Installed on iPhone (V3.1), the page goes under the status bar: never above it. */
+  padding: max(14vh, calc(env(safe-area-inset-top, 0px) + var(--espace-6)))
+    calc(var(--espace-4) + env(safe-area-inset-right, 0px)) var(--espace-6)
+    calc(var(--espace-4) + env(safe-area-inset-left, 0px));
 }
 
 .visuellement-cache {

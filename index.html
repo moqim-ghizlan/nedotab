@@ -6,7 +6,26 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="description" content="Vos sites et dossiers, sur tous vos appareils." />
     <title>NedoTab</title>
-    <link rel="icon" href="/icons/32.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="NedoTab" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#e4e8e1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#161d19" media="(prefers-color-scheme: dark)" />
+    <!-- The background colour shows at once when the app opens (no white flash). -->
+    <style>
+      html {
+        background: #e4e8e1;
+      }
+      @media (prefers-color-scheme: dark) {
+        html {
+          background: #161d19;
+        }
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>

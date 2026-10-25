@@ -679,3 +679,10 @@ p {
   list-style: none;
   font-size: 0.95rem;
 }
+
+/* The iOS "Share" symbol, drawn in the text of the iPhone guide. */
+.symbole-partage {
+  margin: 0 2px;
+  vertical-align: -3px;
+  color: var(--accent);
+}
