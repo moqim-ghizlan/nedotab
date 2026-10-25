@@ -71,4 +71,66 @@ describe("compte", () => {
     expect(f.prefs.compte).toBeNull();
     expect(compte.lire().statut).toBe("deconnecte");
   });
+
+  describe("application web : connexion par redirection (V3.2)", () => {
+    const redirection = (opts) => {
+      const f = fausse(opts);
+      f.plat.capacites = { connexion: "redirection" };
+      f.fb.terminerConnexion = vi.fn(async () => ({ uid: "u1", nom: "Alice", email: "a@x.fr" }));
+      f.fb.reconnecterPourConfirmer = vi.fn(async () => ({ uid: "u1" }));
+      return f;
+    };
+    it("avant de partir chez Google : marqueur posé", async () => {
+      const f = redirection();
+      f.fb.connecter.mockImplementationOnce(() => new Promise(() => {})); // page quittée
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      compte.connecter();
+      await vi.waitFor(() =>
+        expect(f.prefs.connexionEnAttente).toMatchObject({ but: "connexion" }),
+      );
+      expect(compte.lire().statut).toBe("connexion");
+    });
+    it("au retour : connexion terminée, marqueur effacé, indicateur écrit", async () => {
+      const f = redirection();
+      f.prefs.connexionEnAttente = { but: "connexion", le: Date.now() };
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      expect(await compte.demarrer()).toBe("connexion");
+      expect(compte.lire()).toMatchObject({ statut: "connecte", profil: { uid: "u1" } });
+      expect(f.prefs.connexionEnAttente).toBeNull();
+      expect(f.prefs.compte).toMatchObject({ connecte: true, uid: "u1" });
+    });
+    it("revenu sans se connecter : déconnecté, sans message", async () => {
+      const f = redirection();
+      f.fb.terminerConnexion.mockResolvedValueOnce(null);
+      f.prefs.connexionEnAttente = { but: "connexion", le: Date.now() };
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      expect(await compte.demarrer()).toBeNull();
+      expect(compte.lire()).toMatchObject({ statut: "deconnecte", erreur: null });
+    });
+    it("domaine non autorisé : message lisible", async () => {
+      const f = redirection();
+      f.fb.terminerConnexion.mockRejectedValueOnce({ code: "auth/unauthorized-domain" });
+      f.prefs.connexionEnAttente = { but: "connexion", le: Date.now() };
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      vi.spyOn(console, "error").mockImplementationOnce(() => {});
+      await compte.demarrer();
+      expect(compte.lire()).toMatchObject({ statut: "deconnecte" });
+      expect(compte.lire().erreur).toMatch(/pas autorisée/);
+    });
+    it("marqueur trop ancien : ignoré, Firebase non chargé", async () => {
+      const f = redirection();
+      f.prefs.connexionEnAttente = { but: "connexion", le: Date.now() - 60 * 60 * 1000 };
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      expect(await compte.demarrer()).toBeNull();
+      expect(f.charger).not.toHaveBeenCalled();
+      expect(f.prefs.connexionEnAttente).toBeNull();
+    });
+    it("confirmation avec une connexion récente : pas de redirection", async () => {
+      const f = redirection({ indicateur: { connecte: true, uid: "u1" } });
+      const compte = creerCompte({ charger: f.charger, plat: f.plat });
+      await compte.demarrer();
+      expect(await compte.reconnecter()).toBe(true);
+      expect(f.prefs.connexionEnAttente).toBeNull();
+    });
+  });
 });

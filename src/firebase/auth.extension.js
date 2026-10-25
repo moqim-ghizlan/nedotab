@@ -54,6 +54,14 @@ export async function deconnecter({ obtenirJeton, oublierJeton }) {
   await signOut(obtenirAuth());
 }
 
+/** The extension never leaves the page to sign in: no redirect to finish (V3.2). */
+export async function terminerConnexion() {
+  return null;
+}
+
+/** A fresh Google sign-in confirms the account deletion (V2.10). */
+export const reconnecterPourConfirmer = connecter;
+
 /** Calls `callback(profil|null)` on every sign-in state change; returns the unsubscribe. */
 export function ecouterUtilisateur(callback) {
   return onAuthStateChanged(obtenirAuth(), (u) => callback(profil(u)));

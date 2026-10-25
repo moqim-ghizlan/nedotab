@@ -20,6 +20,10 @@ export const capacites = {
   proposerExtension: false,
   miseAJourManuelle: true,
   installable: false,
+  /** Google sign-in: a token from Chrome ("jeton") or a redirect to Google (V3.2). */
+  connexion: "jeton",
+  /** The account's data is synchronised (the web app gets it in V3.3). */
+  synchroCompte: true,
 };
 
 /** An extension is not added to a home screen. */

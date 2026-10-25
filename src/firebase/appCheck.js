@@ -1,4 +1,5 @@
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
+import { envAvecCible } from "./config.js";
 
 /**
  * App Check (V2.2, monitoring mode only — enforcement is decided in the Firebase console).
@@ -8,7 +9,7 @@ import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-ch
  * - Development with the emulators: debug token, never in production builds.
  * @returns {boolean} true when App Check was started
  */
-export function activerAppCheck(app, env = import.meta.env) {
+export function activerAppCheck(app, env = envAvecCible()) {
   if (env.VITE_TARGET !== "pwa" || !env.VITE_APPCHECK_CLE_RECAPTCHA) return false;
   if (env.DEV && env.VITE_UTILISER_EMULATEURS === "true") {
     globalThis.FIREBASE_APPCHECK_DEBUG_TOKEN = true;

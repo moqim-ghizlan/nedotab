@@ -27,6 +27,10 @@ export const capacites = {
   miseAJourManuelle: false,
   /** Can be added to the home screen (V3.1). */
   installable: true,
+  /** Google sign-in: a redirect to Google and back, reliable on the home screen (V3.2). */
+  connexion: "redirection",
+  /** The account's data is synchronised: not yet, it comes in V3.3. */
+  synchroCompte: false,
 };
 
 /** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */
@@ -85,9 +89,9 @@ export function rechercherSurLeWeb(texte, { nouvelOnglet = false } = {}) {
 export class ConnexionIndisponible extends Error {}
 export class ConnexionAnnulee extends Error {}
 
-/** Google sign-in of the web app uses a redirect (V3.2): no token here yet. */
+/** Google sign-in of the web app is a redirect (firebase/auth.pwa.js): no token here. */
 export async function obtenirJetonGoogle() {
-  throw new ConnexionIndisponible("Connexion de l'application web prévue en V3.2");
+  throw new ConnexionIndisponible("La connexion de l'application web passe par Google");
 }
 
 export async function oublierJetonGoogle() {}

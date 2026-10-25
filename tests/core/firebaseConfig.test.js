@@ -38,4 +38,14 @@ describe("configuration Firebase", () => {
     const r = lireConfig({ ...complet, VITE_UTILISER_EMULATEURS: "true" });
     expect(r.config.projectId).toBe(PROJET_DEMO);
   });
+  it("application web : connexion sur le domaine Hosting, jamais firebaseapp.com", () => {
+    expect(lireConfig({ ...complet, VITE_TARGET: "pwa" }).config.authDomain).toBe("p.web.app");
+    expect(
+      lireConfig({ ...complet, VITE_TARGET: "pwa", VITE_FIREBASE_AUTH_DOMAIN_PWA: "app.fr" }).config
+        .authDomain,
+    ).toBe("app.fr");
+    expect(lireConfig({ ...complet, VITE_TARGET: "extension" }).config.authDomain).toBe(
+      "p.firebaseapp.com",
+    );
+  });
 });

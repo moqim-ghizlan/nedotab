@@ -38,7 +38,13 @@ export default defineConfig(({ mode }) => {
     "import.meta.env.VITE_VERSION": JSON.stringify(pkg.version),
   };
   // The platform layer of this target only (src/platform/index.js).
-  const resolve_ = { alias: { "#plateforme": resolve(`src/platform/${mode}.js`) } };
+  // V3.2: Google sign-in of this target only (no web-extension Auth in the web app).
+  const resolve_ = {
+    alias: {
+      "#plateforme": resolve(`src/platform/${mode}.js`),
+      "#auth": resolve(`src/firebase/auth.${mode}.js`),
+    },
+  };
   const build = {
     emptyOutDir: true,
     sourcemap: true,

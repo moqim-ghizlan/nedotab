@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 // Uses the real auth module against the Auth emulator ("demo-nedotab" project).
 const { connecter, deconnecter, ecouterUtilisateur, obtenirAuth } =
-  await import("../../src/firebase/auth.js");
+  await import("../../src/firebase/auth.extension.js");
 
 const jetons = (email) => ({
   obtenirJeton: async () => ({

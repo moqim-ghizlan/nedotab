@@ -2,6 +2,40 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.2.0] - 2026-10-25
+
+### Ajouté
+
+- **Connexion Google dans l'application web** (iPhone, iPad, navigateur) : « Se connecter avec
+  Google » ouvre la page de Google puis revient dans l'app, y compris dans l'app installée
+  sur l'écran d'accueil. « Connexion… » s'affiche pendant le retour ; le choix du compte
+  Google est toujours proposé. La session est gardée après fermeture de l'app.
+- Même compte que l'extension : se connecter avec le même compte Google sur le PC et
+  l'iPhone, c'est le même utilisateur. La synchronisation des sites arrive en 3.3 : en
+  attendant, la section Compte de l'app l'indique et ne propose pas « Synchroniser ».
+- Suppression du compte depuis l'app : une connexion de moins de 4 minutes suffit ; sinon
+  Google redemande le compte, puis il suffit de relancer la suppression.
+- Messages clairs : retour sans connexion (rien à dire), autre compte choisi, pas de réseau,
+  adresse non autorisée.
+- `npm run verifier:auth` : l'extension n'embarque pas la connexion par redirection, et
+  l'app web n'embarque pas le code `chrome.identity`.
+
+### Modifié
+
+- L'extension se connecte exactement comme avant (`chrome.identity`) ; son code est
+  désormais dans `src/firebase/auth.extension.js`, choisi au build.
+- L'app web se connecte sur son propre domaine (`nedotab-app.web.app`, variable
+  `VITE_FIREBASE_AUTH_DOMAIN_PWA`) au lieu de `firebaseapp.com`.
+
+### Corrigé
+
+- La cible du build (extension ou app web) n'arrivait pas jusqu'à la configuration
+  Firebase : App Check ne pouvait jamais s'activer dans l'app web.
+
+### Problèmes connus
+
+- Test d'émulateur `suppression.test.js` (« tout supprimé ») en échec, déjà présent en 3.1.0.
+
 ## [3.1.0] - 2026-10-25
 
 ### Ajouté

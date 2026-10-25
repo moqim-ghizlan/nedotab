@@ -4,7 +4,15 @@
  */
 export { obtenirApp } from "./app.js";
 export { lireConfig } from "./config.js";
-export { connecter, deconnecter, ecouterUtilisateur, obtenirAuth, profil } from "./auth.js";
+export {
+  connecter,
+  deconnecter,
+  ecouterUtilisateur,
+  obtenirAuth,
+  profil,
+  reconnecterPourConfirmer,
+  terminerConnexion,
+} from "#auth";
 export {
   ecouterDocument,
   ecrireDocument,

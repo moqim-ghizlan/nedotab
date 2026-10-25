@@ -156,7 +156,9 @@ export async function demarrerApp(racine) {
     compte,
     synchro,
     async connecter() {
-      if (await compte.connecter()) await synchro.lancerPremiereSynchro();
+      // Web app (V3.2): the page leaves for Google; the way back is handled at startup.
+      if ((await compte.connecter()) && plateforme.capacites.synchroCompte)
+        await synchro.lancerPremiereSynchro();
     },
     synchroniser: () => synchro.lancerPremiereSynchro(),
     async deconnecter() {
@@ -306,7 +308,16 @@ export async function demarrerApp(racine) {
     sauvegardeVerifiee = true;
     session.sauvegardes.verifierAuto().catch(() => (sauvegardeVerifiee = false));
   });
-  compte.demarrer().then(() => synchro.demarrer());
+  compte.demarrer().then(async (retour) => {
+    // Back from Google in the web app (V3.2): same as a sign-in from the account section.
+    if (retour === "connexion" && plateforme.capacites.synchroCompte)
+      return synchro.lancerPremiereSynchro();
+    if (retour === "confirmation")
+      toast("Identité confirmée : relancez « Supprimer mon compte » dans les 4 minutes.", {
+        duree: 9000,
+      });
+    return synchro.demarrer();
+  });
   // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
   monterBandeauInstallation();
   // Test builds against the emulators only: inspection hook for the browser scenarios.

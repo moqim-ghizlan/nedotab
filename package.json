@@ -1,6 +1,6 @@
 {
   "name": "nedotab",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "private": true,
   "type": "module",
   "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
@@ -19,6 +19,7 @@
     "icones": "node scripts/generer-icones.js",
     "verifier": "node scripts/verifier-code-distant.js dist/extension",
     "package": "npm run build:extension && npm run verifier && node scripts/empaqueter.js",
+    "verifier:auth": "node scripts/verifier-auth.mjs",
     "verifier:navigateur": "node scripts/verifier-navigateur.mjs",
     "tester-sites": "node scripts/tester-sites.mjs",
     "test:couverture": "vitest run --coverage",

@@ -4,7 +4,12 @@ import { defineConfig } from "vitest/config";
 // V3.0: the whole suite runs for each target (`npm run test:cibles`): CIBLE=pwa vitest run.
 const cible = process.env.CIBLE === "pwa" ? "pwa" : "extension";
 const define = { "import.meta.env.VITE_TARGET": JSON.stringify(cible) };
-const resolve_ = { alias: { "#plateforme": resolve(`src/platform/${cible}.js`) } };
+const resolve_ = {
+  alias: {
+    "#plateforme": resolve(`src/platform/${cible}.js`),
+    "#auth": resolve(`src/firebase/auth.${cible}.js`),
+  },
+};
 
 // Security-rules tests need the Firebase emulators: `npm run test:regles` starts them and
 // sets FIRESTORE_EMULATOR_HOST, which enables the "regles" project.
