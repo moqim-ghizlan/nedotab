@@ -2,6 +2,35 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.3.0] - 2026-10-25
+
+### Ajouté
+
+- **Synchronisation entre l'iPhone, l'iPad et l'extension Chrome** : avec le même compte
+  Google, l'application web affiche les mêmes sites, dossiers et réglages, mis à jour en
+  temps réel, avec la même gestion des conflits et du hors ligne que entre deux ordinateurs
+  (un seul code de synchronisation pour les deux).
+- Première connexion dans l'app : même choix que sur l'extension (garder les sites du
+  compte, ceux de l'appareil, ou fusionner), copie de sécurité avant tout changement.
+- iPhone et iPad : les modifications partent quand l'app passe en arrière-plan, et celles
+  en attente repartent quand elle revient au premier plan.
+- Navigation privée sans stockage : l'app fonctionne quand même (sans hors ligne) et le
+  signale discrètement.
+- Sauvegardes : l'appareil d'origine est affiché (Chrome, iPhone, iPad ou Navigateur).
+- Préparation d'App Check pour l'app web (reCAPTCHA autorisé par la politique de sécurité ;
+  clé à créer, voir `docs/firebase.md`).
+
+### Modifié
+
+- Textes : « cet appareil » au lieu de « cet ordinateur ».
+- Règles Firestore : une sauvegarde peut venir de `iphone`, `ipad` ou `navigateur`.
+- Les tests sur émulateurs tournent pour les deux cibles (`CIBLE=pwa npm run test:regles`).
+
+### Corrigé
+
+- Test de suppression de compte sur émulateurs : délai de « connexion récente » porté à
+  10 s (le démarrage à froid de la fonction le dépassait).
+
 ## [3.2.0] - 2026-10-25
 
 ### Ajouté
@@ -35,10 +64,6 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
   bloquait le retour sur une préversion.
 - La cible du build (extension ou app web) n'arrivait pas jusqu'à la configuration
   Firebase : App Check ne pouvait jamais s'activer dans l'app web.
-
-### Problèmes connus
-
-- Test d'émulateur `suppression.test.js` (« tout supprimé ») en échec, déjà présent en 3.1.0.
 
 ## [3.1.0] - 2026-10-25
 

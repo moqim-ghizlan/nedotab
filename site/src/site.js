@@ -1,4 +1,5 @@
 import "./site.css";
+import { monterDemo } from "./demo.js";
 
 // "Copier" buttons: chrome:// addresses cannot be opened from a web page.
 for (const bouton of document.querySelectorAll("[data-copier]")) {
@@ -12,3 +13,6 @@ for (const bouton of document.querySelectorAll("[data-copier]")) {
     setTimeout(() => (bouton.textContent = "Copier"), 2500);
   });
 }
+
+const hoteDemo = document.querySelector("[data-demo]");
+if (hoteDemo) monterDemo(hoteDemo);
