@@ -68,14 +68,14 @@ try {
     await p.eval(`document.activeElement?.blur()`);
   };
 
-  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "brume" } });
+  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "aurore" } });
   await p.capture(`${SORTIE}/accueil-clair.webp`);
 
   await preparer({ theme: "sombre", fond: { type: "degrade", valeur: "nuit" } }, true);
   await p.capture(`${SORTIE}/accueil-sombre.webp`);
 
   // Folder window at level 3 with its breadcrumb
-  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "brume" } });
+  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "aurore" } });
   await p.eval(`document.querySelector('.tuile[data-id="travail"]').click()`);
   await attendre(250);
   await p.eval(`document.querySelector('.grille--dossier .tuile[data-id="clients"]').click()`);
@@ -84,7 +84,7 @@ try {
   await p.capture(`${SORTIE}/dossiers.webp`);
 
   // Instant search
-  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "sable" } });
+  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "aurore" } });
   await p.eval(`document.getElementById("recherche").focus()`);
   await p.taper("re");
   await attendre(200);
@@ -131,7 +131,7 @@ try {
 
   // Open Graph image 1200 x 630
   await p.taille(1200, 630);
-  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "lagon" } });
+  await preparer({ theme: "clair", fond: { type: "degrade", valeur: "crepuscule" } });
   await p.capture(`${SORTIE}/og-image.png`);
   await p.taille(1024, 640);
 

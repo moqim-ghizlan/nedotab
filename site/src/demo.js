@@ -7,7 +7,7 @@ const dossier = (titre, items) => ({ type: "dossier", titre, items });
 const GRILLE = [
   site("Courriel", "#517cc2"),
   site("Agenda", "#2f4f86"),
-  site("Cartes", "#6b8fcf"),
+  site("Météo", "#7f9bd0"),
   dossier("Travail", [
     site("Documents", "#517cc2"),
     site("Tableur", "#2f4f86"),
@@ -24,17 +24,17 @@ const GRILLE = [
     site("Visio", "#6b8fcf"),
     site("Équipe", "#04080c", "É"),
   ]),
-  site("Actualités", "#cf76b8"),
-  site("Météo", "#7f9bd0"),
-  site("Musique", "#d493d9"),
+  site("Journal", "#cf76b8"),
+  site("Vidéos", "#04080c"),
+  site("Radio", "#d493d9"),
   dossier("Loisirs", [
     site("Séries", "#a85a9a"),
     site("Cinéma", "#cf76b8"),
     site("Lectures", "#517cc2"),
     site("Jeux", "#2f4f86"),
   ]),
-  site("Recettes", "#a85a9a"),
-  site("Banque", "#04080c"),
+  site("Banque", "#2f4f86"),
+  site("Encyclopédie", "#a85a9a"),
   site("Photos", "#6b8fcf"),
 ];
 
@@ -46,6 +46,13 @@ function apercu(items, trouves = []) {
     else apercu(el.items, trouves);
   }
   return trouves;
+}
+
+/** Ink letters on light tiles, white letters on dark ones. */
+function teinter(el, couleur) {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16));
+  el.style.setProperty("--c", couleur);
+  el.style.color = 0.299 * r + 0.587 * g + 0.114 * b > 165 ? "#04080c" : "#ffffff";
 }
 
 const creer = (balise, classe, texte) => {
@@ -61,11 +68,11 @@ function tuile(el, ouvrir) {
   const icone = creer("span", el.type === "dossier" ? "d-icone d-icone--dossier" : "d-icone");
   if (el.type === "site") {
     icone.textContent = el.lettre;
-    icone.style.setProperty("--c", el.couleur);
+    teinter(icone, el.couleur);
   } else {
     for (const s of apercu(el.items)) {
       const mini = creer("span", "d-mini", s.lettre);
-      mini.style.setProperty("--c", s.couleur);
+      teinter(mini, s.couleur);
       icone.append(mini);
     }
     corps.type = "button";
@@ -182,9 +189,7 @@ export function monterDemo(hote) {
     ([entree]) => {
       if (!entree.isIntersecting) return;
       obs.disconnect();
-      etapes.forEach((c, i) =>
-        minuteries.push(setTimeout(() => aller(c, false), 1400 + i * 1700)),
-      );
+      etapes.forEach((c, i) => minuteries.push(setTimeout(() => aller(c, false), 1400 + i * 1700)));
     },
     { threshold: 0.6 },
   );
