@@ -30,7 +30,7 @@ const vrai = (v) => v === true || v === "true";
  * @returns {{ config: object, emulateurs: boolean }}
  * @throws {Error} readable message naming the missing variables
  */
-export function lireConfig(env = envAvecCible()) {
+export function lireConfig(env = envAvecCible(), hote = globalThis.location?.host) {
   const emulateurs = vrai(env.VITE_UTILISER_EMULATEURS);
   // The emulators always use the local demo project, even when .env.local holds a real one:
   // a test run can never reach real data.
@@ -57,9 +57,13 @@ export function lireConfig(env = envAvecCible()) {
   const config = Object.fromEntries(
     Object.entries(CHAMPS).map(([champ, cle]) => [champ, env[cle]]),
   );
-  // V3.2: the web app signs in on its own domain (the Hosting one), otherwise Safari blocks
-  // the third-party cookies of the redirect and the user comes back signed out.
-  if (env.VITE_TARGET === "pwa")
-    config.authDomain = env.VITE_FIREBASE_AUTH_DOMAIN_PWA || `${config.projectId}.web.app`;
+  // V3.2: the web app signs in on its own domain, otherwise Safari blocks the third-party
+  // cookies of the redirect and the user comes back signed out. Every Firebase Hosting
+  // domain (the site, its preview channels) serves the sign-in pages (/__/auth/handler).
+  if (env.VITE_TARGET === "pwa") {
+    const hebergement = /\.(web\.app|firebaseapp\.com)$/.test(hote ?? "");
+    config.authDomain =
+      env.VITE_FIREBASE_AUTH_DOMAIN_PWA || (hebergement ? hote : `${config.projectId}.web.app`);
+  }
   return { emulateurs, config };
 }

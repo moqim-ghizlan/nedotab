@@ -44,6 +44,12 @@ describe("configuration Firebase", () => {
       lireConfig({ ...complet, VITE_TARGET: "pwa", VITE_FIREBASE_AUTH_DOMAIN_PWA: "app.fr" }).config
         .authDomain,
     ).toBe("app.fr");
+    expect(
+      lireConfig({ ...complet, VITE_TARGET: "pwa" }, "p--v3-2-abc.web.app").config.authDomain,
+    ).toBe("p--v3-2-abc.web.app");
+    expect(lireConfig({ ...complet, VITE_TARGET: "pwa" }, "localhost:5173").config.authDomain).toBe(
+      "p.web.app",
+    );
     expect(lireConfig({ ...complet, VITE_TARGET: "extension" }).config.authDomain).toBe(
       "p.firebaseapp.com",
     );
