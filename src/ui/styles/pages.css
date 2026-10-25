@@ -45,21 +45,34 @@ html.accueil-en-pages .pied {
   transition: none;
 }
 
-/* A page: the grid of the home, with exactly the columns that were measured. */
+/*
+ * A page: lignes × colonnes cells that fill the room (V2.12, the same grid on every device);
+ * the tiles shrink when a cell is smaller than them.
+ */
 .page-grille {
   flex: 0 0 100%;
-  align-content: start;
   padding: var(--espace-2) var(--espace-1);
-  grid-template-columns: repeat(var(--page-colonnes, 4), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--page-colonnes, 8), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--page-lignes, 4), minmax(0, 1fr));
+  align-items: center;
 }
 
-/* Sample tile used to measure a cell: present, never seen. */
+.page-grille > .case > .tuile {
+  zoom: var(--echelle-tuile, 1);
+}
+
+/* Sample tile used to measure a tile: present for a moment, never seen, never zoomed. */
 .page-grille--temoin {
   position: absolute;
   inset: 0 auto auto 0;
   width: 100%;
+  grid-template-rows: none;
   visibility: hidden;
   pointer-events: none;
+}
+
+.page-grille--temoin > .case > .tuile {
+  zoom: 1;
 }
 
 /* Empty page after the last one, reached only while dragging. */

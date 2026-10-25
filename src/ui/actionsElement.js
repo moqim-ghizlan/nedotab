@@ -1,6 +1,7 @@
 import { A } from "../core/actions.js";
 import { compterSites, peutCreerDossierDans, trouver } from "../core/arbre.js";
 import { creerDossier } from "../core/modele.js";
+import { comptesDe, positionDans } from "../core/pages.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirDeplacerVers } from "./dialogues/deplacerVersArbre.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
@@ -29,15 +30,16 @@ export function brancherActionsElements(
     });
   };
 
-  /** Runs `action`, then offers "Annuler" that puts the whole grid back. */
+  /** Runs `action`, then offers "Annuler" that puts the whole grid (and its pages) back. */
   const avecAnnulation = (message, action, idAFocaliser) => {
     const avant = store.lire().grille;
+    const pages = comptesDe(store.lire());
     store.envoyer(action);
     toast(message, {
       action: {
         libelle: "Annuler",
         onClic: () => {
-          store.envoyer({ type: A.GRILLE_REMPLACER, grille: avant });
+          store.envoyer({ type: A.GRILLE_REMPLACER, grille: avant, pages });
           if (idAFocaliser) focaliser(idAFocaliser);
         },
       },
@@ -47,6 +49,8 @@ export function brancherActionsElements(
   const supprimerSite = (r) => {
     const id = r.element.id;
     const indexTuile = [...conteneur.querySelectorAll(".tuile")].indexOf(tuileDe(id));
+    // Home: the page it was on, to put it back there (V2.12).
+    const page = r.parent ? undefined : positionDans(comptesDe(store.lire()), r.index)?.page;
     store.envoyer({ type: A.ELEMENT_SUPPRIMER, id });
     focaliserApresSuppression(Math.max(0, indexTuile));
     toast(`« ${r.element.titre} » supprimé`, {
@@ -58,6 +62,7 @@ export function brancherActionsElements(
             element: r.element,
             parentId: r.parent?.id ?? null,
             index: r.index,
+            page,
           });
           focaliser(id);
         },

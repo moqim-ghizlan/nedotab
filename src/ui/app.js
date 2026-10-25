@@ -30,6 +30,7 @@ import { toast } from "./toast.js";
 import { ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
+import { comptesDe, grilleAccueil } from "../core/pages.js";
 
 /** V2.9: operations that could not be applied after a change made on another device. */
 function signalerIgnorees(ignorees) {
@@ -373,8 +374,11 @@ export async function demarrerApp(racine) {
       mode === "pages"
         ? creerAccueilPagine({
             annoncer,
-            redessiner: () => accueil?.demanderRendu(),
             actif: () => !estVide(),
+            disposition: () => ({
+              comptes: comptesDe(store.lire()),
+              ...grilleAccueil(store.lire().reglages),
+            }),
           })
         : null;
     conteneurAccueil = pagination

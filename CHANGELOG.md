@@ -2,6 +2,29 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.12.0] - 2026-10-25
+
+### Modifié
+
+- **Pages de l'accueil comme dans Infinity** : les pages sont maintenant enregistrées. Une
+  tuile glissée sur la page 2 y reste, même si la page 1 garde une case libre ; une tuile
+  posée sur la page vide après la dernière ouvre une nouvelle page à elle seule. Sur une
+  page pleine, la tuile déposée entre et la dernière de cette page passe à la suivante.
+  Supprimer une tuile ne fait pas remonter les pages suivantes ; une page vidée disparaît ;
+  « Annuler » remet la tuile sur sa page. Alt + flèches passent aussi d'une page à l'autre.
+- **Grille lignes × colonnes** (Réglages → Apparence → Lignes par page, Colonnes par page),
+  4 × 8 par défaut, la même sur tous les appareils : sur un écran plus petit, les tuiles
+  rétrécissent au lieu de changer de page. Réduire la grille fait passer le surplus de
+  chaque page sur la suivante.
+- Les pages et la grille font partie des réglages synchronisés : mêmes pages sur tous les
+  appareils, dans les sauvegardes et dans l'export. Format des données : deux champs
+  ajoutés aux réglages (`grilleAccueil`, et `pagesAccueil` seulement quand les pages ne
+  sont pas le découpage simple) ; aucune migration, les données existantes gardent le même
+  affichage. Mettre à jour NedoTab sur tous les appareils : une version plus ancienne
+  affiche les pages à sa façon.
+- Le réglage « Colonnes » (propre à l'appareil) ne concerne plus que l'affichage en
+  défilement vertical.
+
 ## [2.11.1] - 2026-10-25
 
 ### Corrigé

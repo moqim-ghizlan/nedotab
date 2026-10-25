@@ -1,6 +1,6 @@
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { etatInitial } from "./modele.js";
-import { validerReglages, validerReglagesAppareil } from "./reglages.js";
+import { avecPagesValides, validerReglages, validerReglagesAppareil } from "./reglages.js";
 
 /** Successive migrations: MIGRATIONS[n] turns schema n into schema n + 1. */
 const MIGRATIONS = {
@@ -112,7 +112,10 @@ export function valider(
     ...etat,
     versionSchema: etat?.versionSchema ?? base.versionSchema,
     grille,
-    reglages: validerReglages({ ...base.reglages, ...etat?.reglages }),
+    reglages: avecPagesValides(
+      validerReglages({ ...base.reglages, ...etat?.reglages }),
+      grille.length,
+    ),
     reglagesAppareil: validerReglagesAppareil(etat?.reglagesAppareil),
   };
 }

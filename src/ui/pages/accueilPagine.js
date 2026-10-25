@@ -1,4 +1,4 @@
-import { borner, decouper, indexApresDepot } from "../../core/pages.js";
+import { borner, decouperParComptes } from "../../core/pages.js";
 import { el } from "../dom.js";
 import { rendreGrille } from "../grille.js";
 import { creerIndicateur } from "./indicateur.js";
@@ -10,19 +10,20 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)");
 const CHAMPS = "input, textarea, select, [contenteditable]";
 
 /**
- * Home grid in pages (V2.11): the single ordered list is cut into pages that fit the screen
- * without scrolling, laid side by side on a track that slides. Pages are a view: nothing
- * about them is stored, and a new tab always starts on page 1.
+ * Home grid in pages, as in Infinity (V2.11, pages stored since V2.12): the pages and the
+ * lignes × colonnes grid come from the synced settings (see core/pages.js), laid side by
+ * side on a track that slides. A new tab always starts on page 1.
  *
  * Given to creerVueGrille as `pagination`: it renders the pages with the shared tile
- * renderer, tells the drag which lists exist and turns a drop into an index of the whole
- * list, and brings the page of a tile into view before it gets the focus.
+ * renderer, tells the drag which lists exist and turns a drop into a page and a position in
+ * it, and brings the page of a tile into view before it gets the focus.
  *
- * @param {{ annoncer: (texte: string) => void, redessiner: () => void, actif: () => boolean }} options
- *   redessiner: render again (deferred during a drag) when the room changes;
- *   actif: false while the home grid is not shown (empty grid).
+ * @param {{ annoncer: (texte: string) => void, actif: () => boolean,
+ *           disposition: () => { comptes: number[], lignes: number, colonnes: number } }} options
+ *   actif: false while the home grid is not shown (empty grid); disposition: the page sizes
+ *   and the grid of the state being rendered.
  */
-export function creerAccueilPagine({ annoncer, redessiner, actif = () => true }) {
+export function creerAccueilPagine({ annoncer, actif = () => true, disposition }) {
   const piste = el("div", { class: "piste" });
   const temporaire = el("ul", {
     class: "grille page-grille page-grille--temporaire",
@@ -37,9 +38,11 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
     piste,
   );
 
-  let pages = []; // <ul> of each page, in order
+  let pages = []; // <ul> of each page shown, in order (the last may only hold "+")
   let pageCourante = 0;
-  let cap = { colonnes: 1, lignes: 1, parPage: 4 };
+  let grille = { lignes: 4, colonnes: 8 };
+  let comptes = []; // stored page sizes of the list rendered
+  let ids = []; // ids of the list rendered, in order
   let glisserEn = null; // { pageDepart } during a drag
   let posee = null; // id of the tile just dropped, shown by the next render
 
@@ -93,10 +96,8 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
   }
 
   /**
-   * After a drop, the page where the tile really is comes into view and the tile lights up.
-   * Pages are cut from one list: a tile dropped on a page that has no room before it (the
-   * page that only holds "+", or the empty page) goes to the end of the list, which may be
-   * on the previous page. The user must see where it went.
+   * After a drop, the page where the tile is comes into view and the tile lights up (a full
+   * page that received it gave its last tile to the next page: the user sees where it went).
    */
   const montrerPosee = () => {
     const tuile = piste.querySelector(`.tuile[data-id="${CSS.escape(posee)}"]`);
@@ -128,17 +129,7 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
     allerA: (p) => allerA(p),
   });
 
-  const mesure = creerMesure(fenetre, {
-    surChangement: () => {
-      const avant = cap.parPage;
-      const apres = mesure.mesurer().parPage;
-      if (apres === avant) return;
-      // Keep in view the first element the user was looking at.
-      const premier = pageCourante * avant;
-      pageCourante = Math.floor(premier / apres);
-      redessiner();
-    },
-  });
+  const mesure = creerMesure(fenetre, { grille: () => grille });
 
   const suivrePointeur = (e) => zones.suivre(e.clientX, e.clientY);
 
@@ -169,42 +160,78 @@ export function creerAccueilPagine({ annoncer, redessiner, actif = () => true })
     racine: fenetre,
     indicateur: indicateur.racine,
 
-    /** Cuts `liste` into pages and renders them; the page shown is kept (bounded). */
+    /**
+     * Renders the stored pages; "+" takes the last cell of the last page, or a page of its
+     * own when that one is full. The page shown is kept (bounded).
+     */
     rendre(liste, { avecAjout, libelleAjout }) {
-      cap = mesure.mesurer();
-      const decoupees = decouper(liste, cap.parPage, { avecTuileAjout: avecAjout });
-      while (pages.length < decoupees.length) {
-        const ul = el("ul", { class: "grille page-grille" });
-        pages.push(ul);
+      const d = disposition();
+      comptes = d.comptes;
+      grille = { lignes: d.lignes, colonnes: d.colonnes };
+      ids = liste.map((e) => e.id);
+      const decoupees = decouperParComptes(liste, comptes).map((elements) => ({ elements }));
+      if (!decoupees.length) decoupees.push({ elements: [] });
+      const capacite = grille.lignes * grille.colonnes;
+      if (avecAjout) {
+        if (decoupees.at(-1).elements.length < capacite) decoupees.at(-1).ajout = true;
+        else decoupees.push({ elements: [], ajout: true });
       }
+      while (pages.length < decoupees.length) pages.push(el("ul", { class: "grille page-grille" }));
       for (const ul of pages.splice(decoupees.length)) ul.remove();
       decoupees.forEach((page, i) => {
         const ul = pages[i];
         ul.setAttribute("aria-label", `Page ${i + 1} sur ${decoupees.length}`);
-        rendreGrille(ul, page.elements, { avecAjout: page.ajout, libelleAjout });
+        rendreGrille(ul, page.elements, { avecAjout: !!page.ajout, libelleAjout });
       });
       piste.replaceChildren(...pages, temporaire);
-      fenetre.style.setProperty("--page-colonnes", String(cap.colonnes));
-      fenetre.style.setProperty("--page-lignes", String(cap.lignes));
+      fenetre.style.setProperty("--page-colonnes", String(grille.colonnes));
+      fenetre.style.setProperty("--page-lignes", String(grille.lignes));
+      mesure.appliquer();
       pageCourante = borner(pageCourante, nbPages());
       appliquer(false);
       if (posee) montrerPosee();
     },
 
     listes: () => [...pages, temporaire],
-    colonnes: () => cap.colonnes,
+    colonnes: () => grille.colonnes,
 
-    /** ELEMENT_DEPLACER's index for a drop, or null when nothing moved. */
-    versIndex(evt) {
+    /**
+     * ELEMENT_DEPLACER's page and position for a drop, or null when nothing moved. The page
+     * that only holds "+" and the empty page after the last one are a new page.
+     */
+    deplacement(evt) {
       const pageSource = pageDe(evt.from);
-      const pageCible = pageDe(evt.to);
+      const pageCible = Math.min(pageDe(evt.to), comptes.length);
       if (pageSource === pageCible && evt.oldDraggableIndex === evt.newDraggableIndex) return null;
-      return indexApresDepot({
-        pageSource,
-        pageCible,
-        indexDansPage: evt.newDraggableIndex,
-        parPage: cap.parPage,
-      });
+      return { versPage: pageCible, versIndex: evt.newDraggableIndex };
+    },
+
+    /**
+     * Alt + arrows on a home tile: the next cell, across pages (at the end of a page, the
+     * first cell of the next one). @returns ELEMENT_DEPLACER's page and position, or null.
+     */
+    deplacementClavier(id, touche) {
+      let debut = 0;
+      for (let page = 0; page < comptes.length; page++) {
+        const index = ids.indexOf(id) - debut;
+        if (index >= 0 && index < comptes[page]) {
+          const n = comptes[page];
+          const { colonnes } = grille;
+          const precedente = page > 0 ? [page - 1, comptes[page - 1]] : null;
+          const suivante = page < comptes.length - 1 ? [page + 1, 0] : null;
+          const vers = {
+            ArrowLeft: index > 0 ? [page, index - 1] : precedente,
+            ArrowRight: index < n - 1 ? [page, index + 1] : suivante,
+            ArrowUp: index - colonnes >= 0 ? [page, index - colonnes] : null,
+            ArrowDown: index + colonnes < n ? [page, index + colonnes] : null,
+            Home: [0, 0],
+            End: [comptes.length - 1, comptes.at(-1)],
+          }[touche];
+          return vers ? { versPage: vers[0], versIndex: vers[1] } : null;
+        }
+        debut += comptes[page];
+      }
+      return null;
     },
 
     montrer(noeud) {

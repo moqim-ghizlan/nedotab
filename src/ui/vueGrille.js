@@ -1,6 +1,7 @@
 import { A } from "../core/actions.js";
 import { peutCreerDossierDans, peutPlacer, trouver } from "../core/arbre.js";
 import { genererIdParDefaut } from "../core/modele.js";
+import { comptesDe } from "../core/pages.js";
 import { brancherActionsElements } from "./actionsElement.js";
 import { activerDeplacementClavier, activerGlisser } from "./glisser.js";
 import { activerClavierGrille, colonnes, rendreGrille } from "./grille.js";
@@ -60,15 +61,16 @@ export function creerVueGrille({
   const montrer = (noeud) => pagination?.montrer(noeud);
   const nbColonnes = () => pagination?.colonnes() ?? colonnes(conteneur);
 
-  /** Runs `action`, then offers "Annuler" that puts the whole grid back. */
+  /** Runs `action`, then offers "Annuler" that puts the whole grid (and its pages) back. */
   const avecAnnulation = (message, action) => {
     const avant = grille();
+    const pages = comptesDe(store.lire());
     store.envoyer(action);
     if (grille() === avant) return false;
     toast(message, {
       action: {
         libelle: "Annuler",
-        onClic: () => store.envoyer({ type: A.GRILLE_REMPLACER, grille: avant }),
+        onClic: () => store.envoyer({ type: A.GRILLE_REMPLACER, grille: avant, pages }),
       },
     });
     return true;
@@ -152,7 +154,7 @@ export function creerVueGrille({
           ? {
               groupe: "accueil",
               listes: pagination.listes,
-              versIndex: pagination.versIndex,
+              deplacement: pagination.deplacement,
               surDebut: pagination.debutGlisser,
               surFin: pagination.finGlisser,
             }
@@ -160,7 +162,12 @@ export function creerVueGrille({
       });
   activerClavierGrille(conteneur, { nbColonnes, montrer });
   if (!lectureSeule()) {
-    activerDeplacementClavier(store, conteneur, { annoncer, colonnes: nbColonnes, montrer });
+    activerDeplacementClavier(store, conteneur, {
+      annoncer,
+      colonnes: nbColonnes,
+      montrer,
+      deplacementClavier: pagination?.deplacementClavier,
+    });
   }
   const actions = brancherActionsElements(store, conteneur, { lectureSeule, ouvrirDossier });
 

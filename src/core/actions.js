@@ -16,6 +16,15 @@ import {
   trouver,
 } from "./arbre.js";
 import { PROFONDEUR_MAX } from "./constantes.js";
+import {
+  capaciteDe,
+  comptesAStocker,
+  comptesDe,
+  indexGlobalDansPages,
+  normaliserComptes,
+  positionDans,
+  reconcilier,
+} from "./pages.js";
 import { FONDS_MAX, modifierReglagesEtat, validerEntreeFond } from "./reglages.js";
 
 export const A = {
@@ -101,7 +110,98 @@ function filtrerChamps(changements, autorises) {
 
 const avecGrille = (etat, grille) => (grille === etat.grille ? etat : { ...etat, grille });
 
+/**
+ * The reducer. Every change of the home list also updates the home pages (V2.12, see
+ * pages.js): ELEMENT_DEPLACER may give `versPage` (then `versIndex` is the position in that
+ * page), FUSIONNER keeps the new folder on the page of its target, ELEMENT_RESTAURER may
+ * give the `page` the element was on, GRILLE_REMPLACER may give the `pages` to put back.
+ */
 export function reduire(etat, action) {
+  const { action: effective, place } = preparerPages(etat, action);
+  const suivant = reduireBase(etat, effective);
+  // A move may change only the page (the last tile of a page put first on the next one).
+  if (suivant === etat && place?.page == null) return etat;
+  return avecPages(etat, suivant, effective, place);
+}
+
+const racine = (r) => !!r && !r.parent;
+
+/** The action as the base reducer understands it, and which element goes on which page. */
+function preparerPages(etat, action) {
+  if (action.type === A.ELEMENT_DEPLACER && (action.versParentId ?? null) === null) {
+    if (action.versPage == null) return { action, place: { id: action.id, page: null } };
+    const versIndex = indexGlobalDansPages(
+      etat.grille,
+      comptesDe(etat),
+      action.versPage,
+      action.versIndex,
+      action.id,
+    );
+    return {
+      action: { ...action, versIndex },
+      place: { id: action.id, page: action.versPage, index: action.versIndex },
+    };
+  }
+  if (action.type === A.FUSIONNER && action.nouveauDossierId) {
+    const r = trouver(etat.grille, action.cibleId);
+    if (racine(r)) {
+      const page = positionDans(comptesDe(etat), r.index)?.page ?? null;
+      return { action, place: { id: action.nouveauDossierId, page } };
+    }
+  }
+  if (
+    action.type === A.ELEMENT_RESTAURER &&
+    action.page != null &&
+    (action.parentId ?? null) === null
+  ) {
+    return { action, place: { id: action.element?.id, page: action.page } };
+  }
+  return { action, place: null };
+}
+
+/** Actions that bring their own settings: their pages are only checked. */
+const AVEC_REGLAGES = new Set([A.CHARGER, A.GRILLE_RESTAURER, A.SYNCHRO_APPLIQUER]);
+
+const memesComptes = (a, b) =>
+  a === b ||
+  (Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => x === b[i]));
+
+function avecPages(etat, suivant, action, place) {
+  if (!suivant.reglages || !Array.isArray(suivant.grille)) return suivant;
+  const capacite = capaciteDe(suivant.reglages);
+  let liste = suivant.grille;
+  let comptes;
+  if (AVEC_REGLAGES.has(action.type) || (action.type === A.GRILLE_REMPLACER && action.pages)) {
+    const voulus =
+      action.type === A.GRILLE_REMPLACER ? action.pages : suivant.reglages.pagesAccueil;
+    comptes = normaliserComptes(voulus ?? null, liste.length, capacite);
+  } else {
+    const memeListe = suivant.grille === etat.grille && capaciteDe(etat.reglages) === capacite;
+    if (memeListe && place?.page == null) return suivant;
+    ({ liste, comptes } = reconcilier({
+      avant: etat.grille,
+      comptesAvant: comptesDe(etat),
+      apres: suivant.grille,
+      capacite,
+      place,
+    }));
+  }
+  const grille =
+    liste.length === suivant.grille.length && liste.every((e, i) => e === suivant.grille[i])
+      ? suivant.grille
+      : liste;
+  const stocke = comptesAStocker(comptes, liste.length, capacite);
+  let reglages = suivant.reglages;
+  if (!memesComptes(stocke, reglages.pagesAccueil ?? null)) {
+    reglages = { ...reglages };
+    if (stocke) reglages.pagesAccueil = stocke;
+    else delete reglages.pagesAccueil;
+  }
+  if (grille === suivant.grille && reglages === suivant.reglages) return suivant;
+  return { ...suivant, grille, reglages };
+}
+
+function reduireBase(etat, action) {
   switch (action.type) {
     case A.CHARGER:
       return action.etat;

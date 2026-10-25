@@ -507,6 +507,13 @@ body.fond-sombre {
   }
 }
 
+/* A group of settings shown or hidden together (pages or one scrolling grid). */
+.reglages-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
 .reglages-libelle {
   margin: var(--espace-1) 0 -4px;
   color: var(--texte-secondaire);

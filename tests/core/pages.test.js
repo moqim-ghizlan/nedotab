@@ -1,175 +1,233 @@
 import { describe, expect, it } from "vitest";
 import { A, reduire } from "../../src/core/actions.js";
+import { migrer } from "../../src/core/migration.js";
 import {
-  borner,
-  capacite,
-  decouper,
-  indexApresDepot,
-  indexGlobal,
-  nombrePages,
-  pageApresRedimensionnement,
-  pageDeIndex,
+  comptesAStocker,
+  comptesDe,
+  comptesParDefaut,
+  decouperParComptes,
+  indexGlobalDansPages,
+  normaliserComptes,
+  positionDans,
+  validerGrilleAccueil,
 } from "../../src/core/pages.js";
 
 const site = (id) => ({ id, type: "site", titre: id, url: `https://${id}.fr`, creeLe: 0 });
-const sites = (n) => Array.from({ length: n }, (_, i) => site(`s${i}`));
+const sites = (n, depuis = 0) => Array.from({ length: n }, (_, i) => site(`s${depuis + i}`));
+/** State with `n` sites on a lignes × colonnes home grid and the given page sizes. */
+const etatDe = (n, { lignes = 4, colonnes = 8, pages } = {}) => ({
+  versionSchema: 2,
+  grille: sites(n),
+  reglages: {
+    theme: "auto",
+    fond: { type: "aucun" },
+    fonds: [],
+    grilleAccueil: { lignes, colonnes },
+    ...(pages ? { pagesAccueil: pages } : {}),
+  },
+  reglagesAppareil: {},
+});
+const pagesDe = (etat) =>
+  decouperParComptes(etat.grille, comptesDe(etat)).map((p) => p.map((e) => e.id));
+const versPage = (etat, id, page, index) =>
+  reduire(etat, {
+    type: A.ELEMENT_DEPLACER,
+    id,
+    versParentId: null,
+    versPage: page,
+    versIndex: index,
+  });
 
-describe("capacite", () => {
-  const tuile = { largeurTuile: 96, hauteurTuile: 100, ecartX: 12, ecartY: 16 };
-  it("grand écran", () => {
-    expect(capacite({ largeur: 960, hauteur: 600, ...tuile })).toEqual({
-      colonnes: 9,
-      lignes: 5,
-      parPage: 45,
-    });
+describe("tailles des pages", () => {
+  it("découpage par défaut : pages pleines sauf la dernière, aucune page pour une liste vide", () => {
+    expect(comptesParDefaut(0, 32)).toEqual([]);
+    expect(comptesParDefaut(32, 32)).toEqual([32]);
+    expect(comptesParDefaut(70, 32)).toEqual([32, 32, 6]);
   });
-  it("petit écran", () => {
-    expect(capacite({ largeur: 360, hauteur: 500, ...tuile })).toEqual({
-      colonnes: 3,
-      lignes: 4,
-      parPage: 12,
-    });
+  it("normalisation : somme ajustée, débordement vers la page suivante, pas de page vide", () => {
+    expect(normaliserComptes([31, 1], 32, 32)).toEqual([31, 1]);
+    expect(normaliserComptes([31, 1], 34, 32)).toEqual([31, 3]); // added: on the last page
+    expect(normaliserComptes([31, 5], 33, 32)).toEqual([31, 2]); // fewer: taken from the end
+    expect(normaliserComptes([40], 40, 32)).toEqual([32, 8]);
+    expect(normaliserComptes([0, -2, 1.5, 3], 3, 32)).toEqual([3]);
+    expect(normaliserComptes(null, 40, 32)).toEqual([32, 8]);
   });
-  it("fenêtre minuscule : au moins 4 par page", () => {
-    expect(capacite({ largeur: 50, hauteur: 40, ...tuile })).toEqual({
-      colonnes: 1,
-      lignes: 1,
-      parPage: 4,
-    });
+  it("rien n'est stocké tant que c'est le découpage par défaut", () => {
+    expect(comptesAStocker([32, 8], 40, 32)).toBeNull();
+    expect(comptesAStocker([31, 9], 40, 32)).toEqual([31, 9]);
   });
-  it("écarts nuls", () => {
-    expect(
-      capacite({ largeur: 400, hauteur: 300, largeurTuile: 100, hauteurTuile: 100 }).parPage,
-    ).toBe(12);
+  it("position et index dans les pages", () => {
+    expect(positionDans([31, 1], 31)).toEqual({ page: 1, index: 0 });
+    expect(positionDans([31, 1], 32)).toBeNull();
+    const liste = sites(32);
+    expect(indexGlobalDansPages(liste, [31, 1], 1, 0)).toBe(31);
+    expect(indexGlobalDansPages(liste, [31, 1], 2, 0)).toBe(32); // a new page: the end
   });
-  it("colonnes forcées sur cet appareil", () => {
-    expect(capacite({ largeur: 960, hauteur: 600, ...tuile, colonnesForcees: 5 }).parPage).toBe(25);
+  it("taille de grille validée", () => {
+    expect(validerGrilleAccueil({ lignes: 4, colonnes: 8 })).toEqual({ lignes: 4, colonnes: 8 });
+    expect(validerGrilleAccueil({ lignes: 0, colonnes: 8 })).toBeNull();
+    expect(validerGrilleAccueil({ lignes: 4, colonnes: 30 })).toBeNull();
   });
 });
 
-describe("decouper", () => {
-  // [elements, number of pages, elements on the last page, "+" on the last page]
-  for (const [n, pages, derniers] of [
-    [0, 1, 0],
-    [1, 1, 1],
-    [19, 1, 19],
-    [20, 2, 0],
-    [21, 2, 1],
-    [40, 3, 0],
-    [41, 3, 1],
-  ]) {
-    it(`${n} éléments, 20 par page → ${pages} page(s), « + » en dernier`, () => {
-      const resultat = decouper(sites(n), 20);
-      expect(resultat).toHaveLength(pages);
-      expect(nombrePages(n, 20)).toBe(pages);
-      const derniere = resultat.at(-1);
-      expect(derniere.elements).toHaveLength(derniers);
-      expect(derniere.ajout).toBe(true);
-      expect(resultat.slice(0, -1).every((p) => !p.ajout && p.elements.length === 20)).toBe(true);
-      expect(resultat.flatMap((p) => p.elements)).toHaveLength(n);
+describe("pages enregistrées (comme Infinity)", () => {
+  it("page 1 pleine : une tuile glissée sur une nouvelle page y reste seule", () => {
+    const etat = versPage(etatDe(32), "s3", 1, 0);
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([31, 1]);
+    expect(pagesDe(etat)[1]).toEqual(["s3"]);
+    expect(etat.reglages.pagesAccueil).toEqual([31, 1]);
+  });
+
+  it("déposée au milieu d'une page qui a des tuiles : à la place visée", () => {
+    const etat = versPage(etatDe(40), "s3", 1, 2);
+    expect(pagesDe(etat)[1].slice(0, 4)).toEqual(["s32", "s33", "s3", "s34"]);
+    expect(pagesDe(etat)[0]).toHaveLength(31);
+  });
+
+  it("déposée sur une page pleine : la dernière tuile de cette page passe à la suivante", () => {
+    const etat = versPage(etatDe(64), "s40", 0, 0); // two full pages
+    const pages = pagesDe(etat);
+    expect(pages.map((p) => p.length)).toEqual([32, 32]);
+    expect(pages[0][0]).toBe("s40");
+    expect(pages[1][0]).toBe("s31"); // pushed from page 1
+  });
+
+  it("supprimer sur la page 1 ne fait pas remonter la page 2", () => {
+    let etat = versPage(etatDe(32), "s3", 1, 0);
+    etat = reduire(etat, { type: A.ELEMENT_SUPPRIMER, id: "s0" });
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([30, 1]);
+  });
+
+  it("la dernière tuile d'une page partie : la page disparaît", () => {
+    let etat = versPage(etatDe(32), "s3", 1, 0);
+    etat = reduire(etat, { type: A.ELEMENT_SUPPRIMER, id: "s3" });
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([31]);
+    expect(etat.reglages.pagesAccueil).toBeUndefined();
+  });
+
+  it("annuler une suppression remet la tuile sur sa page", () => {
+    let etat = versPage(etatDe(32), "s3", 1, 0);
+    const element = etat.grille.find((e) => e.id === "s3");
+    etat = reduire(etat, { type: A.ELEMENT_SUPPRIMER, id: "s3" });
+    etat = reduire(etat, {
+      type: A.ELEMENT_RESTAURER,
+      element,
+      parentId: null,
+      index: 31,
+      page: 1,
     });
-  }
-  it("sans tuile « + » (lecture seule) : pas de page en plus", () => {
-    expect(decouper(sites(20), 20, { avecTuileAjout: false })).toHaveLength(1);
-    expect(nombrePages(0, 20, false)).toBe(1);
+    expect(pagesDe(etat)[1]).toEqual(["s3"]);
+  });
+
+  it("un site ajouté va sur la dernière page, ou sur une nouvelle si elle est pleine", () => {
+    let etat = reduire(etatDe(30), { type: A.SITE_AJOUTER, site: site("n1"), parentId: null });
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([31]);
+    etat = reduire(etatDe(32), { type: A.SITE_AJOUTER, site: site("n2"), parentId: null });
+    expect(pagesDe(etat)).toEqual([sites(32).map((e) => e.id), ["n2"]]);
+  });
+
+  it("site sur site : le nouveau dossier reste sur la page de la cible", () => {
+    let etat = versPage(etatDe(40), "s31", 1, 0); // [31, 9], s31 first on page 2
+    etat = reduire(etat, {
+      type: A.FUSIONNER,
+      sourceId: "s5",
+      cibleId: "s31",
+      nouveauDossierId: "d1",
+      titre: "Dossier",
+    });
+    expect(pagesDe(etat)[1][0]).toBe("d1");
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([30, 9]);
+  });
+
+  it("vider un dossier dans l'accueil : son contenu reste sur sa page", () => {
+    let etat = versPage(etatDe(40), "s31", 1, 0);
+    etat = reduire(etat, {
+      type: A.FUSIONNER,
+      sourceId: "s32",
+      cibleId: "s30",
+      nouveauDossierId: "d1",
+    }); // d1 is the last of page 1
+    etat = reduire(etat, { type: A.DOSSIER_SUPPRIMER, id: "d1", mode: "viderDansParent" });
+    expect(pagesDe(etat)[0].slice(-2)).toEqual(["s30", "s32"]);
+  });
+
+  it("déplacement sans page (défilement, clavier) : la page de ses voisines", () => {
+    const etat = reduire(etatDe(40), {
+      type: A.ELEMENT_DEPLACER,
+      id: "s2",
+      versParentId: null,
+      versIndex: 35,
+    });
+    expect(pagesDe(etat)[1]).toContain("s2");
+  });
+
+  it("annuler un glisser (GRILLE_REMPLACER avec les pages) remet aussi les pages", () => {
+    const depart = etatDe(32);
+    const apres = versPage(depart, "s3", 1, 0);
+    const annule = reduire(apres, {
+      type: A.GRILLE_REMPLACER,
+      grille: depart.grille,
+      pages: comptesDe(depart),
+    });
+    expect(pagesDe(annule)).toEqual(pagesDe(depart));
+    expect(annule.reglages.pagesAccueil).toBeUndefined();
+  });
+
+  it("grille plus petite : chaque page trop pleine déborde sur la suivante", () => {
+    let etat = versPage(etatDe(40), "s3", 1, 0); // [31, 9]
+    etat = reduire(etat, {
+      type: A.REGLAGES_MODIFIER,
+      changements: { grilleAccueil: { lignes: 3, colonnes: 8 } },
+    });
+    expect(pagesDe(etat).map((p) => p.length)).toEqual([24, 16]);
+  });
+
+  it("chargement : des pages incohérentes (autre appareil) sont corrigées", () => {
+    const { etat } = migrer(etatDe(35, { pages: [10, 40] }));
+    expect(comptesDe(etat)).toEqual([10, 25]);
+    expect(etat.reglages.pagesAccueil).toEqual([10, 25]);
   });
 });
 
-describe("index", () => {
-  it("indexGlobal et pageDeIndex sont réciproques", () => {
-    for (let i = 0; i < 200; i++) {
-      const page = pageDeIndex(i, 12);
-      expect(indexGlobal(page, i - page * 12, 12)).toBe(i);
-    }
-  });
-  it("glisser de la page 1 (index 3) vers la page 2 (index 5), 20 par page", () => {
-    // The drop is shown with page 1 missing one element: the dragged element lands after
-    // the 5th tile shown on page 2, i.e. between s24 and s25.
-    const versIndex = indexApresDepot({
-      pageSource: 0,
-      pageCible: 1,
-      indexDansPage: 5,
-      parPage: 20,
-    });
-    expect(versIndex).toBe(24);
-    const g = reduire(
-      { grille: sites(45), reglages: {} },
-      { type: A.ELEMENT_DEPLACER, id: "s3", versParentId: null, versIndex },
-    ).grille.map((e) => e.id);
-    expect(g.slice(23, 26)).toEqual(["s24", "s3", "s25"]);
-  });
-  it("vers une page précédente : pas de décalage", () => {
-    expect(indexApresDepot({ pageSource: 2, pageCible: 0, indexDansPage: 4, parPage: 20 })).toBe(4);
-  });
-  it("dépôt sur la page vide temporaire : fin de la liste", () => {
-    const versIndex = indexApresDepot({
-      pageSource: 0,
-      pageCible: 3,
-      indexDansPage: 0,
-      parPage: 20,
-    });
-    const g = reduire(
-      { grille: sites(45), reglages: {} },
-      { type: A.ELEMENT_DEPLACER, id: "s2", versParentId: null, versIndex },
-    ).grille;
-    expect(g.at(-1).id).toBe("s2");
-  });
-  it("borner", () => {
-    expect(borner(-1, 3)).toBe(0);
-    expect(borner(5, 3)).toBe(2);
-    expect(borner(1, 3)).toBe(1);
-    expect(borner(0, 0)).toBe(0);
-  });
-  it("redimensionnement 20 → 12 par page : la page qui contient l'ancien premier élément", () => {
-    // page 3 (index 2) started with element 40 → page 4 (index 3) with 12 per page
-    expect(
-      pageApresRedimensionnement({ pageActuelle: 2, ancienParPage: 20, nouveauParPage: 12 }),
-    ).toBe(3);
-    expect(
-      pageApresRedimensionnement({ pageActuelle: 3, ancienParPage: 12, nouveauParPage: 20 }),
-    ).toBe(1);
-  });
-});
-
-/** What the user sees at the drop: pages cut from the list, the element moved in them. */
-function ordreAffiche(ids, parPage, source, pageCible, indexDansPage) {
-  const pages = decouper(ids, parPage, { avecTuileAjout: false }).map((p) => [...p.elements]);
-  const pageSource = pageDeIndex(source, parPage);
-  const [deplace] = pages[pageSource].splice(source - pageSource * parPage, 1);
-  while (pages.length <= pageCible) pages.push([]);
-  const cible = pages[pageCible];
-  cible.splice(Math.min(indexDansPage, cible.length), 0, deplace);
-  return pages.flat();
-}
-
-describe("propriété : déplacements entre pages", () => {
-  it("1 000 déplacements aléatoires, capacités variables : rien de perdu, l'ordre affiché est gardé", () => {
-    let graine = 7;
+describe("propriété : pages enregistrées", () => {
+  it("2 000 opérations aléatoires : rien de perdu, pages valides, stockées seulement si utile", () => {
+    let graine = 11;
     const hasard = (n) => {
       graine = (graine * 1103515245 + 12345) % 2147483648;
       return Math.floor((graine / 2147483648) * n);
     };
-    let etat = { grille: sites(57), reglages: {} };
-    for (let i = 0; i < 1000; i++) {
+    let etat = etatDe(50, { lignes: 2, colonnes: 5 });
+    const attendus = new Set(etat.grille.map((e) => e.id));
+    let n = 1000;
+    for (let i = 0; i < 2000; i++) {
       const ids = etat.grille.map((e) => e.id);
-      const parPage = 4 + hasard(30);
-      const source = hasard(ids.length);
-      const nb = nombrePages(ids.length, parPage, false);
-      // A page that exists, or the temporary empty page after the last one.
-      const pageCible = hasard(nb + 1);
-      const pageSource = pageDeIndex(source, parPage);
-      const tailleCible = pageCible >= nb ? 0 : Math.min(parPage, ids.length - pageCible * parPage);
-      const indexDansPage = hasard(tailleCible + (pageCible === pageSource ? 0 : 1));
-      const attendu = ordreAffiche(ids, parPage, source, pageCible, indexDansPage);
-      etat = reduire(etat, {
-        type: A.ELEMENT_DEPLACER,
-        id: ids[source],
-        versParentId: null,
-        versIndex: indexApresDepot({ pageSource, pageCible, indexDansPage, parPage }),
-      });
-      const apres = etat.grille.map((e) => e.id);
-      expect(new Set(apres).size).toBe(57);
-      expect(apres).toEqual(attendu);
+      const comptes = comptesDe(etat);
+      const op = hasard(6);
+      if (op <= 2 && ids.length) {
+        etat = versPage(etat, ids[hasard(ids.length)], hasard(comptes.length + 1), hasard(12));
+      } else if (op === 3) {
+        const id = `n${n++}`;
+        attendus.add(id);
+        etat = reduire(etat, { type: A.SITE_AJOUTER, site: site(id), parentId: null });
+      } else if (op === 4 && ids.length > 1) {
+        const id = ids[hasard(ids.length)];
+        attendus.delete(id);
+        etat = reduire(etat, { type: A.ELEMENT_SUPPRIMER, id });
+      } else {
+        etat = reduire(etat, {
+          type: A.REGLAGES_MODIFIER,
+          changements: { grilleAccueil: { lignes: 1 + hasard(4), colonnes: 2 + hasard(6) } },
+        });
+      }
+      const apres = comptesDe(etat);
+      const { lignes, colonnes } = etat.reglages.grilleAccueil;
+      expect(apres.reduce((s, c) => s + c, 0)).toBe(etat.grille.length);
+      expect(apres.every((c) => c >= 1 && c <= lignes * colonnes)).toBe(true);
+      expect(new Set(etat.grille.map((e) => e.id))).toEqual(attendus);
+      if (etat.reglages.pagesAccueil)
+        expect(etat.reglages.pagesAccueil).not.toEqual(
+          comptesParDefaut(etat.grille.length, lignes * colonnes),
+        );
     }
   });
 });

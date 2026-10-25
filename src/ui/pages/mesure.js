@@ -1,17 +1,18 @@
-import { capacite } from "../../core/pages.js";
 import { el } from "../dom.js";
 import { rendreGrille } from "../grille.js";
 
 export const DEBOUNCE_MS = 150;
 
 /**
- * Room for the home pages (V2.11). `fenetre` is the clipping box of the pages: its size
- * comes from the layout around it (flex), never from its content, so measuring it cannot
- * loop. The size of a tile is read from a hidden sample tile and from the CSS, never
- * duplicated here. The sample only enters the page for the time of a measure: it must never
- * be found among the real tiles (selectors, keyboard, drop targets).
+ * Size of the tiles of the home pages (V2.12). The grid has the same lignes × colonnes on
+ * every device; when a cell is smaller than a tile, the tiles shrink (CSS zoom) so that the
+ * page always shows all its rows without scrolling. `fenetre` is the clipping box of the
+ * pages: its size comes from the layout around it, never from its content.
+ *
+ * The natural size of a tile is read from a sample tile, which only enters the page for the
+ * time of a measure: it must never be found among the real tiles.
  */
-export function creerMesure(fenetre, { surChangement }) {
+export function creerMesure(fenetre, { grille }) {
   const temoin = el("ul", {
     class: "grille page-grille page-grille--temoin",
     "aria-hidden": "true",
@@ -29,40 +30,43 @@ export function creerMesure(fenetre, { surChangement }) {
     },
   ]);
 
-  const mesurer = () => {
+  /** Sets --echelle-tuile on the pages for the current room and grid. */
+  const appliquer = () => {
+    const { lignes, colonnes } = grille();
     fenetre.append(temoin);
     const cs = getComputedStyle(temoin);
     const px = (v) => parseFloat(v) || 0;
-    const boite = fenetre.getBoundingClientRect();
-    const forcees = Number(document.documentElement.dataset.colonnes) || null;
-    const resultat = capacite({
-      largeur: boite.width - px(cs.paddingLeft) - px(cs.paddingRight),
-      hauteur: boite.height - px(cs.paddingTop) - px(cs.paddingBottom),
-      largeurTuile: px(cs.getPropertyValue("--tuile-largeur-min")) || 96,
-      hauteurTuile: temoin.firstElementChild?.getBoundingClientRect().height || 100,
-      ecartX: px(cs.columnGap),
-      ecartY: px(cs.rowGap),
-      colonnesForcees: forcees,
-    });
+    // Read while the sample is in the page (a detached element has no computed style).
+    const case_ = temoin.firstElementChild.getBoundingClientRect();
+    const largeurTuile = px(cs.getPropertyValue("--tuile-largeur-min")) || 96;
+    const largeur =
+      fenetre.clientWidth -
+      px(cs.paddingLeft) -
+      px(cs.paddingRight) -
+      px(cs.columnGap) * (colonnes - 1);
+    const hauteur =
+      fenetre.clientHeight -
+      px(cs.paddingTop) -
+      px(cs.paddingBottom) -
+      px(cs.rowGap) * (lignes - 1);
     temoin.remove();
-    return resultat;
+    const echelle = Math.min(
+      1,
+      largeur / colonnes / largeurTuile,
+      hauteur / lignes / (case_.height || 100),
+    );
+    fenetre.style.setProperty("--echelle-tuile", String(Math.max(0.3, echelle).toFixed(3)));
   };
 
   let minuteur = null;
-  let derniere = null;
   const observateur = new ResizeObserver(() => {
     clearTimeout(minuteur);
-    minuteur = setTimeout(() => {
-      const taille = `${fenetre.clientWidth}×${fenetre.clientHeight}`;
-      if (taille === derniere) return;
-      derniere = taille;
-      surChangement();
-    }, DEBOUNCE_MS);
+    minuteur = setTimeout(appliquer, DEBOUNCE_MS);
   });
   observateur.observe(fenetre);
 
   return {
-    mesurer,
+    appliquer,
     detruire: () => {
       clearTimeout(minuteur);
       observateur.disconnect();

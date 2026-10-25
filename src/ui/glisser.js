@@ -13,8 +13,9 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").match
  * (see intentionDepot.js); the drop on such a target is passed to `deposer`.
  *
  * Home grid in pages (V2.11): one list per page, all in the same group. `listes()` gives
- * them (synchroniser() after each render) and `versIndex(evt)` turns the drop into an index
- * of the whole list; `surDebut` / `surFin` let the pages show their edge zones.
+ * them (synchroniser() after each render) and `deplacement(evt)` turns the drop into the
+ * fields of ELEMENT_DEPLACER (V2.12: the page and the position in it); `surDebut` /
+ * `surFin` let the pages show their edge zones.
  *
  * Escape during a drag cancels it: nothing moves (`surFin` receives { annule: true }).
  * `surFin` also receives the id of the dragged element, before the render that follows.
@@ -22,7 +23,7 @@ const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").match
  * @param {HTMLElement} conteneur persistent element (never recreated by the renderer)
  * @param {{ parentId?: () => string|null, rendre: () => void, intention?: object,
  *           deposer?: (id: string, cible: object) => void, listes?: () => HTMLElement[],
- *           versIndex?: (evt: object) => number|null, surDebut?: () => void,
+ *           deplacement?: (evt: object) => object|null, surDebut?: () => void,
  *           surFin?: (infos: { annule: boolean, id?: string }) => void, groupe?: string }} options parentId
  *        gives the level shown; groupe: SortableJS group shared by the lists
  */
@@ -35,8 +36,8 @@ export function activerGlisser(
     intention,
     deposer,
     listes = () => [conteneur],
-    versIndex = (evt) =>
-      evt.oldDraggableIndex !== evt.newDraggableIndex ? evt.newDraggableIndex : null,
+    deplacement = (evt) =>
+      evt.oldDraggableIndex !== evt.newDraggableIndex ? { versIndex: evt.newDraggableIndex } : null,
     surDebut,
     surFin,
     groupe,
@@ -96,13 +97,13 @@ export function activerGlisser(
       document.removeEventListener("keydown", surTouche, true);
       const id = evt.item.querySelector("[data-id]")?.dataset.id;
       const cible = intention?.terminer();
-      const index = annule ? null : versIndex(evt);
+      const vers = annule ? null : deplacement(evt);
       if (annule) {
         // Cancelled: the re-render below puts everything back.
       } else if (id && cible) {
         deposer?.(id, cible);
-      } else if (id && index != null) {
-        store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: parentId(), versIndex: index });
+      } else if (id && vers) {
+        store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: parentId(), ...vers });
       }
       surFin?.({ annule, id });
       // The click that ends a drag must not open the site. SortableJS also swallows the
@@ -164,7 +165,7 @@ export function activerGlisser(
 export function activerDeplacementClavier(
   store,
   conteneur,
-  { annoncer, colonnes, montrer = () => {} },
+  { annoncer, colonnes, montrer = () => {}, deplacementClavier = null },
 ) {
   conteneur.addEventListener("keydown", (e) => {
     if (!e.altKey || e.ctrlKey || e.metaKey) return;
@@ -184,9 +185,17 @@ export function activerDeplacementClavier(
     }[e.key];
     if (pas === undefined) return;
     e.preventDefault();
+    // Home pages (V2.12): the next cell across pages, given as a page and a position.
+    const surPage = !r.parent && deplacementClavier ? deplacementClavier(id, e.key) : undefined;
+    if (surPage === null) return;
     const versIndex = Math.max(0, Math.min(liste.length - 1, r.index + pas));
-    if (versIndex === r.index) return;
-    store.envoyer({ type: A.ELEMENT_DEPLACER, id, versParentId: r.parent?.id ?? null, versIndex });
+    if (!surPage && versIndex === r.index) return;
+    store.envoyer({
+      type: A.ELEMENT_DEPLACER,
+      id,
+      versParentId: r.parent?.id ?? null,
+      ...(surPage ?? { versIndex }),
+    });
     requestAnimationFrame(() => {
       // With pages, the page follows the tile when it leaves the one shown.
       const deplacee = conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);

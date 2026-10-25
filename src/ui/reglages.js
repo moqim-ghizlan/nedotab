@@ -6,6 +6,7 @@ import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglag
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
+import { grilleAccueil } from "../core/pages.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { sectionSauvegardes } from "./reglages/sauvegardes.js";
@@ -106,8 +107,46 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       ["defilement", "Défilement vertical"],
     ],
     store.lire().reglagesAppareil?.affichageAccueil ?? "pages",
-    (v) => modifier({ affichageAccueil: v }),
+    (v) => {
+      modifier({ affichageAccueil: v });
+      montrerSelonAffichage();
+    },
   );
+
+  // Synced (V2.12): the grid of the home pages, the same on every device.
+  const grilleActuelle = () => grilleAccueil(store.lire().reglages);
+  const lignesAccueil = segments(
+    "Lignes",
+    ["2", "3", "4", "5", "6"].map((n) => [n, n]),
+    String(grilleActuelle().lignes),
+    (v) => modifier({ grilleAccueil: { ...grilleActuelle(), lignes: Number(v) } }),
+  );
+  const colonnesAccueil = segments(
+    "Colonnes de la grille",
+    ["4", "5", "6", "7", "8", "9", "10"].map((n) => [n, n]),
+    String(grilleActuelle().colonnes),
+    (v) => modifier({ grilleAccueil: { ...grilleActuelle(), colonnes: Number(v) } }),
+  );
+  const reglagesPages = el(
+    "div",
+    { class: "reglages-groupe" },
+    el("p", { class: "reglages-libelle", texte: "Lignes par page" }),
+    lignesAccueil.groupe,
+    el("p", { class: "reglages-libelle", texte: "Colonnes par page" }),
+    colonnesAccueil.groupe,
+  );
+  const reglagesDefilement = el(
+    "div",
+    { class: "reglages-groupe" },
+    libelleAppareil("Colonnes"),
+    colonnes.groupe,
+  );
+  // Pages: the synced grid; one scrolling grid: the device's forced columns.
+  const montrerSelonAffichage = () => {
+    const pages = (store.lire().reglagesAppareil?.affichageAccueil ?? "pages") === "pages";
+    reglagesPages.hidden = !pages;
+    reglagesDefilement.hidden = pages;
+  };
 
   // Synced switches: where links open (key of the settings, label, explanation).
   const interrupteurs = [
@@ -363,8 +402,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         ...Object.values(panneaux),
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
-        libelleAppareil("Colonnes"),
-        colonnes.groupe,
+        reglagesPages,
+        reglagesDefilement,
       ),
       section(
         "Ouverture des liens",
@@ -574,6 +613,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     }
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     affichageAccueil.maj(store.lire().reglagesAppareil?.affichageAccueil ?? "pages");
+    lignesAccueil.maj(String(grilleActuelle().lignes));
+    colonnesAccueil.maj(String(grilleActuelle().colonnes));
+    montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {

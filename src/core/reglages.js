@@ -7,6 +7,8 @@
  *     | { type: "degrade", valeur: "aurore" }            (name of a built-in gradient)
  *     | { type: "image", ref: "local:<id>", dominante: "#334455", voile: 0.25, flou: 0 }
  */
+import { capaciteDe, comptesAStocker, normaliserComptes, validerGrilleAccueil } from "./pages.js";
+
 export const THEMES = ["auto", "clair", "sombre"];
 export const NOMS_DEGRADES = [
   "aurore",
@@ -113,14 +115,15 @@ export function validerFond(fond) {
 export const INTERRUPTEURS = ["nouvelOnglet", "rechercheNouvelOnglet"];
 
 /**
- * Applies `changements` (whitelisted keys: theme, fond and the INTERRUPTEURS) to `reglages`.
- * Unknown keys and invalid values are refused: the same object is returned.
+ * Applies `changements` (whitelisted keys: theme, fond, grilleAccueil and the INTERRUPTEURS)
+ * to `reglages`. Unknown keys and invalid values are refused: the same object is returned.
+ * pagesAccueil is never changed here: the reducer keeps it in line with the grid.
  */
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  if (cles.length === 0 || cles.some((c) => !["theme", "fond", ...INTERRUPTEURS].includes(c)))
-    return reglages;
+  const permises = ["theme", "fond", "grilleAccueil", ...INTERRUPTEURS];
+  if (cles.length === 0 || cles.some((c) => !permises.includes(c))) return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
     if (!THEMES.includes(changements.theme)) return reglages;
@@ -130,6 +133,12 @@ export function modifierReglages(reglages, changements) {
     const fond = validerFond(changements.fond);
     if (!fond) return reglages;
     suivant.fond = fond;
+  }
+  if ("grilleAccueil" in changements) {
+    // V2.12: lignes × colonnes of the home pages, the same on every device.
+    const g = validerGrilleAccueil(changements.grilleAccueil);
+    if (!g) return reglages;
+    suivant.grilleAccueil = g;
   }
   for (const cle of INTERRUPTEURS.filter((c) => c in changements)) {
     if (typeof changements[cle] !== "boolean") return reglages;
@@ -142,7 +151,10 @@ export function modifierReglages(reglages, changements) {
   return suivant;
 }
 
-/** Settings read from storage: anything invalid falls back to the defaults. */
+/**
+ * Settings read from storage: anything invalid falls back to the defaults. The home pages
+ * (pagesAccueil) are checked against the grid by avecPagesValides, once both are known.
+ */
 export function validerReglages(reglages) {
   const r = reglages && typeof reglages === "object" ? reglages : {};
   const fonds = validerFonds(r.fonds);
@@ -153,6 +165,23 @@ export function validerReglages(reglages) {
   }
   const resultat = { ...r, theme: THEMES.includes(r.theme) ? r.theme : "auto", fond, fonds };
   for (const cle of INTERRUPTEURS) if (resultat[cle] !== true) delete resultat[cle];
+  const grille = validerGrilleAccueil(r.grilleAccueil);
+  if (grille) resultat.grilleAccueil = grille;
+  else delete resultat.grilleAccueil;
+  return resultat;
+}
+
+/** Home page sizes made valid for a home list of `n` elements (V2.12). */
+export function avecPagesValides(reglages, n) {
+  const capacite = capaciteDe(reglages);
+  const comptes = comptesAStocker(
+    normaliserComptes(reglages.pagesAccueil ?? null, n, capacite),
+    n,
+    capacite,
+  );
+  const resultat = { ...reglages };
+  if (comptes) resultat.pagesAccueil = comptes;
+  else delete resultat.pagesAccueil;
   return resultat;
 }
 
