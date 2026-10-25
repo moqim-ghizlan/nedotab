@@ -23,7 +23,7 @@ function creerCanvas(l, h) {
 }
 
 /** Average colour of the picture reduced to 32 x 32. */
-function dominante(source) {
+export function dominante(source) {
   const c = creerCanvas(32, 32);
   const ctx = c.getContext("2d", { willReadFrequently: true });
   ctx.drawImage(source, 0, 0, 32, 32);

@@ -133,6 +133,23 @@ export function activerGlisser(
   };
   synchroniser();
 
+  // A tile pressed but not dragged yet (SortableJS waits for a few pixels): a render now
+  // would replace the tile under the pointer and the drag would be lost (a change from
+  // another tab or device arriving at that moment). It waits for the release.
+  let appui = false;
+  let renduEnAttente = false;
+  const finAppui = () => {
+    if (!appui) return;
+    appui = false;
+    if (renduEnAttente && !glisserEnCours) rendre();
+    renduEnAttente = false;
+  };
+  conteneur.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".case--element")) appui = true;
+  });
+  for (const type of ["pointerup", "pointercancel"])
+    document.addEventListener(type, finAppui, true);
+
   conteneur.addEventListener(
     "click",
     (e) => {
@@ -145,13 +162,17 @@ export function activerGlisser(
   );
 
   return {
-    /** Renders now, or after the drop when a drag is in progress. */
+    /** Renders now, or after the drop when a drag is in progress or a tile is pressed. */
     demanderRendu() {
-      if (!glisserEnCours) rendre();
+      if (glisserEnCours) return;
+      if (appui) renduEnAttente = true;
+      else rendre();
     },
     enCours: () => glisserEnCours,
     synchroniser,
     detruire: () => {
+      for (const type of ["pointerup", "pointercancel"])
+        document.removeEventListener(type, finAppui, true);
       for (const instance of instances.values()) instance.destroy();
       instances.clear();
     },

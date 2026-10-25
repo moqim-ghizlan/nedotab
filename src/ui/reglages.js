@@ -8,6 +8,7 @@ import { el } from "./dom.js";
 import { icone } from "./icones.js";
 import { grilleAccueil } from "../core/pages.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
+import { creerGalerie } from "./reglages/galerie.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { sectionSauvegardes } from "./reglages/sauvegardes.js";
 import { sectionDonnees } from "./reglages/donnees.js";
@@ -256,9 +257,13 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     step: "1",
     id: "reglage-flou",
   });
+  /** A photo is shown: the user's picture, or one of the gallery (V2.13). */
+  const estPhoto = (type) => ["image", "galerie", "aleatoire"].includes(type);
+  /** The gallery and random backgrounds are set from the "Image" panel. */
+  const typeAffiche = (type) => (estPhoto(type) ? "image" : type);
   const reglerImage = (cle, valeur) => {
     const fond = lire().fond;
-    if (fond.type === "image") modifier({ fond: { ...fond, [cle]: valeur } });
+    if (estPhoto(fond.type)) modifier({ fond: { ...fond, [cle]: valeur } });
   };
   voile.addEventListener("input", () => reglerImage("voile", Number(voile.value)));
   flou.addEventListener("input", () => reglerImage("flou", Number(flou.value)));
@@ -284,12 +289,12 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         type: "image",
         ref: `local:${id}`,
         dominante: r.dominante,
-        voile: ancien.type === "image" ? ancien.voile : 0.25,
-        flou: ancien.type === "image" ? ancien.flou : 0,
+        voile: estPhoto(ancien.type) ? ancien.voile : 0.25,
+        flou: estPhoto(ancien.type) ? ancien.flou : 0,
       },
     });
     // One active picture only: the previous one is removed from IndexedDB.
-    if (ancien.type === "image")
+    if (ancien.type === "image" && ancien.ref)
       plateforme.fichiers.supprimerFond(ancien.ref.slice(6)).catch(() => {});
     etatImage.textContent = `Image ${r.largeur} × ${r.hauteur}, ${ko(r.blob.size)}.`;
     fichier.value = "";
@@ -297,6 +302,35 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
 
   const bibliotheque =
     session?.synchro?.lire().mode === "compte" ? creerBibliothequeFonds({ store, session }) : null;
+  // V2.13: free photos of the gallery, or the user's own pictures.
+  const galerie = creerGalerie({
+    lire: () => lire().fond,
+    choisir: (fond) => modifier({ fond }),
+  });
+  const mesImages = el(
+    "div",
+    { class: "reglages-groupe" },
+    // Account mode: the pictures go to the account's library (Storage), else stay local.
+    bibliotheque ? bibliotheque.racine : fichier,
+    bibliotheque ? null : etatImage,
+    bibliotheque
+      ? null
+      : el("p", { class: "reglages-note", texte: "Image gardée sur cet appareil uniquement." }),
+  );
+  const sourcesImage = { galerie: galerie.racine, mesImages };
+  const sourceImage = segments(
+    "Source de l'image",
+    [
+      ["galerie", "Galerie"],
+      ["mesImages", "Mes images"],
+    ],
+    lire().fond.type === "image" ? "mesImages" : "galerie",
+    (v) => afficherSource(v),
+  );
+  const afficherSource = (v) => {
+    sourceImage.maj(v);
+    for (const [s, p] of Object.entries(sourcesImage)) p.hidden = s !== v;
+  };
   const panneaux = {
     aucun: el("p", { class: "reglages-note", texte: "Fond du thème." }),
     couleur: el("div", { class: "reglages-ligne" }, nuancesCouleur, choixCouleur),
@@ -304,12 +338,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     image: el(
       "div",
       { class: "reglages-image" },
-      // Account mode: the pictures go to the account's library (Storage), else stay local.
-      bibliotheque ? bibliotheque.racine : fichier,
-      bibliotheque ? null : etatImage,
-      bibliotheque
-        ? null
-        : el("p", { class: "reglages-note", texte: "Image gardée sur cet appareil uniquement." }),
+      sourceImage.groupe,
+      galerie.racine,
+      mesImages,
       el("label", { for: "reglage-voile", texte: "Voile" }),
       voile,
       el("label", { for: "reglage-flou", texte: "Flou" }),
@@ -324,7 +355,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       ["degrade", "Dégradé"],
       ["image", "Image"],
     ],
-    lire().fond.type,
+    typeAffiche(lire().fond.type),
     (v) => {
       afficherPanneau(v);
       if (v === "aucun") modifier({ fond: { type: "aucun" } });
@@ -334,7 +365,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       if (v === "degrade" && lire().fond.type !== "degrade") {
         modifier({ fond: { type: "degrade", valeur: NOMS_DEGRADES[0] } });
       }
-      if (v === "image" && lire().fond.type !== "image" && !bibliotheque) fichier.click();
+      // Image: the gallery comes first; nothing changes until a photo is chosen.
     },
   );
   const afficherPanneau = (type) => {
@@ -343,6 +374,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   // Type of the background last applied: a change coming from elsewhere (another device,
   // another tab) also switches the panel; a click on a type keeps its own panel.
   let typeApplique = lire().fond.type;
+  afficherSource(lire().fond.type === "image" ? "mesImages" : "galerie");
 
   // --- Autorisations -------------------------------------------------------------------
   const etatPermission = el("p", { class: "reglages-note" });
@@ -606,11 +638,13 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   const actualiser = () => {
     const r = lire();
     theme.maj(r.theme);
-    typeFond.maj(r.fond.type);
+    typeFond.maj(typeAffiche(r.fond.type));
     if (r.fond.type !== typeApplique) {
       typeApplique = r.fond.type;
-      afficherPanneau(r.fond.type);
+      afficherPanneau(typeAffiche(r.fond.type));
+      if (estPhoto(r.fond.type)) afficherSource(r.fond.type === "image" ? "mesImages" : "galerie");
     }
+    galerie.maj();
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     affichageAccueil.maj(store.lire().reglagesAppareil?.affichageAccueil ?? "pages");
     lignesAccueil.maj(String(grilleActuelle().lignes));
@@ -630,8 +664,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         String(r.fond.type === "degrade" && b.dataset.degrade === r.fond.valeur),
       );
     }
-    voile.disabled = flou.disabled = r.fond.type !== "image";
-    if (r.fond.type === "image") {
+    voile.disabled = flou.disabled = !estPhoto(r.fond.type);
+    if (estPhoto(r.fond.type)) {
       voile.value = String(r.fond.voile);
       flou.value = String(r.fond.flou);
     }
@@ -692,7 +726,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   document.addEventListener("pointerdown", surPressionExterieure, true);
 
   document.body.append(panneau);
-  afficherPanneau(lire().fond.type);
+  afficherPanneau(typeAffiche(lire().fond.type));
   actualiser();
   copierFond();
   majPermission();

@@ -1,6 +1,8 @@
 import { estClaire, moyenne } from "../core/couleurs.js";
+import { photoAuHasard, photoDuFond, tailleEcran, urlPhoto } from "../core/galerie.js";
 import { plateforme } from "../platform/index.js";
 import { cssDegrade, DEGRADES } from "./fonds.js";
+import { dominante } from "./services/imageFond.js";
 
 /**
  * Theme and background. A small startup cache (theme + plain colour) is kept in the page's
@@ -52,11 +54,14 @@ systemeSombre?.addEventListener("change", () => {
   if (themeChoisi === "auto") appliquerTheme("auto");
 });
 
+/** A photo is shown: a picture of the user's or of the gallery (V2.13). */
+const estPhoto = (fond) => ["image", "galerie", "aleatoire"].includes(fond.type);
+
 /** Colour the background reduces to (plain colour, gradient average, image dominant). */
 export function couleurDuFond(fond) {
   if (fond.type === "couleur") return fond.valeur;
   if (fond.type === "degrade") return moyenne(DEGRADES[fond.valeur].couleurs);
-  if (fond.type === "image") {
+  if (estPhoto(fond) && fond.dominante) {
     // The veil darkens the picture: mix the dominant colour with black.
     const n = parseInt(fond.dominante.slice(1), 16);
     const v = 1 - fond.voile;
@@ -123,18 +128,135 @@ async function afficherImage(fond, calque) {
   calque.classList.add("fond-image--visible");
 }
 
+// --- gallery photos (V2.13) -----------------------------------------------------------------
+
+const CLE_COULEURS = "nedotab:galerie-couleurs";
+const CLE_SUIVANTE = "nedotab:galerie-suivante";
+const lireJson = (cle) => {
+  try {
+    return JSON.parse(localStorage.getItem(cle)) ?? null;
+  } catch {
+    return null;
+  }
+};
+const ecrireJson = (cle, valeur) => {
+  try {
+    localStorage.setItem(cle, JSON.stringify(valeur));
+  } catch {
+    /* only a speed-up */
+  }
+};
+
+/** Pixels this screen shows: the photo is asked cropped to exactly that. */
+const tailleIci = () =>
+  tailleEcran({
+    largeur: globalThis.screen?.width || innerWidth,
+    hauteur: globalThis.screen?.height || innerHeight,
+    densite: globalThis.devicePixelRatio || 1,
+  });
+const cleCache = (id, t) => `${id}:${t.largeur}x${t.hauteur}`;
+
+/** The photo cropped to this screen: from the device cache, else downloaded once. */
+async function blobGalerie(id, taille = tailleIci()) {
+  const cle = cleCache(id, taille);
+  const enCache = await plateforme.fichiers.lireGalerie(cle).catch(() => null);
+  if (enCache) return enCache;
+  const reponse = await fetch(urlPhoto(id, taille)).catch(() => null);
+  if (!reponse?.ok) return null;
+  const blob = await reponse.blob();
+  await plateforme.fichiers.ecrireGalerie(cle, blob).catch(() => {});
+  return blob;
+}
+
+/** Only the photo shown and the next one (each new tab) are kept on the device. */
+async function purgerGalerie(garder) {
+  const cles = await plateforme.fichiers.listerGalerie().catch(() => []);
+  for (const cle of cles) {
+    if (!garder.has(cle)) plateforme.fichiers.supprimerGalerie(cle).catch(() => {});
+  }
+}
+
+/** Gallery photo shown on this tab, or null (the settings credit it and keep it). */
+let idGalerie = null;
+export const photoGalerieAffichee = () => idGalerie;
+
+/** Photo drawn for this tab (random each new tab): the one the previous tab prepared. */
+let photoOnglet = null;
+function photoPourOnglet(categorie) {
+  if (photoOnglet?.categorie === categorie) return photoOnglet.id;
+  const preparee = lireJson(CLE_SUIVANTE);
+  const id = preparee?.categorie === categorie ? preparee.id : photoAuHasard(categorie);
+  photoOnglet = { categorie, id };
+  return id;
+}
+
+/** Gallery or random background: the photo id shown here, with its known dominant colour. */
+function photoAffichee(fond) {
+  const onglet =
+    fond.type === "aleatoire" && fond.frequence === "onglet"
+      ? photoPourOnglet(fond.categorie)
+      : null;
+  const id = photoDuFond(fond, { onglet });
+  return { id, dominante: lireJson(CLE_COULEURS)?.[id] ?? null };
+}
+
+/** Background photo of the gallery: shown, its colour learnt, the next tab's one prepared. */
+async function afficherGalerie(fond, id, calque) {
+  const taille = tailleIci();
+  const cle = `galerie:${cleCache(id, taille)}`;
+  if (refImage === cle && urlImage) {
+    calque.style.backgroundImage = `url("${urlImage}")`;
+    return;
+  }
+  const blob = await blobGalerie(id, taille);
+  if (!blob) return; // offline and not cached yet: the colour stays
+  if (urlImage) URL.revokeObjectURL(urlImage);
+  urlImage = URL.createObjectURL(blob);
+  refImage = cle;
+  const img = new Image();
+  img.src = urlImage;
+  await img.decode().catch(() => {});
+  calque.style.backgroundImage = `url("${urlImage}")`;
+  calque.classList.add("fond-image--visible");
+  const couleurs = lireJson(CLE_COULEURS) ?? {};
+  if (!couleurs[id]) {
+    try {
+      couleurs[id] = dominante(img);
+      // Few entries: the colours of the photos seen on this device.
+      ecrireJson(CLE_COULEURS, couleurs);
+      const vue = couleurDuFond({ ...fond, dominante: couleurs[id] });
+      appliquerLisibilite(vue);
+      ecrireCache({ ...lireCache(), couleur: couleurs[id] });
+    } catch {
+      /* the text keeps the theme's colours */
+    }
+  }
+  const garder = new Set([cleCache(id, taille)]);
+  if (fond.type === "aleatoire" && fond.frequence === "onglet") {
+    // The next tab shows its photo at once: drawn and downloaded now.
+    const suivante = photoAuHasard(fond.categorie, Math.random, id);
+    ecrireJson(CLE_SUIVANTE, { categorie: fond.categorie, id: suivante });
+    garder.add(cleCache(suivante, taille));
+    blobGalerie(suivante, taille).catch(() => {});
+  }
+  purgerGalerie(garder);
+}
+
 /** Applies the settings (theme + background) and refreshes the startup cache. */
 export async function appliquerReglages(reglages) {
   appliquerTheme(reglages.theme);
-  const fond = reglages.fond;
+  const galerie = reglages.fond.type === "galerie" || reglages.fond.type === "aleatoire";
+  const photo = galerie ? photoAffichee(reglages.fond) : null;
+  idGalerie = photo?.id ?? null;
+  const fond = galerie ? { ...reglages.fond, dominante: photo.dominante } : reglages.fond;
   const calque = couche();
   const couleur = couleurDuFond(fond);
-  calque.dataset.type = fond.type;
-  calque.style.backgroundColor = fond.type === "image" ? fond.dominante : (couleur ?? "");
+  calque.dataset.type = estPhoto(fond) ? "image" : fond.type;
+  calque.style.backgroundColor = estPhoto(fond) ? (fond.dominante ?? "") : (couleur ?? "");
   calque.style.backgroundImage = fond.type === "degrade" ? cssDegrade(fond.valeur) : "";
-  calque.style.setProperty("--voile-fond", fond.type === "image" ? String(fond.voile) : "0");
-  calque.style.setProperty("--flou-fond", fond.type === "image" ? `${fond.flou}px` : "0px");
-  if (fond.type !== "image") {
+  calque.style.setProperty("--voile-fond", estPhoto(fond) ? String(fond.voile) : "0");
+  calque.style.setProperty("--flou-fond", estPhoto(fond) ? `${fond.flou}px` : "0px");
+  if (!estPhoto(fond)) {
     calque.classList.remove("fond-image--visible");
     if (urlImage) URL.revokeObjectURL(urlImage);
     urlImage = null;
@@ -143,8 +265,9 @@ export async function appliquerReglages(reglages) {
   appliquerLisibilite(couleur);
   ecrireCache({
     theme: reglages.theme,
-    type: fond.type,
-    couleur: fond.type === "image" ? fond.dominante : couleur,
+    type: estPhoto(fond) ? "image" : fond.type,
+    couleur: estPhoto(fond) ? fond.dominante : couleur,
   });
   if (fond.type === "image") await afficherImage(fond, calque);
+  else if (photo?.id) await afficherGalerie(fond, photo.id, calque);
 }

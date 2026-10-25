@@ -41,6 +41,16 @@ export const fichiers = {
       .filter((c) => String(c).startsWith("fond-cache:"))
       .map((c) => String(c).slice("fond-cache:".length));
   },
+  /** Cache of the gallery photos (V2.13), cropped to this screen: `cle` = id and size. */
+  lireGalerie: (cle) => transaction("readonly", (s) => s.get(`galerie:${cle}`)),
+  ecrireGalerie: (cle, blob) => transaction("readwrite", (s) => s.put(blob, `galerie:${cle}`)),
+  supprimerGalerie: (cle) => transaction("readwrite", (s) => s.delete(`galerie:${cle}`)),
+  async listerGalerie() {
+    const cles = await transaction("readonly", (s) => s.getAllKeys());
+    return cles
+      .filter((c) => String(c).startsWith("galerie:"))
+      .map((c) => String(c).slice("galerie:".length));
+  },
   /** Keys present (tests, diagnostics). */
   cles: () => transaction("readonly", (s) => s.getAllKeys()),
 };

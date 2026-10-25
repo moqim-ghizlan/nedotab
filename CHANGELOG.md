@@ -2,6 +2,34 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.13.0] - 2026-10-25
+
+### Ajouté
+
+- **Galerie de fonds d'écran** (Réglages → Apparence → Fond → Image → Galerie) : 173
+  photos libres de droits (licence Unsplash gratuite, aucune « Unsplash+ »), choisies à la
+  main et rangées en 10 catégories : Nature, Tech, Romance, Villes, Espace, Mer, Montagne,
+  Minimaliste, Animaux, Art abstrait. Le catalogue est livré avec l'extension : pas de
+  clé d'API, pas de quota, aucun coût Firebase.
+- **Photo à la taille de l'écran** : chaque appareil demande la photo déjà recadrée au
+  format et à la définition de son écran (au plus 3840 px), jamais l'image entière pour
+  n'en montrer qu'une partie. Elle est gardée en cache : les onglets suivants s'ouvrent
+  sans réseau, même hors ligne. Seules la photo affichée et la suivante sont conservées.
+- **Image aléatoire** dans une catégorie ou dans toutes, à la fréquence choisie : à chaque
+  nouvel onglet (la photo suivante est préparée à l'avance), chaque jour (la même sur
+  tous les appareils toute la journée), ou au clic sur « Une autre image ».
+- Crédit du photographe sous la galerie, avec lien vers la photo sur Unsplash.
+- Le choix (photo, ou mode aléatoire avec sa catégorie et sa fréquence) est synchronisé,
+  sauvegardé et exporté ; les images ne sont jamais stockées dans Firebase. Voile et flou
+  s'appliquent aussi aux photos de la galerie. L'import de sa propre image reste dans
+  « Mes images ».
+
+### Corrigé
+
+- Glisser une tuile juste après une modification venue d'un autre onglet ou d'un autre
+  appareil : le redessin de la grille au moment de l'appui faisait perdre le glisser. Il
+  attend désormais le relâcher.
+
 ## [2.12.1] - 2026-10-25
 
 ### Modifié

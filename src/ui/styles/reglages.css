@@ -1242,3 +1242,126 @@ body.fond-clair .carte-action--principale {
     transition: none;
   }
 }
+
+/* --- background gallery (V2.13) ------------------------------------------------------- */
+
+.galerie {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.galerie-aleatoire {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--texte) 3%, transparent);
+}
+
+.galerie-autre {
+  align-self: flex-start;
+}
+
+/* All the categories in view: they wrap instead of scrolling sideways. */
+.galerie-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.galerie-categorie {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--bordure) 80%, transparent);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms,
+    border-color 160ms;
+}
+
+.galerie-categorie:hover {
+  color: var(--texte);
+}
+
+.galerie-categorie[aria-checked="true"] {
+  border-color: transparent;
+  background: var(--texte);
+  color: var(--surface);
+}
+
+.galerie-grille {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.galerie-photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--texte) 8%, transparent);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  cursor: pointer;
+}
+
+.galerie-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 400ms var(--ressort, ease-out);
+}
+
+.galerie-photo:hover img {
+  transform: scale(1.06);
+}
+
+/* The photo chosen: a ring and a check. */
+.galerie-photo[aria-pressed="true"] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--accent);
+}
+
+.galerie-photo[aria-pressed="true"]::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-texte);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.galerie-credit a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .galerie-photo img {
+    transition: none;
+  }
+}

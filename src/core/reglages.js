@@ -6,7 +6,10 @@
  *     | { type: "couleur", valeur: "#1e293b" }
  *     | { type: "degrade", valeur: "aurore" }            (name of a built-in gradient)
  *     | { type: "image", ref: "local:<id>", dominante: "#334455", voile: 0.25, flou: 0 }
+ *     | { type: "galerie", id: "photo-…", voile, flou }                       (V2.13)
+ *     | { type: "aleatoire", categorie, frequence: "onglet"|"jour"|"clic", choix?, voile, flou }
  */
+import { estCategorie, estIdPhoto, FREQUENCES } from "./galerie.js";
 import { capaciteDe, comptesAStocker, normaliserComptes, validerGrilleAccueil } from "./pages.js";
 
 export const THEMES = ["auto", "clair", "sombre"];
@@ -69,10 +72,39 @@ export function fondsAPurger(idsEnCache, reglages) {
   return idsEnCache.filter((id) => !garder.has(id));
 }
 
+/** Veil and blur of a picture background, or null when they are not numbers. */
+function effetsImage(fond) {
+  if (!Number.isFinite(Number(fond.voile ?? 0)) || !Number.isFinite(Number(fond.flou ?? 0))) {
+    return null;
+  }
+  return {
+    voile: borner(fond.voile ?? 0.25, 0, VOILE_MAX),
+    flou: Math.round(borner(fond.flou ?? 0, 0, FLOU_MAX)),
+  };
+}
+
 /** Returns a valid background, or null when `fond` cannot be accepted. */
 export function validerFond(fond) {
   if (!fond || typeof fond !== "object") return null;
   switch (fond.type) {
+    case "galerie": {
+      // A photo of the gallery (V2.13), synced; its address comes from its key.
+      const effets = effetsImage(fond);
+      return effets && estIdPhoto(fond.id) ? { type: "galerie", id: fond.id, ...effets } : null;
+    }
+    case "aleatoire": {
+      // A photo drawn at random in a category: each tab, each day, or on request (V2.13).
+      const effets = effetsImage(fond);
+      if (!effets || !estCategorie(fond.categorie) || !FREQUENCES.includes(fond.frequence))
+        return null;
+      return {
+        type: "aleatoire",
+        categorie: fond.categorie,
+        frequence: fond.frequence,
+        ...(fond.frequence === "clic" && estIdPhoto(fond.choix) ? { choix: fond.choix } : {}),
+        ...effets,
+      };
+    }
     case "aucun":
       return { type: "aucun" };
     case "couleur":
@@ -82,13 +114,8 @@ export function validerFond(fond) {
     case "degrade":
       return NOMS_DEGRADES.includes(fond.valeur) ? { type: "degrade", valeur: fond.valeur } : null;
     case "image": {
-      if (!Number.isFinite(Number(fond.voile ?? 0)) || !Number.isFinite(Number(fond.flou ?? 0))) {
-        return null;
-      }
-      const effets = {
-        voile: borner(fond.voile ?? 0.25, 0, VOILE_MAX),
-        flou: Math.round(borner(fond.flou ?? 0, 0, FLOU_MAX)),
-      };
+      const effets = effetsImage(fond);
+      if (!effets) return null;
       // Picture of the account's library (V2.6): synced, the file is in Storage.
       if (typeof fond.id === "string" && ID_FOND.test(fond.id)) {
         return { type: "image", id: fond.id, ...effets };
