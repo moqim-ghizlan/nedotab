@@ -2,8 +2,9 @@ import { indexer, rechercher } from "../core/recherche.js";
 import { normaliserUrl } from "../core/url.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
-import { creerIcone, sitesDansNouvelOnglet } from "./tuile.js";
+import { creerIcone, ouvrirSite, sitesDansNouvelOnglet } from "./tuile.js";
 import { creerIconeDossier } from "./tuileDossier.js";
+import { toucherSeulement } from "./ecran.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 
@@ -37,7 +38,10 @@ export function creerRecherche(store, { ouvrirDossier }) {
     type: "search",
     class: "recherche-champ",
     id: "recherche",
-    placeholder: "Rechercher dans vos sites… (/)",
+    // The "/" shortcut needs a keyboard: not shown on a phone or a bare tablet (V3.4).
+    placeholder: toucherSeulement()
+      ? "Rechercher dans vos sites…"
+      : "Rechercher dans vos sites… (/)",
     autocomplete: "off",
     spellcheck: "false",
     role: "combobox",
@@ -161,10 +165,7 @@ export function creerRecherche(store, { ouvrirDossier }) {
       : "Aucun site trouvé, Entrée pour chercher sur le web";
   };
 
-  const ouvrirUrl = (url, nouvelOnglet) => {
-    if (nouvelOnglet) window.open(url, "_blank", "noopener");
-    else location.assign(url);
-  };
+  const ouvrirUrl = (url, nouvelOnglet) => ouvrirSite(url, { nouvelOnglet });
 
   /** Web search: a new tab when asked (Ctrl, middle click) or chosen in the settings. */
   const chercherSurLeWeb = (texte, nouvelOnglet) =>

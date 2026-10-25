@@ -2,7 +2,15 @@ import { A } from "../core/actions.js";
 import { parcourir } from "../core/arbre.js";
 import { estimerTaille, niveauTaille } from "../core/taille.js";
 import { URL_SITE } from "../core/constantes.js";
-import { FLOU_MAX, fondEffectif, NOMS_DEGRADES, VOILE_MAX } from "../core/reglages.js";
+import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
+import {
+  affichageAccueilDe,
+  FLOU_MAX,
+  fondEffectif,
+  NOMS_DEGRADES,
+  VOILE_MAX,
+} from "../core/reglages.js";
+import { petitCote } from "./ecran.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
@@ -95,7 +103,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   // Device-only: forced number of columns of the home grid (automatic by default).
   const colonnes = segments(
     "Colonnes",
-    [["auto", "Auto"], ...["4", "5", "6", "7", "8"].map((n) => [n, n])],
+    [["auto", "Auto"], ...["3", "4", "5", "6", "7", "8", "9", "10"].map((n) => [n, n])],
     String(store.lire().reglagesAppareil?.colonnes ?? "auto"),
     (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
@@ -107,7 +115,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       ["pages", "Pages"],
       ["defilement", "Défilement vertical"],
     ],
-    store.lire().reglagesAppareil?.affichageAccueil ?? "pages",
+    affichageAccueilDe(store.lire().reglagesAppareil, petitCote()),
     (v) => {
       modifier({ affichageAccueil: v });
       montrerSelonAffichage();
@@ -144,7 +152,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   );
   // Pages: the synced grid; one scrolling grid: the device's forced columns.
   const montrerSelonAffichage = () => {
-    const pages = (store.lire().reglagesAppareil?.affichageAccueil ?? "pages") === "pages";
+    const pages = affichageAccueilDe(store.lire().reglagesAppareil, petitCote()) === "pages";
     reglagesPages.hidden = !pages;
     reglagesDefilement.hidden = pages;
   };
@@ -182,6 +190,16 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     );
     return { cle, bouton, ligne };
   });
+
+  // Device-only, on iOS: the browser that opens the sites (Safari otherwise).
+  const navigateur = !plateforme.capacites.choixNavigateur
+    ? null
+    : segments(
+        "Ouvrir les sites avec",
+        NAVIGATEURS.map((n) => [n, LIBELLES_NAVIGATEURS[n]]),
+        store.lire().reglagesAppareil?.navigateur ?? "safari",
+        (v) => modifier({ navigateur: v }),
+      );
 
   // Device-only (V2.10.7), where a browser address bar takes the cursor on a new tab.
   const curseurRecherche = !plateforme.capacites.barreAdresse
@@ -440,6 +458,17 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         "Ouverture des liens",
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
         ...interrupteurs.map((i) => i.ligne),
+        ...(navigateur
+          ? [
+              libelleAppareil("Ouvrir les sites avec"),
+              navigateur.groupe,
+              el("p", {
+                class: "reglages-note",
+                texte:
+                  "Le navigateur choisi doit être installé sur cet appareil, sinon le site ne s'ouvre pas.",
+              }),
+            ]
+          : []),
       ),
       curseurRecherche
         ? section(
@@ -660,11 +689,12 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     }
     galerie.maj();
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
-    affichageAccueil.maj(store.lire().reglagesAppareil?.affichageAccueil ?? "pages");
+    affichageAccueil.maj(affichageAccueilDe(store.lire().reglagesAppareil, petitCote()));
     lignesAccueil.maj(String(grilleActuelle().lignes));
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
+    navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {
       b.setAttribute(

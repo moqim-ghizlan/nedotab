@@ -260,6 +260,42 @@
 .fenetre-corps {
   padding: var(--espace-3) var(--espace-5) var(--espace-5);
   overflow-y: auto;
+  container-type: inline-size; /* the folder grid has the same steps as the home (V3.4) */
+}
+
+/*
+ * Phone (V3.4): the folder is a full screen sheet that slides up from the bottom, clear of
+ * the notch and the home bar; the close button is big enough for a thumb.
+ */
+@media (max-width: 599px) {
+  .fenetre-dossier {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  }
+  .fenetre-dossier[open] {
+    animation: monter 220ms ease-out;
+  }
+  .fenetre-corps {
+    flex: 1;
+    padding: var(--espace-3) var(--espace-3) var(--espace-5);
+  }
+  .fenetre-fermer {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@keyframes monter {
+  from {
+    transform: translateY(100%);
+  }
 }
 
 .fenetre-vide {

@@ -4,7 +4,8 @@ import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
 import { expliquer, messageIgnorees } from "../core/rejeu.js";
-import { fondEffectif, fondsAPurger } from "../core/reglages.js";
+import { affichageAccueilDe, fondEffectif, fondsAPurger } from "../core/reglages.js";
+import { petitCote, suivreClavier } from "./ecran.js";
 import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
@@ -27,7 +28,7 @@ import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
 import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
-import { ouvrirSitesDansNouvelOnglet } from "./tuile.js";
+import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
 import { monterBandeauInstallation } from "./bandeauInstallation.js";
@@ -331,6 +332,7 @@ export async function demarrerApp(racine) {
   });
   // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
   monterBandeauInstallation();
+  suivreClavier();
   // Test builds against the emulators only: inspection hook for the browser scenarios.
   if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
     globalThis.__nedotab = { store, synchro, compte, session, firebase: chargerFirebase };
@@ -432,8 +434,8 @@ export async function demarrerApp(racine) {
       pagination,
     });
   };
-  const modeVoulu = () =>
-    store.lire().reglagesAppareil?.affichageAccueil === "defilement" ? "defilement" : "pages";
+  // V3.4: one scrolling grid by default on a phone, pages elsewhere.
+  const modeVoulu = () => affichageAccueilDe(store.lire().reglagesAppareil, petitCote());
   vide
     .querySelector("button")
     .addEventListener("click", (e) => !lectureSeule && menuAjout(e.currentTarget));
@@ -471,6 +473,7 @@ export async function demarrerApp(racine) {
     }
     activerJournal(r.debug);
     plateforme.garderBarreChrome(!!r.barreChrome);
+    ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);
   };
   let appliques = store.lire();
   appliquerReglages(visibles(appliques));

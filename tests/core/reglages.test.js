@@ -10,7 +10,7 @@ import {
 } from "../../src/core/couleurs.js";
 import { migrer } from "../../src/core/migration.js";
 import { etatInitial } from "../../src/core/modele.js";
-import { fondEffectif, validerFond } from "../../src/core/reglages.js";
+import { affichageAccueilDe, fondEffectif, validerFond } from "../../src/core/reglages.js";
 import { DEGRADES } from "../../src/ui/fonds.js";
 
 describe("luminance et choix du texte", () => {
@@ -213,19 +213,34 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     }).etat.reglagesAppareil;
     expect(charge).toEqual({ barreChrome: true });
   });
-  it("affichage de l'accueil : pages par défaut, défilement gardé sur cet appareil seulement", () => {
+  it("affichage de l'accueil : choix gardé sur cet appareil seulement (V3.4 : pages aussi)", () => {
     let etat = modifier(etatInitial(), { affichageAccueil: "defilement" });
     expect(etat.reglagesAppareil).toEqual({ affichageAccueil: "defilement" });
     expect("affichageAccueil" in etat.reglages).toBe(false);
     expect(modifier(etat, { affichageAccueil: "colonnes" })).toBe(etat);
     etat = modifier(etat, { affichageAccueil: "pages" });
+    expect(etat.reglagesAppareil).toEqual({ affichageAccueil: "pages" });
+    etat = modifier(etat, { affichageAccueil: null }); // back to automatic
     expect(etat.reglagesAppareil).toEqual({});
-    expect(modifier(etatInitial(), { affichageAccueil: "pages" }).reglagesAppareil).toEqual({});
     const charge = (affichageAccueil) =>
       migrer({ ...etatInitial(), reglagesAppareil: { affichageAccueil } }).etat.reglagesAppareil;
     expect(charge("defilement")).toEqual({ affichageAccueil: "defilement" });
-    expect(charge("pages")).toEqual({});
+    expect(charge("pages")).toEqual({ affichageAccueil: "pages" });
     expect(charge(3)).toEqual({});
+  });
+  it("affichage par défaut : défilement sur téléphone, pages ailleurs, choix respecté", () => {
+    const cas = [
+      [{}, 375, "defilement"], // iPhone, portrait or landscape: shorter side
+      [{}, 320, "defilement"], // iPhone SE
+      [{}, 744, "pages"], // iPad mini
+      [{}, 1080, "pages"], // computer
+      [undefined, 375, "defilement"],
+      [{ affichageAccueil: "pages" }, 375, "pages"],
+      [{ affichageAccueil: "defilement" }, 1080, "defilement"],
+      [{ affichageAccueil: "autre" }, 1080, "pages"],
+    ];
+    for (const [appareil, cote, attendu] of cas)
+      expect(affichageAccueilDe(appareil, cote)).toBe(attendu);
   });
   it("chargement : colonnes et debug validés", () => {
     const { etat } = migrer({

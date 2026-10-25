@@ -3,6 +3,7 @@
  * without any chrome.* API. What the web cannot do returns a neutral value, and the
  * interface reads `capacites` instead of testing the target (see docs/plateformes.md).
  */
+import { navigateurIos } from "../core/installation.js";
 import { creerServicesStockage } from "./servicesStockage.js";
 import { creerZoneWeb } from "./zoneWeb.js";
 
@@ -29,6 +30,8 @@ export const capacites = {
   installable: true,
   /** Google sign-in: a redirect to Google and back, reliable on the home screen (V3.2). */
   connexion: "redirection",
+  /** Choose the browser that opens the sites: iOS always opens them in Safari otherwise. */
+  choixNavigateur: navigateurIos(globalThis.navigator).ios,
 };
 
 /** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */

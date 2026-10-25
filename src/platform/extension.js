@@ -22,6 +22,7 @@ export const capacites = {
   installable: false,
   /** Google sign-in: a token from Chrome ("jeton") or a redirect to Google (V3.2). */
   connexion: "jeton",
+  choixNavigateur: false,
 };
 
 /** An extension is not added to a home screen. */

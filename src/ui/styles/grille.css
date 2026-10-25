@@ -2,6 +2,8 @@
   width: 100%;
   max-width: 960px;
   flex: 1;
+  /* The grid adapts to the room it has (V3.4), also in a split screen on the iPad. */
+  container-type: inline-size;
 }
 
 .grille {
@@ -44,8 +46,8 @@
 .tuile-icone {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: var(--icone, 56px);
+  height: var(--icone, 56px);
   border-radius: var(--rayon);
   box-shadow: var(--ombre);
   transition:
@@ -72,6 +74,13 @@
   text-overflow: ellipsis;
   font-size: var(--taille-s);
   line-height: 1.3;
+}
+
+/* Touch feedback without the grey flash of iOS (V3.4). */
+@media (pointer: coarse) {
+  .tuile:active .tuile-icone {
+    transform: scale(0.94);
+  }
 }
 
 .tuile:focus-visible {
@@ -366,6 +375,13 @@
   cursor: pointer;
 }
 
+/* Touch (V3.4): result rows of at least 52 px, easy to hit with a thumb. */
+@media (pointer: coarse) {
+  .resultat {
+    min-height: 52px;
+  }
+}
+
 .resultat[aria-selected="true"] {
   background: var(--surface-2);
 }
@@ -437,4 +453,36 @@
   font-size: var(--taille-xs);
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/*
+ * Phone and narrow room (V3.4): columns and icons by steps of the grid's width, so that an
+ * iPhone shows 4 columns of tiles easy to touch. Above 768 px nothing changes (computer,
+ * iPad). Pages keep their own grid; columns forced on this device keep priority.
+ */
+@container (max-width: 767px) {
+  .grille:not(.page-grille) {
+    --icone: 60px;
+    grid-template-columns: repeat(var(--colonnes-auto, 6), minmax(0, 1fr));
+    gap: var(--espace-4) var(--espace-2);
+  }
+  .grille--dossier {
+    --icone: 56px;
+  }
+}
+@container (max-width: 599px) {
+  .grille:not(.page-grille) {
+    --colonnes-auto: 5;
+  }
+}
+@container (max-width: 479px) {
+  .grille:not(.page-grille) {
+    --colonnes-auto: 4;
+    --icone: 58px;
+  }
+}
+@container (max-width: 359px) {
+  .grille:not(.page-grille) {
+    --icone: 52px;
+  }
 }

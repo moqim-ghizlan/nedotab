@@ -108,9 +108,13 @@ export function creerEditeurIcone({
   const champImage = el("input", {
     type: "url",
     inputmode: "url",
+    autocapitalize: "off", // iOS keyboard (V3.4): no capital, no correction of addresses
+    autocorrect: "off",
+    enterkeyhint: "done",
     placeholder: "https://exemple.com/logo.png",
     "aria-label": "Adresse de l'image",
     autocomplete: "off",
+    spellcheck: "false",
   });
   const etatImage = el("span", { class: "icone-etat" });
   champImage.addEventListener("change", async () => {

@@ -10,6 +10,7 @@
  *     | { type: "aleatoire", categorie, frequence: "onglet"|"jour"|"clic", choix?, voile, flou }
  */
 import { estCategorie, estIdPhoto, FREQUENCES } from "./galerie.js";
+import { NAVIGATEURS } from "./navigateurs.js";
 import { capaciteDe, comptesAStocker, normaliserComptes, validerGrilleAccueil } from "./pages.js";
 
 export const THEMES = ["auto", "clair", "sombre"];
@@ -218,15 +219,31 @@ export const COLONNES_MAX = 10;
 const colonnesValides = (n) => Number.isInteger(n) && n >= COLONNES_MIN && n <= COLONNES_MAX;
 
 /** Settings of this device only, never synced (V2.9). */
-export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome", "affichageAccueil"];
+export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome", "affichageAccueil", "navigateur"];
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
 export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
 
+/** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
+export const COTE_TELEPHONE = 600;
+
+/**
+ * Home display of this device (V3.4): the one chosen in the settings, else one grid that
+ * scrolls on a phone (a page of 8 columns is unreadable there) and pages elsewhere.
+ * `petitCote` is the shorter side of the screen, so that turning the phone changes nothing.
+ */
+export function affichageAccueilDe(reglagesAppareil, petitCote) {
+  const choisi = reglagesAppareil?.affichageAccueil;
+  if (AFFICHAGES_ACCUEIL.includes(choisi)) return choisi;
+  return petitCote < COTE_TELEPHONE ? "defilement" : "pages";
+}
+
 /**
  * Device-only settings: local picture background, forced columns, debug log, barreChrome
  * (V2.10.7: leave the cursor in Chrome's address bar on a new tab, instead of the search) and
- * affichageAccueil (V2.11: stored only when "defilement", pages being the default).
+ * affichageAccueil (V2.11; V3.4: stored once chosen, else it depends on the device, see
+ * affichageAccueilDe) and navigateur (browser that opens the sites on iOS, Safari by default
+ * and then not stored).
  */
 export function validerReglagesAppareil(r) {
   const resultat = {};
@@ -235,13 +252,16 @@ export function validerReglagesAppareil(r) {
   if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
-  if (r?.affichageAccueil === "defilement") resultat.affichageAccueil = "defilement";
+  if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
+    resultat.affichageAccueil = r.affichageAccueil;
+  if (NAVIGATEURS.includes(r?.navigateur) && r.navigateur !== "safari")
+    resultat.navigateur = r.navigateur;
   return resultat;
 }
 
 /**
  * Applies device-only changes (colonnes: null = automatic, debug and barreChrome: boolean,
- * affichageAccueil: "pages" | "defilement").
+ * affichageAccueil: "pages" | "defilement", navigateur: one of NAVIGATEURS).
  */
 function modifierAppareil(etat, changements) {
   const appareil = { ...etat.reglagesAppareil };
@@ -251,9 +271,15 @@ function modifierAppareil(etat, changements) {
     else return etat;
   }
   if ("affichageAccueil" in changements) {
-    if (!AFFICHAGES_ACCUEIL.includes(changements.affichageAccueil)) return etat;
-    if (changements.affichageAccueil === "defilement") appareil.affichageAccueil = "defilement";
-    else delete appareil.affichageAccueil;
+    if (changements.affichageAccueil == null) delete appareil.affichageAccueil;
+    else if (AFFICHAGES_ACCUEIL.includes(changements.affichageAccueil))
+      appareil.affichageAccueil = changements.affichageAccueil;
+    else return etat;
+  }
+  if ("navigateur" in changements) {
+    if (!NAVIGATEURS.includes(changements.navigateur)) return etat;
+    if (changements.navigateur === "safari") delete appareil.navigateur;
+    else appareil.navigateur = changements.navigateur;
   }
   for (const cle of ["debug", "barreChrome"].filter((c) => c in changements)) {
     if (changements[cle]) appareil[cle] = true;

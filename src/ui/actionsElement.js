@@ -8,6 +8,7 @@ import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { toast } from "./toast.js";
+import { ouvrirSite } from "./tuile.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 
@@ -178,7 +179,7 @@ export function brancherActionsElements(
       entrees.push(
         {
           libelle: "Ouvrir dans un nouvel onglet",
-          onChoix: () => window.open(e.url, "_blank", "noopener"),
+          onChoix: () => ouvrirSite(e.url, { nouvelOnglet: true }),
         },
         { libelle: "Copier le lien", onChoix: () => copierLien(e.url) },
       );

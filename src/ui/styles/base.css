@@ -10,8 +10,15 @@ body {
   min-height: 100%;
 }
 
+html {
+  /* Touch (V3.4): no double-tap zoom nor its delay; pinch zoom stays allowed. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   min-height: 100vh;
+  min-height: 100dvh; /* iOS: the visible height, not the one behind Safari's bars */
   background: var(--fond);
   color: var(--texte);
   font-family: var(--police);
@@ -52,12 +59,14 @@ textarea {
 
 #app {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   /* Installed on iPhone (V3.1), the page goes under the status bar: never above it. */
   padding: max(14vh, calc(env(safe-area-inset-top, 0px) + var(--espace-6)))
-    calc(var(--espace-4) + env(safe-area-inset-right, 0px)) var(--espace-6)
+    calc(var(--espace-4) + env(safe-area-inset-right, 0px))
+    calc(var(--espace-6) + env(safe-area-inset-bottom, 0px))
     calc(var(--espace-4) + env(safe-area-inset-left, 0px));
 }
 

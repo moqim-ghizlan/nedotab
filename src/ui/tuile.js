@@ -1,4 +1,5 @@
 import { couleurDepuisTexte, lettrePourSite } from "../core/couleurs.js";
+import { urlPourNavigateur } from "../core/navigateurs.js";
 import { el } from "./dom.js";
 import { empreinte, globeNavigateur, urlsFaviconGoogle } from "./services/icones.js";
 
@@ -62,14 +63,34 @@ export function creerIcone(site) {
 /** Synced setting (V2.10.3): sites open in a new tab. */
 let nouvelOnglet = false;
 
+/** Device setting: browser that opens the sites on iOS (Safari by default). */
+let navigateur = "safari";
+
 /** Applies the setting to the tiles already shown and to those created afterwards. */
 export function ouvrirSitesDansNouvelOnglet(actif) {
   nouvelOnglet = !!actif;
   for (const lien of document.querySelectorAll("a.tuile--site")) cibler(lien);
 }
 
+/** Same for the browser chosen on this device. */
+export function ouvrirSitesAvec(choix) {
+  navigateur = choix ?? "safari";
+  for (const lien of document.querySelectorAll("a.tuile--site")) cibler(lien);
+}
+
+/** Address that opens a site in the chosen browser. */
+export const urlOuverture = (url) => urlPourNavigateur(url, navigateur);
+
+/** Opens a site: another browser is another app, so no new tab is needed there. */
+export function ouvrirSite(url, { nouvelOnglet: onglet = false } = {}) {
+  if (navigateur !== "safari") location.assign(urlOuverture(url));
+  else if (onglet) window.open(url, "_blank", "noopener");
+  else location.assign(url);
+}
+
 function cibler(lien) {
-  if (nouvelOnglet) {
+  lien.href = urlOuverture(lien.dataset.url);
+  if (nouvelOnglet && navigateur === "safari") {
     lien.target = "_blank";
     lien.rel = "noopener";
   } else {
@@ -85,7 +106,7 @@ export function creerTuile(element) {
   const lien = el("a", {
     class: "tuile tuile--site",
     href: element.url,
-    dataset: { id: element.id },
+    dataset: { id: element.id, url: element.url },
     "aria-label": element.titre,
     draggable: "false",
   });

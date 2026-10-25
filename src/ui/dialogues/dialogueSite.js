@@ -85,6 +85,9 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     name: "url",
     type: "url",
     inputmode: "url",
+    autocapitalize: "off", // iOS keyboard (V3.4): no capital, no correction of addresses
+    autocorrect: "off",
+    enterkeyhint: "done",
     autocomplete: "off",
     spellcheck: "false",
     placeholder: "exemple.com",
@@ -261,6 +264,9 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
     id: "edition-url",
     type: "url",
     inputmode: "url",
+    autocapitalize: "off", // iOS keyboard (V3.4): no capital, no correction of addresses
+    autocorrect: "off",
+    enterkeyhint: "done",
     autocomplete: "off",
     spellcheck: "false",
     value: site.url,
