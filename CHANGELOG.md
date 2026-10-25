@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.0.2] - 2026-10-25
+
+### Corrigé
+
+- iPhone et iPad : toucher la barre de recherche faisait zoomer Safari et la page défilait
+  sur le côté. Safari zoome sur tout champ dont le texte fait moins de 16 px ; sur les
+  écrans tactiles, les champs (recherche, fenêtres, listes des réglages) font désormais au
+  moins 16 px. Le zoom de l'utilisateur reste possible.
+
 ## [3.0.1] - 2026-10-25
 
 ### Corrigé

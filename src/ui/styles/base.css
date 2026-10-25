@@ -28,6 +28,23 @@ textarea {
   color: inherit;
 }
 
+/*
+ * Safari on iPhone and iPad zooms into a text field whose text is under 16 px as soon as it
+ * gets the focus, and the page then scrolls sideways (V3.0.2). On touch screens the fields
+ * are at least 16 px; the user's own zoom stays allowed.
+ */
+@media (pointer: coarse) {
+  /* :root raises the rule above a field's own class (search bar, gallery list…). */
+  :root
+    :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]),
+      select,
+      textarea
+    ) {
+    font-size: max(16px, 1em);
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
