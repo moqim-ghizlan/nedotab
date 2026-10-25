@@ -2,7 +2,6 @@ import { el } from "../dom.js";
 import { creerAvatar } from "../avatar.js";
 import { icone } from "../icones.js";
 import { URL_SITE } from "../../core/constantes.js";
-import { plateforme } from "../../platform/index.js";
 
 /** What happens to the account's data: the privacy page of the site (V2.10). */
 const lienConfidentialite = () =>
@@ -86,14 +85,11 @@ export function sectionCompte(session) {
     const etat = compte.lire();
     const sync = synchro?.lire() ?? { mode: "local" };
     if (etat.statut === "connecte" && etat.profil) {
-      const synchroPossible = plateforme.capacites.synchroCompte;
-      const [statut, court, detail] = !synchroPossible
-        ? ["local", "Connecté", "La synchronisation de vos sites arrive bientôt sur cette app."]
-        : sync.enCours
-          ? ["en-cours", "Synchronisation…", "Synchronisation en cours."]
-          : sync.mode === "compte"
-            ? ["actif", "Synchronisé", "Vos sites sont enregistrés sur votre compte."]
-            : ["local", "Pas encore synchronisé", "Vos sites restent sur cet ordinateur."];
+      const [statut, court, detail] = sync.enCours
+        ? ["en-cours", "Synchronisation…", "Synchronisation en cours."]
+        : sync.mode === "compte"
+          ? ["actif", "Synchronisé", "Vos sites sont enregistrés sur votre compte."]
+          : ["local", "Pas encore synchronisé", "Vos sites restent sur cet appareil."];
       contenu.replaceChildren(
         el(
           "div",
@@ -117,17 +113,15 @@ export function sectionCompte(session) {
         el(
           "div",
           { class: "compte-actions" },
-          synchroPossible && sync.mode !== "compte" && !sync.enCours
+          sync.mode !== "compte" && !sync.enCours
             ? action("synchroniser", "Synchroniser", () => session.synchroniser(), {
                 classe: "carte-action--principale",
                 titre: "Synchroniser maintenant",
               })
             : null,
-          synchroPossible
-            ? action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
-                titre: "Restaurer la copie de cet ordinateur",
-              })
-            : null,
+          action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
+            titre: "Restaurer la copie de cet appareil",
+          }),
           action("deconnexion", "Se déconnecter", () => session.deconnecter()),
         ),
       );
@@ -163,7 +157,7 @@ export function sectionCompte(session) {
     contenu.replaceChildren(
       el("p", {
         class: "compte-invitation",
-        texte: "Connectez-vous pour retrouver vos sites sur vos autres ordinateurs.",
+        texte: "Connectez-vous pour retrouver vos sites sur vos autres appareils.",
       }),
       el(
         "button",

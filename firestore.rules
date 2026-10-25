@@ -40,7 +40,7 @@ service cloud.firestore {
             || (request.resource.data.nom is string
                 && request.resource.data.nom.size() >= 1
                 && request.resource.data.nom.size() <= 60))
-        && request.resource.data.appareil in ['extension', 'pwa']
+        && request.resource.data.appareil in ['extension', 'pwa', 'iphone', 'ipad', 'navigateur']
         && request.resource.data.nbSites is int
         && request.resource.data.nbDossiers is int
         && request.resource.data.grille is list

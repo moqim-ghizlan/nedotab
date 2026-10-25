@@ -35,19 +35,19 @@ export function demanderChoixPremiereSynchro(resume) {
   return demander({
     titre: "Des sites existent déjà sur votre compte",
     message:
-      "Choisissez ce que vous gardez. Les sites de cet ordinateur sont copiés en sécurité avant tout changement.",
+      "Choisissez ce que vous gardez. Les sites de cet appareil sont copiés en sécurité avant tout changement.",
     contenu: [
       el(
         "div",
         { class: "choix-synchro" },
         colonne("Sur votre compte", resume.compte),
-        colonne("Sur cet ordinateur", resume.local),
+        colonne("Sur cet appareil", resume.local),
       ),
     ],
     boutons: [
       { libelle: "Annuler", valeur: null },
       { libelle: "Garder ceux du compte", valeur: "compte" },
-      { libelle: "Garder ceux de cet ordinateur", valeur: "local" },
+      { libelle: "Garder ceux de cet appareil", valeur: "local" },
       { libelle: "Fusionner les deux", valeur: "fusion", principal: true },
     ],
   });

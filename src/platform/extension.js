@@ -22,8 +22,6 @@ export const capacites = {
   installable: false,
   /** Google sign-in: a token from Chrome ("jeton") or a redirect to Google (V3.2). */
   connexion: "jeton",
-  /** The account's data is synchronised (the web app gets it in V3.3). */
-  synchroCompte: true,
 };
 
 /** An extension is not added to a home screen. */
@@ -66,7 +64,8 @@ const CLE_BARRE_CHROME = "nedotab:barre-chrome";
 /**
  * Chrome always leaves the cursor in its address bar on a new tab page; a tab opened by the
  * extension itself gives it to the page. So a new tab page is replaced at once by a copy
- * opened with chrome.tabs (address "?focus=1", same place, same group), unless the user
+ * opened with chrome.tabs ("?focus=1", erased by the page once read; same place, same
+ * group), unless the user
  * keeps Chrome's bar on this device. Resolves to true when this page is being replaced
  * (nothing to draw), false otherwise, including when the replacement fails.
  */

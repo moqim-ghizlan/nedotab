@@ -3,6 +3,7 @@ import { reduire } from "../../src/core/actions.js";
 import { etatInitial } from "../../src/core/modele.js";
 import { creerStore } from "../../src/core/store.js";
 import * as fb from "../../src/firebase/index.js";
+import { appareilCourant } from "../../src/firebase/sauvegardes.js";
 import { creerSauvegardes } from "../../src/ui/services/sauvegardes.js";
 
 // Backups (V2.7) with the real modules against the emulators.
@@ -57,7 +58,7 @@ describe("sauvegardes (émulateurs)", () => {
     expect(liste[0]).toMatchObject({
       type: "auto",
       nom: null,
-      appareil: "extension",
+      appareil: appareilCourant(), // "extension", or the web app's kind of device
       nbSites: 1,
       nbDossiers: 0,
     });

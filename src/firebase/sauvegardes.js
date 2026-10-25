@@ -13,6 +13,7 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
+import { typeAppareil } from "../core/appareil.js";
 import { compter } from "../core/fusion.js";
 import { aSupprimer, idSauvegarde, nettoyerNom } from "../core/sauvegardes.js";
 import { obtenirApp } from "./app.js";
@@ -20,7 +21,7 @@ import { obtenirApp } from "./app.js";
 /** Backups of the account: users/{uid}/sauvegardes/{AAAA-MM-JJ_HHmmss_xxxx}, immutable. */
 const json = (v) => JSON.parse(JSON.stringify(v));
 const col = (uid) => collection(obtenirApp().firestore, "users", uid, "sauvegardes");
-export const appareilCourant = () => (import.meta.env.VITE_TARGET === "pwa" ? "pwa" : "extension");
+export const appareilCourant = () => typeAppareil(import.meta.env.VITE_TARGET);
 
 /** Creates a backup of `etat` (grid + synced settings; picture files are not copied). */
 export async function creerSauvegarde(uid, etat, { type, nom = null }) {

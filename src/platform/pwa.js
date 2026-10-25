@@ -29,8 +29,6 @@ export const capacites = {
   installable: true,
   /** Google sign-in: a redirect to Google and back, reliable on the home screen (V3.2). */
   connexion: "redirection",
-  /** The account's data is synchronised: not yet, it comes in V3.3. */
-  synchroCompte: false,
 };
 
 /** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */

@@ -124,7 +124,7 @@ describe("première synchronisation (émulateurs)", () => {
     });
   });
 
-  it("les deux : « Garder ceux de cet ordinateur » (sauvegarde du compte d'abord)", async () => {
+  it("les deux : « Garder ceux de cet appareil » (sauvegarde du compte d'abord)", async () => {
     await fb.ecrireDocument(uid, etat([site("x")]), "autre", 1);
     const m = monter([site("a")], "local");
     expect(await m.synchro.lancerPremiereSynchro()).toBe("local");
@@ -137,7 +137,7 @@ describe("première synchronisation (émulateurs)", () => {
     expect(await m.synchro.lancerPremiereSynchro()).toBe("fusion");
     const g = m.store.lire().grille;
     expect(g[0].id).toBe("x");
-    expect(g[1].titre).toMatch(/^Importé de cet ordinateur — \d\d\/\d\d\/\d{4}$/);
+    expect(g[1].titre).toMatch(/^Importé de cet appareil — \d\d\/\d\d\/\d{4}$/);
     expect(ids(g[1].items)).toBe("b");
     expect(ids((await enLigne()).grille)).toBe(ids(g));
   });
@@ -235,7 +235,7 @@ describe("première synchronisation : réglages du compte jamais perdus", () => 
     expect(ids(d.grille)).toBe("a");
     expect(d.reglages).toMatchObject({ theme: "sombre", fonds: [{ id: "f1" }] });
   });
-  it("« Garder ceux de cet ordinateur » garde la bibliothèque du compte", async () => {
+  it("« Garder ceux de cet appareil » garde la bibliothèque du compte", async () => {
     const fond = {
       id: "f1",
       chemin: `users/${uid}/fonds/f1.webp`,

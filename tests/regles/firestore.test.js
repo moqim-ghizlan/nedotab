@@ -117,6 +117,12 @@ describe("users/{uid}/sauvegardes", () => {
       setDoc(doc(db("A"), "users/A/sauvegardes/s3"), sauvegarde({ nom: null, type: "auto" })),
     );
   });
+  it("appareils de l'application web acceptés (V3.3)", async () => {
+    for (const appareil of ["pwa", "iphone", "ipad", "navigateur"])
+      await assertSucceeds(
+        setDoc(doc(db("A"), `users/A/sauvegardes/${appareil}`), sauvegarde({ appareil })),
+      );
+  });
   it("appareil inconnu ou compteurs non entiers refusés", async () => {
     await assertFails(
       setDoc(doc(db("A"), "users/A/sauvegardes/s1"), sauvegarde({ appareil: "pirate" })),

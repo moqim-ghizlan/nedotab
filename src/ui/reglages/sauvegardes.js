@@ -1,3 +1,4 @@
+import { libelleAppareil } from "../../core/appareil.js";
 import { dateHeure, NOM_MAX } from "../../core/sauvegardes.js";
 import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
@@ -54,7 +55,7 @@ export function sectionSauvegardes(service, restauration) {
   const copies = el("ul", { class: "liste-sauvegardes liste-copies" });
   const titreCopies = el("p", {
     class: "reglages-libelle",
-    texte: "Copies sur cet ordinateur",
+    texte: "Copies sur cet appareil",
     hidden: true,
   });
   const chargerCopies = async () => {
@@ -69,7 +70,7 @@ export function sectionSauvegardes(service, restauration) {
           el("span", { class: "sauvegarde-type", "aria-hidden": "true", texte: "⌂" }),
           el("div", { class: "sauvegarde-texte" }, el("strong", { texte: sous })),
           restauration
-            ? boutonApercu("Copie de cet ordinateur", sous, { ...c.etat, creeLe: c.date }, () => {
+            ? boutonApercu("Copie de cet appareil", sous, { ...c.etat, creeLe: c.date }, () => {
                 chargerCopies();
                 if (service.enCompte()) charger(true);
               })
@@ -81,7 +82,7 @@ export function sectionSauvegardes(service, restauration) {
 
   const ligne = (s) => {
     const t = TYPES[s.type] ?? TYPES.auto;
-    const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${s.appareil === "pwa" ? "iPhone / iPad" : "Chrome"}`;
+    const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}`;
     return el(
       "li",
       {
@@ -99,7 +100,7 @@ export function sectionSauvegardes(service, restauration) {
         { class: "sauvegarde-texte" },
         el("strong", { texte: s.nom || t.libelle }),
         el("span", {
-          texte: `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${s.appareil === "pwa" ? "iPhone / iPad" : "Chrome"}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
+          texte: `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
         }),
       ),
       restauration ? boutonApercu(s.nom || t.libelle, sous, s, () => charger(true)) : null,

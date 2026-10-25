@@ -157,8 +157,7 @@ export async function demarrerApp(racine) {
     synchro,
     async connecter() {
       // Web app (V3.2): the page leaves for Google; the way back is handled at startup.
-      if ((await compte.connecter()) && plateforme.capacites.synchroCompte)
-        await synchro.lancerPremiereSynchro();
+      if (await compte.connecter()) await synchro.lancerPremiereSynchro();
     },
     synchroniser: () => synchro.lancerPremiereSynchro(),
     async deconnecter() {
@@ -175,10 +174,10 @@ export async function demarrerApp(racine) {
       }
       const garder = await demander({
         titre: "Se déconnecter",
-        message: "Garder une copie de vos sites sur cet ordinateur ?",
+        message: "Garder une copie de vos sites sur cet appareil ?",
         boutons: [
           { libelle: "Annuler", valeur: null },
-          { libelle: "Non, vider cet ordinateur", valeur: "non" },
+          { libelle: "Non, vider cet appareil", valeur: "non" },
           { libelle: "Oui, garder une copie", valeur: "oui", principal: true },
         ],
       });
@@ -220,7 +219,7 @@ export async function demarrerApp(racine) {
             "label",
             { class: "reglages-case", for: "garder-apres-suppression" },
             garder,
-            el("span", { texte: "Garder une copie de mes sites sur cet ordinateur" }),
+            el("span", { texte: "Garder une copie de mes sites sur cet appareil" }),
           ),
           el(
             "div",
@@ -284,7 +283,7 @@ export async function demarrerApp(racine) {
     },
     async restaurerCopie() {
       const ok = await demander({
-        titre: "Restaurer la copie de cet ordinateur",
+        titre: "Restaurer la copie de cet appareil",
         message:
           "Vos sites seront remplacés par la dernière copie faite avant une synchronisation.",
         boutons: [
@@ -293,9 +292,7 @@ export async function demarrerApp(racine) {
         ],
       });
       if (!ok) return;
-      toast(
-        (await synchro.restaurerCopie()) ? "Copie restaurée" : "Aucune copie sur cet ordinateur",
-      );
+      toast((await synchro.restaurerCopie()) ? "Copie restaurée" : "Aucune copie sur cet appareil");
     },
   };
   session.sauvegardes = creerSauvegardes({ store, session });
@@ -308,10 +305,24 @@ export async function demarrerApp(racine) {
     sauvegardeVerifiee = true;
     session.sauvegardes.verifierAuto().catch(() => (sauvegardeVerifiee = false));
   });
+  // V3.3: without IndexedDB (some private windows of Safari) the account works, not offline.
+  let cacheVerifie = false;
+  synchro.abonner((e) => {
+    if (e.mode !== "compte" || cacheVerifie) return;
+    cacheVerifie = true;
+    chargerFirebase()
+      .then((fb) => fb.cacheHorsLigneDisponible())
+      .then((ok) => {
+        if (!ok)
+          toast("Ce navigateur ne garde pas vos sites hors ligne (navigation privée ?).", {
+            duree: 7000,
+          });
+      })
+      .catch(() => {});
+  });
   compte.demarrer().then(async (retour) => {
     // Back from Google in the web app (V3.2): same as a sign-in from the account section.
-    if (retour === "connexion" && plateforme.capacites.synchroCompte)
-      return synchro.lancerPremiereSynchro();
+    if (retour === "connexion") return synchro.lancerPremiereSynchro();
     if (retour === "confirmation")
       toast("Identité confirmée : relancez « Supprimer mon compte » dans les 4 minutes.", {
         duree: 9000,
@@ -347,7 +358,11 @@ export async function demarrerApp(racine) {
   const recherche = creerRecherche(store, { ouvrirDossier: (id) => ouvrirDossier(id) });
   page.insertBefore(recherche.racine, vide);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
-  if (new URLSearchParams(location.search).has("focus")) recherche.champ.focus();
+  // The "?focus=1" marker is then removed from the address shown by Chrome.
+  if (new URLSearchParams(location.search).has("focus")) {
+    recherche.champ.focus();
+    history.replaceState(history.state, "", location.pathname);
+  }
 
   const nouveauDossier = async (retourFocus) => {
     const titre = await demanderNomDossier({ retourFocus });

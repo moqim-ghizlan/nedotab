@@ -92,7 +92,7 @@ export function dossierImporte(
 
 /**
  * "Fusionner": the account's grid stays as it is; the local sites that are not already in
- * the account (same address) go into a folder "Importé de cet ordinateur — JJ/MM/AAAA" at
+ * the account (same address) go into a folder "Importé de cet appareil — JJ/MM/AAAA" at
  * the end. Too deep folders are flattened by valider() (nothing is lost).
  * @returns {{ grille: object[], ajoutes: number, aplati: boolean }}
  */
@@ -103,7 +103,7 @@ export function fusionnerImport(
 ) {
   const { dossier, ajoutes, aplati } = dossierImporte(grilleCompte, grilleLocale, {
     dossierId,
-    titre: `Importé de cet ordinateur — ${dateCourte(maintenant)}`,
+    titre: `Importé de cet appareil — ${dateCourte(maintenant)}`,
     maintenant,
   });
   if (!dossier) return { grille: grilleCompte, ajoutes: 0, aplati: false };

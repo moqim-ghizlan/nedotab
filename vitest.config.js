@@ -37,7 +37,11 @@ export default defineConfig({
       ...(avecEmulateurs
         ? [
             {
-              resolve: resolve_,
+              // The redirect sign-in of the web app cannot run in Node: the emulator tests
+              // sign in with a token (auth.extension.js) and test the rest of each target.
+              resolve: {
+                alias: { ...resolve_.alias, "#auth": resolve("src/firebase/auth.extension.js") },
+              },
               test: {
                 name: "regles",
                 env: { VITE_UTILISER_EMULATEURS: "true" },

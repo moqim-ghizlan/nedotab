@@ -222,8 +222,14 @@ export function creerSynchro({
   });
   if (typeof window !== "undefined") {
     window.addEventListener("pagehide", envoyerMaintenant);
+    // iOS: pagehide and visibilitychange are the only reliable events when the app goes to
+    // the background (never beforeunload); the persisted queue covers a write cut short.
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") envoyerMaintenant();
+      if (document.visibilityState === "hidden") return envoyerMaintenant();
+      // Back to the foreground (V3.3): iOS may have suspended the network meanwhile.
+      enLigne = globalThis.navigator?.onLine !== false;
+      majStatut();
+      if (etat.mode === "compte" && file.length && !minuteur && !envoiEnCours) planifier();
     });
     window.addEventListener("online", () => {
       enLigne = true;
