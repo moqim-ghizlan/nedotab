@@ -23,7 +23,8 @@ function messageErreur(e) {
     return "Pas de connexion à Internet. Réessayez une fois en ligne.";
   if (e?.code === "auth/unauthorized-domain")
     return "La connexion n'est pas autorisée sur cette adresse.";
-  return "La connexion a échoué. Réessayez.";
+  // The code helps the diagnosis from a phone, where the console is not at hand.
+  return `La connexion a échoué. Réessayez.${e?.code ? ` (${e.code})` : ""}`;
 }
 
 export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {}) {
