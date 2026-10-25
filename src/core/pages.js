@@ -195,3 +195,43 @@ export function reconcilier({ avant, comptesAvant, apres, capacite, place = null
 }
 
 export const borner = (page, nbPages) => Math.min(Math.max(0, page), Math.max(0, nbPages - 1));
+
+/**
+ * Grid of the home pages on a phone (V3.4): the synced grid (8 columns by default) makes
+ * tiny tiles there, so a phone uses its own: 4 columns and 5 or 6 rows in portrait, 7 × 3
+ * in landscape. `largeur` and `hauteur` are the screen's, in CSS px.
+ */
+export function grilleTelephone(largeur, hauteur) {
+  if (largeur > hauteur) return { lignes: 3, colonnes: 7 };
+  return { lignes: hauteur >= 800 ? 6 : 5, colonnes: 4 };
+}
+
+/**
+ * Screens shown for the stored pages (V3.4): each stored page cut into screens of at most
+ * `capacite` elements (Infinity: one screen per page, as on a computer). The stored pages
+ * never change: a phone only shows them in smaller pieces.
+ * @returns {{ page: number, debut: number, n: number }[]} stored page, position of the
+ *   screen's first element in it, number of elements
+ */
+export function ecransDePages(comptes, capacite) {
+  const ecrans = [];
+  comptes.forEach((n, page) => {
+    for (let debut = 0; debut < n; debut += capacite)
+      ecrans.push({ page, debut, n: Math.min(capacite, n - debut) });
+  });
+  return ecrans;
+}
+
+/**
+ * ELEMENT_DEPLACER's page and position for a drop from screen `de` to screen `vers` at
+ * `index` (position among the other elements of that screen). A screen past the last one is
+ * a new page. Moving forward within the same stored page, the element no longer counts
+ * among those before it.
+ */
+export function deplacementEntreEcrans(ecrans, de, vers, index) {
+  const cible = ecrans[vers];
+  if (!cible) return { versPage: (ecrans.at(-1)?.page ?? -1) + 1, versIndex: index };
+  const source = ecrans[de];
+  const avant = source && source.page === cible.page && de < vers ? 1 : 0;
+  return { versPage: cible.page, versIndex: cible.debut - avant + index };
+}

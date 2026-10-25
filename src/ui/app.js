@@ -4,7 +4,12 @@ import { NOM_APP } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
 import { expliquer, messageIgnorees } from "../core/rejeu.js";
-import { affichageAccueilDe, fondEffectif, fondsAPurger } from "../core/reglages.js";
+import {
+  affichageAccueilDe,
+  COTE_TELEPHONE,
+  fondEffectif,
+  fondsAPurger,
+} from "../core/reglages.js";
 import { petitCote, suivreClavier } from "./ecran.js";
 import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
@@ -32,7 +37,7 @@ import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
 import { monterBandeauInstallation } from "./bandeauInstallation.js";
-import { comptesDe, grilleAccueil } from "../core/pages.js";
+import { comptesDe, grilleAccueil, grilleTelephone } from "../core/pages.js";
 
 /** V2.9: operations that could not be applied after a change made on another device. */
 function signalerIgnorees(ignorees) {
@@ -409,6 +414,11 @@ export async function demarrerApp(racine) {
             disposition: () => ({
               comptes: comptesDe(store.lire()),
               ...grilleAccueil(store.lire().reglages),
+              // A phone shows the pages with its own grid (V3.4): 8 columns are unreadable.
+              affichage:
+                petitCote() < COTE_TELEPHONE
+                  ? grilleTelephone(globalThis.innerWidth, globalThis.innerHeight)
+                  : null,
             }),
           })
         : null;
@@ -435,7 +445,7 @@ export async function demarrerApp(racine) {
     });
   };
   // V3.4: one scrolling grid by default on a phone, pages elsewhere.
-  const modeVoulu = () => affichageAccueilDe(store.lire().reglagesAppareil, petitCote());
+  const modeVoulu = () => affichageAccueilDe(store.lire().reglagesAppareil);
   vide
     .querySelector("button")
     .addEventListener("click", (e) => !lectureSeule && menuAjout(e.currentTarget));
@@ -447,6 +457,10 @@ export async function demarrerApp(racine) {
     accueil.demanderRendu();
   };
   rendre();
+  // A phone turned: its page grid changes (V3.4).
+  globalThis
+    .matchMedia?.("(orientation: landscape)")
+    .addEventListener?.("change", () => accueil.demanderRendu());
   performance.mark("nedotab:grille");
   performance.measure("nedotab:premier-rendu", "nedotab:debut", "nedotab:grille");
 

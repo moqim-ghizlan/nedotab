@@ -227,22 +227,17 @@ export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
-/**
- * Home display of this device (V3.4): the one chosen in the settings, else one grid that
- * scrolls on a phone (a page of 8 columns is unreadable there) and pages elsewhere.
- * `petitCote` is the shorter side of the screen, so that turning the phone changes nothing.
- */
-export function affichageAccueilDe(reglagesAppareil, petitCote) {
+/** Home display of this device: the one chosen in the settings, else pages. */
+export function affichageAccueilDe(reglagesAppareil) {
   const choisi = reglagesAppareil?.affichageAccueil;
-  if (AFFICHAGES_ACCUEIL.includes(choisi)) return choisi;
-  return petitCote < COTE_TELEPHONE ? "defilement" : "pages";
+  return AFFICHAGES_ACCUEIL.includes(choisi) ? choisi : "pages";
 }
 
 /**
  * Device-only settings: local picture background, forced columns, debug log, barreChrome
  * (V2.10.7: leave the cursor in Chrome's address bar on a new tab, instead of the search) and
- * affichageAccueil (V2.11; V3.4: stored once chosen, else it depends on the device, see
- * affichageAccueilDe) and navigateur (browser that opens the sites on iOS, Safari by default
+ * affichageAccueil (V2.11; V3.4: stored once chosen, pages by default) and navigateur
+ * (browser that opens the sites on iOS, Safari by default
  * and then not stored).
  */
 export function validerReglagesAppareil(r) {

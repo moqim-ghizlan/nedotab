@@ -32,6 +32,8 @@ html.accueil-en-pages .pied {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Horizontal swipes turn the pages (V3.4, balayage.js); pinch zoom stays allowed. */
+  touch-action: pan-y pinch-zoom;
 }
 
 .accueil-pages[hidden] {

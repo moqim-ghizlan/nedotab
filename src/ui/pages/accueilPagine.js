@@ -1,5 +1,11 @@
-import { borner, decouperParComptes } from "../../core/pages.js";
+import {
+  borner,
+  decouperParComptes,
+  deplacementEntreEcrans,
+  ecransDePages,
+} from "../../core/pages.js";
 import { el } from "../dom.js";
+import { brancherBalayage } from "./balayage.js";
 import { rendreGrille } from "../grille.js";
 import { creerIndicateur } from "./indicateur.js";
 import { creerMesure } from "./mesure.js";
@@ -18,10 +24,16 @@ const CHAMPS = "input, textarea, select, [contenteditable]";
  * renderer, tells the drag which lists exist and turns a drop into a page and a position in
  * it, and brings the page of a tile into view before it gets the focus.
  *
+ * On a phone (V3.4) the pages are shown with the phone's own grid: each stored page is cut
+ * into screens (core/pages.js, ecransDePages), and a drop on a screen is turned back into a
+ * stored page and position. "Page" below means a screen shown.
+ *
  * @param {{ annoncer: (texte: string) => void, actif: () => boolean,
- *           disposition: () => { comptes: number[], lignes: number, colonnes: number } }} options
+ *           disposition: () => { comptes: number[], lignes: number, colonnes: number,
+ *                                affichage?: { lignes: number, colonnes: number } } }} options
  *   actif: false while the home grid is not shown (empty grid); disposition: the page sizes
- *   and the grid of the state being rendered.
+ *   and the grid of the state being rendered, and the grid of this device when it has its
+ *   own (phone).
  */
 export function creerAccueilPagine({ annoncer, actif = () => true, disposition }) {
   const piste = el("div", { class: "piste" });
@@ -40,8 +52,10 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
 
   let pages = []; // <ul> of each page shown, in order (the last may only hold "+")
   let pageCourante = 0;
-  let grille = { lignes: 4, colonnes: 8 };
+  let grille = { lignes: 4, colonnes: 8 }; // grid shown
+  let grilleStockee = grille; // synced grid of the stored pages
   let comptes = []; // stored page sizes of the list rendered
+  let ecrans = []; // screens shown: { page, debut, n } (one per stored page on a computer)
   let ids = []; // ids of the list rendered, in order
   let glisserEn = null; // { pageDepart } during a drag
   let posee = null; // id of the tile just dropped, shown by the next render
@@ -150,6 +164,21 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
   };
   document.addEventListener("keydown", surTouche);
 
+  // Finger swipe on a touch screen (V3.4): the pages follow the finger.
+  const arreterBalayage = brancherBalayage(fenetre, {
+    actif: () => actif() && !glisserEn,
+    peutAller: (sens) => (sens < 0 ? pageCourante > 0 : pageCourante < derniere()),
+    decaler: (px) => {
+      piste.classList.add("piste--sans-transition");
+      piste.style.transform = `translateX(calc(${-pageCourante * 100}% + ${px}px))`;
+    },
+    terminer: (sens) => {
+      const avant = pageCourante;
+      if (sens) allerA(pageCourante + sens);
+      if (pageCourante === avant) appliquer(true); // back into place
+    },
+  });
+
   const arreterMolette = brancherMolette({
     actif: () => actif() && !glisserEn,
     allerRelatif,
@@ -167,11 +196,16 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
     rendre(liste, { avecAjout, libelleAjout }) {
       const d = disposition();
       comptes = d.comptes;
-      grille = { lignes: d.lignes, colonnes: d.colonnes };
-      ids = liste.map((e) => e.id);
-      const decoupees = decouperParComptes(liste, comptes).map((elements) => ({ elements }));
-      if (!decoupees.length) decoupees.push({ elements: [] });
+      grilleStockee = { lignes: d.lignes, colonnes: d.colonnes };
+      grille = d.affichage ?? grilleStockee;
       const capacite = grille.lignes * grille.colonnes;
+      ecrans = ecransDePages(comptes, d.affichage ? capacite : Infinity);
+      ids = liste.map((e) => e.id);
+      const parPage = decouperParComptes(liste, comptes);
+      const decoupees = ecrans.map(({ page, debut, n }) => ({
+        elements: parPage[page].slice(debut, debut + n),
+      }));
+      if (!decoupees.length) decoupees.push({ elements: [] });
       if (avecAjout) {
         if (decoupees.at(-1).elements.length < capacite) decoupees.at(-1).ajout = true;
         else decoupees.push({ elements: [], ajout: true });
@@ -196,14 +230,14 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
     colonnes: () => grille.colonnes,
 
     /**
-     * ELEMENT_DEPLACER's page and position for a drop, or null when nothing moved. The page
-     * that only holds "+" and the empty page after the last one are a new page.
+     * ELEMENT_DEPLACER's stored page and position for a drop, or null when nothing moved.
+     * The page that only holds "+" and the empty page after the last one are a new page.
      */
     deplacement(evt) {
-      const pageSource = pageDe(evt.from);
-      const pageCible = Math.min(pageDe(evt.to), comptes.length);
-      if (pageSource === pageCible && evt.oldDraggableIndex === evt.newDraggableIndex) return null;
-      return { versPage: pageCible, versIndex: evt.newDraggableIndex };
+      const de = pageDe(evt.from);
+      const vers = Math.min(pageDe(evt.to), ecrans.length);
+      if (de === vers && evt.oldDraggableIndex === evt.newDraggableIndex) return null;
+      return deplacementEntreEcrans(ecrans, de, vers, evt.newDraggableIndex);
     },
 
     /**
@@ -216,7 +250,7 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
         const index = ids.indexOf(id) - debut;
         if (index >= 0 && index < comptes[page]) {
           const n = comptes[page];
-          const { colonnes } = grille;
+          const { colonnes } = grilleStockee;
           const precedente = page > 0 ? [page - 1, comptes[page - 1]] : null;
           const suivante = page < comptes.length - 1 ? [page + 1, 0] : null;
           const vers = {
@@ -268,6 +302,7 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
       mesure.detruire();
       zones.fin();
       arreterMolette();
+      arreterBalayage();
       document.removeEventListener("keydown", surTouche);
       document.removeEventListener("pointermove", suivrePointeur, true);
     },

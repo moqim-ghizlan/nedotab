@@ -228,19 +228,11 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     expect(charge("pages")).toEqual({ affichageAccueil: "pages" });
     expect(charge(3)).toEqual({});
   });
-  it("affichage par défaut : défilement sur téléphone, pages ailleurs, choix respecté", () => {
-    const cas = [
-      [{}, 375, "defilement"], // iPhone, portrait or landscape: shorter side
-      [{}, 320, "defilement"], // iPhone SE
-      [{}, 744, "pages"], // iPad mini
-      [{}, 1080, "pages"], // computer
-      [undefined, 375, "defilement"],
-      [{ affichageAccueil: "pages" }, 375, "pages"],
-      [{ affichageAccueil: "defilement" }, 1080, "defilement"],
-      [{ affichageAccueil: "autre" }, 1080, "pages"],
-    ];
-    for (const [appareil, cote, attendu] of cas)
-      expect(affichageAccueilDe(appareil, cote)).toBe(attendu);
+  it("affichage par défaut : pages, choix respecté", () => {
+    expect(affichageAccueilDe({})).toBe("pages");
+    expect(affichageAccueilDe(undefined)).toBe("pages");
+    expect(affichageAccueilDe({ affichageAccueil: "defilement" })).toBe("defilement");
+    expect(affichageAccueilDe({ affichageAccueil: "autre" })).toBe("pages");
   });
   it("chargement : colonnes et debug validés", () => {
     const { etat } = migrer({

@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  COTE_TELEPHONE,
   FLOU_MAX,
   fondEffectif,
   NOMS_DEGRADES,
@@ -115,7 +116,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       ["pages", "Pages"],
       ["defilement", "Défilement vertical"],
     ],
-    affichageAccueilDe(store.lire().reglagesAppareil, petitCote()),
+    affichageAccueilDe(store.lire().reglagesAppareil),
     (v) => {
       modifier({ affichageAccueil: v });
       montrerSelonAffichage();
@@ -143,6 +144,14 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     lignesAccueil.groupe,
     el("p", { class: "reglages-libelle", texte: "Colonnes par page" }),
     colonnesAccueil.groupe,
+    // V3.4: a phone shows the same pages with its own grid.
+    petitCote() < COTE_TELEPHONE
+      ? el("p", {
+          class: "reglages-note",
+          texte:
+            "Sur ce téléphone, les pages s'affichent sur 4 colonnes, coupées en écrans plus petits. Ces réglages valent pour vos ordinateurs et tablettes.",
+        })
+      : null,
   );
   const reglagesDefilement = el(
     "div",
@@ -152,7 +161,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   );
   // Pages: the synced grid; one scrolling grid: the device's forced columns.
   const montrerSelonAffichage = () => {
-    const pages = affichageAccueilDe(store.lire().reglagesAppareil, petitCote()) === "pages";
+    const pages = affichageAccueilDe(store.lire().reglagesAppareil) === "pages";
     reglagesPages.hidden = !pages;
     reglagesDefilement.hidden = pages;
   };
@@ -689,7 +698,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     }
     galerie.maj();
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
-    affichageAccueil.maj(affichageAccueilDe(store.lire().reglagesAppareil, petitCote()));
+    affichageAccueil.maj(affichageAccueilDe(store.lire().reglagesAppareil));
     lignesAccueil.maj(String(grilleActuelle().lignes));
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
