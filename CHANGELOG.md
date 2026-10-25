@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.12.1] - 2026-10-25
+
+### Modifié
+
+- Les pages de l'accueil occupent 90 % de la largeur de la fenêtre au lieu d'une colonne
+  de 960 px ; la barre de recherche garde sa largeur, centrée. L'affichage en défilement
+  vertical ne change pas.
+
 ## [2.12.0] - 2026-10-25
 
 ### Modifié

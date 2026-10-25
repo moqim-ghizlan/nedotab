@@ -14,7 +14,9 @@ html.accueil-en-pages #app {
   padding-bottom: var(--espace-3);
 }
 
+/* The pages use 90 % of the window's width (the search bar keeps its own width). */
 html.accueil-en-pages .page {
+  max-width: 90vw;
   display: flex;
   flex-direction: column;
   min-height: 0;
