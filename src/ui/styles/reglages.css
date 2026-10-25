@@ -1251,6 +1251,42 @@ body.fond-clair .carte-action--principale {
   gap: var(--espace-3);
 }
 
+/* In the panel: the photo chosen, its credit and the button that opens the gallery. */
+.galerie-apercu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+
+.galerie-apercu-image {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--texte) 8%, transparent);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+}
+
+.galerie-apercu-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.galerie-ouvrir {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  width: 100%;
+  font-weight: 600;
+}
+
+.galerie-ouvrir-nombre {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  font-weight: 500;
+}
+
 .galerie-aleatoire {
   display: flex;
   flex-direction: column;
@@ -1261,15 +1297,100 @@ body.fond-clair .carte-action--principale {
   background: color-mix(in srgb, var(--texte) 3%, transparent);
 }
 
+.galerie-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.galerie-options[hidden] {
+  display: none;
+}
+
+.galerie-ligne {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  font-size: var(--taille-s);
+}
+
+.galerie-select {
+  padding: 6px 10px;
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--texte);
+  font-size: var(--taille-s);
+}
+
 .galerie-autre {
   align-self: flex-start;
 }
 
-/* All the categories in view: they wrap instead of scrolling sideways. */
+.galerie-credit a {
+  color: inherit;
+  text-underline-offset: 2px;
+}
+
+/*
+ * The photos, in a window of their own beside the settings panel (V2.13.1): the background
+ * stays visible behind it, so each photo can be judged once chosen.
+ */
+.galerie-fenetre {
+  position: fixed;
+  inset: 12px calc(min(400px, 100vw - 24px) + 24px) 12px auto;
+  width: min(760px, calc(100vw - min(400px, 100vw - 24px) - 48px));
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(28px) saturate(1.5);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+  overflow: hidden;
+}
+
+.galerie-fenetre[open] {
+  display: flex;
+  flex-direction: column;
+  animation: galerie-entree 360ms var(--ressort, cubic-bezier(0.2, 0.9, 0.25, 1.04)) both;
+}
+
+.galerie-fenetre::backdrop {
+  background: transparent;
+}
+
+@keyframes galerie-entree {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.98);
+  }
+}
+
+.galerie-fenetre-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 14px 6px 22px;
+}
+
+.galerie-fenetre-entete h2 {
+  margin: 0 0 2px;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
 .galerie-categories {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  padding: 10px 22px 14px;
 }
 
 .galerie-categorie {
@@ -1298,10 +1419,18 @@ body.fond-clair .carte-action--principale {
   color: var(--surface);
 }
 
+.galerie-fenetre-corps {
+  flex: 1;
+  min-height: 0;
+  padding: 0 22px 22px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
 .galerie-grille {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1313,7 +1442,7 @@ body.fond-clair .carte-action--principale {
   width: 100%;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--texte) 8%, transparent);
   overflow: hidden;
   aspect-ratio: 16 / 9;
@@ -1330,6 +1459,28 @@ body.fond-clair .carte-action--principale {
 
 .galerie-photo:hover img {
   transform: scale(1.06);
+}
+
+/* The author's name rises on hover. */
+.galerie-photo-auteur {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 18px 10px 6px;
+  background: linear-gradient(to top, rgb(0 0 0 / 0.55), transparent);
+  color: #fff;
+  font-size: var(--taille-xs);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 200ms,
+    transform 200ms;
+}
+
+.galerie-photo:hover .galerie-photo-auteur,
+.galerie-photo:focus-visible .galerie-photo-auteur {
+  opacity: 1;
+  transform: none;
 }
 
 /* The photo chosen: a ring and a check. */
@@ -1355,13 +1506,35 @@ body.fond-clair .carte-action--principale {
   font-weight: 700;
 }
 
-.galerie-credit a {
-  color: inherit;
-  text-underline-offset: 2px;
+/* Narrow window: the gallery takes the whole screen, over the panel. */
+@media (max-width: 900px) {
+  .galerie-fenetre {
+    inset: 12px;
+    width: auto;
+  }
+
+  .galerie-fenetre::backdrop {
+    background: var(--voile);
+  }
+}
+
+@media (max-width: 520px) {
+  .galerie-fenetre {
+    inset: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .galerie-grille {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .galerie-photo img {
+  .galerie-fenetre[open],
+  .galerie-photo img,
+  .galerie-photo-auteur {
+    animation: none;
     transition: none;
   }
 }

@@ -710,6 +710,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     desabonner();
     compteUi?.arreter();
     bibliotheque?.arreter();
+    galerie.arreter();
     observateur?.disconnect();
     document.removeEventListener("keydown", surTouche);
     document.removeEventListener("pointerdown", surPressionExterieure, true);

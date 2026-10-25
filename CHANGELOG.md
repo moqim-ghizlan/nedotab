@@ -2,6 +2,17 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [2.13.1] - 2026-10-25
+
+### Modifié
+
+- La liste des photos ne s'étale plus dans le panneau Réglages : le panneau montre la
+  photo choisie, son crédit et un bouton « Parcourir la galerie ». Les photos s'ouvrent
+  dans une fenêtre à part, à gauche du panneau, avec le fond visible derrière pour juger
+  chaque photo ; un clic l'applique aussitôt et la fenêtre reste ouverte. Échap, la croix
+  ou un clic à l'extérieur la ferment. Sur un petit écran, elle prend tout l'écran.
+- Image aléatoire : la catégorie se choisit dans le panneau (liste déroulante).
+
 ## [2.13.0] - 2026-10-25
 
 ### Ajouté

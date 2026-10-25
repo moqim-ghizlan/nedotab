@@ -11,49 +11,64 @@ import {
 } from "../../core/galerie.js";
 import { el } from "../dom.js";
 import { photoGalerieAffichee } from "../apparence.js";
+import { icone } from "../icones.js";
 
 const FREQUENCES = [
   ["onglet", "À chaque onglet"],
   ["jour", "Chaque jour"],
   ["clic", "Au clic"],
 ];
+const CATEGORIES = [[TOUTES, "Toutes"], ...CATEGORIES_GALERIE.map((c) => [c.id, c.libelle])];
+const libelleCategorie = (id) => CATEGORIES.find(([c]) => c === id)?.[1] ?? "Toutes";
+
+/** "Photo : <author> sur Unsplash" (the Unsplash licence does not require it: a courtesy). */
+const credit = (photo) => [
+  "Photo : ",
+  el("a", { href: urlAuteur(photo), target: "_blank", rel: "noopener", texte: photo.auteur }),
+  " sur ",
+  el("a", { href: urlPagePhoto(photo), target: "_blank", rel: "noopener", texte: "Unsplash" }),
+];
 
 /**
  * Gallery of the background settings (V2.13): free Unsplash photos by category, and the
- * random photo (each new tab, each day, or on request). The choice is a synced background:
- * `lire()` gives the current one, `choisir(fond)` applies another (veil and blur kept).
+ * random photo (each new tab, each day, or on request). The settings panel only shows the
+ * photo chosen, the random options and a button; the photos open in a window next to the
+ * panel (V2.13.1), the background staying visible behind to judge each one.
+ *
+ * The choice is a synced background: `lire()` gives the current one, `choisir(fond)`
+ * applies another (veil and blur kept).
  */
 export function creerGalerie({ lire, choisir }) {
-  const fondActuel = () => lire();
   const effets = () => {
-    const f = fondActuel();
+    const f = lire();
     return ["image", "galerie", "aleatoire"].includes(f.type)
       ? { voile: f.voile, flou: f.flou }
       : { voile: 0.25, flou: 0 };
   };
-  let categorie = fondActuel().type === "aleatoire" ? fondActuel().categorie : TOUTES;
+  /** Photo shown now (each new tab: the one drawn for this tab). */
+  const photoActuelle = () => trouverPhoto(photoDuFond(lire(), { onglet: photoGalerieAffichee() }));
 
-  // --- categories --------------------------------------------------------------------------
-  const puces = el("div", {
-    class: "galerie-categories",
-    role: "radiogroup",
-    "aria-label": "Catégories de photos",
-  });
-  for (const [id, libelle] of [
-    [TOUTES, "Toutes"],
-    ...CATEGORIES_GALERIE.map((c) => [c.id, c.libelle]),
-  ]) {
-    puces.append(
-      el("button", {
-        type: "button",
-        class: "galerie-categorie",
-        role: "radio",
-        dataset: { categorie: id },
-        texte: libelle,
-        onclick: () => choisirCategorie(id),
-      }),
-    );
-  }
+  // --- in the panel: the photo chosen and the button --------------------------------------
+  const apercuImage = el("img", { alt: "", width: "400", height: "225", hidden: true });
+  const apercuCredit = el("p", { class: "reglages-note galerie-credit" });
+  const ouvrir = el(
+    "button",
+    {
+      type: "button",
+      class: "bouton galerie-ouvrir",
+      "aria-haspopup": "dialog",
+      onclick: () => fenetre.ouvrir(),
+    },
+    el("span", { texte: "Parcourir la galerie" }),
+    el("span", { class: "galerie-ouvrir-nombre", texte: `${photosDe(TOUTES).length} photos` }),
+  );
+  const apercu = el(
+    "div",
+    { class: "galerie-apercu" },
+    el("div", { class: "galerie-apercu-image" }, apercuImage),
+    apercuCredit,
+    ouvrir,
+  );
 
   // --- random photo ------------------------------------------------------------------------
   const interrupteur = el("input", {
@@ -64,6 +79,25 @@ export function creerGalerie({ lire, choisir }) {
     onchange: (e) => (e.currentTarget.checked ? activerAleatoire() : desactiverAleatoire()),
   });
   const portee = el("span", { class: "reglages-note" });
+  const categorieAleatoire = el(
+    "select",
+    {
+      class: "galerie-select",
+      "aria-label": "Catégorie de l'image aléatoire",
+      onchange: (e) => {
+        const f = lire();
+        if (f.type !== "aleatoire") return;
+        const categorie = e.currentTarget.value;
+        // The draw now happens in this category.
+        choisir({
+          ...f,
+          categorie,
+          ...(f.frequence === "clic" ? { choix: photoAuHasard(categorie) } : {}),
+        });
+      },
+    },
+    CATEGORIES.map(([id, libelle]) => el("option", { value: id, texte: libelle })),
+  );
   const frequences = el(
     "div",
     { class: "segments galerie-frequences", role: "radiogroup", "aria-label": "Fréquence" },
@@ -75,7 +109,7 @@ export function creerGalerie({ lire, choisir }) {
         dataset: { valeur: v },
         texte,
         onclick: () => {
-          const f = fondActuel();
+          const f = lire();
           if (f.type !== "aleatoire") return;
           choisir({
             ...f,
@@ -93,11 +127,18 @@ export function creerGalerie({ lire, choisir }) {
     class: "bouton galerie-autre",
     texte: "Une autre image",
     onclick: () => {
-      const f = fondActuel();
+      const f = lire();
       if (f.type === "aleatoire")
         choisir({ ...f, choix: photoAuHasard(f.categorie, Math.random, photoGalerieAffichee()) });
     },
   });
+  const optionsAleatoire = el(
+    "div",
+    { class: "galerie-options" },
+    el("label", { class: "galerie-ligne" }, el("span", { texte: "Catégorie" }), categorieAleatoire),
+    frequences,
+    autre,
+  );
   const carteAleatoire = el(
     "div",
     { class: "galerie-aleatoire" },
@@ -107,38 +148,92 @@ export function creerGalerie({ lire, choisir }) {
       el("span", { class: "interrupteur-texte" }, el("span", { texte: "Image aléatoire" }), portee),
       interrupteur,
     ),
-    frequences,
-    autre,
+    optionsAleatoire,
   );
 
   function activerAleatoire() {
-    choisir({ type: "aleatoire", categorie, frequence: "jour", ...effets() });
+    choisir({ type: "aleatoire", categorie: fenetre.categorie(), frequence: "jour", ...effets() });
   }
   function desactiverAleatoire() {
     // The photo shown stays, as a chosen one.
-    const id = photoGalerieAffichee() ?? photosDe(categorie)[0]?.id;
+    const id = photoGalerieAffichee() ?? photosDe(TOUTES)[0]?.id;
     if (id) choisir({ type: "galerie", id, ...effets() });
   }
-  function choisirCategorie(id) {
-    categorie = id;
-    const f = fondActuel();
-    // Random: the draw now happens in this category.
-    if (f.type === "aleatoire") {
-      choisir({
-        ...f,
-        categorie: id,
-        ...(f.frequence === "clic" ? { choix: photoAuHasard(id) } : {}),
-      });
+
+  const fenetre = creerFenetreGalerie({
+    estChoisie: (id) => lire().type === "galerie" && lire().id === id,
+    choisir: (id) => choisir({ type: "galerie", id, ...effets() }),
+  });
+
+  function maj() {
+    const f = lire();
+    const aleatoire = f.type === "aleatoire";
+    interrupteur.checked = aleatoire;
+    optionsAleatoire.hidden = !aleatoire;
+    if (aleatoire) categorieAleatoire.value = f.categorie;
+    const ou =
+      aleatoire && f.categorie !== TOUTES
+        ? `dans « ${libelleCategorie(f.categorie)} »`
+        : "dans toutes les catégories";
+    portee.textContent = aleatoire
+      ? `Une photo ${ou}, ${{ onglet: "à chaque nouvel onglet", jour: "chaque jour", clic: "quand vous le demandez" }[f.frequence]}.`
+      : "Laissez NedoTab choisir une photo pour vous.";
+    for (const b of frequences.children)
+      b.setAttribute("aria-checked", String(aleatoire && b.dataset.valeur === f.frequence));
+    autre.hidden = !(aleatoire && f.frequence === "clic");
+    const photo = f.type === "galerie" || aleatoire ? photoActuelle() : null;
+    apercuImage.hidden = !photo;
+    if (photo && apercuImage.dataset.photo !== photo.id) {
+      apercuImage.src = urlVignette(photo.id);
+      apercuImage.dataset.photo = photo.id;
     }
-    rendreGrille();
-    maj();
+    apercuCredit.replaceChildren(...(photo ? credit(photo) : []));
+    fenetre.maj();
   }
 
-  // --- photos ------------------------------------------------------------------------------
+  maj();
+  const racine = el("div", { class: "galerie" }, apercu, carteAleatoire);
+  return { racine, maj, ouvrir: () => fenetre.ouvrir(), arreter: () => fenetre.detruire() };
+}
+
+/**
+ * The photos, in a window of their own next to the settings panel: categories, then a grid
+ * of pictures loaded as they come into view. A click applies the photo at once and keeps
+ * the window open; Escape, the close button or a click outside closes it.
+ */
+function creerFenetreGalerie({ estChoisie, choisir }) {
+  let categorie = TOUTES;
+  const puces = el("div", {
+    class: "galerie-categories",
+    role: "radiogroup",
+    "aria-label": "Catégories de photos",
+  });
+  for (const [id, libelle] of CATEGORIES) {
+    puces.append(
+      el("button", {
+        type: "button",
+        class: "galerie-categorie",
+        role: "radio",
+        dataset: { categorie: id },
+        texte: libelle,
+        onclick: () => {
+          categorie = id;
+          rendreGrille();
+          grille.scrollTop = 0;
+          corps.scrollTop = 0;
+        },
+      }),
+    );
+  }
+  const compte = el("span", { class: "galerie-fenetre-compte" });
   const grille = el("ul", { class: "galerie-grille", "aria-label": "Photos" });
   const rendreGrille = () => {
+    const photos = photosDe(categorie);
+    compte.textContent = `${photos.length} photos`;
+    for (const b of puces.children)
+      b.setAttribute("aria-checked", String(b.dataset.categorie === categorie));
     grille.replaceChildren(
-      ...photosDe(categorie).map((p) =>
+      ...photos.map((p) =>
         el(
           "li",
           {},
@@ -149,8 +244,8 @@ export function creerGalerie({ lire, choisir }) {
               class: "galerie-photo",
               dataset: { photo: p.id },
               "aria-label": `Photo de ${p.auteur}`,
-              title: p.auteur,
-              onclick: () => choisir({ type: "galerie", id: p.id, ...effets() }),
+              "aria-pressed": String(estChoisie(p.id)),
+              onclick: () => choisir(p.id),
             },
             el("img", {
               src: urlVignette(p.id),
@@ -161,59 +256,57 @@ export function creerGalerie({ lire, choisir }) {
               width: "400",
               height: "225",
             }),
+            el("span", { class: "galerie-photo-auteur", texte: p.auteur }),
           ),
         ),
       ),
     );
   };
+  const corps = el("div", { class: "galerie-fenetre-corps" }, grille);
+  const dialogue = el(
+    "dialog",
+    { class: "galerie-fenetre", "aria-labelledby": "galerie-fenetre-titre" },
+    el(
+      "header",
+      { class: "galerie-fenetre-entete" },
+      el(
+        "div",
+        {},
+        el("h2", { id: "galerie-fenetre-titre", texte: "Galerie" }),
+        el("p", { class: "reglages-note" }, compte, " libres de droits, venues d'Unsplash"),
+      ),
+      el(
+        "button",
+        {
+          type: "button",
+          class: "reglages-fermer",
+          "aria-label": "Fermer la galerie",
+          onclick: () => dialogue.close(),
+        },
+        icone("fermer"),
+      ),
+    ),
+    puces,
+    corps,
+  );
+  // A click on the backdrop (outside the window) closes it.
+  dialogue.addEventListener("click", (e) => {
+    if (e.target === dialogue) dialogue.close();
+  });
 
-  const credit = el("p", { class: "reglages-note galerie-credit" });
-
-  function maj() {
-    const f = fondActuel();
-    const aleatoire = f.type === "aleatoire";
-    if (aleatoire && f.categorie !== categorie) {
-      categorie = f.categorie;
+  return {
+    categorie: () => categorie,
+    ouvrir() {
+      if (!dialogue.isConnected) document.body.append(dialogue);
       rendreGrille();
-    }
-    for (const b of puces.children)
-      b.setAttribute("aria-checked", String(b.dataset.categorie === categorie));
-    interrupteur.checked = aleatoire;
-    const libelle =
-      categorie === TOUTES
-        ? "dans toutes les catégories"
-        : `dans « ${CATEGORIES_GALERIE.find((c) => c.id === categorie)?.libelle} »`;
-    portee.textContent = aleatoire
-      ? `Une photo ${libelle}, ${{ onglet: "à chaque nouvel onglet", jour: "chaque jour", clic: "quand vous le demandez" }[f.frequence]}.`
-      : `Une photo au hasard ${libelle}.`;
-    frequences.hidden = !aleatoire;
-    for (const b of frequences.children)
-      b.setAttribute("aria-checked", String(aleatoire && b.dataset.valeur === f.frequence));
-    autre.hidden = !(aleatoire && f.frequence === "clic");
-    const choisie = f.type === "galerie" ? f.id : null;
-    for (const b of grille.querySelectorAll(".galerie-photo"))
-      b.setAttribute("aria-pressed", String(b.dataset.photo === choisie));
-    // Credit of the photo shown (the Unsplash licence does not require it: a courtesy).
-    // The photo of the choice just made (each new tab: the one drawn for this tab).
-    const photo = trouverPhoto(photoDuFond(f, { onglet: photoGalerieAffichee() }));
-    if (photo && (f.type === "galerie" || aleatoire)) {
-      credit.replaceChildren(
-        "Photo : ",
-        el("a", { href: urlAuteur(photo), target: "_blank", rel: "noopener", texte: photo.auteur }),
-        " sur ",
-        el("a", {
-          href: urlPagePhoto(photo),
-          target: "_blank",
-          rel: "noopener",
-          texte: "Unsplash",
-        }),
-      );
-    } else credit.replaceChildren();
-  }
-
-  rendreGrille();
-  maj();
-
-  const racine = el("div", { class: "galerie" }, carteAleatoire, puces, grille, credit);
-  return { racine, maj };
+      dialogue.showModal();
+      puces.querySelector("[aria-checked='true']")?.focus();
+    },
+    /** The photo chosen is marked (also after a change made on another device). */
+    maj() {
+      for (const b of grille.querySelectorAll(".galerie-photo"))
+        b.setAttribute("aria-pressed", String(estChoisie(b.dataset.photo)));
+    },
+    detruire: () => dialogue.remove(),
+  };
 }
