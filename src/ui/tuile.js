@@ -1,7 +1,12 @@
 import { couleurDepuisTexte, lettrePourSite } from "../core/couleurs.js";
 import { urlPourNavigateur } from "../core/navigateurs.js";
 import { el } from "./dom.js";
-import { empreinte, globeNavigateur, urlsFaviconGoogle } from "./services/icones.js";
+import {
+  empreinte,
+  globeNavigateur,
+  urlFaviconGoogleAdresse,
+  urlsFaviconGoogle,
+} from "./services/icones.js";
 
 function pastilleLettre(site) {
   return el("span", {
@@ -39,14 +44,38 @@ function verifierCacheNavigateur(img, site, lettre) {
 }
 
 /**
+ * Icons saved before 3.4.1 asked Google by domain ("domain="), which gives the generic G for
+ * Gmail, Docs, Drive…: the full address is shown first, the saved icon stays the fallback.
+ */
+const iconeGoogleParDomaine = (icone) =>
+  icone.source === "google" && /\/s2\/favicons\?domain=/.test(icone.valeur);
+
+function revenirSiInconnue(img, ancienne, lettre) {
+  const revenir = () => {
+    img.removeEventListener("load", verifier);
+    img.addEventListener("error", lettre, { once: true });
+    img.src = ancienne;
+  };
+  // Google's default 16 px icon means it knows nothing about this address.
+  const verifier = () => {
+    img.removeEventListener("error", revenir);
+    if (img.naturalWidth < 32) revenir();
+    else img.addEventListener("error", lettre, { once: true });
+  };
+  img.addEventListener("load", verifier, { once: true });
+  img.addEventListener("error", revenir, { once: true });
+}
+
+/**
  * Builds the icon node of a site. A broken image falls back to the letter badge on screen
  * only (the state is not changed).
  */
 export function creerIcone(site) {
   const icone = site.icone;
   if (icone?.type !== "url" && icone?.type !== "image") return pastilleLettre(site);
+  const parDomaine = iconeGoogleParDomaine(icone);
   const img = el("img", {
-    src: icone.valeur,
+    src: parDomaine ? urlFaviconGoogleAdresse(site.url) : icone.valeur,
     alt: "",
     loading: "lazy",
     decoding: "async",
@@ -55,7 +84,8 @@ export function creerIcone(site) {
   });
   const cadre = el("span", { class: "tuile-icone tuile-icone--image", "aria-hidden": "true" }, img);
   const lettre = () => cadre.replaceWith(pastilleLettre({ ...site, icone: undefined }));
-  img.addEventListener("error", lettre, { once: true });
+  if (parDomaine) revenirSiInconnue(img, icone.valeur, lettre);
+  else img.addEventListener("error", lettre, { once: true });
   if (icone.source === "chrome") verifierCacheNavigateur(img, site, lettre);
   return cadre;
 }

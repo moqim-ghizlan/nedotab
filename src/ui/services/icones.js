@@ -101,8 +101,19 @@ export function urlFaviconGoogle(url, nom = domaine(url)) {
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(nom)}&sz=128`;
 }
 
-/** Google's icon URLs to try: the site's domain, then its parent domains. */
-export const urlsFaviconGoogle = (url) => domainesParents(url).map((d) => urlFaviconGoogle(url, d));
+/**
+ * Google's icon for the full address: on shared domains (mail.google.com, docs.google.com/
+ * document…) "domain=" answers the parent's generic icon, "domain_url=" the page's own.
+ */
+export function urlFaviconGoogleAdresse(url) {
+  return `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`;
+}
+
+/** Google's icon URLs to try: the full address, the site's domain, then its parent domains. */
+export const urlsFaviconGoogle = (url) => [
+  urlFaviconGoogleAdresse(url),
+  ...domainesParents(url).map((d) => urlFaviconGoogle(url, d)),
+];
 
 async function depuisGoogle(url, signal) {
   for (const src of urlsFaviconGoogle(url)) {
