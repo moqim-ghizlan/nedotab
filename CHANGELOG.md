@@ -29,6 +29,10 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ### Corrigé
 
+- Retour de Google en échec (`auth/internal-error`) : la politique de sécurité du site
+  autorise désormais le script de connexion de Google (`apis.google.com`).
+- L'app web se connecte sur l'adresse où elle tourne (site ou préversion), sinon Safari
+  bloquait le retour sur une préversion.
 - La cible du build (extension ou app web) n'arrivait pas jusqu'à la configuration
   Firebase : App Check ne pouvait jamais s'activer dans l'app web.
 
