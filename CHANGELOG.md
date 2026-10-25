@@ -2,6 +2,38 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.4.0] - 2026-10-25
+
+### Ajouté
+
+- **Pages au doigt** sur iPhone et iPad : la page suit le doigt, un glissement long ou
+  rapide passe à la page voisine, sinon elle revient en place (résistance à la première et
+  à la dernière page). Un glissement vertical ou un appui long sur une icône ne tourne pas
+  la page.
+- **Grille du téléphone** : 4 colonnes × 6 lignes (5 sur un petit iPhone), 7 × 3 en paysage.
+  Les pages enregistrées (8 colonnes par défaut, synchronisées) ne changent pas : le
+  téléphone coupe chaque page en écrans plus petits, et une icône déplacée sur le téléphone
+  arrive au bon endroit sur l'ordinateur.
+- Accueil en défilement vertical (au choix) : 4 colonnes sur iPhone, 5 ou 6 sur une largeur
+  moyenne, icônes de 52 à 60 px selon la place (container queries) ; réglage « Colonnes »
+  de 3 à 10.
+- Téléphone : dossier en plein écran glissant depuis le bas, fenêtres (ajout, modification)
+  en feuille du bas qui remonte au-dessus du clavier iOS, bouton fermer de 44 px.
+- Encoche et barre d'accueil respectées partout (page, messages, feuilles).
+- Tactile : pas de zoom au double toucher, léger enfoncement des icônes au toucher, lignes
+  de résultats de recherche de 52 px, champs d'adresse sans majuscule ni correction
+  automatique ; l'indication « (/) » disparaît sur un écran tactile sans clavier.
+- Hauteur réelle de l'écran sur iOS (`100dvh`).
+
+### Vérifié
+
+| Appareil                                              | Portrait          | Paysage   |
+| ----------------------------------------------------- | ----------------- | --------- |
+| iPhone (Safari, vrai appareil)                        | ✔                 | non testé |
+| Taille iPhone 375 × 812 (navigateur de développement) | ✔                 | —         |
+| Ordinateur (extension, pages de 8 colonnes)           | ✔ sans changement | —         |
+| iPad, Split View                                      | non testé         | non testé |
+
 ## [3.3.0] - 2026-10-25
 
 ### Ajouté
