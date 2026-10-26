@@ -1,6 +1,7 @@
 import { cpSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig, loadEnv } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
@@ -60,6 +61,36 @@ export default defineConfig(({ mode }) => {
       define,
       resolve: resolve_,
       build: { ...build, outDir: "dist/pwa", rollupOptions: { input: { index: "index.html" } } },
+      plugins: [
+        // V3.7: the interface opens without network; a new version is offered, never forced
+        // (registerSW in src/ui/miseAJour.js). Only in this build: the extension has none.
+        VitePWA({
+          registerType: "prompt",
+          injectRegister: false,
+          manifest: false,
+          workbox: {
+            globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2,webmanifest}"],
+            navigateFallback: "/index.html",
+            // The sign-in redirect pages of Firebase (/__/auth/...) must reach the server.
+            navigateFallbackDenylist: [/^\/__\//],
+            cleanupOutdatedCaches: true,
+            // Firebase requests (Firestore, Storage, Auth) are never cached here: the SDK
+            // and its IndexedDB cache handle them.
+            runtimeCaching: [
+              {
+                urlPattern: ({ url }) =>
+                  url.hostname === "www.google.com" && url.pathname.startsWith("/s2/favicons"),
+                handler: "StaleWhileRevalidate",
+                options: {
+                  cacheName: "favicons",
+                  expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
+                  cacheableResponse: { statuses: [0, 200] },
+                },
+              },
+            ],
+          },
+        }),
+      ],
     };
   }
   return {

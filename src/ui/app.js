@@ -338,6 +338,27 @@ export async function demarrerApp(racine) {
   });
   // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
   monterBandeauInstallation();
+  // V3.7: service worker and "new version" banner, in the web app only.
+  if (import.meta.env.VITE_TARGET === "pwa") {
+    import("./miseAJour.js").then((m) =>
+      m.brancherMiseAJour({
+        // What is still waiting goes out first: the local save, then the account queue
+        // (kept on this device anyway: nothing is lost if the 3 s run out).
+        avantRechargement: async () => {
+          persistance.vider();
+          const fini = (e) => e.mode !== "compte" || e.statut === "synchronise";
+          if (fini(synchro.lire())) return;
+          await new Promise((ok) => {
+            const arret = synchro.abonner((e) => {
+              if (!fini(e)) return;
+              arret();
+              ok();
+            });
+          });
+        },
+      }),
+    );
+  }
   suivreClavier();
   // Test builds against the emulators only: inspection hook for the browser scenarios.
   if (import.meta.env.VITE_UTILISER_EMULATEURS === "true")
@@ -545,7 +566,7 @@ export async function demarrerApp(racine) {
     }
   });
 
-  brancherPersistance(store, stockage, {
+  const persistance = brancherPersistance(store, stockage, {
     reduire,
     versionConnue,
     lectureSeule: () => lectureSeule,

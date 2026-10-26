@@ -542,6 +542,12 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
           "p",
           { class: "reglages-liens" },
           el("a", { href: URL_SITE, target: "_blank", rel: "noopener", texte: "Site du projet" }),
+          el("a", {
+            href: `${URL_SITE}mise-a-jour.html`,
+            target: "_blank",
+            rel: "noopener",
+            texte: "Nouveautés",
+          }),
           // The extension is updated by hand (zip); the web app updates itself.
           plateforme.capacites.miseAJourManuelle
             ? el("a", {

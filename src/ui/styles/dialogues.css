@@ -318,3 +318,44 @@
     padding-inline: var(--espace-2);
   }
 }
+
+/* "New version" banner of the web app (V3.7), above the home bar. */
+.bandeau-maj {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--espace-5) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--espace-4));
+  padding: var(--espace-2) var(--espace-3) var(--espace-2) var(--espace-4);
+  border-radius: var(--rayon);
+  background: var(--texte);
+  color: var(--fond);
+  box-shadow: var(--ombre-forte);
+  font-size: var(--taille-s);
+}
+
+.bandeau-maj-bouton {
+  min-height: 36px;
+  padding: 0 var(--espace-3);
+  border: 0;
+  border-radius: var(--rayon-petit);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bandeau-maj-fermer {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
