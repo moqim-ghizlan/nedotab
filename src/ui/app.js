@@ -395,6 +395,7 @@ export async function demarrerApp(racine) {
       retourFocus: tuile,
       lectureSeule: () => lectureSeule,
       annoncer,
+      versAccueil: (x, y) => accueil?.positionDepot(x, y) ?? null,
     });
 
   // Search bar above the grid; a folder found opens directly at its level.
@@ -474,6 +475,7 @@ export async function demarrerApp(racine) {
           lectureSeule: () => lectureSeule,
           annoncer,
           editerTitre: true,
+          versAccueil: (x, y) => accueil?.positionDepot(x, y) ?? null,
         }),
       ajouter: menuAjout,
       libelleAjout: "Ajouter un site ou un dossier",

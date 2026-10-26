@@ -1,6 +1,7 @@
 import { A } from "../core/actions.js";
 import { peutCreerDossierDans, peutPlacer, trouver } from "../core/arbre.js";
 import { genererIdParDefaut } from "../core/modele.js";
+import { indexInsertion } from "../core/insertion.js";
 import { comptesDe } from "../core/pages.js";
 import { brancherActionsElements } from "./actionsElement.js";
 import { activerDeplacementClavier, activerGlisser } from "./glisser.js";
@@ -16,7 +17,8 @@ export const OUVRIR_APRES_FUSION = true;
  * One grid level, shared by the home page and the folder window: rendering, drag and drop
  * (reorder, drop into a folder, site + site → folder, breadcrumb), keyboard, context menus.
  * `parentId()` gives the folder shown (null = home). `pagination` (V2.11, home only) cuts
- * the level into pages: see pages/accueilPagine.js.
+ * the level into pages: see pages/accueilPagine.js. `sortie` (folder window, V3.10.1) lets
+ * an element be dragged out of the folder onto the home grid.
  */
 export function creerVueGrille({
   store,
@@ -29,6 +31,7 @@ export function creerVueGrille({
   ajouter,
   libelleAjout,
   pagination = null,
+  sortie = null,
 }) {
   const grille = () => store.lire().grille;
   const elements = () => {
@@ -150,6 +153,7 @@ export function creerVueGrille({
         rendre,
         intention: intentionAvecSource,
         deposer,
+        sortie,
         ...(pagination
           ? {
               groupe: "accueil",
@@ -158,7 +162,9 @@ export function creerVueGrille({
               surDebut: pagination.debutGlisser,
               surFin: pagination.finGlisser,
             }
-          : {}),
+          : sortie
+            ? { surDebut: sortie.debut, surFin: sortie.fin }
+            : {}),
       });
   activerClavierGrille(conteneur, { nbColonnes, montrer });
   if (!lectureSeule()) {
@@ -217,6 +223,24 @@ export function creerVueGrille({
         if (tuile) montrer(tuile);
         tuile?.focus();
       }),
+    /**
+     * Home only: where an element taken out of a folder and dropped at (x, y) goes (V3.10.1).
+     * @returns {{ vers: object, repere: HTMLElement|null, apres: boolean } | null}
+     */
+    positionDepot: (x, y) => {
+      if (pagination) return pagination.positionDepot(x, y);
+      const cases = [...conteneur.querySelectorAll(":scope > .case--element")];
+      const index = indexInsertion(
+        cases.map((c) => c.getBoundingClientRect()),
+        x,
+        y,
+      );
+      return {
+        vers: { versIndex: index },
+        repere: cases[index] ?? cases.at(-1) ?? null,
+        apres: index >= cases.length,
+      };
+    },
     /** Brings the page holding element `id` into view (search, V4.14). */
     allerAElement: (id) => {
       const tuile = conteneur.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);

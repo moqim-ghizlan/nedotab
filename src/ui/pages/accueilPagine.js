@@ -4,6 +4,7 @@ import {
   deplacementEntreEcrans,
   ecransDePages,
 } from "../../core/pages.js";
+import { indexInsertion } from "../../core/insertion.js";
 import { el } from "../dom.js";
 import { brancherBalayage } from "./balayage.js";
 import { rendreGrille } from "../grille.js";
@@ -293,6 +294,26 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
       if (annule) pageCourante = depart;
       // The render that follows the drop bounds the page and puts the tiles in place.
       appliquer(true);
+    },
+
+    /**
+     * An element brought from a folder and dropped at (x, y) on the page shown (V3.10.1):
+     * the tile it goes before (or after, at the end) and ELEMENT_DEPLACER's page and position.
+     */
+    positionDepot(x, y) {
+      const ul = pages[pageCourante];
+      if (!ul) return null;
+      const cases = [...ul.querySelectorAll(":scope > .case--element")];
+      const index = indexInsertion(
+        cases.map((c) => c.getBoundingClientRect()),
+        x,
+        y,
+      );
+      return {
+        vers: deplacementEntreEcrans(ecrans, -1, pageCourante, index),
+        repere: cases[index] ?? cases.at(-1) ?? null,
+        apres: index >= cases.length,
+      };
     },
 
     pageCourante: () => pageCourante,

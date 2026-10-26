@@ -284,6 +284,15 @@
   pointer-events: none;
 }
 
+/* The copy above a folder window is a popover (glisser.js): none of its default box. */
+.sortable-fallback[popover] {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  overflow: visible;
+}
+
 .tuile.cible--fusion .tuile-icone {
   transform: scale(1.12);
   box-shadow:

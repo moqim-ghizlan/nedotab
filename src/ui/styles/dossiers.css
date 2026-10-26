@@ -439,3 +439,56 @@
   min-width: 0;
   text-align: right;
 }
+
+/*
+ * Taking an icon out of the folder (V3.10.1): the window fades away, only the dragged icon
+ * stays, and the home grid shows where it will land.
+ */
+.fenetre-dossier {
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    box-shadow 160ms ease-out;
+}
+
+.fenetre-dossier--sortie {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.fenetre-dossier--sortie > *,
+.fenetre-dossier--sortie .case--fantome .tuile .tuile-icone {
+  visibility: hidden;
+}
+
+.fenetre-dossier--sortie::backdrop {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.case--insertion-avant,
+.case--insertion-apres {
+  position: relative;
+}
+
+.case--insertion-avant::before,
+.case--insertion-apres::before {
+  content: "";
+  position: absolute;
+  top: 6%;
+  bottom: 22%;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.case--insertion-avant::before {
+  left: -4px;
+}
+
+.case--insertion-apres::before {
+  right: -4px;
+}

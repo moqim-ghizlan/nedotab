@@ -26,21 +26,16 @@ function libererApparence(caseEl) {
 
 /**
  * In a folder window (a modal <dialog>, in the top layer) a copy in <body> would be hidden
- * under the window: it goes into the window, still positioned against the screen.
+ * under the window. The copy itself goes to the top layer, above the window, as a popover:
+ * there it is positioned against the screen whatever the window does (opening animation,
+ * fading away when the icon is taken out of the folder).
  */
-function placerCopieDansLaFenetre() {
+function placerCopieAuPremierPlan() {
   const copie = document.querySelector("body > .sortable-fallback");
-  const fenetre = [...document.querySelectorAll("dialog[open]")]
-    .reverse()
-    .find((d) => d.matches(":modal"));
-  if (!copie || !fenetre) return;
-  // SortableJS keeps moving the copy from its first top/left (fixed, or absolute on iOS):
-  // after the move into the window, top/left are corrected so that it stays in place.
-  const avant = copie.getBoundingClientRect();
-  fenetre.append(copie);
-  const apres = copie.getBoundingClientRect();
-  copie.style.top = `${parseFloat(copie.style.top || "0") + avant.top - apres.top}px`;
-  copie.style.left = `${parseFloat(copie.style.left || "0") + avant.left - apres.left}px`;
+  if (!copie || typeof copie.showPopover !== "function" || copie.matches(":popover-open")) return;
+  if (!document.querySelector("dialog[open]:modal")) return;
+  copie.popover = "manual";
+  copie.showPopover();
 }
 
 /**
@@ -63,8 +58,10 @@ function placerCopieDansLaFenetre() {
  * @param {{ parentId?: () => string|null, rendre: () => void, intention?: object,
  *           deposer?: (id: string, cible: object) => void, listes?: () => HTMLElement[],
  *           deplacement?: (evt: object) => object|null, surDebut?: () => void,
- *           surFin?: (infos: { annule: boolean, id?: string }) => void, groupe?: string }} options parentId
- *        gives the level shown; groupe: SortableJS group shared by the lists
+ *           surFin?: (infos: { annule: boolean, id?: string }) => void, groupe?: string,
+ *           sortie?: { active: () => boolean, deposer: (id: string) => void } }} options parentId
+ *        gives the level shown; groupe: SortableJS group shared by the lists; sortie: the
+ *        element was taken out of the folder window, it is dropped on the home grid
  */
 export function activerGlisser(
   store,
@@ -80,12 +77,13 @@ export function activerGlisser(
     surDebut,
     surFin,
     groupe,
+    sortie,
   },
 ) {
   let glisserEnCours = false;
   let annule = false;
   const suivre = (e) => {
-    placerCopieDansLaFenetre();
+    placerCopieAuPremierPlan();
     intention?.suivre(e.clientX, e.clientY);
   };
   // Escape: end the drag where it is, then nothing is applied.
@@ -134,7 +132,7 @@ export function activerGlisser(
       glisserEnCours = true;
       annule = false;
       document.body.classList.add("glisser-en-cours");
-      requestAnimationFrame(placerCopieDansLaFenetre);
+      requestAnimationFrame(placerCopieAuPremierPlan);
       intention?.demarrer(evt.item.querySelector("[data-id]")?.dataset.id);
       document.addEventListener("pointermove", suivre, true);
       document.addEventListener("keydown", surTouche, true);
@@ -158,6 +156,8 @@ export function activerGlisser(
       const vers = annule ? null : deplacement(evt);
       if (annule) {
         // Cancelled: the re-render below puts everything back.
+      } else if (id && sortie?.active()) {
+        sortie.deposer(id);
       } else if (id && cible) {
         deposer?.(id, cible);
       } else if (id && vers) {

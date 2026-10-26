@@ -1,27 +1,42 @@
 import { A } from "../core/actions.js";
-import { cheminVers, peutCreerDossierDans, trouver } from "../core/arbre.js";
+import { cheminVers, peutCreerDossierDans, peutPlacer, trouver } from "../core/arbre.js";
 import { creerDossier } from "../core/modele.js";
+import { comptesDe } from "../core/pages.js";
 import { demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { rendreFilAriane } from "./filAriane.js";
 import { ouvrirMenu } from "./menuContextuel.js";
-import { PROFONDEUR_ATTEINTE } from "./messages.js";
+import { PROFONDEUR_ATTEINTE, RAISONS } from "./messages.js";
 import { rapatrierToasts, toast } from "./toast.js";
 import { creerVueGrille } from "./vueGrille.js";
 
 let ouverte = null;
+
+/** Time out of the window (or over its header) before the folder lets the icon go. */
+export const DELAI_SORTIE_MS = 400;
 
 /**
  * Folder window: one modal <dialog> over the home grid (never stacked). Opening a
  * sub-folder shows its content in the same window; the breadcrumb, the back button and
  * Escape go up one level. Same grid component as the home page. It follows the state while
  * open (other tab) and goes up, or closes, if the folder shown disappears.
+ *
+ * Taking an icon out (V3.10.1), as on the iPhone: dragged out of the window, or up over its
+ * header (the window fills a phone), for DELAI_SORTIE_MS, the window fades away and the
+ * home grid shows; the icon is dropped there, where the finger is (`versAccueil` gives the
+ * place), and the window closes. Hovering the breadcrumb still works as before.
  */
 export function ouvrirFenetreDossier(
   store,
   dossierId,
-  { retourFocus, lectureSeule = () => false, annoncer, editerTitre = false } = {},
+  {
+    retourFocus,
+    lectureSeule = () => false,
+    annoncer = () => {},
+    editerTitre = false,
+    versAccueil = null,
+  } = {},
 ) {
   ouverte?.fermer();
   const grille = () => store.lire().grille;
@@ -174,6 +189,84 @@ export function ouvrirFenetreDossier(
     });
   };
 
+  // --- taking an icon out onto the home grid ---------------------------------------------------
+  let sortie = null; // during a drag: { x, y, minuteur, active, repere }
+  const marquer = (position) => {
+    sortie.repere?.classList.remove("case--insertion-avant", "case--insertion-apres");
+    sortie.repere = position?.repere ?? null;
+    sortie.repere?.classList.add(
+      position.apres ? "case--insertion-apres" : "case--insertion-avant",
+    );
+  };
+  /** Out of the window, or over its header, but not on a breadcrumb segment (own target). */
+  const dehors = (x, y) => {
+    const r = dialogue.getBoundingClientRect();
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) return true;
+    if (y >= corps.getBoundingClientRect().top) return false;
+    return !document.elementsFromPoint(x, y).some((n) => n.closest?.(".ariane-segment"));
+  };
+  const activerSortie = () => {
+    sortie.minuteur = null;
+    sortie.active = true;
+    dialogue.classList.add("fenetre-dossier--sortie");
+    marquer(versAccueil(sortie.x, sortie.y));
+    annoncer("Déposez l'icône sur l'accueil");
+  };
+  const suivreSortie = (e) => {
+    if (!sortie) return;
+    sortie.x = e.clientX;
+    sortie.y = e.clientY;
+    if (sortie.active) {
+      marquer(versAccueil(e.clientX, e.clientY));
+    } else if (!dehors(e.clientX, e.clientY)) {
+      clearTimeout(sortie.minuteur);
+      sortie.minuteur = null;
+    } else {
+      sortie.minuteur ??= setTimeout(activerSortie, DELAI_SORTIE_MS);
+    }
+  };
+  const glisserHors = versAccueil && {
+    debut: () => {
+      sortie = { x: 0, y: 0, minuteur: null, active: false, repere: null };
+      document.addEventListener("pointermove", suivreSortie, true);
+    },
+    fin: () => {
+      document.removeEventListener("pointermove", suivreSortie, true);
+      if (!sortie) return;
+      clearTimeout(sortie.minuteur);
+      marquer(null);
+      sortie = null;
+      dialogue.classList.remove("fenetre-dossier--sortie");
+    },
+    active: () => !!sortie?.active,
+    deposer: (id) => {
+      const g = grille();
+      const element = trouver(g, id)?.element;
+      const position = versAccueil(sortie.x, sortie.y);
+      const verdict = peutPlacer(g, id, null);
+      if (!element || !verdict.ok) {
+        toast(RAISONS[verdict.raison] ?? "Déplacement impossible", { type: "erreur", duree: 4000 });
+        return;
+      }
+      const avant = g;
+      const pages = comptesDe(store.lire());
+      store.envoyer({
+        type: A.ELEMENT_DEPLACER,
+        id,
+        versParentId: null,
+        ...(position?.vers ?? {}),
+      });
+      toast(`« ${element.titre} » placé sur l'accueil`, {
+        action: {
+          libelle: "Annuler",
+          onClic: () => store.envoyer({ type: A.GRILLE_REMPLACER, grille: avant, pages }),
+        },
+      });
+      // The icon has left the folder: back to the home grid (after SortableJS is done).
+      setTimeout(() => dialogue.open && dialogue.close(), 0);
+    },
+  };
+
   const vue = creerVueGrille({
     store,
     conteneur: grilleEl,
@@ -184,6 +277,7 @@ export function ouvrirFenetreDossier(
     ajouter,
     ouvrirDossier: (id) => aller(id, { sens: 1 }),
     apresFusion: (id) => aller(id, { sens: 1, editerTitre: true }),
+    sortie: glisserHors || null,
   });
 
   function actualiser() {
