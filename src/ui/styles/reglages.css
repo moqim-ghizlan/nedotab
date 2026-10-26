@@ -1640,6 +1640,33 @@ body.fond-clair .carte-action--principale {
     min-height: 0;
     border-left: 1px solid color-mix(in srgb, var(--bordure) 60%, transparent);
   }
+  /* The account card in the narrow left column: stacked, long text cut, one action a line. */
+  .reglages[open] > .carte-compte .compte-profil {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .reglages[open] > .carte-compte .compte-identite {
+    max-width: 100%;
+  }
+  .reglages[open] > .carte-compte .compte-identite strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .reglages[open] > .carte-compte .compte-actions {
+    flex-direction: column;
+  }
+  .reglages[open] > .carte-compte .carte-action {
+    justify-content: flex-start;
+    padding-inline: 16px;
+  }
+  .reglages[open] > .carte-compte .carte-action + .carte-action {
+    border-left: 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  }
   .reglages-onglets .onglets-curseur {
     display: none;
   }
