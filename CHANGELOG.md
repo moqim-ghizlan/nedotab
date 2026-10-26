@@ -23,10 +23,10 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 - Les pages en `windows-1252` et autres encodages sont décodées avec leur jeu de caractères
   (en-tête `content-type`, puis `<meta charset>`).
 
-### À valider à la main
+### Vérifié à la main
 
-- Qualité de l'extrait sur 10 sites réels (bon / moyen / mauvais) avec l'outil de diagnostic :
-  à noter ici avant le tag.
+- Extrait testé sur 10 sites réels avec l'outil de diagnostic : résultats bons, aucune
+  heuristique à ajuster.
 
 ## [4.2.0] - 2026-10-27
 
