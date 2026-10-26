@@ -321,3 +321,48 @@ describe("iaListerModeles", () => {
     expect(await ia.listerModeles("u1", { fournisseur: "openai" })).toHaveLength(200);
   });
 });
+
+describe("iaVerifierModeles", () => {
+  it("dit quels modèles répondent avec la clé : disponible, refusé, incertain", async () => {
+    const { db, ia, faux } = monter();
+    faux.envoyer = vi.fn(async ({ modele }) => {
+      if (modele === "bon") return { texte: "OK", jetonsEntree: 1, jetonsSortie: 1, modele };
+      if (modele === "retire") throw new ErreurFournisseur("modele-introuvable");
+      throw new ErreurFournisseur("limite-fournisseur");
+    });
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const r = await ia.verifierModeles("u1", {
+      fournisseur: "openai",
+      modeles: ["bon", "retire", "trop-de-demandes"],
+    });
+    expect(r).toEqual([
+      { id: "bon", ok: true },
+      { id: "retire", ok: false },
+      { id: "trop-de-demandes", ok: null },
+    ]);
+    // Une seule unité de quota pour tout le lot.
+    expect(db.lire("users/u1/prive/quota").appels).toBe(1);
+  });
+
+  it("refuse : sans clé, plus de 10 modèles, identifiant invalide ; quota atteint", async () => {
+    const { ia } = monter({ limite: 1 });
+    await expect(
+      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] }),
+    ).rejects.toMatchObject({ code: "cle-absente" });
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const onze = Array.from({ length: 11 }, (_, i) => `m${i}`);
+    await expect(
+      ia.verifierModeles("u1", { fournisseur: "openai", modeles: onze }),
+    ).rejects.toBeInstanceOf(EntreeInvalide);
+    await expect(
+      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["mauvais id"] }),
+    ).rejects.toBeInstanceOf(EntreeInvalide);
+    await expect(
+      ia.verifierModeles("u1", { fournisseur: "openai", modeles: [] }),
+    ).rejects.toBeInstanceOf(EntreeInvalide);
+    await ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] });
+    await expect(
+      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] }),
+    ).rejects.toBeInstanceOf(QuotaDepasse);
+  });
+});

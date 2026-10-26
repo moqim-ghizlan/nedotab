@@ -137,6 +137,59 @@ export function creerFonctionsIa(deps) {
     }
   }
 
+  /**
+   * Which of these models answer with this key? One minimal call each ("OK"), at most 10 at
+   * a time, counted as ONE unit in the quota. A model the provider does not know (or no
+   * longer gives to this key) comes back as unavailable; any other failure as unknown.
+   * @returns {Promise<Array<{ id: string, ok: boolean|null }>>}
+   */
+  async function verifierModeles(uid, donnees) {
+    const c = await config();
+    const { fournisseur, modeles } = valider(donnees, {
+      fournisseur: { type: "chaine", requis: true, valeurs: () => fournisseursActifs(c) },
+      modeles: {
+        type: "libre",
+        requis: true,
+        verifier: (v) => {
+          if (!Array.isArray(v) || v.length < 1 || v.length > 10)
+            throw new EntreeInvalide("modeles : 1 à 10 modèles attendus.");
+          for (const m of v)
+            if (typeof m !== "string" || !MODELE.motif.test(m) || m.length > MODELE.max)
+              throw new EntreeInvalide("modeles : identifiant invalide.");
+        },
+      },
+    });
+    const a = adaptateur(fournisseur);
+    const entree = (await lireCles(uid))[fournisseur];
+    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
+    await consommer(uid, { n: 1, limite: c.quotaQuotidien });
+    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
+    const debut = horloge();
+    const resultats = await Promise.all(
+      modeles.map(async (id) => {
+        try {
+          await a.envoyer({
+            cle,
+            modele: id,
+            messages: [{ role: "user", texte: MESSAGE_TEST }],
+            maxJetons: JETONS_TEST,
+          });
+          return { id, ok: true };
+        } catch (e) {
+          return { id, ok: e?.code === "modele-introuvable" ? false : null };
+        }
+      }),
+    );
+    journal({
+      action: "verifierModeles",
+      fournisseur,
+      dureeMs: horloge() - debut,
+      nombre: modeles.length,
+      disponibles: resultats.filter((r) => r.ok).length,
+    });
+    return resultats;
+  }
+
   /** One minimal call ("OK"), counted in the quota. */
   async function tester(uid, donnees) {
     const c = await config();
@@ -248,6 +301,7 @@ export function creerFonctionsIa(deps) {
     etatCles,
     tester,
     listerModeles,
+    verifierModeles,
     executerUsage,
     choixDeLUsage,
   };

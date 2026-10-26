@@ -24,6 +24,13 @@ function monter({ mode = "compte", cles = [], suggeres = [] } = {}) {
     enregistrerCle: vi.fn(),
     supprimerCle: vi.fn(),
     tester: vi.fn(async () => ({ ok: true, valeur: { ok: true, latenceMs: 820, modele: "m" } })),
+    verifierModeles: vi.fn(async (_f, ids) => ({
+      ok: true,
+      valeur: ids.map((id) => ({
+        id,
+        ok: id === "gemini-b" ? true : id === "gemini-a" ? false : null,
+      })),
+    })),
     modeles: vi.fn(async (f) => ({
       ok: true,
       valeur:
@@ -167,6 +174,36 @@ describe("Réglages → Assistant IA", () => {
       "Gemini A",
       "Gemini B",
     ]);
+  });
+
+  it("« Vérifier les modèles » marque ceux qui répondent et met les bons en premier", async () => {
+    const { store, section, service } = monter({
+      cles: [{ fournisseur: "gemini", fin: "ppzA", ajouteLe: 1, valide: true }],
+    });
+    await attendre();
+    await attendre();
+    await attendre();
+    store.envoyer({
+      type: "REGLAGES_MODIFIER",
+      changements: { ia: { actif: true, usages: {}, modelesPerso: [] } },
+    });
+    [...section.querySelectorAll("button")]
+      .find((b) => b.textContent === "Vérifier les modèles")
+      .click();
+    await attendre();
+    await attendre();
+    await attendre();
+    expect(service.verifierModeles).toHaveBeenCalledWith("gemini", ["gemini-a", "gemini-b"]);
+    const options = [
+      ...section.querySelector('select[aria-label="Modèle pour Tags"]').querySelectorAll("option"),
+    ];
+    expect(options.map((o) => o.textContent)).toEqual([
+      "Non défini",
+      "✓ Gemini B",
+      "✗ Gemini A (indisponible)",
+    ]);
+    expect(options[2].disabled).toBe(true);
+    expect(section.textContent).toContain("1 modèle disponible sur 2 vérifiés");
   });
 
   it("« Tester » affiche « OK · 820 ms »", async () => {

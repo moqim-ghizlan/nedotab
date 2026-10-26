@@ -10,6 +10,7 @@ export const FONCTIONS_IA = [
   "iaEtatCles",
   "iaTester",
   "iaListerModeles",
+  "iaVerifierModeles",
 ];
 
 /**

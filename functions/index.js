@@ -102,3 +102,4 @@ export const iaSupprimerCle = appelIa(fonctionsIa.supprimerCle);
 export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
 export const iaListerModeles = appelIa(fonctionsIa.listerModeles);
+export const iaVerifierModeles = appelIa(fonctionsIa.verifierModeles);

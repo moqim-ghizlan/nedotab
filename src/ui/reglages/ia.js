@@ -38,6 +38,10 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   let erreurCles = null;
   /** Models each provider says the key can use: { [fournisseur]: [{ id, nom }] }. */
   const modelesDispo = {};
+  /** Result of "Vérifier les modèles": { "fournisseur|id": true | false | null }. */
+  const disponibilite = {};
+  let verification = ""; // message under the button
+  let enVerification = false;
   const racine = el("div", { class: "ia-reglages" });
   const section = el(
     "section",
@@ -194,6 +198,19 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         const v = valeurChoix({ fournisseur: id, modele: m.id });
         if (!dejaLa.has(v)) groupe.append(el("option", { value: v, texte: m.nom }));
       }
+      // Models checked with the key: the ones that answer first, the refused ones last.
+      const rang = (o) =>
+        disponibilite[o.value] === true ? 0 : disponibilite[o.value] === false ? 2 : 1;
+      const options = [...groupe.querySelectorAll("option")];
+      for (const o of options) {
+        const d = disponibilite[o.value];
+        if (d === true) o.textContent = `✓ ${o.textContent}`;
+        if (d === false) {
+          o.textContent = `✗ ${o.textContent} (indisponible)`;
+          o.disabled = valeurChoix(courant) !== o.value;
+        }
+      }
+      groupe.replaceChildren(...options.sort((a, b) => rang(a) - rang(b)));
       if (groupe.children.length) select.append(groupe);
     }
     // A model chosen earlier that is no longer in the list stays visible instead of vanishing.
@@ -210,6 +227,42 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     }
     select.value = courant ? valeurChoix(courant) : "";
     return select;
+  }
+
+  /** Asks the server which of the newest models (and the ones chosen) answer with the keys. */
+  async function verifierModeles() {
+    enVerification = true;
+    verification = "Vérification des modèles avec votre clé…";
+    rendre();
+    let total = 0;
+    let bons = 0;
+    await Promise.all(
+      avecCle().map(async (id) => {
+        const choisis = USAGES.map((u) => ia().usages[u]).filter((c) => c?.fournisseur === id);
+        const ids = [
+          ...new Set([
+            ...choisis.map((c) => c.modele),
+            ...(modelesDispo[id] ?? []).map((m) => m.id),
+          ]),
+        ].slice(0, 10);
+        if (!ids.length) return;
+        const r = await service.verifierModeles(id, ids);
+        if (!r.ok) {
+          verification = r.erreur;
+          return;
+        }
+        for (const m of r.valeur) {
+          disponibilite[valeurChoix({ fournisseur: id, modele: m.id })] = m.ok;
+          total++;
+          if (m.ok) bons++;
+        }
+      }),
+    );
+    enVerification = false;
+    if (total) {
+      verification = `${bons} modèle${bons > 1 ? "s" : ""} disponible${bons > 1 ? "s" : ""} sur ${total} vérifié${total > 1 ? "s" : ""}. Les modèles refusés par votre clé sont marqués ✗.`;
+    }
+    rendre();
   }
 
   async function ajouterModele() {
@@ -441,6 +494,14 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         note("Votre clé est chiffrée et n'est jamais affichée ni renvoyée à votre appareil."),
         el("h4", { texte: "Modèle par usage" }),
         recommandations,
+        el("button", {
+          type: "button",
+          class: "bouton",
+          texte: enVerification ? "Vérification…" : "Vérifier les modèles",
+          disabled: inactif || enVerification || avecCle().length === 0,
+          onclick: verifierModeles,
+        }),
+        verification ? note(verification) : null,
         ...lignesUsages,
         el("h4", { texte: "Mes modèles" }),
         lignesModeles.length
