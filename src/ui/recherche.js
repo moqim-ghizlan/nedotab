@@ -4,7 +4,7 @@ import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { creerIcone, ouvrirSite, sitesDansNouvelOnglet } from "./tuile.js";
 import { creerIconeDossier } from "./tuileDossier.js";
-import { toucherSeulement } from "./ecran.js";
+import { entrees } from "./entrees.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 
@@ -38,10 +38,7 @@ export function creerRecherche(store, { ouvrirDossier }) {
     type: "search",
     class: "recherche-champ",
     id: "recherche",
-    // The "/" shortcut needs a keyboard: not shown on a phone or a bare tablet (V3.4).
-    placeholder: toucherSeulement()
-      ? "Rechercher dans vos sites…"
-      : "Rechercher dans vos sites… (/)",
+    placeholder: "Rechercher dans vos sites…",
     autocomplete: "off",
     spellcheck: "false",
     role: "combobox",
@@ -49,6 +46,11 @@ export function creerRecherche(store, { ouvrirDossier }) {
     "aria-controls": "recherche-resultats",
     "aria-autocomplete": "list",
     "aria-label": "Rechercher dans vos sites",
+  });
+  // The "/" shortcut needs a keyboard: the hint shows while one is probable (V3.9), and goes
+  // away when it is unplugged (a bare tablet, a phone).
+  entrees().ecouter(({ clavier }) => {
+    champ.placeholder = clavier ? "Rechercher dans vos sites… (/)" : "Rechercher dans vos sites…";
   });
   const liste = el("ul", {
     class: "recherche-resultats",

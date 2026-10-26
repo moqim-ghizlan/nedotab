@@ -34,6 +34,7 @@ import { brancherPersistance } from "./persistance.js";
 import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
 import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
+import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
@@ -338,6 +339,10 @@ export async function demarrerApp(racine) {
   });
   // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
   monterBandeauInstallation();
+  // V3.9: "?" shows the shortcuts, Cmd/Ctrl + "," the settings.
+  brancherRaccourcisGlobaux({
+    ouvrirReglages: () => ouvrirReglages(store, { retourFocus: boutonReglages, session }),
+  });
   // V3.7: service worker and "new version" banner, in the web app only.
   if (import.meta.env.VITE_TARGET === "pwa") {
     import("./miseAJour.js").then((m) =>

@@ -1601,3 +1601,90 @@ body.fond-clair .carte-action--principale {
     background: var(--surface);
   }
 }
+
+/*
+ * Master / detail (V3.9): from 900 px of width the settings are a wide panel, the list of
+ * sections on the left and the chosen one on the right. Narrower: the tabs of the side sheet.
+ */
+@media (min-width: 900px) {
+  .reglages {
+    width: min(780px, calc(100vw - 2 * var(--reglages-marge)));
+  }
+  .reglages[open] {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    align-content: start;
+  }
+  .reglages[open] > .reglages-entete {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .reglages[open] > .carte-compte {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .reglages[open] > .reglages-onglets {
+    grid-column: 1;
+    grid-row: 3;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    align-content: start;
+    gap: 2px;
+    margin: 10px 10px 14px 14px;
+    background: none;
+  }
+  .reglages[open] > .reglages-corps {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+    min-height: 0;
+    border-left: 1px solid color-mix(in srgb, var(--bordure) 60%, transparent);
+  }
+  .reglages-onglets .onglets-curseur {
+    display: none;
+  }
+  .reglages-onglets .onglet {
+    flex-direction: row;
+    gap: var(--espace-3);
+    padding: 10px 12px;
+    font-size: var(--taille-s);
+    text-align: left;
+  }
+  .reglages-onglets .onglet[aria-selected="true"] {
+    background: var(--surface);
+    box-shadow: var(--ombre);
+  }
+}
+
+/* --- shortcuts help (V3.9) -------------------------------------------------------------- */
+
+.aide-groupe-titre {
+  margin: var(--espace-3) 0 var(--espace-1);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aide-liste {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--espace-1) var(--espace-4);
+  margin: 0;
+  font-size: var(--taille-s);
+}
+
+.aide-liste dt,
+.aide-liste dd {
+  margin: 0;
+}
+
+.aide-liste kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+}

@@ -570,3 +570,28 @@
     animation-delay: -30ms;
   }
 }
+
+/* --- iPad and large windows (V3.9) ------------------------------------------------------ */
+
+@media (min-width: 1000px) {
+  .page {
+    max-width: 1100px;
+  }
+}
+
+@container (min-width: 900px) {
+  .grille:not(.page-grille, .grille--dossier) {
+    --icone: 64px;
+    gap: var(--espace-5) var(--espace-4);
+  }
+}
+
+/* A short landscape screen (iPhone on its side): less vertical space spent on margins. */
+@media (max-height: 480px) {
+  .page {
+    padding-top: var(--espace-2);
+  }
+  .grille:not(.page-grille) {
+    gap: var(--espace-2) var(--espace-2);
+  }
+}

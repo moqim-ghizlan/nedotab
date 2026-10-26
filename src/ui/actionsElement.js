@@ -7,6 +7,7 @@ import { ouvrirDeplacerVers } from "./dialogues/deplacerVersArbre.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
+import { menuPourPointeur } from "./entrees.js";
 import { ecranTactile, fermerMenuTactile, ouvrirMenuTactile } from "./menuTactile.js";
 import { toast } from "./toast.js";
 import { enEdition } from "./modeEdition.js";
@@ -219,11 +220,18 @@ export function brancherActionsElements(
     return { entrees, libelle: e.titre };
   };
 
-  const ouvrirMenuPour = (id, x, y) => {
+  /**
+   * `pointerType`: the pointer that asked ("touch", "pen", "mouse", or "" for the keyboard).
+   * A finger gets the sheet or the menu anchored to the tile (V3.6), a mouse or a trackpad
+   * the menu at the cursor, whatever the screen (V3.9: an iPad with a trackpad has both).
+   */
+  const ouvrirMenuPour = (id, x, y, pointerType = "") => {
     const catalogue = entreesPour(id);
     if (!catalogue) return;
-    // Finger (V3.6): sheet or menu anchored to the tile, same entries.
-    if (ecranTactile() && tuileDe(id)) {
+    if (
+      menuPourPointeur(pointerType, { sansSurvol: ecranTactile() }) === "tactile" &&
+      tuileDe(id)
+    ) {
       ouvrirMenuTactile({ ...catalogue, tuile: tuileDe(id) });
       return;
     }
@@ -242,7 +250,7 @@ export function brancherActionsElements(
     const tuile = ev.target.closest(".tuile[data-id]");
     if (!tuile) return; // outside a tile: Chrome's own menu
     ev.preventDefault();
-    ouvrirMenuPour(tuile.dataset.id, ev.clientX, ev.clientY);
+    ouvrirMenuPour(tuile.dataset.id, ev.clientX, ev.clientY, ev.pointerType ?? "mouse");
   });
 
   conteneur.addEventListener(
@@ -265,7 +273,7 @@ export function brancherActionsElements(
     ev.preventDefault();
     ev.stopPropagation();
     const rect = bouton.getBoundingClientRect();
-    ouvrirMenuPour(bouton.dataset.menu, rect.left, rect.bottom + 4);
+    ouvrirMenuPour(bouton.dataset.menu, rect.left, rect.bottom + 4, ev.pointerType ?? "");
   });
 
   conteneur.addEventListener("keydown", (ev) => {
