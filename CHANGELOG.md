@@ -2,6 +2,31 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.10.1] - 2026-10-26
+
+### Corrigé
+
+- **Glisser-déposer** : l'icône glissée reste sous le doigt et sous le curseur (elle partait
+  ailleurs à l'écran, surtout sur iPhone) ; l'endroit d'arrivée est une case vide au lieu
+  d'une deuxième icône.
+- **Pages décalées** après un dépôt sur une autre page : la boîte des pages ne défile plus.
+- **Réglages en deux colonnes** : la carte du compte n'est plus coupée (nom, boutons).
+
+### Ajouté
+
+- **Sortir une icône d'un dossier** en la glissant : hors de la fenêtre du dossier (ou
+  au-dessus de son en-tête sur téléphone) pendant 0,4 s, la fenêtre s'efface, un repère
+  montre où l'icône arrivera sur la page d'accueil affichée ; au dépôt, la fenêtre se ferme
+  et « Annuler » est proposé. Échap annule le geste.
+
+### Vérifié
+
+| Appareil                               | Résultat  |
+| -------------------------------------- | --------- |
+| Chrome, taille ordinateur et téléphone | ✔         |
+| iPhone (vrai appareil)                 | non testé |
+| Tests automatiques                     | ✔ (550)   |
+
 ## [3.10.0] - 2026-10-26
 
 ### Ajouté
