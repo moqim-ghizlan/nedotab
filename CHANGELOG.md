@@ -2,6 +2,50 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.0.0] - 2026-10-26
+
+Fondations de l'IA (aucune fonction visible pour l'utilisateur encore : tags, recherche et
+discussion viennent ensuite).
+
+### Ajouté
+
+- **Fonctions serveur pour l'IA** (Cloud Functions, `europe-west1`) : `iaEnregistrerCle`,
+  `iaSupprimerCle`, `iaEtatCles`, `iaTester`. Chaque utilisateur apporte **sa propre** clé ;
+  le navigateur n'appelle jamais un fournisseur d'IA.
+- **Clés chiffrées** : une clé est d'abord vérifiée auprès du fournisseur, puis enregistrée
+  chiffrée (AES-256-GCM, IV unique, liée à l'utilisateur et au fournisseur) dans
+  `users/{uid}/prive/ia`, un document que le navigateur ne peut ni lire ni écrire. Le secret
+  de chiffrement vit dans Secret Manager. Le serveur ne renvoie que les 4 derniers caractères.
+- **Quota** : 300 appels par utilisateur et par jour (heure de Paris), décompté dans une
+  transaction avant l'appel au fournisseur ; modifiable dans `config/ia`.
+- **Fournisseurs** : OpenAI et Google Gemini (délai de 30 s, un seul réessai sur erreur
+  serveur, erreurs normalisées). Les journaux ne contiennent ni clé ni contenu de message.
+- Section temporaire « Tester une clé IA » dans Réglages → Avancé → Diagnostic (remplacée par
+  l'écran des réglages IA en V4.1).
+- Suppression de compte (V2.10) enfin en ligne : les fonctions sont déployées.
+
+### Modifié
+
+- Le projet Firebase passe au forfait Blaze (obligatoire pour les fonctions), avec un budget
+  de 1 € par mois et des alertes à 50 %, 80 % et 100 %.
+- Le secret IA est requis pour déployer les fonctions : voir `docs/ia.md`.
+
+### Problèmes connus
+
+- `config/ia` n'est pas encore créé : sans lui, OpenAI et Gemini sont actifs, 300 appels par
+  jour, aucun modèle suggéré.
+- OpenAI n'a pas été essayé avec une vraie clé (Gemini oui, « OK » en 562 ms).
+- La checklist de test complète de la V3 n'est toujours pas exécutée.
+
+### Vérifié
+
+| Contrôle                                        | Résultat  |
+| ----------------------------------------------- | --------- |
+| Clé Gemini réelle : enregistrement puis « OK »  | ✔         |
+| Clé OpenAI réelle                               | non testé |
+| Tests automatiques (dont 61 pour le serveur IA) | ✔         |
+| Tests sur émulateurs (règles, fonctions)        | ✔ (78)    |
+
 ## [3.10.1] - 2026-10-26
 
 ### Corrigé
