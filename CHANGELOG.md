@@ -2,6 +2,26 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.5.0] - 2026-10-26
+
+### Ajouté
+
+- **Glisser-déposer au doigt** (iPhone, iPad) : un appui long de 400 ms soulève l'icône, puis
+  elle suit le doigt, affichée au-dessus pour rester visible. Réorganisation, dépôt dans un
+  dossier, création d'un dossier en posant un site sur un autre (0,5 s) et dépôt sur le fil
+  d'Ariane fonctionnent comme à la souris, avec les mêmes garde-fous.
+- Un balayage rapide défile ou change de page sans déclencher de glisser ; la grille défile
+  toute seule quand l'icône approche d'un bord.
+- Un appui long sans bouger émet l'événement `appuilong` (utilisé par le menu tactile, V3.6).
+
+### Vérifié
+
+| Appareil                      | Résultat              |
+| ----------------------------- | --------------------- |
+| iPhone (Safari, vrai appareil) | ✔                     |
+| iPad                          | non testé             |
+| Ordinateur (souris)           | tests automatiques ✔  |
+
 ## [3.4.0] - 2026-10-25
 
 ### Ajouté
