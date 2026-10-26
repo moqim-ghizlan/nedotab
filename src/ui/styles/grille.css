@@ -247,6 +247,22 @@
   cursor: grabbing !important;
 }
 
+/* Finger (V3.5): the dragged icon floats above the finger so that it stays visible. */
+.glisser-doigt .case--glissee .tuile {
+  translate: 0 -64px;
+}
+
+/* Long press without moving: the tile is lifted (the menu of V3.6 opens on it). */
+.tuile.tuile--soulevee .tuile-icone {
+  transform: scale(1.08);
+  box-shadow: var(--ombre-forte);
+}
+
+.tuile img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .case--glissee .tuile {
     transform: none;

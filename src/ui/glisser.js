@@ -1,6 +1,7 @@
 import Sortable from "sortablejs";
 import { A } from "../core/actions.js";
 import { trouver } from "../core/arbre.js";
+import { DELAI_APPUI_LONG_MS, SEUIL_MOUVEMENT_PX, brancherAppuiLong } from "./appuiLong.js";
 
 const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -45,7 +46,16 @@ export function activerGlisser(
 ) {
   let glisserEnCours = false;
   let annule = false;
-  const suivre = (e) => intention?.suivre(e.clientX, e.clientY);
+  let dernierType = "mouse"; // pointer type of the last press: "touch" for the finger
+  // With the finger the dragged icon is shown above it (CSS, .glisser-doigt): the targets
+  // are then looked for under the icon the user sees, not under the finger.
+  const suivre = (e) => {
+    if (document.body.classList.contains("glisser-doigt")) {
+      const r = document.querySelector(".sortable-fallback .tuile-icone")?.getBoundingClientRect();
+      if (r) return intention?.suivre(r.left + r.width / 2, r.top + r.height / 2);
+    }
+    intention?.suivre(e.clientX, e.clientY);
+  };
   // Escape: end the drag where it is, then nothing is applied.
   const surTouche = (e) => {
     if (e.key !== "Escape") return;
@@ -68,6 +78,14 @@ export function activerGlisser(
     dragClass: "case--glissee",
     forceFallback: true,
     fallbackTolerance: 4,
+    // Finger (V3.5): the drag starts after a long press without moving (a quicker swipe
+    // scrolls or turns the page), and the grid scrolls when the icon nears an edge.
+    delay: DELAI_APPUI_LONG_MS,
+    delayOnTouchOnly: true,
+    touchStartThreshold: SEUIL_MOUVEMENT_PX,
+    scrollSensitivity: 60,
+    scrollSpeed: 14,
+    bubbleScroll: true,
     // SortableJS swaps when the pointer enters the swap zone, which is centred on the target
     // by default: aiming at the centre of a tile (to drop into it) would reorder first.
     // Inverted swap puts that zone on the sides of the tile and keeps the centre free.
@@ -77,6 +95,7 @@ export function activerGlisser(
       glisserEnCours = true;
       annule = false;
       document.body.classList.add("glisser-en-cours");
+      document.body.classList.toggle("glisser-doigt", dernierType === "touch");
       intention?.demarrer(evt.item.querySelector("[data-id]")?.dataset.id);
       document.addEventListener("pointermove", suivre, true);
       document.addEventListener("keydown", surTouche, true);
@@ -92,7 +111,7 @@ export function activerGlisser(
       if (plus?.nextElementSibling) evt.to.append(plus);
     },
     onEnd(evt) {
-      document.body.classList.remove("glisser-en-cours");
+      document.body.classList.remove("glisser-en-cours", "glisser-doigt");
       document.removeEventListener("pointermove", suivre, true);
       document.removeEventListener("keydown", surTouche, true);
       const id = evt.item.querySelector("[data-id]")?.dataset.id;
@@ -145,8 +164,10 @@ export function activerGlisser(
     renduEnAttente = false;
   };
   conteneur.addEventListener("pointerdown", (e) => {
+    dernierType = e.pointerType;
     if (e.target.closest(".case--element")) appui = true;
   });
+  const debrancherAppuiLong = brancherAppuiLong(conteneur);
   for (const type of ["pointerup", "pointercancel"])
     document.addEventListener(type, finAppui, true);
 
@@ -171,6 +192,7 @@ export function activerGlisser(
     enCours: () => glisserEnCours,
     synchroniser,
     detruire: () => {
+      debrancherAppuiLong();
       for (const type of ["pointerup", "pointercancel"])
         document.removeEventListener(type, finAppui, true);
       for (const instance of instances.values()) instance.destroy();

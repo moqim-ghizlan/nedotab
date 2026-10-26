@@ -5,6 +5,8 @@
  * a long press without moving stays the tile's (drag, menu).
  */
 
+import { DELAI_APPUI_LONG_MS } from "../appuiLong.js";
+
 /** Movement (px) before the gesture is known as horizontal or vertical. */
 const SEUIL = 10;
 /** A swipe turns the page past this share of the width, or above this speed (px/ms). */
@@ -31,6 +33,11 @@ export function brancherBalayage(fenetre, { actif, peutAller, decaler, terminer 
     if (!geste || e.pointerId !== geste.id) return;
     const dx = e.clientX - geste.x;
     const dy = e.clientY - geste.y;
+    // A long press is the tile's (menu, drag), never a swipe (V3.5).
+    if (!geste.sens && e.timeStamp - geste.t >= DELAI_APPUI_LONG_MS) {
+      geste = null;
+      return;
+    }
     if (!geste.sens) {
       if (Math.abs(dx) < SEUIL && Math.abs(dy) < SEUIL) return;
       geste.sens = Math.abs(dx) > Math.abs(dy) * 1.2 ? "horizontal" : "vertical";
