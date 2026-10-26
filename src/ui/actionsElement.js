@@ -7,6 +7,7 @@ import { ouvrirDeplacerVers } from "./dialogues/deplacerVersArbre.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
+import { ecranTactile, fermerMenuTactile, ouvrirMenuTactile } from "./menuTactile.js";
 import { toast } from "./toast.js";
 import { ouvrirSite } from "./tuile.js";
 
@@ -155,9 +156,21 @@ export function brancherActionsElements(
     }
   };
 
-  const ouvrirMenuPour = (id, x, y) => {
+  const partager = async (e) => {
+    try {
+      await navigator.share({ title: e.titre, url: e.url });
+    } catch {
+      // Closed by the user: nothing to report.
+    }
+  };
+
+  /**
+   * The single catalogue of actions of an element (V3.6): the mouse menu and the touch
+   * sheet both show exactly this list. "Partager" only exists where the system can share.
+   */
+  const entreesPour = (id) => {
     const r = trouver(store.lire().grille, id);
-    if (!r) return;
+    if (!r) return null;
     const e = r.element;
     const modifiable = !lectureSeule();
     const entrees = [];
@@ -183,6 +196,8 @@ export function brancherActionsElements(
         },
         { libelle: "Copier le lien", onChoix: () => copierLien(e.url) },
       );
+      if (typeof navigator.share === "function")
+        entrees.push({ libelle: "Partager…", onChoix: () => partager(e) });
       if (modifiable) {
         entrees.push(deplacerVers, {
           libelle: "Créer un dossier avec ce site",
@@ -200,8 +215,27 @@ export function brancherActionsElements(
         onChoix: () => supprimer(id),
       });
     }
-    ouvrirMenu({ x, y, entrees, retourFocus: tuileDe(id), libelle: e.titre });
+    return { entrees, libelle: e.titre };
   };
+
+  const ouvrirMenuPour = (id, x, y) => {
+    const catalogue = entreesPour(id);
+    if (!catalogue) return;
+    // Finger (V3.6): sheet or menu anchored to the tile, same entries.
+    if (ecranTactile() && tuileDe(id)) {
+      ouvrirMenuTactile({ ...catalogue, tuile: tuileDe(id) });
+      return;
+    }
+    ouvrirMenu({ x, y, ...catalogue, retourFocus: tuileDe(id) });
+  };
+
+  // Long press without moving (appuiLong.js): the actions; a drag starting after it closes them.
+  conteneur.addEventListener("appuilong", (ev) => {
+    const tuile = ev.target.closest(".tuile[data-id]");
+    const catalogue = tuile && entreesPour(tuile.dataset.id);
+    if (catalogue) ouvrirMenuTactile({ ...catalogue, tuile });
+  });
+  conteneur.addEventListener("appuilongannule", fermerMenuTactile);
 
   conteneur.addEventListener("contextmenu", (ev) => {
     const tuile = ev.target.closest(".tuile[data-id]");
@@ -239,5 +273,5 @@ export function brancherActionsElements(
     }
   });
 
-  return { supprimer, modifier, ouvrirMenuPour };
+  return { supprimer, modifier, ouvrirMenuPour, entreesPour };
 }

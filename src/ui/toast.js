@@ -56,6 +56,19 @@ export function toast(message, { action, duree = 5000, type = "info", cle = "pri
     clearTimeout(minuteur);
     restant -= Date.now() - debut;
   };
+  // A swipe down closes the toast: the action is then final (finger).
+  let departY = null;
+  boite.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") departY = e.clientY;
+  });
+  boite.addEventListener("pointermove", (e) => {
+    if (departY != null && e.clientY - departY > 30) {
+      departY = null;
+      etat.fermer(false);
+    }
+  });
+  for (const type of ["pointerup", "pointercancel"])
+    boite.addEventListener(type, () => (departY = null));
   boite.addEventListener("mouseenter", pause);
   boite.addEventListener("mouseleave", lancer);
   boite.addEventListener("focusin", pause);

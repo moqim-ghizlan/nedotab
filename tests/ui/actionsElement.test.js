@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { reduire } from "../../src/core/actions.js";
 import { exemple } from "../../src/core/exemple.js";
 import { etatInitial } from "../../src/core/modele.js";
@@ -63,5 +63,39 @@ describe("suppression", () => {
       new KeyboardEvent("keydown", { key: "Delete", bubbles: true }),
     );
     expect(store.lire().grille).toHaveLength(n - 1);
+  });
+});
+
+describe("catalogue d'actions (V3.6)", () => {
+  const libelles = (entrees) => entrees.filter((e) => e !== "-").map((e) => e.libelle);
+
+  it("« Partager… » n'existe que si le système sait partager", () => {
+    const { ul, actions } = monter();
+    const id = ul.querySelector(".tuile--site, .tuile:not(.tuile--dossier)").dataset.id;
+    expect(libelles(actions.entreesPour(id).entrees)).not.toContain("Partager…");
+    navigator.share = vi.fn();
+    try {
+      expect(libelles(actions.entreesPour(id).entrees)).toContain("Partager…");
+    } finally {
+      delete navigator.share;
+    }
+  });
+
+  it("l'appui long ouvre les mêmes actions que le clic droit", () => {
+    const largeur = window.innerWidth;
+    window.innerWidth = 390; // phone: action sheet
+    onTestFinished(() => (window.innerWidth = largeur));
+    const { ul, actions } = monter();
+    const tuile = ul.querySelector(".tuile:not(.tuile--dossier)");
+    const attendu = libelles(actions.entreesPour(tuile.dataset.id).entrees);
+    tuile.dispatchEvent(new CustomEvent("appuilong", { bubbles: true }));
+    const feuille = document.querySelector(".feuille-actions");
+    expect(feuille).not.toBeNull();
+    const boutons = [...feuille.querySelectorAll(".feuille-liste .feuille-entree")];
+    expect(boutons.map((b) => b.querySelector("span").textContent)).toEqual(attendu);
+    expect(feuille.querySelector(".feuille-annuler")).not.toBeNull();
+    // A drag starting after the long press closes the sheet.
+    tuile.dispatchEvent(new CustomEvent("appuilongannule", { bubbles: true }));
+    expect(document.querySelector(".feuille-actions")).toBeNull();
   });
 });

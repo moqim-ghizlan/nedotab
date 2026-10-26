@@ -17,7 +17,8 @@ export const SEUIL_MOUVEMENT_PX = 8;
  * @returns {"attente"|"defilement"|"menu"|"glisser"}
  */
 export function etatGeste({ dureeMs, deplacementPx }) {
-  if (dureeMs < DELAI_APPUI_LONG_MS) return deplacementPx > SEUIL_MOUVEMENT_PX ? "defilement" : "attente";
+  if (dureeMs < DELAI_APPUI_LONG_MS)
+    return deplacementPx > SEUIL_MOUVEMENT_PX ? "defilement" : "attente";
   return deplacementPx > SEUIL_MOUVEMENT_PX ? "glisser" : "menu";
 }
 
@@ -54,7 +55,8 @@ export function brancherAppuiLong(conteneur) {
     const deplacement = Math.hypot(e.clientX - appui.x, e.clientY - appui.y);
     if (deplacement <= SEUIL_MOUVEMENT_PX) return;
     // Scroll or swipe before the delay; after it, SortableJS takes over (drag).
-    if (appui.leve) appui.tuile.dispatchEvent(new CustomEvent("appuilongannule", { bubbles: true }));
+    if (appui.leve)
+      appui.tuile.dispatchEvent(new CustomEvent("appuilongannule", { bubbles: true }));
     finir();
   };
 

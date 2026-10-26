@@ -221,3 +221,111 @@
   color: var(--texte-secondaire);
   font-size: var(--taille-xs);
 }
+
+/* --- action sheet (V3.6, phone): long press on a tile ---------------------------------- */
+
+.feuille-actions {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  overflow: hidden;
+  z-index: 70;
+}
+
+.feuille-voile {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* The pressed tile, above the dimmed page; it is only a picture. */
+.feuille-tuile {
+  position: fixed;
+  max-width: none;
+  pointer-events: none;
+  transform: scale(1.08);
+}
+
+.feuille-corps {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3) calc(var(--espace-3) + env(safe-area-inset-right, 0px))
+    calc(var(--espace-3) + env(safe-area-inset-bottom, 0px))
+    calc(var(--espace-3) + env(safe-area-inset-left, 0px));
+  animation: monter 200ms ease-out;
+}
+
+.feuille-titre {
+  padding: 0 var(--espace-3);
+  overflow: hidden;
+  color: #fff;
+  font-size: var(--taille-s);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feuille-liste {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--rayon-grand);
+  background: var(--surface);
+}
+
+.feuille-entree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: var(--espace-2) var(--espace-4);
+  border: 0;
+  background: var(--surface);
+  color: var(--texte);
+  font-size: 1.0625rem;
+  cursor: pointer;
+}
+
+.feuille-liste .feuille-entree + .feuille-entree {
+  border-top: 1px solid var(--bordure);
+}
+
+.feuille-entree:active {
+  background: var(--surface-2);
+}
+
+.feuille-entree[aria-disabled="true"] {
+  color: var(--texte-secondaire);
+}
+
+.feuille-entree--danger {
+  color: var(--danger);
+}
+
+.feuille-info {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.feuille-annuler {
+  border-radius: var(--rayon-grand);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feuille-corps {
+    animation: none;
+  }
+}

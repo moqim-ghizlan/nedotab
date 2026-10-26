@@ -203,9 +203,17 @@
   transform: scale(1);
 }
 
+/* No hover (finger): the button is hidden but stays there for VoiceOver ("Actions pour …");
+   the long press opens the same actions (V3.6). */
 @media (hover: none) {
   .tuile-plus {
-    display: none;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    border: 0;
+    clip-path: inset(50%);
+    box-shadow: none;
+    opacity: 0;
   }
 }
 

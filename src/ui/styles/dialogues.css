@@ -306,3 +306,15 @@
     animation: none;
   }
 }
+
+/* Finger (V3.6): the "Annuler" of a toast is at least 44 px high, and a swipe down closes it. */
+@media (hover: none) {
+  .toast {
+    padding-block: var(--espace-1);
+    touch-action: pan-x;
+  }
+  .toast-action {
+    min-height: 44px;
+    padding-inline: var(--espace-2);
+  }
+}
