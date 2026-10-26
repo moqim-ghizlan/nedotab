@@ -31,7 +31,8 @@ import { creerDonnees } from "./services/donnees.js";
 import { creerIndicateurSynchro } from "./indicateurSynchro.js";
 import { demanderChoixPremiereSynchro } from "./dialogues/premiereSynchro.js";
 import { brancherPersistance } from "./persistance.js";
-import { activerJournal } from "./journal.js";
+import { monterBadgeDebug, modeDebug } from "./debug.js";
+import { activerJournal, capturerErreurs } from "./journal.js";
 import { toast } from "./toast.js";
 import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
@@ -339,6 +340,9 @@ export async function demarrerApp(racine) {
   });
   // Web app in Safari on iPhone and iPad (V3.1): how to add it to the home screen.
   monterBandeauInstallation();
+  // V3.10: unhandled errors are kept in the internal log; "DEBUG" badge while diagnostic is on.
+  capturerErreurs();
+  monterBadgeDebug(store);
   // V3.9: "?" shows the shortcuts, Cmd/Ctrl + "," the settings.
   brancherRaccourcisGlobaux({
     ouvrirReglages: () => ouvrirReglages(store, { retourFocus: boutonReglages, session }),
@@ -517,7 +521,7 @@ export async function demarrerApp(racine) {
       delete racineDoc.dataset.colonnes;
       racineDoc.style.removeProperty("--colonnes");
     }
-    activerJournal(r.debug);
+    activerJournal(r.debug || modeDebug(store));
     plateforme.garderBarreChrome(!!r.barreChrome);
     ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);
   };

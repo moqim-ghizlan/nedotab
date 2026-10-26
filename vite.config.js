@@ -70,6 +70,8 @@ export default defineConfig(({ mode }) => {
           manifest: false,
           workbox: {
             globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2,webmanifest}"],
+            // The debug console is loaded on demand only: not worth precaching (V3.10).
+            globIgnores: ["**/eruda-*.js"],
             navigateFallback: "/index.html",
             // The sign-in redirect pages of Firebase (/__/auth/...) must reach the server.
             navigateFallbackDenylist: [/^\/__\//],

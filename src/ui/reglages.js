@@ -20,6 +20,9 @@ import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { creerGalerie } from "./reglages/galerie.js";
 import { sectionCompte } from "./reglages/compte.js";
 import { sectionSauvegardes } from "./reglages/sauvegardes.js";
+import { brancherGesteVersion } from "./debug.js";
+import { sectionDiagnostic } from "./reglages/diagnostic.js";
+import { toast } from "./toast.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
@@ -87,6 +90,19 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return null;
   }
   const lire = () => ({ ...store.lire().reglages, fond: fondEffectif(store.lire()) });
+  /** Version line; 7 quick taps on it turn the diagnostic mode on or off (V3.10). */
+  const versionApropos = () => {
+    const ligne = el("p", {
+      class: "reglages-note",
+      texte: `Version installée : ${plateforme.getVersion()}`,
+    });
+    brancherGesteVersion(ligne, () => {
+      const actif = !store.lire().reglagesAppareil?.debug;
+      store.envoyer({ type: A.REGLAGES_MODIFIER, changements: { debug: actif } });
+      toast(actif ? "Mode diagnostic activé" : "Mode diagnostic désactivé", { duree: 3000 });
+    });
+    return ligne;
+  };
   const modifier = (changements) => store.envoyer({ type: A.REGLAGES_MODIFIER, changements });
 
   // --- Apparence -------------------------------------------------------------------------
@@ -521,12 +537,10 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         ? section("Autorisations", etatPermission, boutonPermission)
         : null,
       section("Stockage", etatStockage),
+      sectionDiagnostic({ store, session }),
       section(
         "À propos",
-        el("p", {
-          class: "reglages-note",
-          texte: `Version installée : ${plateforme.getVersion()}`,
-        }),
+        versionApropos(),
         el(
           "label",
           { class: "reglages-case" },
