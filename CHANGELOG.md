@@ -2,6 +2,56 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.2.0] - 2026-10-27
+
+### Ajouté
+
+- **Tags et description sur chaque site**, modifiables à la main dans « Modifier le site » :
+  - **Tags** : jusqu'à 10, en puces. Entrée, virgule ou point-virgule valident un tag, × le
+    retire, Retour arrière dans le champ vide retire le dernier, une liste collée est découpée.
+    Les tags déjà utilisés ailleurs sont suggérés.
+  - **Description** : 300 caractères au plus, avec un compteur.
+  - Nettoyage automatique : minuscules, sans `#`, sans doublon (accents et casse ignorés),
+    30 caractères par tag, description coupée au dernier mot.
+- **Protection du travail à la main** : dès que vous écrivez des tags ou une description,
+  l'IA ne les écrasera jamais (`tagsManuels`). Renommer seulement ne change rien. La case
+  « Laisser l'IA gérer les tags et la description » rend la main. Le bouton « Régénérer »
+  est prêt mais désactivé (V4.4).
+- Information-bulle d'un site (ordinateur) : le titre et la description.
+- Nouvelle action `SITE_DEFINIR_IA` (utilisée dès la V4.4) : n'écrase jamais des tags écrits
+  à la main, robuste au rejeu.
+
+### Modifié (migration)
+
+- **Schéma de données 2 → 3** : chaque site reçoit `tags`, `description`, `tagsManuels` et
+  l'état `ia`, à tous les niveaux de dossiers, partout (stockage local, compte, sauvegardes,
+  imports) ; la migration est idempotente. Environ 90 octets de plus par site.
+- **Les versions plus anciennes passent en lecture seule** sur des données migrées : mettez à
+  jour **l'extension Chrome** (zip) ; l'application web se met à jour avec « Recharger ». Le
+  message affiché est « Une nouvelle version est nécessaire », avec un lien.
+
+### Corrigé
+
+- Le bandeau « Une nouvelle version est disponible » ne réagissait pas au clic quand le
+  curseur était dans la barre de recherche (même vide) ; il explique maintenant, dans le
+  bandeau, pourquoi il attend (fenêtre ouverte, déplacement ou texte en cours).
+
+### Problèmes connus
+
+- L'extension Chrome doit être remplacée par le zip 4.2 pour modifier les données d'un
+  compte migré.
+- `config/ia` n'est pas créé, OpenAI n'a pas été essayé avec une vraie clé, et la checklist de
+  test de la V3 n'est toujours pas exécutée.
+
+### Vérifié
+
+| Contrôle                                                 | Résultat  |
+| -------------------------------------------------------- | --------- |
+| Application web avec un vrai compte (édition, migration) | ✔         |
+| Extension Chrome 4.2 avec un vrai compte                 | non testé |
+| Tests automatiques                                       | ✔ (755)   |
+| Tests sur émulateurs (règles, synchro, temps réel)       | ✔ (80)    |
+
 ## [4.1.0] - 2026-10-26
 
 ### Ajouté
