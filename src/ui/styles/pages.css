@@ -31,7 +31,10 @@ html.accueil-en-pages .pied {
   position: relative;
   flex: 1;
   min-height: 0;
+  /* Clipped, not scrollable: giving the focus to a tile of another page (after a drop)
+     would otherwise scroll this box and leave the pages shifted. */
   overflow: hidden;
+  overflow: clip;
   /* Horizontal swipes turn the pages (V3.4, balayage.js); pinch zoom stays allowed. */
   touch-action: pan-y pinch-zoom;
 }

@@ -51,6 +51,12 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
     piste,
   );
 
+  // The pages only move with the transform of the track: a scroll of the box (focus given to
+  // a tile out of view, older browsers without overflow: clip) is put back at once.
+  fenetre.addEventListener("scroll", () => {
+    if (fenetre.scrollLeft || fenetre.scrollTop) fenetre.scrollTo(0, 0);
+  });
+
   let pages = []; // <ul> of each page shown, in order (the last may only hold "+")
   let pageCourante = 0;
   let grille = { lignes: 4, colonnes: 8 }; // grid shown
