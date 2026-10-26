@@ -1,117 +1,10 @@
 import { abreger, formaterDiagnostic } from "../../core/diagnostic.js";
-import { chargerFirebase } from "../../firebase/charger.js";
-import { messageErreurIa } from "../messagesIa.js";
 import { plateforme } from "../../platform/index.js";
 import { entrees } from "../entrees.js";
 import { modeDebug, ouvrirConsole } from "../debug.js";
 import { el } from "../dom.js";
 import { journalInterne } from "../journal.js";
 import { toast } from "../toast.js";
-
-/**
- * "Tester une clé IA" (V4.0, temporary: replaced by the AI settings of V4.1). Saves a key
- * through the server (checked, then stored encrypted), shows what the server keeps of it
- * (provider, last 4 characters), runs a minimal call. The key typed is cleared from the
- * field as soon as it is sent and is never kept nor logged here.
- */
-function testeurIa(session) {
-  const etat = el("p", { class: "reglages-note", "aria-live": "polite" });
-  const fournisseur = el(
-    "select",
-    { "aria-label": "Fournisseur" },
-    el("option", { value: "openai", texte: "OpenAI (GPT)" }),
-    el("option", { value: "gemini", texte: "Google (Gemini)" }),
-  );
-  const cle = el("input", {
-    type: "password",
-    autocomplete: "off",
-    spellcheck: "false",
-    placeholder: "Clé API",
-    "aria-label": "Clé API",
-  });
-  const modele = el("input", {
-    type: "text",
-    autocomplete: "off",
-    spellcheck: "false",
-    placeholder: "Identifiant exact du modèle",
-    "aria-label": "Modèle",
-  });
-  const appeler = async (nom, donnees, enCours) => {
-    if (session?.synchro?.lire().mode !== "compte") {
-      etat.textContent = "Connectez-vous et synchronisez d'abord votre compte.";
-      return null;
-    }
-    etat.textContent = enCours;
-    try {
-      const fb = await chargerFirebase();
-      return await fb.appelerIa(nom, donnees);
-    } catch (e) {
-      etat.textContent = messageErreurIa(e);
-      return null;
-    }
-  };
-  const afficherEtat = async () => {
-    const liste = await appeler("iaEtatCles", {}, "Lecture des clés…");
-    if (!liste) return;
-    etat.textContent = liste.length
-      ? liste
-          .map(
-            (c) => `${c.fournisseur} : …${c.fin} (${c.valide === false ? "invalide" : "valide"})`,
-          )
-          .join(" · ")
-      : "Aucune clé enregistrée.";
-  };
-  const bouton = (libelle, onclick) =>
-    el("button", { type: "button", class: "bouton", texte: libelle, onclick });
-
-  return el(
-    "div",
-    { class: "diagnostic-ia" },
-    el("h4", { texte: "Tester une clé IA" }),
-    el("div", { class: "reglages-boutons" }, fournisseur, cle),
-    el(
-      "div",
-      { class: "reglages-boutons" },
-      bouton("Enregistrer la clé", async () => {
-        const valeur = cle.value.trim();
-        cle.value = "";
-        if (!valeur) return;
-        const r = await appeler(
-          "iaEnregistrerCle",
-          { fournisseur: fournisseur.value, cle: valeur },
-          "Vérification de la clé auprès du fournisseur…",
-        );
-        if (r) etat.textContent = `Clé …${r.fin} enregistrée (chiffrée).`;
-      }),
-      bouton("État des clés", afficherEtat),
-      bouton("Supprimer la clé", async () => {
-        const r = await appeler(
-          "iaSupprimerCle",
-          { fournisseur: fournisseur.value },
-          "Suppression…",
-        );
-        if (r) afficherEtat();
-      }),
-    ),
-    el(
-      "div",
-      { class: "reglages-boutons" },
-      modele,
-      bouton("Tester", async () => {
-        const r = await appeler(
-          "iaTester",
-          { fournisseur: fournisseur.value, modele: modele.value.trim() },
-          "Appel de test…",
-        );
-        if (r)
-          etat.textContent = r.ok
-            ? `OK en ${r.latenceMs} ms (${r.modele}).`
-            : `Réponse reçue en ${r.latenceMs} ms mais pas « OK » (${r.modele}).`;
-      }),
-    ),
-    etat,
-  );
-}
 
 /** Facts about the state of the app, as label → value (see formaterDiagnostic). */
 async function rassembler({ store, session }) {
@@ -207,7 +100,6 @@ export function sectionDiagnostic({ store, session }) {
       }),
     ),
     sortie,
-    testeurIa(session),
   );
 
   // Visible with the mode, and the text is read when it is turned on.

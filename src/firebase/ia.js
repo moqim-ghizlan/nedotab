@@ -1,4 +1,6 @@
+import { doc, getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
+import { obtenirApp } from "./app.js";
 import { obtenirFonctions } from "./fonctions.js";
 
 /** The AI functions the browser may call (V4.0). Keys never come back from them. */
@@ -12,4 +14,10 @@ export async function appelerIa(nom, donnees = {}) {
   if (!FONCTIONS_IA.includes(nom)) throw new Error(`Fonction IA inconnue : ${nom}`);
   const r = await httpsCallable(obtenirFonctions(), nom)(donnees);
   return r.data;
+}
+
+/** Reads config/ia (providers, suggested models); the owner writes it, users only read it. */
+export async function lireConfigIa() {
+  const instantane = await getDoc(doc(obtenirApp().firestore, "config", "ia"));
+  return instantane.exists() ? instantane.data() : null;
 }

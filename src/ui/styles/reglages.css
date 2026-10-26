@@ -1746,3 +1746,100 @@ body.fond-clair .carte-action--principale {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* --- AI settings (V4.1) ------------------------------------------------------------------ */
+
+.ia-reglages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.ia-reglages h4 {
+  margin: var(--espace-3) 0 0;
+  font-size: var(--taille-s);
+}
+
+.ia-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ia-cle,
+.ia-modele {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-2) var(--espace-3);
+  padding: var(--espace-3);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+}
+
+.ia-cle-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ia-cle-etat {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.ia-cle-etat--alerte {
+  color: var(--danger);
+  font-weight: 650;
+}
+
+.ia-cle-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.ia-guide {
+  margin: 0;
+  padding: var(--espace-3) var(--espace-3) var(--espace-3) var(--espace-6);
+  border-radius: var(--rayon-petit);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: var(--taille-s);
+}
+
+.ia-usage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2) var(--espace-3);
+}
+
+.ia-usage label {
+  display: flex;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--taille-s);
+}
+
+.ia-test {
+  flex-basis: 100%;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.ia-test--erreur {
+  color: var(--danger);
+}
+
+.ia-modele code {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  text-overflow: ellipsis;
+}

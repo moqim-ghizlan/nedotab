@@ -37,5 +37,5 @@ export {
   sauvegarderAvantRemplacement,
   supprimerSauvegarde,
 } from "./sauvegardes.js";
-export { appelerIa } from "./ia.js";
+export { appelerIa, lireConfigIa } from "./ia.js";
 export { supprimerMonCompte } from "./suppression.js";

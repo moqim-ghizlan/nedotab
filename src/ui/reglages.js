@@ -24,6 +24,7 @@ import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
 import { sectionDonnees } from "./reglages/donnees.js";
+import { sectionIa } from "./reglages/ia.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -34,6 +35,7 @@ const ONGLETS = [
   ["apparence", "Apparence"],
   ["sauvegardes", "Sauvegardes"],
   ["donnees", "Données"],
+  ["ia", "IA"],
   ["avance", "Avancé"],
 ];
 const CLE_ONGLET = "nedotab:onglet-reglages";
@@ -531,6 +533,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
           compteUi?.danger,
         ]
       : null,
+    ia: session ? [sectionIa({ store, session }).section] : null,
     avance: [
       // Reading other sites needs a permission in the extension only (V3.0: capabilities).
       plateforme.capacites.permissionsSites
