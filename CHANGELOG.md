@@ -2,6 +2,41 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.10.0] - 2026-10-26
+
+### Ajouté
+
+- **Mode diagnostic** : sept touchers rapides sur « Version installée » (Réglages → Avancé)
+  l'activent ou le désactivent, et `?debug` à l'adresse l'active pour la session dans Safari.
+  Un badge « DEBUG » reste visible en bas à gauche tant qu'il est actif. Il ne change pas le
+  comportement de l'app.
+- **Section « Diagnostic »** : version, plateforme, mode, réseau, synchro, taille des données,
+  service worker, caches, capacités détectées et 50 dernières entrées du journal ; boutons
+  « Copier le diagnostic », « Actualiser », « Forcer la synchronisation », « Vider le cache de
+  l'interface » et « Ouvrir la console ».
+- **Console Eruda** (application web seulement) : chargée à la demande depuis un fichier à
+  part, jamais au démarrage, jamais dans l'extension, non gardée pour le hors ligne.
+- **Journal interne** : les 500 derniers événements, en mémoire seulement, jamais envoyés ni
+  enregistrés. Pas d'e-mail, de jeton ni d'adresse complète (réduite au domaine), y compris dans
+  les messages d'erreur. Les erreurs non gérées y sont notées, mode diagnostic ou non.
+- Site : question « Comment envoyer un diagnostic ? » dans la FAQ.
+- `npm run verifier:eruda` : Eruda absent de l'extension, en fichier séparé côté web.
+
+### Problèmes connus
+
+- La checklist de test complète (`docs/tests/checklist-v3.md`) n'est pas encore exécutée sur
+  extension, iPhone et iPad : la V3 n'est donc pas close.
+- `npm run verifier:site` échoue tant que le zip de téléchargement du site n'est pas régénéré
+  pour la version courante.
+
+### Vérifié
+
+| Appareil                       | Résultat                   |
+| ------------------------------ | -------------------------- |
+| iPhone (Safari, vrai appareil) | ✔ diagnostic               |
+| iPad                           | non testé                  |
+| Ordinateur                     | tests automatiques ✔ (542) |
+
 ## [3.9.0] - 2026-10-26
 
 ### Ajouté
