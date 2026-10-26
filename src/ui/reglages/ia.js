@@ -42,6 +42,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   const disponibilite = {};
   let verification = ""; // message under the button
   let enVerification = false;
+  let tousModeles = false; // false: only the checked models (✓) are offered
   const racine = el("div", { class: "ia-reglages" });
   const section = el(
     "section",
@@ -60,6 +61,36 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   const cleDe = (id) => cles?.find((c) => c.fournisseur === id) ?? null;
   const avecCle = () => (cles ?? []).filter((c) => c.valide !== false).map((c) => c.fournisseur);
 
+  // Models found working with the keys are remembered 24 h on this device: no new check (and
+  // no call) each time the screen opens. The key set is part of the memory: a new key re-checks.
+  const CLE_MEMOIRE = "nedotab:ia-modeles-verifies";
+  const DUREE_MEMOIRE_MS = 24 * 60 * 60 * 1000;
+  const signatureCles = () => avecCle().sort().join(",");
+  function lireMemoire() {
+    try {
+      const m = JSON.parse(localStorage.getItem(CLE_MEMOIRE) ?? "null");
+      if (m && Date.now() - m.t < DUREE_MEMOIRE_MS && m.cles === signatureCles()) return m;
+    } catch {
+      // No storage (private window): the check simply runs again.
+    }
+    return null;
+  }
+  function ecrireMemoire() {
+    try {
+      localStorage.setItem(
+        CLE_MEMOIRE,
+        JSON.stringify({ t: Date.now(), cles: signatureCles(), valeurs: disponibilite }),
+      );
+    } catch {
+      // Not remembered: no harm.
+    }
+  }
+  function aVerifierDejaFait() {
+    const m = lireMemoire();
+    if (m) Object.assign(disponibilite, m.valeurs);
+    return !!m;
+  }
+
   async function charger() {
     if (!enCompte()) return;
     config = await service.config();
@@ -77,6 +108,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         }),
     );
     rendre();
+    if (ia().actif && !aVerifierDejaFait()) verifierModeles({ silencieux: true });
   }
 
   // --- keys ------------------------------------------------------------------------------------
@@ -194,9 +226,12 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       }
       // Then everything the provider lists for this key (nothing twice).
       const dejaLa = new Set([...groupe.querySelectorAll("option")].map((o) => o.value));
+      // By default only the models that answered with this key; "all" shows the rest.
       for (const m of modelesDispo[id] ?? []) {
         const v = valeurChoix({ fournisseur: id, modele: m.id });
-        if (!dejaLa.has(v)) groupe.append(el("option", { value: v, texte: m.nom }));
+        if (dejaLa.has(v)) continue;
+        if (tousModeles || disponibilite[v] === true)
+          groupe.append(el("option", { value: v, texte: m.nom }));
       }
       // Models checked with the key: the ones that answer first, the refused ones last.
       const rang = (o) =>
@@ -230,7 +265,8 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   }
 
   /** Asks the server which of the newest models (and the ones chosen) answer with the keys. */
-  async function verifierModeles() {
+  async function verifierModeles({ silencieux = false } = {}) {
+    if (enVerification) return;
     enVerification = true;
     verification = "Vérification des modèles avec votre clé…";
     rendre();
@@ -260,8 +296,11 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     );
     enVerification = false;
     if (total) {
-      verification = `${bons} modèle${bons > 1 ? "s" : ""} disponible${bons > 1 ? "s" : ""} sur ${total} vérifié${total > 1 ? "s" : ""}. Les modèles refusés par votre clé sont marqués ✗.`;
-    }
+      ecrireMemoire();
+      verification = silencieux
+        ? ""
+        : `${bons} modèle${bons > 1 ? "s" : ""} disponible${bons > 1 ? "s" : ""} sur ${total} vérifié${total > 1 ? "s" : ""}.`;
+    } else if (silencieux) verification = "";
     rendre();
   }
 
@@ -497,11 +536,23 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         el("button", {
           type: "button",
           class: "bouton",
-          texte: enVerification ? "Vérification…" : "Vérifier les modèles",
+          texte: enVerification ? "Vérification…" : "Revérifier mes modèles",
           disabled: inactif || enVerification || avecCle().length === 0,
           onclick: verifierModeles,
         }),
         verification ? note(verification) : null,
+        el("button", {
+          type: "button",
+          class: "lien-discret",
+          texte: tousModeles
+            ? "Ne montrer que les modèles qui marchent"
+            : "Afficher tous les modèles du fournisseur",
+          disabled: inactif,
+          onclick: () => {
+            tousModeles = !tousModeles;
+            rendre();
+          },
+        }),
         ...lignesUsages,
         el("h4", { texte: "Mes modèles" }),
         lignesModeles.length
@@ -530,6 +581,9 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     if (suivante === vue) return;
     vue = suivante;
     rendre();
+    if (ia().actif && cles && !enVerification && !aVerifierDejaFait()) {
+      verifierModeles({ silencieux: true });
+    }
   });
   const arretSynchro = session?.synchro?.abonner?.(() => {
     if (!section.isConnected) return arretSynchro?.();

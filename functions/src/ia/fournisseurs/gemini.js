@@ -83,6 +83,10 @@ export async function verifierCle({ cle }, options) {
 const plusRecentsDabord = (a, b) =>
   b.id.localeCompare(a.id, "en", { numeric: true, sensitivity: "base" });
 
+// Models that answer with pictures, speech or live streams, or that are not for chatting.
+const PAS_TEXTE =
+  /(image|tts|audio|live|embed|robotics|computer-use|imagen|veo|native|learnlm|aqa|vision|banana)/i;
+
 export async function listerModeles({ cle }, options) {
   const r = await appelJson(
     `${BASE}/models?pageSize=1000`,
@@ -91,6 +95,7 @@ export async function listerModeles({ cle }, options) {
   );
   return (Array.isArray(r?.models) ? r.models : [])
     .filter((m) => m?.supportedGenerationMethods?.includes("generateContent"))
+    .filter((m) => !PAS_TEXTE.test(String(m.name ?? "")))
     .map((m) => ({
       id: nomModele(String(m.name ?? "")),
       nom: m.displayName || nomModele(String(m.name)),

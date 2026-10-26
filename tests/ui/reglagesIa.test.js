@@ -168,15 +168,14 @@ describe("Réglages → Assistant IA", () => {
     await attendre();
     expect(service.modeles).toHaveBeenCalledTimes(1);
     expect(service.modeles).toHaveBeenCalledWith("gemini");
+    // Rien n'est proposé tant qu'aucun modèle n'a répondu : pas de liste de 46 noms.
     const select = section.querySelector('select[aria-label="Modèle pour Tags"]');
     expect([...select.querySelectorAll("option")].map((o) => o.textContent)).toEqual([
       "Non défini",
-      "Gemini A",
-      "Gemini B",
     ]);
   });
 
-  it("« Vérifier les modèles » marque ceux qui répondent et met les bons en premier", async () => {
+  it("« Revérifier mes modèles » ne garde que ceux qui répondent", async () => {
     const { store, section, service } = monter({
       cles: [{ fournisseur: "gemini", fin: "ppzA", ajouteLe: 1, valide: true }],
     });
@@ -188,7 +187,7 @@ describe("Réglages → Assistant IA", () => {
       changements: { ia: { actif: true, usages: {}, modelesPerso: [] } },
     });
     [...section.querySelectorAll("button")]
-      .find((b) => b.textContent === "Vérifier les modèles")
+      .find((b) => b.textContent === "Revérifier mes modèles")
       .click();
     await attendre();
     await attendre();
@@ -197,13 +196,22 @@ describe("Réglages → Assistant IA", () => {
     const options = [
       ...section.querySelector('select[aria-label="Modèle pour Tags"]').querySelectorAll("option"),
     ];
-    expect(options.map((o) => o.textContent)).toEqual([
+    // Par défaut : seulement ceux qui marchent.
+    expect(options.map((o) => o.textContent)).toEqual(["Non défini", "✓ Gemini B"]);
+    expect(section.textContent).toContain("1 modèle disponible sur 2 vérifiés");
+    // « Afficher tous » montre aussi les refusés, désactivés.
+    [...section.querySelectorAll("button")]
+      .find((b) => b.textContent === "Afficher tous les modèles du fournisseur")
+      .click();
+    const tous = [
+      ...section.querySelector('select[aria-label="Modèle pour Tags"]').querySelectorAll("option"),
+    ];
+    expect(tous.map((o) => o.textContent)).toEqual([
       "Non défini",
       "✓ Gemini B",
       "✗ Gemini A (indisponible)",
     ]);
-    expect(options[2].disabled).toBe(true);
-    expect(section.textContent).toContain("1 modèle disponible sur 2 vérifiés");
+    expect(tous[2].disabled).toBe(true);
   });
 
   it("« Tester » affiche « OK · 820 ms »", async () => {

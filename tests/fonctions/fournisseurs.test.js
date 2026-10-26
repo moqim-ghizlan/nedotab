@@ -367,3 +367,31 @@ describe("listerModeles : les plus récents d'abord", () => {
     ]);
   });
 });
+
+describe("Gemini : écarte les modèles qui ne servent pas à écrire du texte", () => {
+  it("images, voix, direct, embeddings… ne sont pas proposés", async () => {
+    const noms = [
+      "gemini-3.1-flash-lite",
+      "gemini-3-pro-image-preview",
+      "gemini-2.5-flash-preview-tts",
+      "gemini-live-2.5-flash",
+      "gemini-2.5-flash-native-audio",
+      "gemini-embedding-001",
+      "gemini-3.1-pro",
+    ];
+    const f = vi.fn().mockResolvedValue(
+      reponse(200, {
+        models: noms.map((n) => ({
+          name: `models/${n}`,
+          displayName: n,
+          supportedGenerationMethods: ["generateContent"],
+        })),
+      }),
+    );
+    const liste = await gemini.listerModeles(
+      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
+      { fetch: f },
+    );
+    expect(liste.map((m) => m.id)).toEqual(["gemini-3.1-pro", "gemini-3.1-flash-lite"]);
+  });
+});
