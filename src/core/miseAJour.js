@@ -10,6 +10,18 @@ export function peutRecharger({ fenetreOuverte, glisserEnCours, saisieEnCours })
   return !fenetreOuverte && !glisserEnCours && !saisieEnCours;
 }
 
+/**
+ * Pourquoi le rechargement doit attendre, ou null s'il peut avoir lieu : le message affiché
+ * à l'utilisateur est choisi par l'interface selon cette raison.
+ * @returns {null | "fenetre" | "glisser" | "saisie"}
+ */
+export function raisonOccupe({ fenetreOuverte, glisserEnCours, saisieEnCours }) {
+  if (fenetreOuverte) return "fenetre";
+  if (glisserEnCours) return "glisser";
+  if (saisieEnCours) return "saisie";
+  return null;
+}
+
 /** Faut-il chercher une nouvelle version maintenant, au retour au premier plan ? (1 fois/heure) */
 export function doitVerifier(derniereVerification, maintenant) {
   return maintenant - derniereVerification >= INTERVALLE_VERIFICATION_MS;
