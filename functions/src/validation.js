@@ -8,7 +8,7 @@ export class EntreeInvalide extends Error {}
 
 /**
  * @param {unknown} donnees
- * @param {Record<string, { type: "chaine"|"entier"|"booleen", requis?: boolean, min?: number,
+ * @param {Record<string, { type: "chaine"|"entier"|"booleen"|"libre", requis?: boolean, min?: number,
  *         max?: number, motif?: RegExp, valeurs?: () => string[] }>} schema
  * @returns {Record<string, unknown>} only the fields of the schema
  */
@@ -41,6 +41,9 @@ export function valider(donnees, schema) {
       if (!Number.isInteger(v)) throw new EntreeInvalide(`${cle} : nombre entier attendu.`);
       if (regle.min != null && v < regle.min) throw new EntreeInvalide(`${cle} : trop petit.`);
       if (regle.max != null && v > regle.max) throw new EntreeInvalide(`${cle} : trop grand.`);
+    } else if (regle.type === "libre") {
+      // A structure the caller checks itself (list of messages…): throws EntreeInvalide.
+      regle.verifier(v, cle);
     } else if (regle.type === "booleen") {
       if (typeof v !== "boolean") throw new EntreeInvalide(`${cle} : vrai ou faux attendu.`);
     }

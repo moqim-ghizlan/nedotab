@@ -16,6 +16,19 @@ export const MESSAGE_TEST = "Réponds uniquement par OK";
 // Room for the reasoning of some models before the two letters of the answer.
 export const JETONS_TEST = 1024;
 
+const USAGES = ["tags", "recherche", "chat"];
+
+function verifierMessages(v) {
+  if (!Array.isArray(v) || v.length < 1 || v.length > 50)
+    throw new EntreeInvalide("messages : 1 à 50 messages attendus.");
+  for (const m of v) {
+    if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role))
+      throw new EntreeInvalide("messages : rôle invalide.");
+    if (typeof m.texte !== "string" || m.texte.length < 1 || m.texte.length > 20000)
+      throw new EntreeInvalide("messages : texte invalide.");
+  }
+}
+
 const MODELE = { type: "chaine", requis: true, min: 1, max: 100, motif: /^[\w.:/-]+$/ };
 
 /**
@@ -140,5 +153,65 @@ export function creerFonctionsIa(deps) {
     }
   }
 
-  return { enregistrerCle, supprimerCle, etatCles, tester };
+  /**
+   * The provider and the model of a use (tags, search, chat) are read HERE, from the user's
+   * settings (users/{uid}.reglages.ia), never from the request: the browser cannot ask for a
+   * provider it has no key for, and the screen and the server cannot disagree.
+   */
+  async function choixDeLUsage(uid, usage) {
+    const snap = await db.doc(`users/${uid}`).get();
+    const ia = snap.exists ? snap.data()?.reglages?.ia : null;
+    if (ia?.actif !== true) throw new ErreurFournisseur("ia-desactivee");
+    const choix = ia.usages?.[usage];
+    if (!choix?.fournisseur || !choix?.modele) throw new ErreurFournisseur("pas-de-modele");
+    const c = await config();
+    if (!fournisseursActifs(c).includes(choix.fournisseur) || !fournisseurs[choix.fournisseur])
+      throw new ErreurFournisseur("pas-de-modele");
+    return { fournisseur: choix.fournisseur, modele: choix.modele };
+  }
+
+  /**
+   * Common path of every AI feature (V4.4 and after): settings → quota → key in memory →
+   * provider. `donnees`: { usage, systeme?, messages, maxJetons?, formatJson? } and nothing
+   * else: a "fournisseur" or "modele" sent by the browser is refused.
+   */
+  async function executerUsage(uid, donnees) {
+    const { usage, systeme, messages, maxJetons, formatJson } = valider(donnees, {
+      usage: { type: "chaine", requis: true, valeurs: () => USAGES },
+      systeme: { type: "chaine", max: 20000 },
+      messages: { type: "libre", requis: true, verifier: verifierMessages },
+      maxJetons: { type: "entier", min: 1, max: 8192 },
+      formatJson: { type: "booleen" },
+    });
+    const { fournisseur, modele } = await choixDeLUsage(uid, usage);
+    const entree = (await lireCles(uid))[fournisseur];
+    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
+    const c = await config();
+    await consommer(uid, { n: 1, limite: c.quotaQuotidien });
+    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
+    const debut = horloge();
+    try {
+      const r = await fournisseurs[fournisseur].envoyer({
+        cle,
+        modele,
+        systeme,
+        messages,
+        maxJetons,
+        formatJson,
+      });
+      journal({
+        action: usage,
+        fournisseur,
+        modele,
+        dureeMs: horloge() - debut,
+        jetons: r.jetonsEntree + r.jetonsSortie,
+      });
+      return { texte: r.texte, modele: r.modele };
+    } catch (e) {
+      journal({ action: usage, fournisseur, modele, dureeMs: horloge() - debut, code: e?.code });
+      throw e;
+    }
+  }
+
+  return { enregistrerCle, supprimerCle, etatCles, tester, executerUsage, choixDeLUsage };
 }

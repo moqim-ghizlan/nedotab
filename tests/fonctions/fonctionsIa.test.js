@@ -212,3 +212,86 @@ describe("config/ia", () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("executerUsage : le fournisseur vient des réglages, pas de la requête", () => {
+  const messages = [{ role: "user", texte: "Bonjour" }];
+
+  function avecReglages(ia) {
+    const m = monter();
+    m.db.doc("users/u1").set({ reglages: ia ? { ia } : {} });
+    return m;
+  }
+  const reglagesOpenai = {
+    actif: true,
+    usages: { tags: { fournisseur: "openai", modele: "gpt-choisi" }, recherche: null, chat: null },
+  };
+
+  it("utilise le fournisseur et le modèle des réglages de l'utilisateur", async () => {
+    const { ia, faux, db } = avecReglages(reglagesOpenai);
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const r = await ia.executerUsage("u1", { usage: "tags", messages });
+    expect(r).toEqual({ texte: "OK", modele: "modele-x" });
+    expect(faux.envoyer).toHaveBeenCalledWith(
+      expect.objectContaining({ cle: CLE, modele: "gpt-choisi", messages }),
+    );
+    expect(db.lire("users/u1/prive/quota").appels).toBe(1);
+  });
+
+  it("un fournisseur ou un modèle envoyé par le navigateur est refusé, rien n'est appelé", async () => {
+    const { ia, faux } = avecReglages(reglagesOpenai);
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    for (const triche of [{ fournisseur: "gemini" }, { modele: "autre" }]) {
+      await expect(
+        ia.executerUsage("u1", { usage: "tags", messages, ...triche }),
+      ).rejects.toBeInstanceOf(EntreeInvalide);
+    }
+    expect(faux.envoyer).not.toHaveBeenCalled();
+  });
+
+  it("IA désactivée, usage sans modèle, fournisseur sans clé : refusés avant tout appel", async () => {
+    const m1 = avecReglages({ ...reglagesOpenai, actif: false });
+    await expect(m1.ia.executerUsage("u1", { usage: "tags", messages })).rejects.toMatchObject({
+      code: "ia-desactivee",
+    });
+    const m2 = avecReglages(reglagesOpenai);
+    await m2.ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    await expect(m2.ia.executerUsage("u1", { usage: "chat", messages })).rejects.toMatchObject({
+      code: "pas-de-modele",
+    });
+    const m3 = avecReglages(reglagesOpenai);
+    await expect(m3.ia.executerUsage("u1", { usage: "tags", messages })).rejects.toMatchObject({
+      code: "cle-absente",
+    });
+    for (const m of [m1, m2, m3]) expect(m.faux.envoyer).not.toHaveBeenCalled();
+  });
+
+  it("usage et messages invalides : refusés", async () => {
+    const { ia } = avecReglages(reglagesOpenai);
+    for (const d of [
+      { usage: "autre", messages },
+      { usage: "tags" },
+      { usage: "tags", messages: [] },
+      { usage: "tags", messages: [{ role: "system", texte: "x" }] },
+      { usage: "tags", messages: [{ role: "user", texte: "" }] },
+    ])
+      await expect(ia.executerUsage("u1", d)).rejects.toBeInstanceOf(EntreeInvalide);
+  });
+
+  it("modèle retiré chez le fournisseur : code modele-introuvable, message clair", async () => {
+    const m = monter({ erreurEnvoi: "modele-introuvable" });
+    m.db.doc("users/u1").set({ reglages: { ia: reglagesOpenai } });
+    await m.ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const e = await m.ia.executerUsage("u1", { usage: "tags", messages }).catch((x) => x);
+    expect(versErreurAppel(e)).toMatchObject({
+      code: "not-found",
+      details: { code: "modele-introuvable" },
+    });
+  });
+
+  it("le journal n'a ni la clé ni le texte des messages", async () => {
+    const { ia, journal } = avecReglages(reglagesOpenai);
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    await ia.executerUsage("u1", { usage: "tags", messages });
+    expect(JSON.stringify(journal.mock.calls)).not.toMatch(/VraieCle|Bonjour/);
+  });
+});

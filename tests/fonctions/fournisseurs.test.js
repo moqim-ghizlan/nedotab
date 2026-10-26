@@ -82,6 +82,37 @@ describe("appelJson", () => {
   });
 });
 
+describe.each([
+  ["OpenAI", openai, { choices: [{ message: { content: "OK" } }], usage: {} }],
+  ["Gemini", gemini, { candidates: [{ content: { parts: [{ text: "OK" }] } }] }],
+])("adaptateur %s : réponses simulées", (_nom, adaptateur, succes) => {
+  const cle = "AIzaSyExempleDeCleTresLongue1234567890";
+  const demande = (f) =>
+    adaptateur.envoyer(
+      { cle, modele: "m", messages: [{ role: "user", texte: "a" }] },
+      { fetch: f },
+    );
+
+  it("réponse réussie", async () => {
+    const f = vi.fn().mockResolvedValue(reponse(200, succes));
+    expect((await demande(f)).texte).toBe("OK");
+  });
+  it.each([
+    [401, "cle-invalide"],
+    [429, "limite-fournisseur"],
+    [404, "modele-introuvable"],
+  ])("%i → %s, sans réessai", async (statut, code) => {
+    const f = vi.fn().mockResolvedValue(reponse(statut, {}));
+    await expect(demande(f)).rejects.toMatchObject({ code });
+    expect(f).toHaveBeenCalledTimes(1);
+  });
+  it("500 → fournisseur indisponible, après un seul réessai", async () => {
+    const f = vi.fn().mockResolvedValue(reponse(500, {}));
+    await expect(demande(f)).rejects.toMatchObject({ code: "fournisseur-indisponible" });
+    expect(f).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("adaptateur OpenAI", () => {
   it("envoie une requête Chat Completions conforme et lit la réponse", async () => {
     const f = vi.fn().mockResolvedValue(

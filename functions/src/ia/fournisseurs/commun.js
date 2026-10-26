@@ -21,6 +21,7 @@ export const CODES = [
   "limite-fournisseur",
   "cle-sans-credit",
   "requete-invalide",
+  "modele-introuvable",
   "fournisseur-indisponible",
 ];
 
@@ -43,6 +44,7 @@ export function codeErreur(statut, corps) {
     return "cle-sans-credit";
   if (statut === 401 || statut === 403 || texte.includes("api_key_invalid")) return "cle-invalide";
   if (statut === 429) return "limite-fournisseur";
+  if (statut === 404) return "modele-introuvable";
   if (statut >= 400 && statut < 500) return "requete-invalide";
   return "fournisseur-indisponible";
 }

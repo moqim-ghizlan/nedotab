@@ -10,6 +10,7 @@
  *     | { type: "aleatoire", categorie, frequence: "onglet"|"jour"|"clic", choix?, voile, flou }
  */
 import { estCategorie, estIdPhoto, FREQUENCES } from "./galerie.js";
+import { iaAStocker, validerIa } from "./ia.js";
 import { NAVIGATEURS } from "./navigateurs.js";
 import { capaciteDe, comptesAStocker, normaliserComptes, validerGrilleAccueil } from "./pages.js";
 
@@ -143,14 +144,14 @@ export function validerFond(fond) {
 export const INTERRUPTEURS = ["nouvelOnglet", "rechercheNouvelOnglet"];
 
 /**
- * Applies `changements` (whitelisted keys: theme, fond, grilleAccueil and the INTERRUPTEURS)
+ * Applies `changements` (whitelisted keys: theme, fond, grilleAccueil, ia and the INTERRUPTEURS)
  * to `reglages`. Unknown keys and invalid values are refused: the same object is returned.
  * pagesAccueil is never changed here: the reducer keeps it in line with the grid.
  */
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  const permises = ["theme", "fond", "grilleAccueil", ...INTERRUPTEURS];
+  const permises = ["theme", "fond", "grilleAccueil", "ia", ...INTERRUPTEURS];
   if (cles.length === 0 || cles.some((c) => !permises.includes(c))) return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
@@ -167,6 +168,15 @@ export function modifierReglages(reglages, changements) {
     const g = validerGrilleAccueil(changements.grilleAccueil);
     if (!g) return reglages;
     suivant.grilleAccueil = g;
+  }
+  if ("ia" in changements) {
+    // V4.1: AI settings (on/off, model of each use, custom models), synced. No key in them.
+    if (!changements.ia || typeof changements.ia !== "object") return reglages;
+    const ia = iaAStocker(validerIa(changements.ia));
+    if (ia) suivant.ia = ia;
+    else delete suivant.ia;
+    if (JSON.stringify(suivant.ia) === JSON.stringify(reglages.ia) && cles.length === 1)
+      return reglages;
   }
   for (const cle of INTERRUPTEURS.filter((c) => c in changements)) {
     if (typeof changements[cle] !== "boolean") return reglages;
@@ -193,6 +203,9 @@ export function validerReglages(reglages) {
   }
   const resultat = { ...r, theme: THEMES.includes(r.theme) ? r.theme : "auto", fond, fonds };
   for (const cle of INTERRUPTEURS) if (resultat[cle] !== true) delete resultat[cle];
+  const ia = iaAStocker(r.ia);
+  if (ia) resultat.ia = ia;
+  else delete resultat.ia;
   const grille = validerGrilleAccueil(r.grilleAccueil);
   if (grille) resultat.grilleAccueil = grille;
   else delete resultat.grilleAccueil;

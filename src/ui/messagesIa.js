@@ -8,6 +8,9 @@ const PAR_RAISON = {
   "cle-absente": "Enregistrez d'abord une clé pour ce fournisseur.",
   "limite-fournisseur": "Le fournisseur reçoit trop de demandes : réessayez dans un instant.",
   "requete-invalide": "Demande refusée par le fournisseur (nom du modèle ?).",
+  "modele-introuvable": "Ce modèle n'est plus disponible, choisissez-en un autre.",
+  "pas-de-modele": "Choisissez un modèle pour cet usage dans les réglages de l'assistant.",
+  "ia-desactivee": "L'assistant IA est désactivé : activez-le dans les réglages.",
   "fournisseur-indisponible": "Le fournisseur ne répond pas : réessayez plus tard.",
   "entree-invalide": "Données refusées : vérifiez ce que vous avez saisi.",
 };
