@@ -57,3 +57,22 @@ export async function verifierCle({ cle }, options) {
     throw e;
   }
 }
+
+// Only the models that write text: not embeddings, speech, images, moderation, realtime…
+const TEXTE = /^(gpt|chatgpt|o\d)/i;
+const PAS_TEXTE =
+  /(embedding|whisper|tts|dall-e|moderation|image|audio|realtime|transcribe|search|instruct|davinci|babbage)/i;
+
+/**
+ * Models the key can use to write text (GET /v1/models), sorted by identifier. The list
+ * comes from OpenAI at the time of the call: nothing about models is written in the code.
+ * @returns {Promise<Array<{ id: string, nom: string }>>}
+ */
+export async function listerModeles({ cle }, options) {
+  const r = await appelJson(`${BASE}/models`, { method: "GET", headers: entetes(cle) }, options);
+  return (Array.isArray(r?.data) ? r.data : [])
+    .map((m) => String(m?.id ?? ""))
+    .filter((id) => TEXTE.test(id) && !PAS_TEXTE.test(id))
+    .sort((a, b) => a.localeCompare(b))
+    .map((id) => ({ id, nom: id }));
+}

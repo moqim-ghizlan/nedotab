@@ -295,3 +295,29 @@ describe("executerUsage : le fournisseur vient des réglages, pas de la requête
     expect(JSON.stringify(journal.mock.calls)).not.toMatch(/VraieCle|Bonjour/);
   });
 });
+
+describe("iaListerModeles", () => {
+  it("renvoie la liste du fournisseur, sans toucher au quota, avec la clé déchiffrée", async () => {
+    const { db, ia, faux } = monter();
+    faux.listerModeles = vi.fn(async ({ cle }) => (cle === CLE ? [{ id: "m1", nom: "M1" }] : []));
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    expect(await ia.listerModeles("u1", { fournisseur: "openai" })).toEqual([
+      { id: "m1", nom: "M1" },
+    ]);
+    expect(db.lire("users/u1/prive/quota")).toBeUndefined();
+  });
+  it("sans clé : refusé ; fournisseur inconnu : refusé ; 200 modèles au plus", async () => {
+    const { ia, faux } = monter();
+    await expect(ia.listerModeles("u1", { fournisseur: "openai" })).rejects.toMatchObject({
+      code: "cle-absente",
+    });
+    await expect(ia.listerModeles("u1", { fournisseur: "mistral" })).rejects.toBeInstanceOf(
+      EntreeInvalide,
+    );
+    faux.listerModeles = vi.fn(async () =>
+      Array.from({ length: 500 }, (_, i) => ({ id: `m${i}`, nom: `M${i}` })),
+    );
+    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    expect(await ia.listerModeles("u1", { fournisseur: "openai" })).toHaveLength(200);
+  });
+});

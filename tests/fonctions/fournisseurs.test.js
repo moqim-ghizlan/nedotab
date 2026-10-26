@@ -276,3 +276,66 @@ describe("adaptateur Gemini", () => {
     expect(gemini.formatCle.test("deux mots dans une phrase collee")).toBe(false);
   });
 });
+
+describe("listerModeles : la liste vient du fournisseur", () => {
+  it("Gemini : seulement les modèles qui écrivent du texte, triés", async () => {
+    const f = vi.fn().mockResolvedValue(
+      reponse(200, {
+        models: [
+          {
+            name: "models/z-modele",
+            displayName: "Z",
+            supportedGenerationMethods: ["generateContent"],
+          },
+          {
+            name: "models/embedding-x",
+            displayName: "Emb",
+            supportedGenerationMethods: ["embedContent"],
+          },
+          {
+            name: "models/a-modele",
+            displayName: "A",
+            supportedGenerationMethods: ["generateContent", "countTokens"],
+          },
+        ],
+      }),
+    );
+    const liste = await gemini.listerModeles(
+      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
+      { fetch: f },
+    );
+    expect(liste).toEqual([
+      { id: "a-modele", nom: "A" },
+      { id: "z-modele", nom: "Z" },
+    ]);
+    expect(f.mock.calls[0][0]).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+    );
+    expect(f.mock.calls[0][1].headers["x-goog-api-key"]).toBeTruthy();
+  });
+
+  it("OpenAI : écarte les modèles de voix, d'images, d'embeddings…", async () => {
+    const ids = [
+      "gpt-b",
+      "text-embedding-3-small",
+      "whisper-1",
+      "tts-1",
+      "dall-e-3",
+      "o3",
+      "gpt-image-1",
+      "gpt-a",
+      "omni-moderation-latest",
+      "gpt-4o-realtime-preview",
+    ];
+    const f = vi.fn().mockResolvedValue(reponse(200, { data: ids.map((id) => ({ id })) }));
+    const liste = await openai.listerModeles({ cle: "sk-abcdefghijklmnopqrstuvwx" }, { fetch: f });
+    expect(liste.map((m) => m.id)).toEqual(["gpt-a", "gpt-b", "o3"]);
+  });
+
+  it("clé refusée : erreur normalisée", async () => {
+    const f = vi.fn().mockResolvedValue(reponse(401, {}));
+    await expect(openai.listerModeles({ cle: "sk-x" }, { fetch: f })).rejects.toMatchObject({
+      code: "cle-invalide",
+    });
+  });
+});

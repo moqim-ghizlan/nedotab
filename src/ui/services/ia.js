@@ -24,6 +24,8 @@ export function creerServiceIa({ chargerFb = chargerFirebase } = {}) {
     enregistrerCle: (fournisseur, cle) => appeler("iaEnregistrerCle", { fournisseur, cle }),
     supprimerCle: (fournisseur) => appeler("iaSupprimerCle", { fournisseur }),
     tester: (fournisseur, modele) => appeler("iaTester", { fournisseur, modele }),
+    /** Models the user's key can use, asked to the provider: [{ id, nom }]. */
+    modeles: (fournisseur) => appeler("iaListerModeles", { fournisseur }),
     /** config/ia, or the default when it is missing or unreadable (offline). */
     async config() {
       try {

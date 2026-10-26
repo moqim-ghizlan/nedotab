@@ -36,6 +36,8 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   let config = null; // config/ia
   let cles = null; // [{ fournisseur, fin, ajouteLe, valide }] | null while loading
   let erreurCles = null;
+  /** Models each provider says the key can use: { [fournisseur]: [{ id, nom }] }. */
+  const modelesDispo = {};
   const racine = el("div", { class: "ia-reglages" });
   const section = el(
     "section",
@@ -60,6 +62,16 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     const r = await service.etatCles();
     cles = r.ok ? r.valeur : null;
     erreurCles = r.ok ? null : r.erreur;
+    rendre();
+    // The lists of models come from the providers themselves (free, no quota used).
+    await Promise.all(
+      (cles ?? [])
+        .filter((c) => c.valide !== false)
+        .map(async (c) => {
+          const m = await service.modeles(c.fournisseur);
+          if (m.ok) modelesDispo[c.fournisseur] = m.valeur;
+        }),
+    );
     rendre();
   }
 
@@ -176,6 +188,12 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
           el("option", { value: valeurChoix({ fournisseur: id, modele: m.id }), texte: m.nom }),
         );
       }
+      // Then everything the provider lists for this key (nothing twice).
+      const dejaLa = new Set([...groupe.querySelectorAll("option")].map((o) => o.value));
+      for (const m of modelesDispo[id] ?? []) {
+        const v = valeurChoix({ fournisseur: id, modele: m.id });
+        if (!dejaLa.has(v)) groupe.append(el("option", { value: v, texte: m.nom }));
+      }
       if (groupe.children.length) select.append(groupe);
     }
     // A model chosen earlier that is no longer in the list stays visible instead of vanishing.
@@ -223,7 +241,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       contenu: [
         champ("Fournisseur", "ia-m-fournisseur", fournisseur),
         champ("Identifiant exact", "ia-m-id", id),
-        champ("Nom affiché", "ia-m-nom", nom),
+        champ("Nom affiché (facultatif)", "ia-m-nom", nom),
         erreur,
       ],
       boutons: [
@@ -428,7 +446,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         lignesModeles.length
           ? el("ul", { class: "ia-liste" }, lignesModeles)
           : note(
-              "Ajoutez un modèle qui n'est pas dans la liste : fournisseur et identifiant exact.",
+              "Les listes ci-dessus viennent directement de vos fournisseurs. Ajoutez ici seulement un modèle qui n'y figure pas (identifiant exact).",
             ),
         el("button", {
           type: "button",

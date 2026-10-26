@@ -24,6 +24,16 @@ function monter({ mode = "compte", cles = [], suggeres = [] } = {}) {
     enregistrerCle: vi.fn(),
     supprimerCle: vi.fn(),
     tester: vi.fn(async () => ({ ok: true, valeur: { ok: true, latenceMs: 820, modele: "m" } })),
+    modeles: vi.fn(async (f) => ({
+      ok: true,
+      valeur:
+        f === "gemini"
+          ? [
+              { id: "gemini-a", nom: "Gemini A" },
+              { id: "gemini-b", nom: "Gemini B" },
+            ]
+          : [{ id: "gpt-a", nom: "gpt-a" }],
+    })),
   };
   const { section } = sectionIa({ store, session, service });
   document.body.append(section);
@@ -137,6 +147,26 @@ describe("Réglages → Assistant IA", () => {
       recherche: null,
       chat: { fournisseur: "gemini", modele: "gem-chat" },
     });
+  });
+
+  it("les listes de modèles viennent du fournisseur, pour les seules clés valables", async () => {
+    const { section, service } = monter({
+      cles: [
+        { fournisseur: "gemini", fin: "ppzA", ajouteLe: 1, valide: true },
+        { fournisseur: "openai", fin: "x7Qa", ajouteLe: 1, valide: false },
+      ],
+    });
+    await attendre();
+    await attendre();
+    await attendre();
+    expect(service.modeles).toHaveBeenCalledTimes(1);
+    expect(service.modeles).toHaveBeenCalledWith("gemini");
+    const select = section.querySelector('select[aria-label="Modèle pour Tags"]');
+    expect([...select.querySelectorAll("option")].map((o) => o.textContent)).toEqual([
+      "Non défini",
+      "Gemini A",
+      "Gemini B",
+    ]);
   });
 
   it("« Tester » affiche « OK · 820 ms »", async () => {

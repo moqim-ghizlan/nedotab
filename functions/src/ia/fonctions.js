@@ -108,6 +108,35 @@ export function creerFonctionsIa(deps) {
     }));
   }
 
+  /**
+   * The models the user's key can use, asked to the provider itself (free: no quota). The
+   * list is kept short (200) and never contains anything but identifiers and names.
+   */
+  async function listerModeles(uid, donnees) {
+    const c = await config();
+    const { fournisseur } = valider(donnees, {
+      fournisseur: { type: "chaine", requis: true, valeurs: () => fournisseursActifs(c) },
+    });
+    const a = adaptateur(fournisseur);
+    const entree = (await lireCles(uid))[fournisseur];
+    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
+    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
+    const debut = horloge();
+    try {
+      const modeles = (await a.listerModeles({ cle })).slice(0, 200);
+      journal({
+        action: "listerModeles",
+        fournisseur,
+        dureeMs: horloge() - debut,
+        nombre: modeles.length,
+      });
+      return modeles;
+    } catch (e) {
+      journal({ action: "listerModeles", fournisseur, dureeMs: horloge() - debut, code: e?.code });
+      throw e;
+    }
+  }
+
   /** One minimal call ("OK"), counted in the quota. */
   async function tester(uid, donnees) {
     const c = await config();
@@ -213,5 +242,13 @@ export function creerFonctionsIa(deps) {
     }
   }
 
-  return { enregistrerCle, supprimerCle, etatCles, tester, executerUsage, choixDeLUsage };
+  return {
+    enregistrerCle,
+    supprimerCle,
+    etatCles,
+    tester,
+    listerModeles,
+    executerUsage,
+    choixDeLUsage,
+  };
 }
