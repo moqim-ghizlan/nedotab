@@ -2,8 +2,10 @@ import { A } from "../../core/actions.js";
 import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { creerSite } from "../../core/modele.js";
 import { estimerTaille, niveauTaille } from "../../core/taille.js";
+import { DESCRIPTION_MAX, normaliserDescription, tagsUtilises } from "../../core/tags.js";
 import { cleUrl, domaine, normaliserUrl } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
+import { creerChampTags } from "../champTags.js";
 import { el } from "../dom.js";
 import { creerEditeurIcone } from "./editerIcone.js";
 import { trouverIconeEtTitre } from "../services/icones.js";
@@ -313,6 +315,30 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
     onChange: majApercu,
     importBloque: () => niveauTaille(estimerTaille(store.lire())) === "bloque",
   });
+  // Tags and description (V4.2): written by hand, they are never overwritten by the AI.
+  const champTags = creerChampTags({
+    tags: site.tags ?? [],
+    suggestions: () => tagsUtilises(store.lire().grille),
+  });
+  const champDescription = el("textarea", {
+    id: "edition-description",
+    rows: "3",
+    maxlength: String(DESCRIPTION_MAX * 2),
+    autocomplete: "off",
+    "aria-describedby": "edition-description-compteur",
+  });
+  champDescription.value = site.description ?? "";
+  const compteur = el("span", { id: "edition-description-compteur", class: "champ-compteur" });
+  const majCompteur = () => {
+    const n = [...champDescription.value].length;
+    compteur.textContent = `${Math.min(n, 9999)} / ${DESCRIPTION_MAX}`;
+    compteur.classList.toggle("champ-compteur--depasse", n > DESCRIPTION_MAX);
+  };
+  champDescription.addEventListener("input", majCompteur);
+  majCompteur();
+  const IA_A_GERER = site.tagsManuels === true;
+  const caseIa = IA_A_GERER ? el("input", { id: "edition-laisser-ia", type: "checkbox" }) : null;
+  const proposeParIa = site.ia?.etat === "ok" && !site.tagsManuels;
   champTitre.addEventListener("input", majApercu);
   champUrl.addEventListener("input", () => {
     const { url } = lireSite();
@@ -351,6 +377,41 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
       editeur.racine,
       el(
         "div",
+        { class: "champ" },
+        el("label", { for: champTags.champ.id, texte: "Tags" }),
+        champTags.racine,
+        proposeParIa
+          ? el(
+              "p",
+              { class: "champ-ia" },
+              el("span", { texte: "Proposé par l'IA" }),
+              el("button", {
+                type: "button",
+                class: "lien-discret",
+                texte: "Régénérer",
+                disabled: true,
+                title: "Bientôt disponible",
+              }),
+            )
+          : null,
+      ),
+      el(
+        "div",
+        { class: "champ" },
+        el("label", { for: "edition-description", texte: "Description" }),
+        champDescription,
+        compteur,
+      ),
+      IA_A_GERER
+        ? el(
+            "label",
+            { class: "case-a-cocher", for: "edition-laisser-ia" },
+            caseIa,
+            el("span", { texte: "Laisser l'IA gérer les tags et la description" }),
+          )
+        : null,
+      el(
+        "div",
         { class: "dialogue-actions" },
         el("button", {
           type: "button",
@@ -374,6 +435,17 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
     const titre = champTitre.value.trim() || domaine(r.url);
     const urlChangee = r.url !== site.url;
     const changements = { titre, url: r.url, icone: editeur.lire() };
+    // Tags and description are sent only when they changed: editing the name alone must not
+    // mark the site as written by hand.
+    champTags.champ.dispatchEvent(new Event("blur"));
+    const tags = champTags.lire();
+    const description = normaliserDescription(champDescription.value);
+    if (caseIa?.checked) {
+      changements.tagsManuels = false;
+    } else {
+      if (JSON.stringify(tags) !== JSON.stringify(site.tags ?? [])) changements.tags = tags;
+      if (description !== (site.description ?? "")) changements.description = description;
+    }
     store.envoyer({ type: A.SITE_MODIFIER, id: site.id, changements });
     if (urlChangee && editeur.mode() === "auto" && caseNouvelleIcone.checked) {
       trouverIconeEtTitre(r.url).then((res) =>

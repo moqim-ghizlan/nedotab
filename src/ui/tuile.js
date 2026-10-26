@@ -143,7 +143,15 @@ export function creerTuile(element) {
   cibler(lien);
   lien.append(
     creerIcone(element),
-    el("span", { class: "tuile-titre", title: element.titre, texte: element.titre }),
+    el("span", {
+      class: "tuile-titre",
+      // Tooltip (computer): the title, and the description when there is one (V4.2).
+      title: element.description
+        ? `${element.titre}
+${element.description}`
+        : element.titre,
+      texte: element.titre,
+    }),
   );
   return lien;
 }

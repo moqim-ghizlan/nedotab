@@ -1,6 +1,6 @@
 import { A, reduire } from "../core/actions.js";
 import { listerDossiers } from "../core/arbre.js";
-import { NOM_APP } from "../core/constantes.js";
+import { NOM_APP, URL_SITE } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
 import { expliquer, messageIgnorees } from "../core/rejeu.js";
@@ -101,13 +101,23 @@ export async function demarrerApp(racine) {
     }),
   );
   const bandeau = lectureSeule
-    ? el("p", {
-        class: "bandeau",
-        role: "alert",
-        texte: versionFuture
-          ? "Données créées par une version plus récente : mettez à jour l'extension. Lecture seule."
-          : "Vos données n'ont pas pu être lues. Lecture seule pour ne rien perdre.",
-      })
+    ? el(
+        "p",
+        { class: "bandeau", role: "alert" },
+        el("span", {
+          texte: versionFuture
+            ? "Une nouvelle version est nécessaire : vos données ont été créées par une version plus récente. Lecture seule. "
+            : "Vos données n'ont pas pu être lues. Lecture seule pour ne rien perdre.",
+        }),
+        versionFuture
+          ? el("a", {
+              href: `${URL_SITE}mise-a-jour.html`,
+              target: "_blank",
+              rel: "noopener",
+              texte: "Comment mettre à jour",
+            })
+          : null,
+      )
     : null;
   const page = el("main", { class: "page" }, bandeau, vide, zoneAccueil);
   const pied = el("footer", { class: "pied", texte: `${NOM_APP} ${plateforme.getVersion()}` });

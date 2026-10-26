@@ -1,3 +1,4 @@
+import { champsEnrichissement } from "../../src/core/tags.js";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { A, reduire } from "../../src/core/actions.js";
 import { etatInitial } from "../../src/core/modele.js";
@@ -14,6 +15,7 @@ const site = (id) => ({
   url: `https://${id}.fr`,
   icone: { type: "lettre", couleur: "#2c6b5a" },
   creeLe: 0,
+  ...champsEnrichissement(null),
 });
 
 let uid;

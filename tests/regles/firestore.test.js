@@ -58,6 +58,36 @@ describe("users/{uid}", () => {
     await assertFails(getDoc(doc(db(null), "users/A")));
     await assertFails(setDoc(doc(db(null), "users/A"), etat()));
   });
+  it("schéma 3 (V4.2) : document avec sites enrichis (tags, description, état IA) accepté", async () => {
+    const site = {
+      id: "a",
+      type: "site",
+      titre: "A",
+      url: "https://a.fr",
+      tags: ["jeux", "vidéo"],
+      description: "Un site.",
+      tagsManuels: true,
+      ia: { etat: "ok", majLe: 1 },
+    };
+    await assertSucceeds(
+      setDoc(doc(db("A"), "users/A"), etat({ versionSchema: 3, grille: [site], revision: 1 })),
+    );
+    await assertSucceeds(getDoc(doc(db("A"), "users/A")));
+  });
+  it("un document de schéma 2 (avant V4.2) reste lisible et réécrivable", async () => {
+    await preparer("users/A", {
+      versionSchema: 2,
+      grille: [],
+      reglages: {},
+      majLe: new Date(),
+      majPar: "x",
+      revision: 1,
+    });
+    await assertSucceeds(getDoc(doc(db("A"), "users/A")));
+    await assertSucceeds(
+      setDoc(doc(db("A"), "users/A"), etat({ versionSchema: 3, grille: [], revision: 2 })),
+    );
+  });
   it("A supprime son document", async () => {
     await preparer("users/A", { versionSchema: 1 });
     await assertSucceeds(deleteDoc(doc(db("A"), "users/A")));
