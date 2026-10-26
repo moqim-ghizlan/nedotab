@@ -2,6 +2,32 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.3.0] - 2026-10-27
+
+### Ajouté
+
+- **Lecture du contenu des pages (extension)** : un résumé compact d'une page (titre,
+  description, mots-clés, titres, début du texte visible, langue ; 3 000 caractères au plus),
+  qui servira à l'IA en V4.4. Aucun appel IA dans cette version.
+  - Nettoyage : scripts, menus, pieds de page, bandeaux cookies, popups et lignes courtes
+    répétées sont retirés ; `main` / `article` sont préférés.
+  - **Confidentialité** : adresses privées, URL avec jeton, domaines sensibles (banque, santé,
+    messagerie…) et pages d'erreur ou de contrôle ne sont pas lus (extrait réduit, requête
+    retirée de l'URL). Règles dans `docs/ia.md`.
+  - Cache en mémoire (50 entrées, 10 minutes), aucun stockage durable, aucun cookie envoyé.
+  - Sans la permission d'accès aux sites, ou dans l'application web : pas d'extrait.
+- Réglages → Diagnostic : « Voir l'extrait d'une URL » (extension, mode debug).
+
+### Modifié
+
+- Les pages en `windows-1252` et autres encodages sont décodées avec leur jeu de caractères
+  (en-tête `content-type`, puis `<meta charset>`).
+
+### À valider à la main
+
+- Qualité de l'extrait sur 10 sites réels (bon / moyen / mauvais) avec l'outil de diagnostic :
+  à noter ici avant le tag.
+
 ## [4.2.0] - 2026-10-27
 
 ### Ajouté

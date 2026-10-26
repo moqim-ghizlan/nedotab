@@ -40,6 +40,15 @@ const simplifier = (t) =>
     .replace(/\p{M}/gu, "")
     .replace(/[^a-z0-9]/g, "");
 
+/** True for an error, login or consent page title (kept out of titles and extracts). */
+export function titreParasite(titre) {
+  const bas = normaliserEspaces(titre)
+    .toLowerCase()
+    .replace(/[.…!:\s]+$/u, "")
+    .trim();
+  return TITRES_PARASITES.some((p) => bas === p || bas.startsWith(`${p} `));
+}
+
 /** Cleans a page title: spaces, long "A | B - C" titles, parasite titles, 60 chars max. */
 export function nettoyerTitre(titre, nomDomaine = "") {
   let t = normaliserEspaces(titre);
@@ -60,13 +69,7 @@ export function nettoyerTitre(titre, nomDomaine = "") {
       t = ressemblant ?? segments.reduce((a, b) => (b.length < a.length ? b : a));
     }
   }
-  const bas = t
-    .toLowerCase()
-    .replace(/[.…!:\s]+$/u, "")
-    .trim();
-  if (TITRES_PARASITES.some((p) => bas === p || bas.startsWith(`${p} `))) {
-    return nomDomaine;
-  }
+  if (titreParasite(t)) return nomDomaine;
   if (t.length > 60) t = `${t.slice(0, 59).trimEnd()}…`;
   return t;
 }

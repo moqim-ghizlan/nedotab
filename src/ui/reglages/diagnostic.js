@@ -1,4 +1,5 @@
 import { abreger, formaterDiagnostic } from "../../core/diagnostic.js";
+import { normaliserUrl } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
 import { entrees } from "../entrees.js";
 import { modeDebug, ouvrirConsole } from "../debug.js";
@@ -36,6 +37,50 @@ async function rassembler({ store, session }) {
     Entrées: JSON.stringify(entrees().lire()),
     Écran: `${innerWidth}×${innerHeight}`,
   };
+}
+
+/** "Voir l'extrait d'une URL" (V4.3): what the page reader would give to the AI. */
+function outilExtrait() {
+  const champ = el("input", {
+    type: "url",
+    class: "champ",
+    placeholder: "https://exemple.com/page",
+    "aria-label": "Adresse dont voir l'extrait",
+    autocapitalize: "off",
+    autocorrect: "off",
+    spellcheck: "false",
+  });
+  const resultat = el("pre", { class: "diagnostic-texte", "aria-live": "polite" });
+  const voir = async () => {
+    const saisie = normaliserUrl(champ.value);
+    if (!saisie.ok) {
+      resultat.textContent = saisie.erreur;
+      return;
+    }
+    resultat.textContent = "Lecture…";
+    const extrait = await plateforme.lireExtrait?.(saisie.url).catch(() => null);
+    resultat.textContent = extrait
+      ? JSON.stringify(extrait, null, 2)
+      : "Aucun extrait : permission d'accès aux sites non accordée, ou page illisible.";
+  };
+  champ.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") voir();
+  });
+  return el(
+    "div",
+    { class: "diagnostic-extrait" },
+    el("p", {
+      class: "reglages-note",
+      texte: "Voir l'extrait d'une URL : le résumé que l'IA recevrait (extension uniquement).",
+    }),
+    el(
+      "div",
+      { class: "reglages-boutons" },
+      champ,
+      el("button", { type: "button", class: "bouton", texte: "Voir l'extrait", onclick: voir }),
+    ),
+    resultat,
+  );
 }
 
 /**
@@ -99,6 +144,7 @@ export function sectionDiagnostic({ store, session }) {
           toast("Console indisponible ici (utilisez les outils de développement).");
       }),
     ),
+    plateforme.capacites?.lirePagesWeb ? outilExtrait() : null,
     sortie,
   );
 

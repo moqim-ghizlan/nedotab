@@ -16,7 +16,7 @@ function signalAvecDelai(delai, signalParent) {
 
 async function lireLimite(reponse, maxOctets) {
   const lecteur = reponse.body?.getReader();
-  if (!lecteur) return (await reponse.text()).slice(0, maxOctets);
+  if (!lecteur) return new TextEncoder().encode((await reponse.text()).slice(0, maxOctets));
   const morceaux = [];
   let total = 0;
   while (total < maxOctets) {
@@ -34,7 +34,19 @@ async function lireLimite(reponse, maxOctets) {
     pos += part.length;
     if (pos >= tout.length) break;
   }
-  return new TextDecoder("utf-8").decode(tout);
+  return tout;
+}
+
+/** Decodes with the charset of the content-type header, else of a <meta>, else UTF-8. */
+function decoder(octets, contentType = "") {
+  const entete = contentType.match(/charset\s*=\s*["']?([\w-]+)/i)?.[1];
+  const debut = new TextDecoder("latin1").decode(octets.subarray(0, 2048));
+  const nom = entete ?? debut.match(/<meta[^>]+charset\s*=\s*["']?([\w-]+)/i)?.[1] ?? "utf-8";
+  try {
+    return new TextDecoder(nom).decode(octets);
+  } catch {
+    return new TextDecoder("utf-8").decode(octets);
+  }
 }
 
 /** Reads at most 512 KB of an HTML page. @returns {Promise<{html:string,urlFinale:string}|null>} */
@@ -43,7 +55,8 @@ export async function lirePage(url, { signal, delai = 5000, maxOctets = 512 * 10
   try {
     const r = await fetch(url, { credentials: "omit", redirect: "follow", signal: s.signal });
     if (!r.ok || !(r.headers.get("content-type") || "").includes("text/html")) return null;
-    return { html: await lireLimite(r, maxOctets), urlFinale: r.url || url };
+    const octets = await lireLimite(r, maxOctets);
+    return { html: decoder(octets, r.headers.get("content-type") || ""), urlFinale: r.url || url };
   } catch {
     return null;
   } finally {
@@ -57,7 +70,7 @@ export async function lireJson(url, { signal, delai = 3000, maxOctets = 100 * 10
   try {
     const r = await fetch(url, { credentials: "omit", redirect: "follow", signal: s.signal });
     if (!r.ok) return null;
-    return JSON.parse(await lireLimite(r, maxOctets));
+    return JSON.parse(new TextDecoder("utf-8").decode(await lireLimite(r, maxOctets)));
   } catch {
     return null;
   } finally {

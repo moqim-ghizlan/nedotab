@@ -65,6 +65,11 @@ export async function lirePage() {
   return null;
 }
 
+/** The web app cannot read other sites; the server will (V4.5). */
+export async function lireExtrait() {
+  return null;
+}
+
 export async function lireJson() {
   return null;
 }

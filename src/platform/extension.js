@@ -1,5 +1,6 @@
 /** Extension implementation of the platform layer (chrome.*). */
 import { partagerFichier as partager } from "./partage.js";
+import { lireExtrait as lireExtraitPage } from "./extrait.js";
 import { lireJson, lirePage } from "./reseau.js";
 import { creerServicesStockage } from "./servicesStockage.js";
 import {
@@ -58,6 +59,10 @@ export function urlFaviconNavigateur(pageUrl, taille = 64) {
   url.searchParams.set("size", String(taille));
   return url.href;
 }
+
+/** Summary of a page for the AI (V4.3); null without the site permission. */
+export const lireExtrait = (url, { signal } = {}) =>
+  lireExtraitPage(url, { lirePage, permissions: permissionsSites, signal });
 
 export { fichiers } from "./fichiers.js";
 
