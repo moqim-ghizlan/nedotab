@@ -145,9 +145,101 @@ describe("adaptateur OpenAI", () => {
   });
 });
 
-describe("adaptateur Gemini (V4.1)", () => {
-  it("pas encore implémenté", async () => {
-    await expect(gemini.envoyer()).rejects.toThrow("non implémenté");
-    await expect(gemini.verifierCle()).rejects.toThrow("non implémenté");
+describe("adaptateur Gemini", () => {
+  const cle = "AIzaSyExempleDeCleGeminiTresLongue1234";
+
+  it("envoie une requête generateContent conforme et lit la réponse", async () => {
+    const f = vi.fn().mockResolvedValue(
+      reponse(200, {
+        modelVersion: "modele-test-2026",
+        candidates: [{ content: { parts: [{ text: "O" }, { text: "K" }] } }],
+        usageMetadata: { promptTokenCount: 9, candidatesTokenCount: 2 },
+      }),
+    );
+    const r = await gemini.envoyer(
+      {
+        cle,
+        modele: "models/modele-test",
+        systeme: "Tu es concis.",
+        messages: [
+          { role: "user", texte: "Bonjour" },
+          { role: "assistant", texte: "Salut" },
+          { role: "user", texte: "Ça va ?" },
+        ],
+        maxJetons: 50,
+        temperature: 0.2,
+        formatJson: true,
+      },
+      { fetch: f },
+    );
+    expect(r).toEqual({
+      texte: "OK",
+      jetonsEntree: 9,
+      jetonsSortie: 2,
+      modele: "modele-test-2026",
+    });
+    const [url, init] = f.mock.calls[0];
+    expect(url).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/modele-test:generateContent",
+    );
+    expect(url).not.toContain(cle);
+    expect(init.headers["x-goog-api-key"]).toBe(cle);
+    expect(JSON.parse(init.body)).toEqual({
+      contents: [
+        { role: "user", parts: [{ text: "Bonjour" }] },
+        { role: "model", parts: [{ text: "Salut" }] },
+        { role: "user", parts: [{ text: "Ça va ?" }] },
+      ],
+      systemInstruction: { parts: [{ text: "Tu es concis." }] },
+      generationConfig: {
+        maxOutputTokens: 50,
+        temperature: 0.2,
+        responseMimeType: "application/json",
+      },
+    });
+  });
+
+  it("sans option : pas de generationConfig ni de systemInstruction", async () => {
+    const f = vi
+      .fn()
+      .mockResolvedValue(reponse(200, { candidates: [{ content: { parts: [{ text: "x" }] } }] }));
+    await gemini.envoyer(
+      { cle, modele: "m", messages: [{ role: "user", texte: "a" }] },
+      { fetch: f },
+    );
+    expect(JSON.parse(f.mock.calls[0][1].body)).toEqual({
+      contents: [{ role: "user", parts: [{ text: "a" }] }],
+    });
+  });
+
+  it("prompt bloqué ou réponse vide : erreur normalisée", async () => {
+    const f = vi
+      .fn()
+      .mockResolvedValue(reponse(200, { promptFeedback: { blockReason: "SAFETY" } }));
+    await expect(
+      gemini.envoyer({ cle, modele: "m", messages: [{ role: "user", texte: "a" }] }, { fetch: f }),
+    ).rejects.toMatchObject({ code: "requete-invalide" });
+  });
+
+  it("vérifie la clé par la liste des modèles (400 API_KEY_INVALID = invalide)", async () => {
+    const f = vi.fn().mockResolvedValue(reponse(200, { models: [] }));
+    expect(await gemini.verifierCle({ cle }, { fetch: f })).toEqual({ valide: true });
+    expect(f.mock.calls[0][0]).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",
+    );
+    f.mockResolvedValue(
+      reponse(400, {
+        error: { status: "INVALID_ARGUMENT", details: [{ reason: "API_KEY_INVALID" }] },
+      }),
+    );
+    expect(await gemini.verifierCle({ cle }, { fetch: f })).toEqual({
+      valide: false,
+      raison: "cle-invalide",
+    });
+  });
+
+  it("format de clé tolérant", () => {
+    expect(gemini.formatCle.test(cle)).toBe(true);
+    expect(gemini.formatCle.test("trop court")).toBe(false);
   });
 });

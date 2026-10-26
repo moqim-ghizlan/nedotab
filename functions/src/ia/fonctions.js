@@ -14,7 +14,7 @@ import { fournisseursActifs } from "./config.js";
 
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 // Room for the reasoning of some models before the two letters of the answer.
-export const JETONS_TEST = 256;
+export const JETONS_TEST = 1024;
 
 const MODELE = { type: "chaine", requis: true, min: 1, max: 100, motif: /^[\w.:/-]+$/ };
 

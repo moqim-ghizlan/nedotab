@@ -7,7 +7,7 @@ import { QUOTA_PAR_DEFAUT } from "../quota.js";
 
 export const DUREE_CACHE_MS = 5 * 60 * 1000;
 
-/** Used until config/ia exists: OpenAI only (the first provider chosen), 300 calls a day. */
+/** Used until config/ia exists: OpenAI and Gemini (the providers chosen), 300 calls a day. */
 export const CONFIG_PAR_DEFAUT = {
   quotaQuotidien: QUOTA_PAR_DEFAUT,
   fournisseurs: [
@@ -21,7 +21,7 @@ export const CONFIG_PAR_DEFAUT = {
       id: "gemini",
       nom: "Google (Gemini)",
       lienCle: "https://aistudio.google.com/apikey",
-      actif: false,
+      actif: true,
     },
   ],
   modelesSuggeres: [],

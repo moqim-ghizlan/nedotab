@@ -11,7 +11,7 @@
       "id": "gemini",
       "nom": "Google (Gemini)",
       "lienCle": "https://aistudio.google.com/apikey",
-      "actif": false
+      "actif": true
     }
   ],
   "modelesSuggeres": [

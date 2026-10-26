@@ -45,10 +45,10 @@ describe("fonctions IA (émulateurs)", () => {
     expect(e?.details?.code).toBe("entree-invalide");
   });
 
-  it("Gemini pas encore proposé (V4.1) : refusé", async () => {
-    await connecter("ia-gemini");
+  it("fournisseur non proposé : refusé", async () => {
+    await connecter("ia-autre");
     const e = await erreur(
-      fb.appelerIa("iaEnregistrerCle", { fournisseur: "gemini", cle: "A".repeat(39) }),
+      fb.appelerIa("iaEnregistrerCle", { fournisseur: "mistral", cle: "A".repeat(39) }),
     );
     expect(e?.code).toBe("functions/invalid-argument");
   });

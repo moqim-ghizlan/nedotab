@@ -20,7 +20,7 @@ function testeurIa(session) {
     "select",
     { "aria-label": "Fournisseur" },
     el("option", { value: "openai", texte: "OpenAI (GPT)" }),
-    el("option", { value: "gemini", texte: "Google (Gemini) — V4.1" }),
+    el("option", { value: "gemini", texte: "Google (Gemini)" }),
   );
   const cle = el("input", {
     type: "password",

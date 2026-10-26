@@ -65,10 +65,10 @@ describe("iaEnregistrerCle", () => {
     expect(db.lire("users/u1/prive/ia")).toBeUndefined();
   });
 
-  it("fournisseur inactif dans config/ia (Gemini en V4.0) : refusé", async () => {
+  it("fournisseur absent de config/ia : refusé", async () => {
     const { ia, faux } = monter();
     await expect(
-      ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE }),
+      ia.enregistrerCle("u1", { fournisseur: "mistral", cle: CLE }),
     ).rejects.toBeInstanceOf(EntreeInvalide);
     expect(faux.verifierCle).not.toHaveBeenCalled();
   });
@@ -191,12 +191,12 @@ describe("erreurs vers le navigateur", () => {
 });
 
 describe("config/ia", () => {
-  it("valeurs par défaut : OpenAI actif, Gemini inactif, 300 appels", () => {
+  it("valeurs par défaut : OpenAI et Gemini actifs, 300 appels", () => {
     const c = normaliserConfig(null);
     expect(c.quotaQuotidien).toBe(300);
     expect(c.fournisseurs.map((f) => [f.id, f.actif])).toEqual([
       ["openai", true],
-      ["gemini", false],
+      ["gemini", true],
     ]);
   });
   it("lue une fois puis gardée 5 minutes", async () => {
