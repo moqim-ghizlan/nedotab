@@ -2,6 +2,31 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.6.0] - 2026-10-26
+
+### Ajouté
+
+- **Menu par appui long** (iPhone, iPad) : l'icône appuyée reste visible, agrandie, au-dessus
+  d'un voile flou. Sur iPhone, feuille d'actions en bas (boutons de 52 px, « Supprimer » en
+  rouge en dernier, « Annuler » à part) ; sur iPad, menu ancré à l'icône. Toucher le voile ou
+  glisser ferme le menu.
+- **Un seul catalogue d'actions** pour la souris et le doigt : toute action ajoutée plus tard
+  apparaît dans les deux. Les actions désactivées montrent leur raison.
+- **Partager…** (feuille de partage du système), uniquement là où le navigateur sait partager.
+- **Mode « Modifier la grille »** : bouton « Modifier » / « OK » en haut (écran tactile), icônes
+  qui tremblent avec un « − » pour supprimer (avec « Annuler »), glisser sans appui long, appui
+  sur un site sans effet. Pas de tremblement si les animations sont réduites.
+- Messages : bouton « Annuler » de 44 px minimum, balayage vers le bas pour fermer.
+- VoiceOver : le bouton « Actions pour … » reste sur chaque icône (invisible au toucher).
+
+### Vérifié
+
+| Appareil                       | Résultat                   |
+| ------------------------------ | -------------------------- |
+| iPhone (Safari, vrai appareil) | non testé                  |
+| iPad                           | non testé                  |
+| Ordinateur (souris)            | tests automatiques ✔ (494) |
+
 ## [3.5.0] - 2026-10-26
 
 ### Ajouté
@@ -16,11 +41,11 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ### Vérifié
 
-| Appareil                      | Résultat              |
-| ----------------------------- | --------------------- |
-| iPhone (Safari, vrai appareil) | ✔                     |
-| iPad                          | non testé             |
-| Ordinateur (souris)           | tests automatiques ✔  |
+| Appareil                       | Résultat             |
+| ------------------------------ | -------------------- |
+| iPhone (Safari, vrai appareil) | ✔                    |
+| iPad                           | non testé            |
+| Ordinateur (souris)            | tests automatiques ✔ |
 
 ## [3.4.0] - 2026-10-25
 
