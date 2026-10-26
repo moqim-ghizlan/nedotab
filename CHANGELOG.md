@@ -2,6 +2,32 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.9.0] - 2026-10-26
+
+### Ajouté
+
+- **Réglages en deux colonnes** dès 900 px de large (iPad en paysage, ordinateur) : la liste des
+  sections à gauche, la section choisie à droite.
+- **Aide des raccourcis** : la touche `?` affiche tous les raccourcis clavier (aussi dans
+  l'extension) ; `Cmd + ,` (ou `Ctrl + ,`) ouvre les réglages. Rien ne se déclenche dans un
+  champ de saisie ni au-dessus d'une fenêtre ouverte.
+- **Détection de ce que l'on peut faire**, pas de l'appareil : trackpad ou souris branchés,
+  clavier physique. L'indication « (/) » de la recherche apparaît avec un clavier et
+  disparaît sans, y compris quand on le branche ou le débranche en cours d'usage.
+- **Menu selon le pointeur** : un clic secondaire à la souris ou au trackpad ouvre le menu
+  souris ; un doigt ou un stylet ouvre le menu tactile (feuille ou menu ancré à l'icône).
+- Grand écran : contenu jusqu'à 1100 px, icônes de 64 px quand la grille est large ; en
+  paysage court (iPhone couché), marges verticales réduites.
+
+### Vérifié
+
+| Appareil                             | Résultat                              |
+| ------------------------------------ | ------------------------------------- |
+| Navigateur de développement, 1100 px | ✔ réglages en deux colonnes, aide `?` |
+| iPad (Split View, Stage Manager)     | non testé                             |
+| iPad avec clavier et trackpad        | non testé                             |
+| Ordinateur                           | tests automatiques ✔ (525)            |
+
 ## [3.8.0] - 2026-10-26
 
 ### Ajouté
