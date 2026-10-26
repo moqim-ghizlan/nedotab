@@ -2,6 +2,57 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.1.0] - 2026-10-26
+
+### Ajouté
+
+- **Réglages → onglet « IA »** : un interrupteur « Activer l'assistant IA » (désactivé par
+  défaut), puis :
+  - **Mes clés** : une ligne par fournisseur (OpenAI, Google Gemini). « Ajouter ma clé » ouvre
+    une fenêtre à champ masqué ; la clé est vérifiée auprès du fournisseur, enregistrée
+    chiffrée, puis le champ est vidé. On voit seulement ses 4 derniers caractères ;
+    « Remplacer », « Supprimer », badge « À vérifier » si le fournisseur la refuse.
+  - **Modèle par usage** (Tags, Recherche, Discussion) : les listes ne proposent que les
+    modèles qui répondent avec votre clé (✓). Les listes viennent des fournisseurs eux-mêmes,
+    aucun nom de modèle n'est écrit dans le code ; la vérification se fait toute seule et est
+    gardée 24 h sur l'appareil ; « Revérifier mes modèles », « Afficher tous les modèles du
+    fournisseur » ; bouton « Tester » (« OK · 562 ms »).
+  - **Mes modèles** : ajout d'un modèle par son identifiant exact, jusqu'à 20 ; supprimer un
+    modèle utilisé remet l'usage à « non défini ».
+  - Guide en trois étapes à la première activation ; mode sans compte : explication.
+- Les choix (activation, modèle de chaque usage, modèles ajoutés) sont des réglages
+  synchronisés (`reglages.ia`), sans aucune clé.
+- **Fonctions serveur** `iaListerModeles` (modèles que la clé peut utiliser, sans toucher au
+  quota) et `iaVerifierModeles` (quels modèles répondent, 1 appel de quota pour 10 modèles).
+- **Choix côté serveur** : le fournisseur et le modèle d'un usage sont lus par le serveur dans
+  les réglages de l'utilisateur, jamais dans la requête du navigateur (`executerUsage`, prêt
+  pour les fonctions IA suivantes). Un modèle retiré par le fournisseur donne « Ce modèle n'est
+  pas disponible avec votre clé ».
+- `iaPrete(usage)` : dit si l'IA est prête (mode local, désactivée, pas de clé, pas de modèle,
+  hors ligne) pour que chaque fonction IA s'affiche ou explique quoi faire.
+
+### Modifié
+
+- L'ancien test temporaire de clé du diagnostic est supprimé (remplacé par l'écran).
+
+### Problèmes connus
+
+- `config/ia` n'est pas encore créé : pas de modèles « recommandés » ni de bouton
+  « Utiliser les recommandations ». Les listes viennent des fournisseurs.
+- OpenAI n'a pas été essayé avec une vraie clé (Gemini oui).
+- Après avoir vidé le cache du navigateur, la première synchronisation de l'application web
+  peut échouer avec « permissions refusées » : cause non trouvée.
+- La checklist de test complète de la V3 n'est toujours pas exécutée.
+
+### Vérifié
+
+| Contrôle                                              | Résultat  |
+| ----------------------------------------------------- | --------- |
+| Écran IA avec un vrai compte et une clé Gemini réelle | ✔         |
+| Clé OpenAI réelle                                     | non testé |
+| Tests automatiques (dont écran et serveur IA)         | ✔ (679)   |
+| Tests sur émulateurs (règles, fonctions)              | ✔ (78)    |
+
 ## [4.0.0] - 2026-10-26
 
 Fondations de l'IA (aucune fonction visible pour l'utilisateur encore : tags, recherche et
