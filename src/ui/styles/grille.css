@@ -219,13 +219,18 @@
 
 /* --- drag and drop ------------------------------------------------------------------ */
 
-.case--fantome {
-  opacity: 0.4;
+/* Where the icon will land: an empty slot (as on the iPhone), not a second icon. */
+.case--fantome .tuile > *,
+.case--fantome .tuile-icone > * {
+  visibility: hidden;
 }
 
-.case--fantome .tuile-icone {
-  outline: 2px dashed var(--accent);
-  outline-offset: 3px;
+.case--fantome .tuile .tuile-icone {
+  visibility: visible;
+  outline: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--surface) 18%, transparent) !important;
+  color: transparent;
   box-shadow: none;
 }
 
@@ -253,11 +258,6 @@
 .glisser-en-cours,
 .glisser-en-cours * {
   cursor: grabbing !important;
-}
-
-/* Finger (V3.5): the dragged icon floats above the finger so that it stays visible. */
-.glisser-doigt .case--glissee .tuile {
-  translate: 0 -64px;
 }
 
 /* Long press without moving: the tile is lifted (the menu of V3.6 opens on it). */

@@ -7,6 +7,43 @@ import { DELAI_APPUI_LONG_MS, SEUIL_MOUVEMENT_PX, brancherAppuiLong } from "./ap
 const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 /**
+ * The dragged copy is made from the tile but shown in <body>, out of the grid whose rules
+ * size it (icon size of the grid, zoom of the home pages): those are copied on the tile
+ * itself before the copy is made, and removed when it is released.
+ */
+function figerApparence(caseEl) {
+  const tuile = caseEl.querySelector(".tuile");
+  if (!tuile) return;
+  const style = getComputedStyle(tuile);
+  caseEl.style.setProperty("--icone", style.getPropertyValue("--icone"));
+  if (style.zoom && style.zoom !== "1") tuile.style.zoom = style.zoom;
+}
+
+function libererApparence(caseEl) {
+  caseEl.style.removeProperty("--icone");
+  caseEl.querySelector(".tuile")?.style.removeProperty("zoom");
+}
+
+/**
+ * In a folder window (a modal <dialog>, in the top layer) a copy in <body> would be hidden
+ * under the window: it goes into the window, still positioned against the screen.
+ */
+function placerCopieDansLaFenetre() {
+  const copie = document.querySelector("body > .sortable-fallback");
+  const fenetre = [...document.querySelectorAll("dialog[open]")]
+    .reverse()
+    .find((d) => d.matches(":modal"));
+  if (!copie || !fenetre) return;
+  // SortableJS keeps moving the copy from its first top/left (fixed, or absolute on iOS):
+  // after the move into the window, top/left are corrected so that it stays in place.
+  const avant = copie.getBoundingClientRect();
+  fenetre.append(copie);
+  const apres = copie.getBoundingClientRect();
+  copie.style.top = `${parseFloat(copie.style.top || "0") + avant.top - apres.top}px`;
+  copie.style.left = `${parseFloat(copie.style.left || "0") + avant.left - apres.left}px`;
+}
+
+/**
  * Drag and drop on one grid level with SortableJS. The DOM is never the source of truth:
  * the gesture becomes an ELEMENT_DEPLACER action and the full re-render puts the DOM back in
  * line with the state. Renders requested during a drag are deferred until the drop.
@@ -47,14 +84,8 @@ export function activerGlisser(
 ) {
   let glisserEnCours = false;
   let annule = false;
-  let dernierType = "mouse"; // pointer type of the last press: "touch" for the finger
-  // With the finger the dragged icon is shown above it (CSS, .glisser-doigt): the targets
-  // are then looked for under the icon the user sees, not under the finger.
   const suivre = (e) => {
-    if (document.body.classList.contains("glisser-doigt")) {
-      const r = document.querySelector(".sortable-fallback .tuile-icone")?.getBoundingClientRect();
-      if (r) return intention?.suivre(r.left + r.width / 2, r.top + r.height / 2);
-    }
+    placerCopieDansLaFenetre();
     intention?.suivre(e.clientX, e.clientY);
   };
   // Escape: end the drag where it is, then nothing is applied.
@@ -79,6 +110,13 @@ export function activerGlisser(
     dragClass: "case--glissee",
     forceFallback: true,
     fallbackTolerance: 4,
+    // The dragged copy lives in <body>, not in the grid: the grid is a size container and
+    // the pages slide with a transform, and both move a "fixed" element away from the
+    // pointer (badly on iOS, where SortableJS positions the copy on its own). In <body> it
+    // stays under the finger and the cursor, whatever page is shown.
+    fallbackOnBody: true,
+    onChoose: (evt) => figerApparence(evt.item),
+    onUnchoose: (evt) => libererApparence(evt.item),
     // Finger (V3.5): the drag starts after a long press without moving (a quicker swipe
     // scrolls or turns the page), and the grid scrolls when the icon nears an edge.
     delay: enEdition() ? 0 : DELAI_APPUI_LONG_MS,
@@ -96,7 +134,7 @@ export function activerGlisser(
       glisserEnCours = true;
       annule = false;
       document.body.classList.add("glisser-en-cours");
-      document.body.classList.toggle("glisser-doigt", dernierType === "touch");
+      requestAnimationFrame(placerCopieDansLaFenetre);
       intention?.demarrer(evt.item.querySelector("[data-id]")?.dataset.id);
       document.addEventListener("pointermove", suivre, true);
       document.addEventListener("keydown", surTouche, true);
@@ -112,7 +150,7 @@ export function activerGlisser(
       if (plus?.nextElementSibling) evt.to.append(plus);
     },
     onEnd(evt) {
-      document.body.classList.remove("glisser-en-cours", "glisser-doigt");
+      document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
       document.removeEventListener("keydown", surTouche, true);
       const id = evt.item.querySelector("[data-id]")?.dataset.id;
@@ -172,7 +210,6 @@ export function activerGlisser(
     renduEnAttente = false;
   };
   conteneur.addEventListener("pointerdown", (e) => {
-    dernierType = e.pointerType;
     if (e.target.closest(".case--element")) appui = true;
   });
   const debrancherAppuiLong = brancherAppuiLong(conteneur);
