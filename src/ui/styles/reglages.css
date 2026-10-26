@@ -1570,3 +1570,34 @@ body.fond-clair .carte-action--principale {
     display: block;
   }
 }
+
+/* Finger (V3.8): 64 px rows, 44 px buttons, a vertical scroll stays possible on a row. */
+@media (hover: none) {
+  .sauvegarde {
+    min-height: 64px;
+    touch-action: pan-y;
+    transition: transform 160ms ease-out;
+  }
+  .sauvegarde .lien-discret,
+  .sauvegardes .bouton,
+  .sauvegardes .segment {
+    min-height: 44px;
+  }
+  .apercu-differences summary,
+  .apercu-contenu summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+
+/* The buttons of a preview stay within reach of the thumb, above the home bar. */
+@media (max-width: 599px) {
+  .dialogue:has(.apercu-resume) .dialogue-actions,
+  .dialogue:has(.apercu-resume) .dialogue-boutons {
+    position: sticky;
+    bottom: calc(-1 * var(--espace-5) - env(safe-area-inset-bottom, 0px));
+    padding-block: var(--espace-3);
+    background: var(--surface);
+  }
+}

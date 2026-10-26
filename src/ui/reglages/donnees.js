@@ -19,6 +19,24 @@ export function sectionDonnees({ donnees, restauration, store }) {
       )
     : null;
 
+  // The share sheet needs a tap of its own: when the system refused because the file took
+  // too long to prepare, a second button shares the file, already prepared.
+  const repartager = el("button", { type: "button", class: "bouton", hidden: true });
+  const messageDonne = (r, quoi) => {
+    repartager.hidden = r.mode !== "bloque";
+    if (r.mode === "bloque") {
+      repartager.textContent = `Partager « ${r.fichier.name} »`;
+      repartager.onclick = async () => {
+        const mode = await donnees.redonner(r.fichier);
+        repartager.hidden = mode === "bloque";
+        etat.textContent = mode === "annule" ? "" : `${quoi} ${verbe(mode)}.`;
+      };
+      return `${quoi} est prêt.`;
+    }
+    return r.mode === "annule" ? "" : `${quoi} ${verbe(r.mode)}.`;
+  };
+  const verbe = (mode) => (mode === "partage" ? "partagé" : "téléchargé");
+
   const exporter = el("button", {
     type: "button",
     class: "bouton",
@@ -28,7 +46,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
       etat.textContent = "Préparation du fichier…";
       const r = await donnees.exporter({ inclureSauvegardes: sauvegardes.checked });
       exporter.disabled = false;
-      etat.textContent = r.ok ? `Fichier « ${r.nom} » téléchargé.` : r.erreur;
+      etat.textContent = r.ok ? messageDonne(r, `Fichier « ${r.nom} »`) : r.erreur;
     },
   });
 
@@ -41,7 +59,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
       etat.textContent = "Préparation de l'archive…";
       const r = await donnees.telechargerFonds();
       etat.textContent = r.ok
-        ? `${r.nombre} fond${r.nombre > 1 ? "s" : ""} d'écran téléchargé${r.nombre > 1 ? "s" : ""}.`
+        ? messageDonne(r, `Archive de ${r.nombre} fond${r.nombre > 1 ? "s" : ""} d'écran`)
         : r.erreur;
     },
   });
@@ -128,6 +146,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
     choixSauvegardes,
     el("div", { class: "reglages-boutons" }, exporter, importer),
     fonds,
+    repartager,
     fichier,
     etat,
   );

@@ -76,6 +76,9 @@ export function urlFaviconNavigateur() {
 
 export { fichiers } from "./fichiers.js";
 
+/** Share sheet of the system (iPhone, iPad), else a download (V3.8). */
+export { partagerFichier } from "./partage.js";
+
 /** No browser address bar to take the cursor from. */
 export const prendreLeCurseur = () => Promise.resolve(false);
 export function garderBarreChrome() {}

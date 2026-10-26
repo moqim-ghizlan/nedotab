@@ -1,4 +1,5 @@
 /** Extension implementation of the platform layer (chrome.*). */
+import { partagerFichier as partager } from "./partage.js";
 import { lireJson, lirePage } from "./reseau.js";
 import { creerServicesStockage } from "./servicesStockage.js";
 import {
@@ -59,6 +60,10 @@ export function urlFaviconNavigateur(pageUrl, taille = 64) {
 }
 
 export { fichiers } from "./fichiers.js";
+
+/** A computer: the file is downloaded (V3.8). */
+export const partagerFichier = (fichier, options) =>
+  partager(fichier, { ...options, partage: false });
 
 const CLE_BARRE_CHROME = "nedotab:barre-chrome";
 

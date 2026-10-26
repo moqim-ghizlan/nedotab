@@ -4,19 +4,12 @@ import { genererIdParDefaut } from "../../core/modele.js";
 import { creerZip } from "../../core/zip.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
+import { telecharger } from "../../platform/partage.js";
 import { blobFondCompte } from "../apparence.js";
 
 const EXTENSIONS = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
-/** Gives the user a file (Blob + <a download>), in the extension and in the PWA. */
-export function telecharger(contenu, nom, type) {
-  const url = URL.createObjectURL(new Blob([contenu], { type }));
-  const lien = Object.assign(document.createElement("a"), { href: url, download: nom });
-  document.body.append(lien);
-  lien.click();
-  lien.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
-}
+export { telecharger };
 
 /**
  * The user's data (V2.10): export to a JSON file (also without an account), backgrounds as
@@ -45,7 +38,17 @@ export function creerDonnees({
     return resultat;
   }
 
-  /** @returns {Promise<{ ok: true, nom: string } | { ok: false, erreur: string }>} */
+  /** Gives the file: share sheet where there is one, else a download (V3.8). */
+  const donner = (fichier) =>
+    plat.partagerFichier
+      ? plat.partagerFichier(fichier)
+      : (telecharger(fichier, fichier.name, fichier.type), "telecharge");
+
+  /**
+   * @returns {Promise<{ ok: true, nom: string, mode: string, fichier: File }
+   *                  | { ok: false, erreur: string }>}
+   *   mode: "partage" | "telecharge" | "annule" | "bloque" (see platform/partage.js)
+   */
   async function exporter({ inclureSauvegardes = true, maintenant = new Date() } = {}) {
     let sauvegardes;
     if (enCompte() && inclureSauvegardes) {
@@ -65,9 +68,12 @@ export function creerDonnees({
       sauvegardes,
     });
     const nom = nomFichierExport(maintenant);
-    telecharger(JSON.stringify(contenu, null, 2), nom, "application/json");
-    return { ok: true, nom };
+    const fichier = new File([JSON.stringify(contenu, null, 2)], nom, { type: "application/json" });
+    return { ok: true, nom, fichier, mode: await donner(fichier) };
   }
+
+  /** Shares a file prepared earlier (after "bloque": a new tap is a new gesture). */
+  const redonner = (fichier) => donner(fichier);
 
   /** Background pictures of the user: the account's library and this device's picture. */
   async function fondsATelecharger() {
@@ -95,8 +101,8 @@ export function creerDonnees({
     }
     if (!fichiers.length) return { ok: false, erreur: "Aucun fond d'écran à télécharger." };
     const nom = nomFichierExport(maintenant).replace(/\.json$/, "-fonds.zip");
-    telecharger(creerZip(fichiers, maintenant), nom, "application/zip");
-    return { ok: true, nombre: fichiers.length };
+    const fichier = new File([creerZip(fichiers, maintenant)], nom, { type: "application/zip" });
+    return { ok: true, nombre: fichiers.length, fichier, mode: await donner(fichier) };
   }
 
   /**
@@ -118,5 +124,13 @@ export function creerDonnees({
     return r;
   }
 
-  return { exporter, telechargerFonds, fondsATelecharger, lireFichier, fusionner, enCompte };
+  return {
+    exporter,
+    redonner,
+    telechargerFonds,
+    fondsATelecharger,
+    lireFichier,
+    fusionner,
+    enCompte,
+  };
 }

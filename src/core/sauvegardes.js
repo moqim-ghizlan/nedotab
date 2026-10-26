@@ -60,3 +60,18 @@ export function dateHeure(ms) {
   const d = new Date(ms);
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+const jourCivil = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/**
+ * Backup date for a phone list (V3.8): "Aujourd'hui 14:35", "Hier 09:12", then "18/10/2026".
+ * Days are those of the user's time zone, not 24 h slices.
+ */
+export function dateRelative(ms, maintenant = Date.now()) {
+  const d = new Date(ms);
+  const ecart = Math.round((jourCivil(new Date(maintenant)) - jourCivil(d)) / JOUR_MS);
+  const heure = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (ecart === 0) return `Aujourd'hui ${heure}`;
+  if (ecart === 1) return `Hier ${heure}`;
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}

@@ -1,5 +1,5 @@
 import { libelleAppareil } from "../../core/appareil.js";
-import { dateHeure, NOM_MAX } from "../../core/sauvegardes.js";
+import { dateHeure, dateRelative, NOM_MAX } from "../../core/sauvegardes.js";
 import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { ouvrirApercu } from "./apercuSauvegarde.js";
@@ -11,6 +11,34 @@ const TYPES = {
   manuelle: { symbole: "★", libelle: "Manuelle" },
   "avant-restauration": { symbole: "↺", libelle: "Avant restauration" },
 };
+
+/**
+ * Finger: a swipe to the left on a row asks to delete it (V3.8). The row follows the finger
+ * a little and comes back; a mostly vertical gesture is a scroll and is left alone.
+ */
+function glisserPourSupprimer(ligne, supprimer) {
+  let depart = null;
+  ligne.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch") depart = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  });
+  ligne.addEventListener("pointermove", (e) => {
+    if (!depart || e.pointerId !== depart.id) return;
+    const dx = e.clientX - depart.x;
+    if (dx < 0 && Math.abs(dx) > Math.abs(e.clientY - depart.y)) {
+      ligne.style.transform = `translateX(${Math.max(dx, -96)}px)`;
+    }
+  });
+  const fin = (e) => {
+    if (!depart || e.pointerId !== depart.id) return;
+    const dx = e.clientX - depart.x;
+    const dy = e.clientY - depart.y;
+    depart = null;
+    ligne.style.transform = "";
+    if (e.type === "pointerup" && dx < -70 && Math.abs(dx) > Math.abs(dy) * 1.5) supprimer();
+  };
+  ligne.addEventListener("pointerup", fin);
+  ligne.addEventListener("pointercancel", fin);
+}
 
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
 
@@ -80,6 +108,22 @@ export function sectionSauvegardes(service, restauration) {
     );
   };
 
+  /** Deletion of a manual backup, after confirmation. */
+  const supprimerSauvegarde = async (s) => {
+    const ok = await demander({
+      titre: "Supprimer cette sauvegarde",
+      message: `« ${s.nom || "Sauvegarde manuelle"} » sera supprimée définitivement.`,
+      boutons: [
+        { libelle: "Annuler", valeur: false },
+        { libelle: "Supprimer", valeur: true, principal: true, danger: true },
+      ],
+    });
+    if (!ok) return;
+    const fb = await service.charger();
+    await fb.supprimerSauvegarde(service.uid(), s.id);
+    charger(true);
+  };
+
   const ligne = (s) => {
     const t = TYPES[s.type] ?? TYPES.auto;
     const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}`;
@@ -100,7 +144,7 @@ export function sectionSauvegardes(service, restauration) {
         { class: "sauvegarde-texte" },
         el("strong", { texte: s.nom || t.libelle }),
         el("span", {
-          texte: `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
+          texte: `${s.creeLe ? dateRelative(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
         }),
       ),
       restauration ? boutonApercu(s.nom || t.libelle, sous, s, () => charger(true)) : null,
@@ -110,26 +154,23 @@ export function sectionSauvegardes(service, restauration) {
             class: "lien-discret",
             texte: "Supprimer",
             "aria-label": `Supprimer la sauvegarde ${s.nom ?? ""}`,
-            onclick: async () => {
-              const ok = await demander({
-                titre: "Supprimer cette sauvegarde",
-                message: `« ${s.nom || "Sauvegarde manuelle"} » sera supprimée définitivement.`,
-                boutons: [
-                  { libelle: "Annuler", valeur: false },
-                  { libelle: "Supprimer", valeur: true, principal: true, danger: true },
-                ],
-              });
-              if (!ok) return;
-              const fb = await service.charger();
-              await fb.supprimerSauvegarde(service.uid(), s.id);
-              charger(true);
-            },
+            onclick: () => supprimerSauvegarde(s),
           })
         : null,
     );
   };
 
+  let chargement = false;
   async function charger(depuisLeDebut) {
+    if (chargement && !depuisLeDebut) return;
+    chargement = true;
+    try {
+      await chargerPage(depuisLeDebut);
+    } finally {
+      chargement = false;
+    }
+  }
+  async function chargerPage(depuisLeDebut) {
     if (depuisLeDebut) {
       suite = null;
       liste.replaceChildren();
@@ -139,7 +180,13 @@ export function sectionSauvegardes(service, restauration) {
       const fb = await service.charger();
       const r = await fb.listerSauvegardes(service.uid(), { type: filtre, apres: suite });
       suite = r.suite;
-      liste.append(...r.sauvegardes.map(ligne));
+      liste.append(
+        ...r.sauvegardes.map((s) => {
+          const li = ligne(s);
+          if (s.type === "manuelle") glisserPourSupprimer(li, () => supprimerSauvegarde(s));
+          return li;
+        }),
+      );
       plus.hidden = !suite;
       etat.textContent = liste.children.length ? "" : "Aucune sauvegarde pour l'instant.";
     } catch {
@@ -147,6 +194,15 @@ export function sectionSauvegardes(service, restauration) {
     }
   }
   plus.addEventListener("click", () => charger(false));
+  // Pages of 20 load by themselves when the end of the list comes near (finger scrolling).
+  if (globalThis.IntersectionObserver) {
+    new IntersectionObserver(
+      (entrees) => {
+        if (entrees.some((e) => e.isIntersecting) && !plus.hidden) charger(false);
+      },
+      { rootMargin: "200px" },
+    ).observe(plus);
+  }
 
   const filtres = el("div", { class: "segments", role: "radiogroup", "aria-label": "Filtre" });
   for (const [valeur, texte] of [
