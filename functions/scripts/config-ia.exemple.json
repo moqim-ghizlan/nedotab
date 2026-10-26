@@ -1,0 +1,26 @@
+{
+  "quotaQuotidien": 300,
+  "fournisseurs": [
+    {
+      "id": "openai",
+      "nom": "OpenAI (GPT)",
+      "lienCle": "https://platform.openai.com/api-keys",
+      "actif": true
+    },
+    {
+      "id": "gemini",
+      "nom": "Google (Gemini)",
+      "lienCle": "https://aistudio.google.com/apikey",
+      "actif": false
+    }
+  ],
+  "modelesSuggeres": [
+    {
+      "fournisseur": "openai",
+      "id": "<identifiant exact du modèle, depuis la documentation OpenAI>",
+      "nom": "<nom affiché>",
+      "usages": ["tags", "recherche", "chat"],
+      "recommandePour": "tags"
+    }
+  ]
+}

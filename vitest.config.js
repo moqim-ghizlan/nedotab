@@ -26,7 +26,11 @@ export default defineConfig({
         test: {
           name: "core",
           environment: "node",
-          include: ["tests/core/**/*.test.js", "tests/scripts/**/*.test.js"],
+          include: [
+            "tests/core/**/*.test.js",
+            "tests/scripts/**/*.test.js",
+            "tests/fonctions/**/*.test.js",
+          ],
         },
       },
       {

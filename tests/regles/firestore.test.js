@@ -165,6 +165,18 @@ describe("chemins fermés", () => {
     await assertFails(getDoc(doc(db("A"), "users/A/prive/ia")));
     await assertFails(setDoc(doc(db("A"), "users/A/prive/ia"), { cle: "x" }));
   });
+  it("users/A/prive/quota (V4.0) : ni lu ni écrit par A (le quota se remettrait à zéro)", async () => {
+    await preparer("users/A/prive/quota", { jour: "2026-10-26", appels: 300 });
+    await assertFails(getDoc(doc(db("A"), "users/A/prive/quota")));
+    await assertFails(
+      setDoc(doc(db("A"), "users/A/prive/quota"), { jour: "2026-10-26", appels: 0 }),
+    );
+  });
+  it("config/ia (V4.0) : lisible par un connecté, jamais écrite", async () => {
+    await preparer("config/ia", { quotaQuotidien: 300 });
+    await assertSucceeds(getDoc(doc(db("A"), "config/ia")));
+    await assertFails(setDoc(doc(db("A"), "config/ia"), { quotaQuotidien: 100000 }));
+  });
   it("sous-collection non prévue : refusée", async () => {
     await assertFails(setDoc(doc(db("A"), "users/A/autre/x"), { a: 1 }));
     await assertFails(getDoc(doc(db("A"), "users/A/autre/x")));

@@ -1,15 +1,21 @@
 /**
  * Cloud Functions of NedoTab (region europe-west1). V2.10: complete deletion of an account,
  * done by the server (Admin SDK): a series of calls from the browser could stop halfway.
+ * V4.0: the AI functions (keys of the users, quota), see src/ia/ and docs/ia.md.
  */
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
-import { defineInt } from "firebase-functions/params";
+import { defineInt, defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { AGE_CONNEXION_MAX_S, connexionRecente, stockageAbsent } from "./regles.js";
+import { creerLecteurConfig } from "./src/ia/config.js";
+import { versErreurAppel } from "./src/ia/erreurs.js";
+import { creerFonctionsIa } from "./src/ia/fonctions.js";
+import { FOURNISSEURS } from "./src/ia/fournisseurs/index.js";
+import { consommer } from "./src/quota.js";
 
 initializeApp();
 
@@ -49,3 +55,49 @@ export const supprimerMonCompte = onCall(
     return { ok: true };
   },
 );
+
+// --- V4.0: AI functions ---------------------------------------------------------------------
+// Every AI call goes through here: the user's own key, stored encrypted (users/{uid}/prive/ia),
+// decrypted only in memory for the time of a call, never sent back to the browser.
+
+const IA_CLE_CHIFFREMENT = defineSecret("IA_CLE_CHIFFREMENT");
+
+const lireConfigIa = creerLecteurConfig(getFirestore());
+const fonctionsIa = creerFonctionsIa({
+  db: getFirestore(),
+  secret: () => IA_CLE_CHIFFREMENT.value(),
+  fournisseurs: FOURNISSEURS,
+  config: lireConfigIa,
+  consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  // Provider, model, duration, tokens, error code: never the key nor the messages.
+  journal: (infos) => logger.info("ia", infos),
+});
+
+const OPTIONS_IA = {
+  region: "europe-west1",
+  secrets: [IA_CLE_CHIFFREMENT],
+  maxInstances: 10,
+  timeoutSeconds: 60,
+  memory: "256MiB",
+  // Same as supprimerMonCompte: App Check is not enforced yet (decision of V2.2).
+  enforceAppCheck: false,
+};
+
+/** onCall around one AI function: signed-in user, errors turned into callable errors. */
+const appelIa = (fonction) =>
+  onCall(OPTIONS_IA, async (requete) => {
+    if (!requete.auth)
+      throw new HttpsError("unauthenticated", "Connectez-vous pour utiliser l'IA.");
+    try {
+      return await fonction(requete.auth.uid, requete.data);
+    } catch (e) {
+      const { code, message, details } = versErreurAppel(e);
+      if (code === "internal") logger.error("ia : erreur interne", { nom: e?.name });
+      throw new HttpsError(code, message, details);
+    }
+  });
+
+export const iaEnregistrerCle = appelIa(fonctionsIa.enregistrerCle);
+export const iaSupprimerCle = appelIa(fonctionsIa.supprimerCle);
+export const iaEtatCles = appelIa(fonctionsIa.etatCles);
+export const iaTester = appelIa(fonctionsIa.tester);

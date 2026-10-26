@@ -19,3 +19,4 @@ storage-debug.log
 ui-debug.log
 !functions/.env.demo-nedotab
 functions/node_modules/
+functions/.secret.local
