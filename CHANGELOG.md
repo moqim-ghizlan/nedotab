@@ -2,6 +2,28 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.8.0] - 2026-10-26
+
+### Ajouté
+
+- **Export par la feuille de partage** (iPhone, iPad) : « Exporter mes données » et l'archive
+  des fonds d'écran s'envoient vers Fichiers, AirDrop, Mail… Repli sur le téléchargement quand
+  le système ne sait pas partager de fichier, et dans l'extension. Fermer la feuille n'affiche
+  rien ; si iOS refuse parce que la préparation a été trop longue, un bouton « Partager … »
+  envoie le fichier déjà prêt. Le fichier d'export est le même que sur ordinateur.
+- **Liste des sauvegardes au doigt** : dates lisibles (« Aujourd'hui 14:35 », « Hier 09:12 »,
+  puis `18/10/2026`), lignes de 64 px, boutons de 44 px, pages de 20 chargées en approchant du
+  bas, suppression d'une sauvegarde manuelle par balayage vers la gauche (avec confirmation).
+- Aperçu d'une sauvegarde : les boutons restent en bas de l'écran, au pouce.
+
+### Vérifié
+
+| Appareil                       | Résultat                   |
+| ------------------------------ | -------------------------- |
+| iPhone (Safari, vrai appareil) | ✔                          |
+| iPad                           | non testé                  |
+| Ordinateur                     | tests automatiques ✔ (509) |
+
 ## [3.7.0] - 2026-10-26
 
 ### Ajouté
