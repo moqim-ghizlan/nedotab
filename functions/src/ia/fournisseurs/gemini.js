@@ -12,8 +12,12 @@ const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
 const entetes = (cle) => ({ "x-goog-api-key": cle, "content-type": "application/json" });
 
-/** Loose on purpose: the test call decides, the format only stops obvious mistakes. */
-export const formatCle = /^[A-Za-z0-9_-]{30,}$/;
+/**
+ * Very loose on purpose: Google has changed the look of its keys (older "AIza…", newer ones
+ * with other characters such as a dot). The test call decides; this only stops obvious
+ * mistakes (spaces, a pasted sentence).
+ */
+export const formatCle = /^[\w.~+/=-]{20,}$/;
 
 /** "models/xxx" and "xxx" both work for the user. */
 const nomModele = (modele) => modele.replace(/^models\//, "");

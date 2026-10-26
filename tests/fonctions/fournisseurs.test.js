@@ -238,8 +238,10 @@ describe("adaptateur Gemini", () => {
     });
   });
 
-  it("format de clé tolérant", () => {
+  it("format de clé tolérant : anciennes clés, clés récentes avec un point", () => {
     expect(gemini.formatCle.test(cle)).toBe(true);
+    expect(gemini.formatCle.test("AQ.Ab8RN6Exemple-de_cle.recente1234567")).toBe(true);
     expect(gemini.formatCle.test("trop court")).toBe(false);
+    expect(gemini.formatCle.test("deux mots dans une phrase collee")).toBe(false);
   });
 });

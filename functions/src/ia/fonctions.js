@@ -48,7 +48,10 @@ export function creerFonctionsIa(deps) {
       cle: { type: "chaine", requis: true, min: 20, max: 300, motif: /^\S+$/ },
     });
     const a = adaptateur(fournisseur);
-    if (a.formatCle && !a.formatCle.test(cle)) throw new ErreurFournisseur("cle-invalide");
+    if (a.formatCle && !a.formatCle.test(cle)) {
+      journal({ action: "formatCle", fournisseur, valide: false });
+      throw new ErreurFournisseur("cle-invalide");
+    }
     const debut = horloge();
     const verdict = await a.verifierCle({ cle });
     journal({
