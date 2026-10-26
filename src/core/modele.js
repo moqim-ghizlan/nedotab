@@ -11,6 +11,7 @@
  * @typedef {{ versionSchema: number, grille: Element[], reglages: Reglages, reglagesAppareil: { fond?: object } }} Etat
  */
 import { VERSION_SCHEMA } from "./constantes.js";
+import { champsEnrichissement } from "./tags.js";
 import { couleurDepuisTexte } from "./couleurs.js";
 
 export const genererIdParDefaut = () => globalThis.crypto.randomUUID();
@@ -32,6 +33,7 @@ export function creerSite({ titre, url, icone, id, creeLe }, genererId = generer
     url: urlPropre,
     icone: icone ? { ...icone } : { type: "lettre", couleur: couleurDepuisTexte(urlPropre) },
     creeLe: creeLe ?? Date.now(),
+    ...champsEnrichissement(null),
   };
 }
 

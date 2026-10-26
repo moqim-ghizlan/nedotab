@@ -2,6 +2,7 @@
  * First contact between the local grid and the account's grid (V2.3). Pure functions.
  */
 import { parcourir } from "./arbre.js";
+import { VERSION_SCHEMA } from "./constantes.js";
 import { valider } from "./migration.js";
 import { cleUrl } from "./url.js";
 
@@ -81,7 +82,7 @@ export function dossierImporte(
   let aplati = false;
   const { grille } = valider(
     {
-      versionSchema: 2,
+      versionSchema: VERSION_SCHEMA,
       grille: [{ id: dossierId, type: "dossier", titre, items: importes, creeLe: maintenant }],
     },
     () => {},

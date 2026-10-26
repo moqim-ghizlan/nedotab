@@ -31,6 +31,19 @@ const appareil = (base, actions) => actions.map((a) => op(a, base));
 const exemples = (base) => [
   { type: A.SITE_AJOUTER, site: site("nouveau"), parentId: null, index: 1 },
   { type: A.SITE_MODIFIER, id: "a", changements: { titre: "A2" } },
+  {
+    type: A.SITE_MODIFIER,
+    id: "a",
+    changements: { tags: ["Jeux", "Vidéo"], description: "Un site." },
+  },
+  {
+    type: A.SITE_DEFINIR_IA,
+    id: "a",
+    etat: "ok",
+    tags: ["ia"],
+    description: "Par l'IA.",
+    majLe: 5,
+  },
   { type: A.ELEMENT_SUPPRIMER, id: "b" },
   {
     type: A.ELEMENT_RESTAURER,
@@ -87,6 +100,8 @@ describe("robustesse au rejeu (cible introuvable)", () => {
   };
   it("SITE_MODIFIER d'un site supprimé : ignorée", () =>
     ignoree({ type: A.SITE_MODIFIER, id: "x", changements: { titre: "T" } }, "INTROUVABLE"));
+  it("SITE_DEFINIR_IA d'un site supprimé : ignorée", () =>
+    ignoree({ type: A.SITE_DEFINIR_IA, id: "x", etat: "ok", tags: ["a"] }, "INTROUVABLE"));
   it("ELEMENT_SUPPRIMER déjà supprimé : rien à faire, pas signalée", () => {
     const r = appliquer(base, { type: A.ELEMENT_SUPPRIMER, id: "x" });
     expect(r).toMatchObject({ etat: base, appliquee: true });

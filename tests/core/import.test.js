@@ -10,6 +10,7 @@ import {
   verifierTailleFichier,
 } from "../../src/core/import.js";
 import { etatInitial } from "../../src/core/modele.js";
+import { champsEnrichissement } from "../../src/core/tags.js";
 import { crc32, creerZip } from "../../src/core/zip.js";
 
 const site = (id, url = `https://${id}.fr`, extra = {}) => ({
@@ -19,6 +20,7 @@ const site = (id, url = `https://${id}.fr`, extra = {}) => ({
   url,
   icone: { type: "lettre", couleur: "#2c6b5a" },
   creeLe: 1,
+  ...champsEnrichissement(null),
   ...extra,
 });
 const dossier = (id, items) => ({ id, type: "dossier", titre: id, items, creeLe: 1 });
@@ -41,7 +43,7 @@ describe("export", () => {
     expect(e).toEqual({
       format: "nedotab-export",
       versionFormat: 1,
-      versionSchema: 2,
+      versionSchema: 3,
       exporteLe: "2026-10-21T14:35:00.000Z",
       application: { version: "2.10.0", plateforme: "extension" },
       grille: etat.grille,

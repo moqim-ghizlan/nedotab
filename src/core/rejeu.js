@@ -12,6 +12,7 @@ function raison(etat, action) {
   const parentDe = (id) => trouver(etat.grille, id)?.parent?.id ?? null;
   switch (action.type) {
     case A.SITE_MODIFIER:
+    case A.SITE_DEFINIR_IA:
     case A.DOSSIER_RENOMMER:
       return existe(action.id) ? null : "INTROUVABLE";
     case A.ELEMENT_DEPLACER:
@@ -79,6 +80,8 @@ export function decrire(etat, action) {
       const verbe = cles.length === 1 && cles[0] === "titre" ? "Renommer" : "Modifier";
       return { libelle: `${verbe} ${guillemets(titre(action.id))}`, nature: "site" };
     }
+    case A.SITE_DEFINIR_IA:
+      return { libelle: `Tags de ${guillemets(titre(action.id))}`, nature: "site" };
     case A.DOSSIER_RENOMMER:
       return { libelle: `Renommer ${guillemets(titre(action.id))}`, nature: "dossier" };
     case A.ELEMENT_SUPPRIMER:

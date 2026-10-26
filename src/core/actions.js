@@ -26,11 +26,13 @@ import {
   reconcilier,
 } from "./pages.js";
 import { FONDS_MAX, modifierReglagesEtat, validerEntreeFond } from "./reglages.js";
+import { ETATS_IA, normaliserDescription, normaliserEtatIa, normaliserTags } from "./tags.js";
 
 export const A = {
   CHARGER: "CHARGER",
   SITE_AJOUTER: "SITE_AJOUTER",
   SITE_MODIFIER: "SITE_MODIFIER",
+  SITE_DEFINIR_IA: "SITE_DEFINIR_IA",
   ELEMENT_SUPPRIMER: "ELEMENT_SUPPRIMER",
   ELEMENT_RESTAURER: "ELEMENT_RESTAURER",
   ELEMENT_DEPLACER: "ELEMENT_DEPLACER",
@@ -99,8 +101,42 @@ function supprimerDossier(grille, { id, mode }) {
   );
 }
 
-/** Fields of a site that SITE_MODIFIER may change. */
-const CHAMPS_SITE = ["titre", "url", "icone"];
+/**
+ * Fields of a site that SITE_MODIFIER may change. tags and description are cleaned and, when
+ * the user changes them, mark the site as written by hand (tagsManuels): the AI never
+ * overwrites them (V4.2). tagsManuels: false gives the site back to the AI.
+ */
+const CHAMPS_SITE = ["titre", "url", "icone", "tags", "description", "tagsManuels"];
+
+/** SITE_MODIFIER's changes with tags and description cleaned and tagsManuels set. */
+function changementsSite(changements) {
+  const c = filtrerChamps(changements, CHAMPS_SITE);
+  if ("tags" in c) c.tags = normaliserTags(c.tags);
+  if ("description" in c) c.description = normaliserDescription(c.description);
+  if ("tagsManuels" in c && typeof c.tagsManuels !== "boolean") delete c.tagsManuels;
+  if (("tags" in c || "description" in c) && !("tagsManuels" in c)) c.tagsManuels = true;
+  return c;
+}
+
+/**
+ * SITE_DEFINIR_IA (V4.4 and after): the AI proposes tags and a description. They are written
+ * only if the user has not written theirs (tagsManuels); the state of the AI work is always
+ * recorded. A site that is gone makes the action do nothing.
+ */
+function definirIa(site, action) {
+  const ia = normaliserEtatIa({
+    etat: action.etat,
+    majLe: action.majLe ?? null,
+    erreur: action.erreur,
+  });
+  if (site.tagsManuels || action.etat !== "ok") return { ...site, ia };
+  return {
+    ...site,
+    tags: normaliserTags(action.tags),
+    description: normaliserDescription(action.description),
+    ia,
+  };
+}
 
 function filtrerChamps(changements, autorises) {
   return Object.fromEntries(
@@ -214,13 +250,20 @@ function reduireBase(etat, action) {
       );
     }
     case A.SITE_MODIFIER: {
-      const changements = filtrerChamps(action.changements, CHAMPS_SITE);
+      const changements = changementsSite(action.changements);
       if (Object.keys(changements).length === 0) return etat;
       return avecGrille(
         etat,
         remplacer(etat.grille, action.id, (e) =>
           e.type === "site" ? { ...e, ...changements } : e,
         ),
+      );
+    }
+    case A.SITE_DEFINIR_IA: {
+      if (!ETATS_IA.includes(action.etat)) return etat;
+      return avecGrille(
+        etat,
+        remplacer(etat.grille, action.id, (e) => (e.type === "site" ? definirIa(e, action) : e)),
       );
     }
     case A.ELEMENT_SUPPRIMER: {

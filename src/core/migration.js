@@ -1,6 +1,18 @@
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { etatInitial } from "./modele.js";
 import { avecPagesValides, validerReglages, validerReglagesAppareil } from "./reglages.js";
+import { champsEnrichissement } from "./tags.js";
+
+/** Every site of a grid (all levels) with its tags, description and AI state completed. */
+function enrichir(elements) {
+  if (!Array.isArray(elements)) return elements;
+  return elements.map((e) => {
+    if (!e || typeof e !== "object") return e;
+    if (e.type === "dossier") return { ...e, items: enrichir(e.items) };
+    if (e.type === "site") return { ...e, ...champsEnrichissement(e) };
+    return e;
+  });
+}
 
 /** Successive migrations: MIGRATIONS[n] turns schema n into schema n + 1. */
 const MIGRATIONS = {
@@ -19,6 +31,9 @@ const MIGRATIONS = {
     }
     return { ...brut, versionSchema: 2, reglagesAppareil: brut.reglagesAppareil ?? {} };
   },
+  // 2 → 3 (V4.2): every site gets tags, a description and an AI state, at every level. An
+  // older version reading schema 3 goes read-only: it cannot write sites without them.
+  2: (brut) => ({ ...brut, versionSchema: 3, grille: enrichir(brut.grille) }),
 };
 
 /**
@@ -79,11 +94,12 @@ function filtrer(elements, niveau, ctx) {
     if (!elementValide(e)) {
       ctx.ignores.push(e);
     } else if (e.type === "site") {
-      resultat.push(idUnique(e, ctx));
+      resultat.push(idUnique({ ...e, ...champsEnrichissement(e) }, ctx));
     } else if (niveau >= PROFONDEUR_MAX) {
       // No folder at level 3: its sites take its place, nothing is deleted.
       ctx.corrections.push(`dossier trop profond « ${e.titre} » aplati`);
-      for (const site of sitesDe(e.items, ctx)) resultat.push(idUnique(site, ctx));
+      for (const site of sitesDe(e.items, ctx))
+        resultat.push(idUnique({ ...site, ...champsEnrichissement(site) }, ctx));
     } else {
       const dossier = idUnique(e, ctx);
       resultat.push({ ...dossier, items: filtrer(e.items, niveau + 1, ctx) });
