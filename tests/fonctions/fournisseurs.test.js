@@ -305,8 +305,8 @@ describe("listerModeles : la liste vient du fournisseur", () => {
       { fetch: f },
     );
     expect(liste).toEqual([
-      { id: "a-modele", nom: "A" },
       { id: "z-modele", nom: "Z" },
+      { id: "a-modele", nom: "A" },
     ]);
     expect(f.mock.calls[0][0]).toBe(
       "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
@@ -329,7 +329,7 @@ describe("listerModeles : la liste vient du fournisseur", () => {
     ];
     const f = vi.fn().mockResolvedValue(reponse(200, { data: ids.map((id) => ({ id })) }));
     const liste = await openai.listerModeles({ cle: "sk-abcdefghijklmnopqrstuvwx" }, { fetch: f });
-    expect(liste.map((m) => m.id)).toEqual(["gpt-a", "gpt-b", "o3"]);
+    expect(liste.map((m) => m.id)).toEqual(["o3", "gpt-b", "gpt-a"]);
   });
 
   it("clé refusée : erreur normalisée", async () => {
@@ -337,5 +337,33 @@ describe("listerModeles : la liste vient du fournisseur", () => {
     await expect(openai.listerModeles({ cle: "sk-x" }, { fetch: f })).rejects.toMatchObject({
       code: "cle-invalide",
     });
+  });
+});
+
+describe("listerModeles : les plus récents d'abord", () => {
+  it("les numéros se comparent comme des nombres (3.1 avant 2.5, 10 avant 9)", async () => {
+    const modeles = [
+      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-2.0-flash",
+      "gemini-10-x",
+      "gemini-9-x",
+    ].map((n) => ({
+      name: `models/${n}`,
+      displayName: n,
+      supportedGenerationMethods: ["generateContent"],
+    }));
+    const f = vi.fn().mockResolvedValue(reponse(200, { models: modeles }));
+    const liste = await gemini.listerModeles(
+      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
+      { fetch: f },
+    );
+    expect(liste.map((m) => m.id)).toEqual([
+      "gemini-10-x",
+      "gemini-9-x",
+      "gemini-3.1-flash-lite",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+    ]);
   });
 });

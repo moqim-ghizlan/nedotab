@@ -13,7 +13,7 @@ const PAR_CODE = {
   "cle-absente": ["failed-precondition", "Aucune clé enregistrée pour ce fournisseur."],
   "limite-fournisseur": ["resource-exhausted", "Trop de demandes chez le fournisseur."],
   "requete-invalide": ["invalid-argument", "Demande refusée par le fournisseur."],
-  "modele-introuvable": ["not-found", "Ce modèle n'est plus disponible."],
+  "modele-introuvable": ["not-found", "Ce modèle n'est pas disponible avec cette clé."],
   "pas-de-modele": ["failed-precondition", "Aucun modèle choisi pour cet usage."],
   "ia-desactivee": ["failed-precondition", "L'assistant IA est désactivé."],
   "fournisseur-indisponible": ["unavailable", "Fournisseur indisponible pour l'instant."],

@@ -75,10 +75,14 @@ export async function verifierCle({ cle }, options) {
 
 /**
  * Models the key can use to write text (GET /v1beta/models: those that support
- * generateContent), sorted by identifier. The list comes from Google at the time of the
+ * generateContent), newest first. The list comes from Google at the time of the
  * call: nothing about models is written in the code.
  * @returns {Promise<Array<{ id: string, nom: string }>>}
  */
+/** Newest first: "gemini-3.1-…" before "gemini-2.5-…" (numbers compared as numbers). */
+const plusRecentsDabord = (a, b) =>
+  b.id.localeCompare(a.id, "en", { numeric: true, sensitivity: "base" });
+
 export async function listerModeles({ cle }, options) {
   const r = await appelJson(
     `${BASE}/models?pageSize=1000`,
@@ -92,5 +96,5 @@ export async function listerModeles({ cle }, options) {
       nom: m.displayName || nomModele(String(m.name)),
     }))
     .filter((m) => m.id)
-    .sort((a, b) => a.id.localeCompare(b.id));
+    .sort(plusRecentsDabord);
 }

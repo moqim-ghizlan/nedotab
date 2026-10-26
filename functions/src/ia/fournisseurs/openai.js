@@ -64,7 +64,7 @@ const PAS_TEXTE =
   /(embedding|whisper|tts|dall-e|moderation|image|audio|realtime|transcribe|search|instruct|davinci|babbage)/i;
 
 /**
- * Models the key can use to write text (GET /v1/models), sorted by identifier. The list
+ * Models the key can use to write text (GET /v1/models), newest first. The list
  * comes from OpenAI at the time of the call: nothing about models is written in the code.
  * @returns {Promise<Array<{ id: string, nom: string }>>}
  */
@@ -73,6 +73,6 @@ export async function listerModeles({ cle }, options) {
   return (Array.isArray(r?.data) ? r.data : [])
     .map((m) => String(m?.id ?? ""))
     .filter((id) => TEXTE.test(id) && !PAS_TEXTE.test(id))
-    .sort((a, b) => a.localeCompare(b))
+    .sort((a, b) => b.localeCompare(a, "en", { numeric: true, sensitivity: "base" }))
     .map((id) => ({ id, nom: id }));
 }

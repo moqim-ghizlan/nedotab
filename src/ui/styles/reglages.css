@@ -1843,3 +1843,63 @@ body.fond-clair .carte-action--principale {
   font-size: var(--taille-xs);
   text-overflow: ellipsis;
 }
+
+/* Model lists and fields of the AI settings: the same look as the other fields (V4.1). */
+.ia-reglages select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+  color: var(--texte);
+  font-size: var(--taille-s);
+  cursor: pointer;
+}
+
+.ia-reglages select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.ia-reglages select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ia-usage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--espace-1) var(--espace-3);
+  padding: var(--espace-3);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+}
+
+.ia-usage label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  color: var(--texte-secondaire);
+  font-weight: 600;
+}
+
+.ia-usage select {
+  background: var(--fond);
+}
+
+.ia-usage .bouton {
+  min-height: 40px;
+}
+
+.ia-test {
+  grid-column: 1 / -1;
+  min-height: 1em;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.ia-test:empty {
+  display: none;
+}
