@@ -9,6 +9,7 @@ import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { ecranTactile, fermerMenuTactile, ouvrirMenuTactile } from "./menuTactile.js";
 import { toast } from "./toast.js";
+import { enEdition } from "./modeEdition.js";
 import { ouvrirSite } from "./tuile.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
@@ -243,6 +244,20 @@ export function brancherActionsElements(
     ev.preventDefault();
     ouvrirMenuPour(tuile.dataset.id, ev.clientX, ev.clientY);
   });
+
+  conteneur.addEventListener(
+    "click",
+    (ev) => {
+      if (!enEdition()) return;
+      const retirer = ev.target.closest("[data-retirer]");
+      // In "Modifier la grille" a tap deletes with the "−" and does not open a site.
+      if (!retirer && !ev.target.closest(".tuile:not(.tuile--dossier)")) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (retirer && !lectureSeule()) supprimer(retirer.dataset.retirer);
+    },
+    true,
+  );
 
   conteneur.addEventListener("click", (ev) => {
     const bouton = ev.target.closest("[data-menu]");

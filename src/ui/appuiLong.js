@@ -7,6 +7,8 @@
  *   lifted and the `appuilong` event is fired on it, for the context menu of V3.6);
  * - the finger then moves: the drag starts (SortableJS) and the menu, if any, closes.
  */
+import { enEdition } from "./modeEdition.js";
+
 export const DELAI_APPUI_LONG_MS = 400;
 export const SEUIL_MOUVEMENT_PX = 8;
 
@@ -37,7 +39,7 @@ export function brancherAppuiLong(conteneur) {
   };
 
   const debut = (e) => {
-    if (e.pointerType !== "touch" || !e.isPrimary) return;
+    if (e.pointerType !== "touch" || !e.isPrimary || enEdition()) return;
     const tuile = e.target.closest?.(".case--element .tuile[data-id]");
     if (!tuile) return;
     finir();

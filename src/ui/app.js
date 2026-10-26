@@ -34,6 +34,7 @@ import { brancherPersistance } from "./persistance.js";
 import { activerJournal } from "./journal.js";
 import { toast } from "./toast.js";
 import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
+import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
 import { creerAccueilPagine } from "./pages/accueilPagine.js";
 import { monterBandeauInstallation } from "./bandeauInstallation.js";
@@ -347,7 +348,12 @@ export async function demarrerApp(racine) {
     boutonReglages,
     creerIndicateurSynchro(synchro),
   );
-  const barre = el("div", { class: "barre-haut" }, groupeCompte);
+  const barre = el(
+    "div",
+    { class: "barre-haut" },
+    lectureSeule ? null : creerBoutonEdition(),
+    groupeCompte,
+  );
   racine.replaceChildren(barre, page, pied, annonces);
   const annoncer = (texte) => {
     annonces.textContent = "";

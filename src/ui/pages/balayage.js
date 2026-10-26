@@ -6,6 +6,7 @@
  */
 
 import { DELAI_APPUI_LONG_MS } from "../appuiLong.js";
+import { enEdition } from "../modeEdition.js";
 
 /** Movement (px) before the gesture is known as horizontal or vertical. */
 const SEUIL = 10;
@@ -26,6 +27,8 @@ export function brancherBalayage(fenetre, { actif, peutAller, decaler, terminer 
 
   const debut = (e) => {
     if (e.pointerType !== "touch" || !e.isPrimary || !actif()) return;
+    // "Modifier la grille": a finger on a tile drags it, it does not turn the page (V3.6).
+    if (enEdition() && e.target.closest?.(".case--element")) return;
     geste = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, sens: null, dx: 0 };
   };
 

@@ -1543,3 +1543,30 @@ body.fond-clair .carte-action--principale {
     transition: none;
   }
 }
+
+/* "Modifier la grille" (V3.6): a button for the finger only (without hover). */
+.bouton-modifier {
+  display: none;
+  height: 40px;
+  padding: 0 var(--espace-4);
+  border: 1px solid color-mix(in srgb, var(--bordure) 70%, transparent);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  backdrop-filter: blur(8px);
+  color: var(--texte);
+  font-size: var(--taille-s);
+  cursor: pointer;
+}
+
+.bouton-modifier--actif {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (hover: none) {
+  .bouton-modifier {
+    display: block;
+  }
+}

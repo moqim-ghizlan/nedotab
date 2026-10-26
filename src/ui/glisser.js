@@ -1,6 +1,7 @@
 import Sortable from "sortablejs";
 import { A } from "../core/actions.js";
 import { trouver } from "../core/arbre.js";
+import { EVENEMENT_EDITION, enEdition } from "./modeEdition.js";
 import { DELAI_APPUI_LONG_MS, SEUIL_MOUVEMENT_PX, brancherAppuiLong } from "./appuiLong.js";
 
 const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -71,7 +72,7 @@ export function activerGlisser(
     ...(groupe ? { group: groupe } : {}),
     animation: REDUIT ? 0 : 150,
     draggable: ".case--element",
-    filter: ".case--ajout, .tuile-plus",
+    filter: ".case--ajout, .tuile-plus, .tuile-retirer",
     preventOnFilter: false,
     ghostClass: "case--fantome",
     chosenClass: "case--choisie",
@@ -80,7 +81,7 @@ export function activerGlisser(
     fallbackTolerance: 4,
     // Finger (V3.5): the drag starts after a long press without moving (a quicker swipe
     // scrolls or turns the page), and the grid scrolls when the icon nears an edge.
-    delay: DELAI_APPUI_LONG_MS,
+    delay: enEdition() ? 0 : DELAI_APPUI_LONG_MS,
     delayOnTouchOnly: true,
     touchStartThreshold: SEUIL_MOUVEMENT_PX,
     scrollSensitivity: 60,
@@ -152,6 +153,13 @@ export function activerGlisser(
   };
   synchroniser();
 
+  // "Modifier la grille" (V3.6): an icon is dragged right away, without the long press.
+  const surEdition = ({ detail }) => {
+    options.delay = detail.actif ? 0 : DELAI_APPUI_LONG_MS;
+    for (const instance of instances.values()) instance.option("delay", options.delay);
+  };
+  document.addEventListener(EVENEMENT_EDITION, surEdition);
+
   // A tile pressed but not dragged yet (SortableJS waits for a few pixels): a render now
   // would replace the tile under the pointer and the drag would be lost (a change from
   // another tab or device arriving at that moment). It waits for the release.
@@ -193,6 +201,7 @@ export function activerGlisser(
     synchroniser,
     detruire: () => {
       debrancherAppuiLong();
+      document.removeEventListener(EVENEMENT_EDITION, surEdition);
       for (const type of ["pointerup", "pointercancel"])
         document.removeEventListener(type, finAppui, true);
       for (const instance of instances.values()) instance.destroy();

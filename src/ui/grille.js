@@ -27,6 +27,13 @@ export function rendreGrille(
         tuile,
         el("button", {
           type: "button",
+          class: "tuile-retirer",
+          "aria-label": `Supprimer ${element.titre}`,
+          dataset: { retirer: element.id },
+          texte: "−",
+        }),
+        el("button", {
+          type: "button",
           class: "tuile-plus",
           "aria-label": `Actions pour ${element.titre}`,
           dataset: { menu: element.id },

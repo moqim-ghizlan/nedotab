@@ -510,3 +510,63 @@
     --icone: 52px;
   }
 }
+
+/* --- "Modifier la grille" (V3.6): wiggling icons with a "−" ------------------------------- */
+
+.tuile-retirer {
+  display: none;
+}
+
+.mode-edition .tuile-retirer {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 44px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: var(--ombre);
+}
+
+/* A larger touch area around the small "−". */
+.mode-edition .tuile-retirer::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.mode-edition .tuile-plus {
+  display: none;
+}
+
+@keyframes tremblement {
+  0% {
+    transform: rotate(-1.6deg);
+  }
+  100% {
+    transform: rotate(1.6deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mode-edition .case--element:not(.case--fantome, .case--glissee) .tuile {
+    animation: tremblement 130ms ease-in-out infinite alternate;
+  }
+  .mode-edition .case--element:nth-child(2n) .tuile {
+    animation-duration: 150ms;
+    animation-delay: -60ms;
+  }
+  .mode-edition .case--element:nth-child(3n) .tuile {
+    animation-duration: 115ms;
+    animation-delay: -30ms;
+  }
+}
