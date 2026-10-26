@@ -2,6 +2,34 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [3.7.0] - 2026-10-26
+
+### Ajouté
+
+- **Ouverture hors ligne** (application web) : un service worker garde l'interface en cache ;
+  l'app installée s'ouvre sans réseau, avec ses données (cache Firestore). Les icônes de sites
+  Google déjà vues sont gardées 30 jours. Rien de Firebase (Firestore, Storage, connexion)
+  n'est mis en cache par le service worker, et les pages de connexion `/__/` lui échappent.
+- **Bandeau « Une nouvelle version est disponible »** avec « Recharger » : jamais de
+  rechargement automatique ; refusé pendant une fenêtre ouverte, un glisser ou une saisie ;
+  les modifications en attente partent avant le rechargement (3 s au plus). Recherche d'une
+  nouvelle version au retour au premier plan, au plus une fois par heure.
+- Après une mise à jour : message unique « Mise à jour vers la version X » avec « Nouveautés ».
+  Lien « Nouveautés » dans Réglages → À propos.
+- `sw.js` servi sans cache par Firebase Hosting.
+
+### Inchangé
+
+- L'extension Chrome n'a pas de service worker.
+
+### Vérifié
+
+| Appareil                       | Résultat                                      |
+| ------------------------------ | --------------------------------------------- |
+| iPhone (Safari, vrai appareil) | ✔ hors ligne, connexion Google                |
+| Bandeau de mise à jour         | pas encore vu (demande un second déploiement) |
+| Ordinateur                     | tests automatiques ✔ (499)                    |
+
 ## [3.6.0] - 2026-10-26
 
 ### Ajouté
