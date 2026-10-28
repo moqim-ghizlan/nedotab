@@ -33,6 +33,7 @@ let ouvert = null;
 
 const ONGLETS = [
   ["apparence", "Apparence"],
+  ["general", "Général"],
   ["sauvegardes", "Sauvegardes"],
   ["donnees", "Données"],
   ["ia", "IA"],
@@ -495,6 +496,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         reglagesPages,
         reglagesDefilement,
       ),
+    ],
+    general: [
       section(
         "Ouverture des liens",
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
@@ -681,6 +684,14 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     if (!b) return;
     curseur.style.setProperty("--x", `${b.offsetLeft}px`);
     curseur.style.setProperty("--l", `${b.offsetWidth}px`);
+    // Narrow screens: the tab bar scrolls sideways, keep the chosen tab in view.
+    const visible = barreOnglets.clientWidth;
+    if (barreOnglets.scrollWidth > visible) {
+      barreOnglets.scrollTo({
+        left: b.offsetLeft - (visible - b.offsetWidth) / 2,
+        behavior: "smooth",
+      });
+    }
   }
 
   const panneau = el(
