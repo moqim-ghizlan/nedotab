@@ -232,6 +232,11 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "Grille et dossiers. Désactivé, seules les icônes restent visibles.",
       true,
     ],
+    [
+      "confirmerSuppression",
+      "Confirmer avant de supprimer",
+      "Demande une confirmation avant de supprimer un site ou un dossier vide. Un dossier rempli la demande toujours ; l'annulation reste possible juste après.",
+    ],
   ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
       type: "checkbox",
@@ -254,7 +259,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche", "masquerTitres"];
+  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche", "masquerTitres", "confirmerSuppression"];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);

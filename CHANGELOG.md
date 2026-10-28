@@ -50,6 +50,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Afficher les titres sous les icônes »** (Général > Interface, synchronisé). Désactivé, les titres restent lisibles par les lecteurs d'écran.
 
+## [4.5.5] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Confirmer avant de supprimer »** (Général > Interface, synchronisé) : demande une confirmation avant de supprimer un site ou un dossier vide (un dossier rempli la demandait déjà ; l'annulation reste possible).
+
 ## [Non publié]
 
 ### Ajouté (V4.5)

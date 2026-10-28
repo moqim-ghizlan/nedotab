@@ -94,6 +94,10 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ masquerTitres: true }).reglages.masquerTitres).toBe(true);
     expect(modifier({ masquerTitres: false })).toBe(etat);
   });
+  it("confirmer avant de supprimer : un interrupteur stocké seulement activé", () => {
+    expect(modifier({ confirmerSuppression: true }).reglages.confirmerSuppression).toBe(true);
+    expect(modifier({ confirmerSuppression: false })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);

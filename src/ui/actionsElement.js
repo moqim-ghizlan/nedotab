@@ -108,11 +108,36 @@ export function brancherActionsElements(
     focaliserApresSuppression(Math.max(0, indexTuile));
   };
 
+  /** "Confirmer avant de supprimer" (V4.5.5): a site or an empty folder asks first. */
+  const confirmerSuppression = async (r) => {
+    if (!store.lire().reglages.confirmerSuppression) return true;
+    if (r.element.type === "dossier" && r.element.items.length > 0) return true; // asks already
+    const dossier = r.element.type === "dossier";
+    const choix = await demander({
+      titre: dossier ? "Supprimer le dossier" : "Supprimer le site",
+      message: `Supprimer ${dossier ? "le dossier" : "le site"} « ${r.element.titre} » ?`,
+      boutons: [
+        { libelle: "Annuler", valeur: false, principal: true },
+        { libelle: "Supprimer", valeur: true, danger: true },
+      ],
+      retourFocus: tuileDe(r.element.id),
+    });
+    return choix === true;
+  };
+
+  const supprimerSansConfirmer = (r) => {
+    if (r.element.type === "dossier") supprimerDossier(r);
+    else supprimerSite(r);
+  };
+
+  // Synchronous when the setting is off, so that nothing waits for a dialog for nothing.
   const supprimer = (id) => {
     const r = trouver(store.lire().grille, id);
     if (!r) return;
-    if (r.element.type === "dossier") supprimerDossier(r);
-    else supprimerSite(r);
+    if (!store.lire().reglages.confirmerSuppression) return supprimerSansConfirmer(r);
+    confirmerSuppression(r).then((ok) => {
+      if (ok) supprimerSansConfirmer(r);
+    });
   };
 
   const renommerDossier = async (dossier) => {

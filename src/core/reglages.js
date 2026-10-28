@@ -142,7 +142,8 @@ export function validerFond(fond) {
  * rechercheNouvelOnglet the web searches of the search bar (V2.10.6), gardeDossierOuvert stops a
  * click outside a folder window from closing it (V4.5.1), animationsReduites turns off the
  * animations and transitions (V4.5.2), masquerRecherche hides the search bar (V4.5.3), masquerTitres the
- * titles under the icons (V4.5.4).
+ * titles under the icons (V4.5.4), confirmerSuppression asks before deleting a site or an empty
+ * folder (V4.5.5).
  */
 export const INTERRUPTEURS = [
   "nouvelOnglet",
@@ -151,6 +152,7 @@ export const INTERRUPTEURS = [
   "animationsReduites",
   "masquerRecherche",
   "masquerTitres",
+  "confirmerSuppression",
 ];
 
 /**
