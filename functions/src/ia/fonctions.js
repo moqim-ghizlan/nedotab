@@ -13,6 +13,11 @@ import { ErreurFournisseur } from "./fournisseurs/commun.js";
 import { fournisseursActifs } from "./config.js";
 import { messagePage, RAPPEL_FORMAT, SYSTEME_TAGS } from "./prompts/tags.js";
 import { lireSortieTags } from "./tagsSortie.js";
+import { extraitReduit } from "../partage/extraitPage.js";
+import { ErreurPage } from "../reseau/recupererPage.js";
+
+/** Page downloads per user and per day (V4.5): the function must not become a crawler. */
+export const PAGES_PAR_JOUR = 60;
 
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
@@ -58,6 +63,7 @@ function verifierExtrait(v) {
  */
 export function creerFonctionsIa(deps) {
   const { db, secret, fournisseurs, config, consommer, journal = () => {} } = deps;
+  const lirePage = deps.lirePage ?? (async () => null); // (url) => extrait | null, V4.5
   const horloge = deps.horloge ?? (() => Date.now());
   const refCles = (uid) => db.doc(`users/${uid}/prive/ia`);
   const lireCles = async (uid) => {
@@ -237,7 +243,20 @@ export function creerFonctionsIa(deps) {
       url: { type: "chaine", requis: true, max: 2048, motif: /^https?:\/\/\S+$/i },
       titre: { type: "chaine", max: 300 },
     });
-    const messages = [{ role: "user", texte: messagePage({ extrait, url, titre }) }];
+    // No extract (web app): the server reads the page itself, safely (recupererPage). A page
+    // that cannot be read gives a reduced extract: the tags then come from title and domain.
+    let page = extrait;
+    if (!page) {
+      await consommer(uid, { n: 1, limite: PAGES_PAR_JOUR, document: "quotaPages" });
+      try {
+        page = await lirePage(url);
+      } catch (e) {
+        if (!(e instanceof ErreurPage)) throw e;
+        journal({ action: "lirePage", code: e.code });
+      }
+      page ??= extraitReduit(url, titre);
+    }
+    const messages = [{ role: "user", texte: messagePage({ extrait: page, url, titre }) }];
     for (let essai = 0; essai < 2; essai++) {
       const r = await executerUsage(uid, {
         usage: "tags",

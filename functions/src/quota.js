@@ -42,8 +42,13 @@ export function apresConsommation(actuel, { jour, n = 1, limite = QUOTA_PAR_DEFA
  * Takes `n` calls from the quota of `uid` (Firestore transaction).
  * @param {import("firebase-admin/firestore").Firestore} db
  */
-export async function consommer(db, uid, { n = 1, limite, maintenant = new Date() } = {}) {
-  const ref = db.doc(`users/${uid}/prive/quota`);
+export async function consommer(
+  db,
+  uid,
+  { n = 1, limite, maintenant = new Date(), document = "quota" } = {},
+) {
+  // `document`: another counter next to the AI calls (V4.5: downloads of pages, "quotaPages").
+  const ref = db.doc(`users/${uid}/prive/${document}`);
   const jour = jourParis(maintenant);
   return db.runTransaction(async (t) => {
     const snap = await t.get(ref);

@@ -17,6 +17,8 @@ export { lireJson, lirePage };
 export const capacites = {
   nom: "extension",
   lirePagesWeb: true,
+  /** Page read by our server: no, the extension reads it itself (V4.5). */
+  extraitServeur: false,
   permissionsSites: true,
   barreAdresse: true,
   proposerExtension: false,

@@ -1,6 +1,6 @@
 {
   "name": "nedotab",
-  "version": "4.4.2",
+  "version": "4.4.3",
   "private": true,
   "type": "module",
   "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
@@ -45,6 +45,7 @@
     "firebase-tools": "^15.34.1",
     "globals": "^17.13.0",
     "happy-dom": "^21.0.4",
+    "linkedom": "^0.18.14",
     "prettier": "^3.9.10",
     "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0",

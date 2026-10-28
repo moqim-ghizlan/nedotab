@@ -17,6 +17,7 @@ describe("capacités des plateformes", () => {
     expect(pwa.capacites).toMatchObject({
       nom: "pwa",
       lirePagesWeb: false,
+      extraitServeur: true,
       permissionsSites: false,
       barreAdresse: false,
     });

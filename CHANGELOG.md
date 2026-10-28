@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.4.3] - 2026-10-29
+
+### Modifié
+
+- Nouvel onglet **Général** dans les réglages : « Ouverture des liens » (et le choix du
+  navigateur sur iOS) et « Nouvel onglet » quittent Apparence pour y être regroupés.
+- Barre d'onglets des réglages : sur un écran étroit, elle défile latéralement au lieu d'écraser
+  les libellés.
+
 ## [4.4.2] - 2026-10-29
 
 ### Modifié
@@ -18,6 +27,18 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
   sous-dossiers.
 
 ## [Non publié]
+
+### Ajouté (V4.5)
+
+- **Tags et description depuis la PWA (iPhone, iPad)** : sans extrait, `iaGenererTags` lit la page
+  côté serveur (`recupererPage`), la résume avec le même code que l'extension (copies testées,
+  parseur linkedom) puis appelle l'IA. Page illisible ou refusée : génération sur le titre et le
+  domaine.
+  - **Sécurité (SSRF)** : http/https, ports 80 et 443, DNS résolu avant la connexion et toutes
+    les adresses vérifiées (ipaddr.js), connexion à l'IP vérifiée, redirections suivies à la main
+    (3 au plus, chacune revérifiée), 6 s, 512 Ko, HTML seulement, aucun cookie, exclusions de
+    confidentialité de la V4.3. 60 téléchargements par utilisateur et par jour.
+  - Réglages → Assistant IA : phrase de transparence ; brouillon de confidentialité mis à jour.
 
 ### Ajouté (V4.4)
 

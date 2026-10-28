@@ -32,7 +32,10 @@ export function creerEnrichissement({
 
   async function generer({ id, url, titre }) {
     try {
-      const extrait = (await plateforme.lireExtrait?.(url).catch(() => null)) ?? null;
+      // Extension: the page is read here. Web app: no extract, the server reads the page (V4.5).
+      const extrait = plateforme.capacites?.lirePagesWeb
+        ? ((await plateforme.lireExtrait?.(url).catch(() => null)) ?? null)
+        : null;
       const r = await appeler("iaGenererTags", {
         ...(extrait ? { extrait } : {}),
         url,
@@ -58,7 +61,8 @@ export function creerEnrichissement({
   return {
     /** Asks for a proposal for one site; false when nothing is started (AI not ready…). */
     async demander(site) {
-      if (!plateforme.capacites?.lirePagesWeb) return false;
+      const { lirePagesWeb, extraitServeur } = plateforme.capacites ?? {};
+      if (!lirePagesWeb && !extraitServeur) return false;
       const pret = iaPrete(await contexte());
       if (!pret.prete) return false;
       definir(site.id, { etat: "en_attente" });

@@ -15,7 +15,10 @@ import { creerLecteurConfig } from "./src/ia/config.js";
 import { versErreurAppel } from "./src/ia/erreurs.js";
 import { creerFonctionsIa } from "./src/ia/fonctions.js";
 import { FOURNISSEURS } from "./src/ia/fournisseurs/index.js";
+import { parseHTML } from "linkedom";
+import { extraireContenu } from "./src/partage/extraitPage.js";
 import { consommer } from "./src/quota.js";
+import { recupererPage } from "./src/reseau/recupererPage.js";
 
 initializeApp();
 
@@ -70,6 +73,11 @@ const fonctionsIa = creerFonctionsIa({
   config: lireConfigIa,
   consommer: (uid, options) => consommer(getFirestore(), uid, options),
   // Provider, model, duration, tokens, error code: never the key nor the messages.
+  // V4.5: the page is read by the server through recupererPage (anti-SSRF), then summarised.
+  lirePage: async (url) => {
+    const { html, urlFinale } = await recupererPage(url);
+    return extraireContenu(parseHTML(html).document, urlFinale);
+  },
   journal: (infos) => logger.info("ia", infos),
 });
 

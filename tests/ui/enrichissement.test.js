@@ -4,12 +4,12 @@ import { creerEnrichissement } from "../../src/ui/services/enrichissement.js";
 
 const prete = { ia: { actif: true }, modeCompte: true, enLigne: true, cles: [{ fournisseur: "gemini", valide: true }] };
 
-function monter({ contexte = prete, lirePagesWeb = true, appeler } = {}) {
+function monter({ contexte = prete, lirePagesWeb = true, extraitServeur = false, appeler } = {}) {
   const actions = [];
   const store = { envoyer: (a) => actions.push(a), lire: () => ({}) };
   const e = creerEnrichissement({
     store,
-    plateforme: { capacites: { lirePagesWeb }, lireExtrait: async () => null },
+    plateforme: { capacites: { lirePagesWeb, extraitServeur }, lireExtrait: async () => ({ titre: "local" }) },
     contexte: async () => contexte,
     appeler,
     horloge: () => 1,
@@ -49,5 +49,19 @@ describe("enrichissement", () => {
     for (let i = 0; i < 5; i++) await e.demander({ id: `s${i}`, url: "https://a.fr" });
     await vi.waitFor(() => expect(e.enAttente()).toBe(0));
     expect(max).toBe(2);
+  });
+  it("PWA (extraitServeur) : appel sans extrait, le serveur lit la page", async () => {
+    const appeler = vi.fn(async () => ({ tags: ["a"], description: "d" }));
+    const { e } = monter({ lirePagesWeb: false, extraitServeur: true, appeler });
+    expect(await e.demander({ id: "s", url: "https://a.fr", titre: "A" })).toBe(true);
+    await vi.waitFor(() => expect(e.enAttente()).toBe(0));
+    expect(appeler.mock.calls[0][1]).toEqual({ url: "https://a.fr", titre: "A" });
+  });
+  it("extension : l'extrait local est envoyé", async () => {
+    const appeler = vi.fn(async () => ({ tags: ["a"], description: "d" }));
+    const { e } = monter({ appeler });
+    await e.demander({ id: "s", url: "https://a.fr", titre: "A" });
+    await vi.waitFor(() => expect(e.enAttente()).toBe(0));
+    expect(appeler.mock.calls[0][1].extrait).toEqual({ titre: "local" });
   });
 });

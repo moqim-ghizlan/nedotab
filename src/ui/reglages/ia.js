@@ -1,6 +1,7 @@
 import { A } from "../../core/actions.js";
 import { avecActif, EXPLICATIONS_IA, FOURNISSEURS, iaDe } from "../../core/ia.js";
 import { dateHeure } from "../../core/sauvegardes.js";
+import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { creerServiceIa } from "../services/ia.js";
@@ -154,6 +155,12 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       el("span", { texte: "Activer l'assistant IA" }),
     );
 
+    const infoServeur = plateforme.capacites?.extraitServeur
+      ? note(
+          "Sur iPhone et iPad, la page est lue par notre serveur pour proposer des tags. Aucune donnée de connexion n'est envoyée au site.",
+        )
+      : null;
+
     const lignesCles = fournisseursOffertes().map((f) => {
       const c = cleDe(f.id);
       return el(
@@ -228,6 +235,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         note(
           "Chaque fonction IA utilise votre propre clé Gemini : les appels sont facturés par Google sur votre compte. Rien n'est envoyé tant que l'assistant est désactivé.",
         ),
+        infoServeur,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,

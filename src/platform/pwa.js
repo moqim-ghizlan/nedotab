@@ -18,6 +18,8 @@ export const capacites = {
   nom: "pwa",
   /** Read other sites' pages (titles, icons): no, a web page is bound by CORS. */
   lirePagesWeb: false,
+  /** Page read by our server for the AI tags (V4.5), since the browser cannot. */
+  extraitServeur: true,
   /** Optional permission to read sites: no such thing on the web. */
   permissionsSites: false,
   /** Take the cursor from the browser's address bar on a new tab: no new tab here. */
