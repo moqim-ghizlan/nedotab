@@ -226,6 +226,12 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "Masquer la barre de recherche",
       "Libère de la place sur l'accueil. Le raccourci « / » ne fait plus rien.",
     ],
+    [
+      "masquerTitres",
+      "Afficher les titres sous les icônes",
+      "Grille et dossiers. Désactivé, seules les icônes restent visibles.",
+      true,
+    ],
   ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
       type: "checkbox",
@@ -248,7 +254,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche"];
+  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche", "masquerTitres"];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);

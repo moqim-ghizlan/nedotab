@@ -90,6 +90,10 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ masquerRecherche: true }).reglages.masquerRecherche).toBe(true);
     expect(modifier({ masquerRecherche: false })).toBe(etat);
   });
+  it("masquer les titres : un interrupteur stocké seulement activé", () => {
+    expect(modifier({ masquerTitres: true }).reglages.masquerTitres).toBe(true);
+    expect(modifier({ masquerTitres: false })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);

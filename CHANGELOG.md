@@ -44,6 +44,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Masquer la barre de recherche »** (Général > Interface, synchronisé). Le raccourci « / » est alors inactif.
 
+## [4.5.4] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Afficher les titres sous les icônes »** (Général > Interface, synchronisé). Désactivé, les titres restent lisibles par les lecteurs d'écran.
+
 ## [Non publié]
 
 ### Ajouté (V4.5)

@@ -95,3 +95,16 @@ textarea {
 :root[data-masquer-recherche] .recherche {
   display: none;
 }
+
+/* Setting "Afficher les titres sous les icônes" turned off (V4.5.4): the titles stay readable by
+ * screen readers, only the "Ajouter" tiles keep theirs. */
+:root[data-masquer-titres] .grille .tuile:not(.tuile--ajout) .tuile-titre {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
