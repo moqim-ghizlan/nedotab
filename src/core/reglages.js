@@ -259,10 +259,19 @@ export const CLES_APPAREIL = [
   "navigateur",
   "tailleTuiles",
   "retourHaptique",
+  "formeIcones",
 ];
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
 export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
+
+/** Shape of the icons on this device (V4.5.7): rounded by default, then not stored. */
+export const FORMES_ICONES = ["carre", "arrondi", "rond"];
+
+export function formeIconesDe(reglagesAppareil) {
+  const choisie = reglagesAppareil?.formeIcones;
+  return FORMES_ICONES.includes(choisie) ? choisie : "arrondi";
+}
 
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
@@ -288,6 +297,8 @@ export function validerReglagesAppareil(r) {
   if (tailleTuilesValide(r?.tailleTuiles) && r.tailleTuiles !== TAILLE_TUILES_DEFAUT)
     resultat.tailleTuiles = r.tailleTuiles;
   if (r?.retourHaptique === true) resultat.retourHaptique = true;
+  if (FORMES_ICONES.includes(r?.formeIcones) && r.formeIcones !== "arrondi")
+    resultat.formeIcones = r.formeIcones;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -313,6 +324,11 @@ function modifierAppareil(etat, changements) {
     if (t == null || t === TAILLE_TUILES_DEFAUT) delete appareil.tailleTuiles;
     else if (tailleTuilesValide(t)) appareil.tailleTuiles = t;
     else return etat;
+  }
+  if ("formeIcones" in changements) {
+    if (!FORMES_ICONES.includes(changements.formeIcones)) return etat;
+    if (changements.formeIcones === "arrondi") delete appareil.formeIcones;
+    else appareil.formeIcones = changements.formeIcones;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;

@@ -62,6 +62,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Vibration au glisser-déposer »** (Général > Interface, propre à l'appareil). Courte vibration quand on attrape ou dépose une icône (Android et Chrome ; sur iPhone, essai par l'astuce de l'interrupteur iOS 17.4+, non garanti).
 
+## [4.5.7] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Forme des icônes »** (Apparence, propre à l'appareil) : carrées, arrondies (par défaut) ou rondes.
+
 ## [Non publié]
 
 ### Ajouté (V4.6)

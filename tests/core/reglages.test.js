@@ -214,6 +214,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     expect(etat.reglages).not.toHaveProperty("retourHaptique");
     expect(modifier(etat, { retourHaptique: false }).reglagesAppareil).toEqual({});
   });
+  it("forme des icônes : arrondie par défaut et non stockée", () => {
+    let etat = modifier(etatInitial(), { formeIcones: "rond" });
+    expect(etat.reglagesAppareil).toEqual({ formeIcones: "rond" });
+    expect(modifier(etat, { formeIcones: "triangle" })).toBe(etat);
+    etat = modifier(etat, { formeIcones: "arrondi" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

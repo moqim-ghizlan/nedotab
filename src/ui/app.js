@@ -9,6 +9,7 @@ import {
   COTE_TELEPHONE,
   fondEffectif,
   fondsAPurger,
+  formeIconesDe,
 } from "../core/reglages.js";
 import { petitCote, suivreClavier } from "./ecran.js";
 import { chargerFirebase } from "../firebase/charger.js";
@@ -568,6 +569,7 @@ export async function demarrerApp(racine) {
     racineDoc.style.setProperty("--taille-tuiles", String((r.tailleTuiles ?? 100) / 100));
     racineDoc.dataset.animationPage = r.animationPage ?? "glisse";
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
+    racineDoc.dataset.forme = formeIconesDe(r);
     activerJournal(r.debug || modeDebug(store));
     plateforme.garderBarreChrome(!!r.barreChrome);
     ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);

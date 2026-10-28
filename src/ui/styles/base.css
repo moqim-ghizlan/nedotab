@@ -108,3 +108,17 @@ textarea {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Setting "Forme des icônes" (V4.5.7): the icons of the grid and of the folders, not the
+ * mini icons of a folder preview. */
+:root[data-forme="carre"] .grille .tuile > .tuile-icone {
+  border-radius: 6px;
+}
+
+:root[data-forme="rond"] .grille .tuile > .tuile-icone {
+  border-radius: 50%;
+}
+
+:root[data-forme="rond"] .grille .tuile > .tuile-icone--dossier {
+  border-radius: 34%;
+}

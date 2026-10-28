@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  formeIconesDe,
   COTE_TELEPHONE,
   FLOU_MAX,
   fondEffectif,
@@ -263,6 +264,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
+
+  // Device-only (V4.5.7): shape of the icons.
+  const formeIcones = segments(
+    "Forme des icônes",
+    [
+      ["carre", "Carrées"],
+      ["arrondi", "Arrondies"],
+      ["rond", "Rondes"],
+    ],
+    formeIconesDe(store.lire().reglagesAppareil),
+    (v) => modifier({ formeIcones: v }),
+  );
 
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
@@ -552,6 +565,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         ...Object.values(panneaux),
         libelleAppareil("Taille des cartes"),
         tailleTuiles,
+        libelleAppareil("Forme des icônes"),
+        formeIcones.groupe,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -813,6 +828,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
+    formeIcones.maj(formeIconesDe(store.lire().reglagesAppareil));
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
