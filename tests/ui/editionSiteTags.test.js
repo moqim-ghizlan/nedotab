@@ -70,13 +70,13 @@ describe("Modifier le site : tags et description (V4.2)", () => {
     expect(dialogue.querySelector("#edition-laisser-ia")).toBeNull();
   });
 
-  it("proposé par l'IA : mention et bouton « Régénérer » désactivé (V4.2)", () => {
+  it("proposé par l'IA : mention et bouton « Régénérer » actif (V4.4)", () => {
     const { dialogue } = ouvrir({ tags: ["a"], ia: { etat: "ok", majLe: 5 } });
     expect(dialogue.textContent).toContain("Proposé par l'IA");
     const regenerer = [...dialogue.querySelectorAll("button")].find(
       (b) => b.textContent === "Régénérer",
     );
-    expect(regenerer.disabled).toBe(true);
+    expect(regenerer.disabled).toBe(false);
   });
 
   it("Annuler ne change rien", () => {

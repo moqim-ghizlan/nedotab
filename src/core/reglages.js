@@ -231,8 +231,22 @@ export const COLONNES_MIN = 3;
 export const COLONNES_MAX = 10;
 const colonnesValides = (n) => Number.isInteger(n) && n >= COLONNES_MIN && n <= COLONNES_MAX;
 
+/** Size of the tiles on this device, in % of the natural size (100 = default). */
+export const TAILLE_TUILES_MIN = 60;
+export const TAILLE_TUILES_MAX = 200;
+export const TAILLE_TUILES_DEFAUT = 100;
+const tailleTuilesValide = (n) =>
+  Number.isInteger(n) && n >= TAILLE_TUILES_MIN && n <= TAILLE_TUILES_MAX;
+
 /** Settings of this device only, never synced (V2.9). */
-export const CLES_APPAREIL = ["colonnes", "debug", "barreChrome", "affichageAccueil", "navigateur"];
+export const CLES_APPAREIL = [
+  "colonnes",
+  "debug",
+  "barreChrome",
+  "affichageAccueil",
+  "navigateur",
+  "tailleTuiles",
+];
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
 export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
@@ -258,6 +272,8 @@ export function validerReglagesAppareil(r) {
   const fond = validerFond(r?.fond);
   if (fond?.type === "image" && fond.ref) resultat.fond = fond;
   if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
+  if (tailleTuilesValide(r?.tailleTuiles) && r.tailleTuiles !== TAILLE_TUILES_DEFAUT)
+    resultat.tailleTuiles = r.tailleTuiles;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -276,6 +292,12 @@ function modifierAppareil(etat, changements) {
   if ("colonnes" in changements) {
     if (changements.colonnes == null) delete appareil.colonnes;
     else if (colonnesValides(changements.colonnes)) appareil.colonnes = changements.colonnes;
+    else return etat;
+  }
+  if ("tailleTuiles" in changements) {
+    const t = changements.tailleTuiles;
+    if (t == null || t === TAILLE_TUILES_DEFAUT) delete appareil.tailleTuiles;
+    else if (tailleTuilesValide(t)) appareil.tailleTuiles = t;
     else return etat;
   }
   if ("affichageAccueil" in changements) {

@@ -11,6 +11,8 @@ import { chiffrer, dechiffrer, donneesAssociees } from "../chiffrement.js";
 import { EntreeInvalide, valider } from "../validation.js";
 import { ErreurFournisseur } from "./fournisseurs/commun.js";
 import { fournisseursActifs } from "./config.js";
+import { messagePage, RAPPEL_FORMAT, SYSTEME_TAGS } from "./prompts/tags.js";
+import { lireSortieTags } from "./tagsSortie.js";
 
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
@@ -26,6 +28,24 @@ function verifierMessages(v) {
     if (typeof m.texte !== "string" || m.texte.length < 1 || m.texte.length > 20000)
       throw new EntreeInvalide("messages : texte invalide.");
   }
+}
+
+/** Extract of a page (V4.3): same limits as extraitPage.js; a bad shape is refused. */
+function verifierExtrait(v) {
+  if (typeof v !== "object" || Array.isArray(v)) throw new EntreeInvalide("extrait invalide.");
+  const texte = (x, max) => x == null || (typeof x === "string" && x.length <= max);
+  const liste = (x, n, max) =>
+    x == null || (Array.isArray(x) && x.length <= n && x.every((t) => texte(t, max) && t != null));
+  if (
+    !texte(v.titre, 300) ||
+    !texte(v.description, 500) ||
+    !texte(v.texte, 3000) ||
+    !texte(v.langue, 10) ||
+    !texte(v.domaine, 255) ||
+    !liste(v.motsCles, 20, 100) ||
+    !liste(v.titres, 20, 300)
+  )
+    throw new EntreeInvalide("extrait : tailles dépassées.");
 }
 
 /**
@@ -207,7 +227,36 @@ export function creerFonctionsIa(deps) {
     }
   }
 
+  /**
+   * V4.4: tags and description of a site from its page extract. One retry with a reminder of
+   * the format when the answer is not valid, then "reponse-invalide".
+   */
+  async function genererTags(uid, donnees) {
+    const { extrait, url, titre } = valider(donnees, {
+      extrait: { type: "libre", verifier: verifierExtrait },
+      url: { type: "chaine", requis: true, max: 2048, motif: /^https?:\/\/\S+$/i },
+      titre: { type: "chaine", max: 300 },
+    });
+    const messages = [{ role: "user", texte: messagePage({ extrait, url, titre }) }];
+    for (let essai = 0; essai < 2; essai++) {
+      const r = await executerUsage(uid, {
+        usage: "tags",
+        systeme: SYSTEME_TAGS,
+        messages:
+          essai === 0
+            ? messages
+            : [...messages, { role: "assistant", texte: "..." }, { role: "user", texte: RAPPEL_FORMAT }],
+        maxJetons: 1024,
+        formatJson: true,
+      });
+      const sortie = lireSortieTags(r.texte);
+      if (sortie) return { ...sortie, modele: r.modele };
+    }
+    throw new ErreurFournisseur("reponse-invalide");
+  }
+
   return {
+    genererTags,
     enregistrerCle,
     supprimerCle,
     etatCles,

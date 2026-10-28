@@ -283,3 +283,36 @@ describe("executerUsage : fournisseur et modèle imposés par config/ia", () => 
     expect(JSON.stringify(journal.mock.calls)).not.toMatch(/VraieCle|Bonjour/);
   });
 });
+
+describe("genererTags (V4.4)", () => {
+  const entree = { url: "https://a.fr", titre: "A", extrait: { titre: "A", texte: "texte" } };
+  async function pret(reponses) {
+    const m = monter();
+    await m.ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    await m.db.doc("users/u1").set({ reglages: { ia: { actif: true } } });
+    m.faux.envoyer.mockReset();
+    for (const r of reponses)
+      m.faux.envoyer.mockResolvedValueOnce({ texte: r, jetonsEntree: 1, jetonsSortie: 1, modele: "m" });
+    return m;
+  }
+  it("réponse valide", async () => {
+    const m = await pret(['{"tags":["Mail"],"description":"Messagerie."}']);
+    expect(await m.ia.genererTags("u1", entree)).toEqual({ tags: ["mail"], description: "Messagerie.", modele: "m" });
+  });
+  it("invalide puis valide : un seul nouvel essai", async () => {
+    const m = await pret(["n'importe quoi", '{"tags":["a"],"description":"d"}']);
+    expect((await m.ia.genererTags("u1", entree)).tags).toEqual(["a"]);
+    expect(m.faux.envoyer).toHaveBeenCalledTimes(2);
+  });
+  it("deux fois invalide : reponse-invalide", async () => {
+    const m = await pret(["x", "y"]);
+    await expect(m.ia.genererTags("u1", entree)).rejects.toMatchObject({ code: "reponse-invalide" });
+  });
+  it("IA désactivée : aucun appel au fournisseur", async () => {
+    const m = monter();
+    await m.ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    m.faux.envoyer.mockClear();
+    await expect(m.ia.genererTags("u1", entree)).rejects.toMatchObject({ code: "ia-desactivee" });
+    expect(m.faux.envoyer).not.toHaveBeenCalled();
+  });
+});

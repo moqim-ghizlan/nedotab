@@ -11,6 +11,7 @@ const PAR_RAISON = {
   "modele-introuvable": "Le modèle de l'assistant n'est pas disponible avec votre clé.",
   "pas-de-modele": "Aucun fournisseur d'IA n'est disponible pour l'instant.",
   "ia-desactivee": "L'assistant IA est désactivé : activez-le dans les réglages.",
+  "reponse-invalide": "La réponse de l'IA était inutilisable : réessayez.",
   "fournisseur-indisponible": "Le fournisseur ne répond pas : réessayez plus tard.",
   "entree-invalide": "Données refusées : vérifiez ce que vous avez saisi.",
 };

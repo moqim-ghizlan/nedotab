@@ -4,6 +4,18 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ## [Non publié]
 
+### Ajouté (V4.4)
+
+- **Tags et description générés par l'IA à l'ajout d'un site (extension).** Fonction `iaGenererTags`
+  (prompt versionné `PROMPT_TAGS_VERSION = 1`, sortie JSON validée et normalisée comme côté
+  navigateur, un nouvel essai si la réponse est invalide, URL / e-mail / HTML retirés de la
+  description). Le contenu de la page est présenté comme une donnée, pas une instruction.
+  - Service `enrichissement` : 2 générations simultanées au plus, jamais d'écrasement de tags
+    écrits à la main, relance si l'adresse change. Rien pour les sites importés (V4.6) ni dans
+    la PWA (V4.5).
+  - Tuile : point discret pendant la génération. Édition : « Régénérer » actif.
+  - Qualité observée : à noter après les vérifications manuelles du plan.
+
 ### Modifié
 
 - **IA : Gemini seul, un modèle imposé.** Le fournisseur OpenAI, le choix du modèle par usage,

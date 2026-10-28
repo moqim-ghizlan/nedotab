@@ -127,6 +127,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ colonnes: v === "auto" ? null : Number(v) }),
   );
 
+  // Device-only: size of the tiles (% of the natural size).
+  const tailleTuiles = el("input", {
+    type: "range",
+    min: "60",
+    max: "200",
+    step: "10",
+    id: "reglage-taille-tuiles",
+    "aria-label": "Taille des cartes",
+    value: String(store.lire().reglagesAppareil?.tailleTuiles ?? 100),
+  });
+  tailleTuiles.addEventListener("input", () => modifier({ tailleTuiles: Number(tailleTuiles.value) }));
+
   // Device-only (V2.11): the home grid in pages, or one grid that scrolls.
   const affichageAccueil = segments(
     "Affichage de l'accueil",
@@ -476,6 +488,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         el("p", { class: "reglages-libelle", texte: "Fond" }),
         typeFond.groupe,
         ...Object.values(panneaux),
+        libelleAppareil("Taille des cartes"),
+        tailleTuiles,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,

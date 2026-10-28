@@ -16,6 +16,7 @@ const PAR_CODE = {
   "modele-introuvable": ["not-found", "Ce modèle n'est pas disponible avec cette clé."],
   "pas-de-modele": ["failed-precondition", "Aucun modèle choisi pour cet usage."],
   "ia-desactivee": ["failed-precondition", "L'assistant IA est désactivé."],
+  "reponse-invalide": ["internal", "Réponse de l'IA inutilisable."],
   "fournisseur-indisponible": ["unavailable", "Fournisseur indisponible pour l'instant."],
 };
 

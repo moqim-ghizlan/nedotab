@@ -14,6 +14,9 @@ import { petitCote, suivreClavier } from "./ecran.js";
 import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
+import { iaDe } from "../core/ia.js";
+import { creerEnrichissement, installerEnrichissement } from "./services/enrichissement.js";
+import { creerServiceIa } from "./services/ia.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
@@ -317,6 +320,26 @@ export async function demarrerApp(racine) {
   session.sauvegardes = creerSauvegardes({ store, session });
   session.restauration = creerRestauration({ store, session });
   session.donnees = creerDonnees({ store, session });
+  // V4.4: tags and description proposed by the AI after an adding (extension only).
+  {
+    let cles = null;
+    installerEnrichissement(
+      creerEnrichissement({
+        store,
+        plateforme,
+        appeler: async (nom, donnees) => (await chargerFirebase()).appelerIa(nom, donnees),
+        async contexte() {
+          const modeCompte = synchro.lire().mode === "compte";
+          const ia = iaDe(store.lire().reglages);
+          if (modeCompte && ia.actif && navigator.onLine && !cles?.length) {
+            const r = await creerServiceIa().etatCles();
+            if (r.ok) cles = r.valeur;
+          }
+          return { ia, modeCompte, enLigne: navigator.onLine, cles: cles ?? [] };
+        },
+      }),
+    );
+  }
   // Automatic backup: once the account is synced (first server snapshot), at most daily.
   let sauvegardeVerifiee = false;
   synchro.abonner((e) => {
@@ -533,6 +556,8 @@ export async function demarrerApp(racine) {
       delete racineDoc.dataset.colonnes;
       racineDoc.style.removeProperty("--colonnes");
     }
+    racineDoc.style.setProperty("--taille-tuiles", String((r.tailleTuiles ?? 100) / 100));
+    document.dispatchEvent(new Event("nedotab:taille-tuiles"));
     activerJournal(r.debug || modeDebug(store));
     plateforme.garderBarreChrome(!!r.barreChrome);
     ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);

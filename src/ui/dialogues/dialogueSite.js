@@ -10,6 +10,7 @@ import { el } from "../dom.js";
 import { creerEditeurIcone } from "./editerIcone.js";
 import { trouverIconeEtTitre } from "../services/icones.js";
 import { creerIcone } from "../tuile.js";
+import { enrichir } from "../services/enrichissement.js";
 
 function urlsDe(elements, acc = new Set()) {
   for (const e of elements) {
@@ -236,6 +237,7 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     const titreSaisi = champTitre.value.trim();
     const site = creerSite({ titre: titreSaisi || domaine(r.url), url: r.url });
     store.envoyer({ type: A.SITE_AJOUTER, site, parentId });
+    enrichir(site);
     const enCours = recherche;
     enCours?.promesse.then((res) => {
       const changements = { icone: res.icone };
@@ -389,8 +391,11 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
                 type: "button",
                 class: "lien-discret",
                 texte: "Régénérer",
-                disabled: true,
-                title: "Bientôt disponible",
+                title: "Demander une nouvelle proposition",
+                onclick: () => {
+                  enrichir(site, { force: true });
+                  dialogue.close();
+                },
               }),
             )
           : null,
@@ -447,6 +452,9 @@ export function ouvrirEditionSite(store, site, { apresModification } = {}) {
       if (description !== (site.description ?? "")) changements.description = description;
     }
     store.envoyer({ type: A.SITE_MODIFIER, id: site.id, changements });
+    // New address: a new proposal, unless the user keeps their own tags.
+    if (urlChangee && !changements.tags && (!site.tagsManuels || caseIa?.checked))
+      enrichir({ ...site, url: r.url, titre });
     if (urlChangee && editeur.mode() === "auto" && caseNouvelleIcone.checked) {
       trouverIconeEtTitre(r.url).then((res) =>
         store.envoyer({ type: A.SITE_MODIFIER, id: site.id, changements: { icone: res.icone } }),

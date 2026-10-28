@@ -69,6 +69,11 @@ html.accueil-en-pages .pied {
   zoom: var(--echelle-tuile, 1);
 }
 
+/* Scrolling grid: the tile size setting applies directly. */
+.grille:not(.page-grille):not(.grille--dossier) > .case > .tuile {
+  zoom: var(--taille-tuiles, 1);
+}
+
 /* Sample tile used to measure a tile: present for a moment, never seen, never zoomed. */
 .page-grille--temoin {
   position: absolute;

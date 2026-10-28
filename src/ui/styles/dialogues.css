@@ -459,3 +459,30 @@
   color: var(--texte-secondaire);
   font-size: var(--taille-xs);
 }
+
+/* V4.4: discreet dot on a tile while the AI prepares its tags. */
+.tuile--site[data-ia="en_attente"] {
+  position: relative;
+}
+.tuile--site[data-ia="en_attente"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+  animation: ia-pulse 1.2s ease-in-out infinite;
+}
+@keyframes ia-pulse {
+  50% {
+    opacity: 0.15;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tuile--site[data-ia="en_attente"]::after {
+    animation: none;
+  }
+}

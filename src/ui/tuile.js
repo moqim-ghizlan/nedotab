@@ -140,6 +140,7 @@ export function creerTuile(element) {
     "aria-label": element.titre,
     draggable: "false",
   });
+  if (element.ia?.etat === "en_attente") lien.dataset.ia = "en_attente";
   cibler(lien);
   lien.append(
     creerIcone(element),

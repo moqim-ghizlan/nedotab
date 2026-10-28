@@ -101,3 +101,4 @@ export const iaEnregistrerCle = appelIa(fonctionsIa.enregistrerCle);
 export const iaSupprimerCle = appelIa(fonctionsIa.supprimerCle);
 export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
+export const iaGenererTags = appelIa(fonctionsIa.genererTags);

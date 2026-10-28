@@ -50,8 +50,9 @@ export function creerMesure(fenetre, { grille }) {
       px(cs.paddingBottom) -
       px(cs.rowGap) * (lignes - 1);
     temoin.remove();
+    const taille = parseFloat(getComputedStyle(fenetre).getPropertyValue("--taille-tuiles")) || 1;
     const echelle = Math.min(
-      1,
+      taille,
       largeur / colonnes / largeurTuile,
       hauteur / lignes / (case_.height || 100),
     );
@@ -64,10 +65,13 @@ export function creerMesure(fenetre, { grille }) {
     minuteur = setTimeout(appliquer, DEBOUNCE_MS);
   });
   observateur.observe(fenetre);
+  // The tile size setting changed.
+  document.addEventListener("nedotab:taille-tuiles", appliquer);
 
   return {
     appliquer,
     detruire: () => {
+      document.removeEventListener("nedotab:taille-tuiles", appliquer);
       clearTimeout(minuteur);
       observateur.disconnect();
     },
