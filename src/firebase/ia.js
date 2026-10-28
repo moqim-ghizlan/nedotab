@@ -4,14 +4,7 @@ import { obtenirApp } from "./app.js";
 import { obtenirFonctions } from "./fonctions.js";
 
 /** The AI functions the browser may call (V4.0). Keys never come back from them. */
-export const FONCTIONS_IA = [
-  "iaEnregistrerCle",
-  "iaSupprimerCle",
-  "iaEtatCles",
-  "iaTester",
-  "iaListerModeles",
-  "iaVerifierModeles",
-];
+export const FONCTIONS_IA = ["iaEnregistrerCle", "iaSupprimerCle", "iaEtatCles", "iaTester"];
 
 /**
  * Calls an AI function of the server and returns its answer. Errors keep their callable
@@ -23,7 +16,7 @@ export async function appelerIa(nom, donnees = {}) {
   return r.data;
 }
 
-/** Reads config/ia (providers, suggested models); the owner writes it, users only read it. */
+/** Reads config/ia (providers); the owner writes it, users only read it. */
 export async function lireConfigIa() {
   const instantane = await getDoc(doc(obtenirApp().firestore, "config", "ia"));
   return instantane.exists() ? instantane.data() : null;

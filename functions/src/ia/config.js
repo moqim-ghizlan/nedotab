@@ -1,5 +1,5 @@
 /**
- * config/ia (V4.0): providers offered, suggested models, daily quota. Written by the owner
+ * config/ia (V4.0): providers offered, the one model imposed, daily quota. Written by the owner
  * (console or functions/scripts/initialiser-config-ia.js), read by the functions and kept
  * 5 minutes in the instance. Model ids are never written in the code: they change often.
  */
@@ -7,16 +7,14 @@ import { QUOTA_PAR_DEFAUT } from "../quota.js";
 
 export const DUREE_CACHE_MS = 5 * 60 * 1000;
 
-/** Used until config/ia exists: OpenAI and Gemini (the providers chosen), 300 calls a day. */
+/**
+ * Used until config/ia exists: Gemini only, one model for everybody (`modele`, the owner can
+ * change it in config/ia without a deploy), 300 calls a day.
+ */
 export const CONFIG_PAR_DEFAUT = {
   quotaQuotidien: QUOTA_PAR_DEFAUT,
+  modele: "gemini-3.1-flash-lite",
   fournisseurs: [
-    {
-      id: "openai",
-      nom: "OpenAI (GPT)",
-      lienCle: "https://platform.openai.com/api-keys",
-      actif: true,
-    },
     {
       id: "gemini",
       nom: "Google (Gemini)",
@@ -24,7 +22,6 @@ export const CONFIG_PAR_DEFAUT = {
       actif: true,
     },
   ],
-  modelesSuggeres: [],
 };
 
 /** The config with every field present and of the right type. */
@@ -34,8 +31,11 @@ export function normaliserConfig(brute) {
     Number.isInteger(c.quotaQuotidien) && c.quotaQuotidien > 0 ? c.quotaQuotidien : null;
   return {
     quotaQuotidien: quota ?? CONFIG_PAR_DEFAUT.quotaQuotidien,
+    modele:
+      typeof c.modele === "string" && /^[\w.:/-]{1,100}$/.test(c.modele)
+        ? c.modele
+        : CONFIG_PAR_DEFAUT.modele,
     fournisseurs: Array.isArray(c.fournisseurs) ? c.fournisseurs : CONFIG_PAR_DEFAUT.fournisseurs,
-    modelesSuggeres: Array.isArray(c.modelesSuggeres) ? c.modelesSuggeres : [],
   };
 }
 

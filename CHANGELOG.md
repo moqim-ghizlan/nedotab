@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [Non publié]
+
+### Modifié
+
+- **IA : Gemini seul, un modèle imposé.** Le fournisseur OpenAI, le choix du modèle par usage,
+  les modèles personnalisés et la vérification des modèles sont retirés : cette vérification
+  envoyait jusqu'à 10 requêtes de génération (1 024 jetons de sortie chacune) et coûtait cher.
+  Le modèle vient de `config/ia.modele` ; le test de clé n'utilise plus que 256 jetons.
+- Fonctions `iaListerModeles` et `iaVerifierModeles` supprimées.
+
 ## [4.3.0] - 2026-10-27
 
 ### Ajouté

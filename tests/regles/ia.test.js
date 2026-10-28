@@ -55,7 +55,7 @@ describe("fonctions IA (émulateurs)", () => {
 
   it("tester sans clé enregistrée : la raison est donnée", async () => {
     await connecter("ia-sans-cle");
-    const e = await erreur(fb.appelerIa("iaTester", { fournisseur: "openai", modele: "modele-x" }));
+    const e = await erreur(fb.appelerIa("iaTester", { fournisseur: "gemini" }));
     expect(e?.code).toBe("functions/failed-precondition");
     expect(e?.details?.code).toBe("cle-absente");
   });

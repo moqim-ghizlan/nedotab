@@ -13,8 +13,7 @@ import { ErreurFournisseur } from "./fournisseurs/commun.js";
 import { fournisseursActifs } from "./config.js";
 
 export const MESSAGE_TEST = "Réponds uniquement par OK";
-// Room for the reasoning of some models before the two letters of the answer.
-export const JETONS_TEST = 1024;
+export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
 
 const USAGES = ["tags", "recherche", "chat"];
 
@@ -28,8 +27,6 @@ function verifierMessages(v) {
       throw new EntreeInvalide("messages : texte invalide.");
   }
 }
-
-const MODELE = { type: "chaine", requis: true, min: 1, max: 100, motif: /^[\w.:/-]+$/ };
 
 /**
  * @param {{
@@ -108,95 +105,13 @@ export function creerFonctionsIa(deps) {
     }));
   }
 
-  /**
-   * The models the user's key can use, asked to the provider itself (free: no quota). The
-   * list is kept short (200) and never contains anything but identifiers and names.
-   */
-  async function listerModeles(uid, donnees) {
+  /** One minimal call ("OK") with the imposed model, counted in the quota. */
+  async function tester(uid, donnees) {
     const c = await config();
     const { fournisseur } = valider(donnees, {
       fournisseur: { type: "chaine", requis: true, valeurs: () => fournisseursActifs(c) },
     });
-    const a = adaptateur(fournisseur);
-    const entree = (await lireCles(uid))[fournisseur];
-    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
-    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
-    const debut = horloge();
-    try {
-      const modeles = (await a.listerModeles({ cle })).slice(0, 200);
-      journal({
-        action: "listerModeles",
-        fournisseur,
-        dureeMs: horloge() - debut,
-        nombre: modeles.length,
-      });
-      return modeles;
-    } catch (e) {
-      journal({ action: "listerModeles", fournisseur, dureeMs: horloge() - debut, code: e?.code });
-      throw e;
-    }
-  }
-
-  /**
-   * Which of these models answer with this key? One minimal call each ("OK"), at most 10 at
-   * a time, counted as ONE unit in the quota. A model the provider does not know (or no
-   * longer gives to this key) comes back as unavailable; any other failure as unknown.
-   * @returns {Promise<Array<{ id: string, ok: boolean|null }>>}
-   */
-  async function verifierModeles(uid, donnees) {
-    const c = await config();
-    const { fournisseur, modeles } = valider(donnees, {
-      fournisseur: { type: "chaine", requis: true, valeurs: () => fournisseursActifs(c) },
-      modeles: {
-        type: "libre",
-        requis: true,
-        verifier: (v) => {
-          if (!Array.isArray(v) || v.length < 1 || v.length > 10)
-            throw new EntreeInvalide("modeles : 1 à 10 modèles attendus.");
-          for (const m of v)
-            if (typeof m !== "string" || !MODELE.motif.test(m) || m.length > MODELE.max)
-              throw new EntreeInvalide("modeles : identifiant invalide.");
-        },
-      },
-    });
-    const a = adaptateur(fournisseur);
-    const entree = (await lireCles(uid))[fournisseur];
-    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
-    await consommer(uid, { n: 1, limite: c.quotaQuotidien });
-    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
-    const debut = horloge();
-    const resultats = await Promise.all(
-      modeles.map(async (id) => {
-        try {
-          await a.envoyer({
-            cle,
-            modele: id,
-            messages: [{ role: "user", texte: MESSAGE_TEST }],
-            maxJetons: JETONS_TEST,
-          });
-          return { id, ok: true };
-        } catch (e) {
-          return { id, ok: e?.code === "modele-introuvable" ? false : null };
-        }
-      }),
-    );
-    journal({
-      action: "verifierModeles",
-      fournisseur,
-      dureeMs: horloge() - debut,
-      nombre: modeles.length,
-      disponibles: resultats.filter((r) => r.ok).length,
-    });
-    return resultats;
-  }
-
-  /** One minimal call ("OK"), counted in the quota. */
-  async function tester(uid, donnees) {
-    const c = await config();
-    const { fournisseur, modele } = valider(donnees, {
-      fournisseur: { type: "chaine", requis: true, valeurs: () => fournisseursActifs(c) },
-      modele: MODELE,
-    });
+    const modele = c.modele;
     const a = adaptateur(fournisseur);
     const cles = await lireCles(uid);
     const entree = cles[fournisseur];
@@ -236,20 +151,17 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
-   * The provider and the model of a use (tags, search, chat) are read HERE, from the user's
-   * settings (users/{uid}.reglages.ia), never from the request: the browser cannot ask for a
-   * provider it has no key for, and the screen and the server cannot disagree.
+   * The provider and the model of a use are imposed by config/ia (one model for everybody),
+   * never read from the user's settings nor from the request. Only the switch is the user's.
    */
-  async function choixDeLUsage(uid, usage) {
+  async function choixDeLUsage(uid) {
     const snap = await db.doc(`users/${uid}`).get();
-    const ia = snap.exists ? snap.data()?.reglages?.ia : null;
-    if (ia?.actif !== true) throw new ErreurFournisseur("ia-desactivee");
-    const choix = ia.usages?.[usage];
-    if (!choix?.fournisseur || !choix?.modele) throw new ErreurFournisseur("pas-de-modele");
+    if ((snap.exists ? snap.data()?.reglages?.ia : null)?.actif !== true)
+      throw new ErreurFournisseur("ia-desactivee");
     const c = await config();
-    if (!fournisseursActifs(c).includes(choix.fournisseur) || !fournisseurs[choix.fournisseur])
-      throw new ErreurFournisseur("pas-de-modele");
-    return { fournisseur: choix.fournisseur, modele: choix.modele };
+    const fournisseur = fournisseursActifs(c).find((id) => fournisseurs[id]);
+    if (!fournisseur) throw new ErreurFournisseur("pas-de-modele");
+    return { fournisseur, modele: c.modele };
   }
 
   /**
@@ -265,7 +177,7 @@ export function creerFonctionsIa(deps) {
       maxJetons: { type: "entier", min: 1, max: 8192 },
       formatJson: { type: "booleen" },
     });
-    const { fournisseur, modele } = await choixDeLUsage(uid, usage);
+    const { fournisseur, modele } = await choixDeLUsage(uid);
     const entree = (await lireCles(uid))[fournisseur];
     if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
     const c = await config();
@@ -300,8 +212,6 @@ export function creerFonctionsIa(deps) {
     supprimerCle,
     etatCles,
     tester,
-    listerModeles,
-    verifierModeles,
     executerUsage,
     choixDeLUsage,
   };

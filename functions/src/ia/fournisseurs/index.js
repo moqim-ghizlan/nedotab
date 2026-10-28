@@ -3,6 +3,5 @@
  * config/ia (`fournisseurs[].actif`), not here.
  */
 import * as gemini from "./gemini.js";
-import * as openai from "./openai.js";
 
-export const FOURNISSEURS = { openai, gemini };
+export const FOURNISSEURS = { gemini };

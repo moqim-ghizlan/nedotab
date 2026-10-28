@@ -31,7 +31,7 @@ function monter({ valide = true, reponse = "OK", limite = 300, erreurEnvoi = nul
   const ia = creerFonctionsIa({
     db,
     secret: () => secret,
-    fournisseurs: { openai: faux, gemini: faux },
+    fournisseurs: { gemini: faux },
     config: async () => ({ ...CONFIG_PAR_DEFAUT, quotaQuotidien: limite }),
     consommer: (uid, o) => consommer(db, uid, o),
     journal,
@@ -43,14 +43,14 @@ function monter({ valide = true, reponse = "OK", limite = 300, erreurEnvoi = nul
 describe("iaEnregistrerCle", () => {
   it("clé valide : enregistrée chiffrée, jamais en clair", async () => {
     const { db, ia } = monter();
-    expect(await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE })).toEqual({
-      fournisseur: "openai",
+    expect(await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE })).toEqual({
+      fournisseur: "gemini",
       fin: "WXYZ",
       valide: true,
     });
     const doc = db.lire("users/u1/prive/ia");
-    expect(doc.cles.openai.chiffre.v).toBe(1);
-    expect(doc.cles.openai.fin).toBe("WXYZ");
+    expect(doc.cles.gemini.chiffre.v).toBe(1);
+    expect(doc.cles.gemini.fin).toBe("WXYZ");
     expect(db.brut()).not.toContain(CLE);
     expect(db.brut()).not.toContain("VraieCleSecrete");
   });
@@ -58,7 +58,7 @@ describe("iaEnregistrerCle", () => {
   it("clé refusée par le fournisseur : rien d'enregistré", async () => {
     const { db, ia } = monter({ valide: false });
     await expect(
-      ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE }),
+      ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE }),
     ).rejects.toMatchObject({
       code: "cle-invalide",
     });
@@ -74,11 +74,11 @@ describe("iaEnregistrerCle", () => {
   });
 
   it.each([
-    [{ fournisseur: "openai" }, "clé manquante"],
-    [{ fournisseur: "openai", cle: "sk-court" }, "clé trop courte"],
-    [{ fournisseur: "openai", cle: "sk-avec espace dans la clé 123" }, "espace"],
-    [{ fournisseur: "openai", cle: 1234567890 }, "pas une chaîne"],
-    [{ fournisseur: "openai", cle: CLE, autre: 1 }, "paramètre en trop"],
+    [{ fournisseur: "gemini" }, "clé manquante"],
+    [{ fournisseur: "gemini", cle: "sk-court" }, "clé trop courte"],
+    [{ fournisseur: "gemini", cle: "sk-avec espace dans la clé 123" }, "espace"],
+    [{ fournisseur: "gemini", cle: 1234567890 }, "pas une chaîne"],
+    [{ fournisseur: "gemini", cle: CLE, autre: 1 }, "paramètre en trop"],
     [{ fournisseur: "inconnu", cle: CLE }, "fournisseur inconnu"],
   ])("paramètres invalides (%s) : refusés", async (donnees) => {
     const { ia } = monter();
@@ -88,7 +88,7 @@ describe("iaEnregistrerCle", () => {
   it("requête de plus de 200 Ko : refusée", async () => {
     const { ia } = monter();
     await expect(
-      ia.enregistrerCle("u1", { fournisseur: "openai", cle: "x".repeat(210 * 1024) }),
+      ia.enregistrerCle("u1", { fournisseur: "gemini", cle: "x".repeat(210 * 1024) }),
     ).rejects.toThrow(/volumineuse/);
   });
 });
@@ -96,25 +96,25 @@ describe("iaEnregistrerCle", () => {
 describe("iaEtatCles et iaSupprimerCle", () => {
   it("l'état ne renvoie jamais la clé ni sa forme chiffrée", async () => {
     const { ia } = monter();
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     const etat = await ia.etatCles("u1", {});
-    expect(etat).toEqual([{ fournisseur: "openai", fin: "WXYZ", ajouteLe: 1000, valide: true }]);
+    expect(etat).toEqual([{ fournisseur: "gemini", fin: "WXYZ", ajouteLe: 1000, valide: true }]);
     expect(JSON.stringify(etat)).not.toContain("chiffre");
     expect(JSON.stringify(etat)).not.toContain("VraieCle");
   });
 
   it("supprimer : l'état est vide", async () => {
     const { ia } = monter();
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    await ia.supprimerCle("u1", { fournisseur: "openai" });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    await ia.supprimerCle("u1", { fournisseur: "gemini" });
     expect(await ia.etatCles("u1", {})).toEqual([]);
   });
 
   it("les clés d'un utilisateur ne sont pas celles d'un autre", async () => {
     const { ia } = monter();
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     expect(await ia.etatCles("u2", {})).toEqual([]);
-    await expect(ia.tester("u2", { fournisseur: "openai", modele: "m" })).rejects.toMatchObject({
+    await expect(ia.tester("u2", { fournisseur: "gemini" })).rejects.toMatchObject({
       code: "cle-absente",
     });
   });
@@ -123,13 +123,13 @@ describe("iaEtatCles et iaSupprimerCle", () => {
 describe("iaTester", () => {
   it("appel minimal avec la clé déchiffrée, compté dans le quota", async () => {
     const { db, ia, faux } = monter();
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    const r = await ia.tester("u1", { fournisseur: "openai", modele: "modele-x" });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    const r = await ia.tester("u1", { fournisseur: "gemini" });
     expect(r).toEqual({ ok: true, latenceMs: 0, modele: "modele-x" });
     expect(faux.envoyer).toHaveBeenCalledWith(
       expect.objectContaining({
         cle: CLE,
-        modele: "modele-x",
+        modele: CONFIG_PAR_DEFAUT.modele,
         messages: [{ role: "user", texte: MESSAGE_TEST }],
       }),
     );
@@ -138,34 +138,25 @@ describe("iaTester", () => {
 
   it("quota atteint : refusé avant l'appel au fournisseur", async () => {
     const { ia, faux } = monter({ limite: 1 });
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    await ia.tester("u1", { fournisseur: "openai", modele: "m" });
-    await expect(ia.tester("u1", { fournisseur: "openai", modele: "m" })).rejects.toBeInstanceOf(
-      QuotaDepasse,
-    );
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    await ia.tester("u1", { fournisseur: "gemini" });
+    await expect(ia.tester("u1", { fournisseur: "gemini" })).rejects.toBeInstanceOf(QuotaDepasse);
     expect(faux.envoyer).toHaveBeenCalledTimes(1);
   });
 
   it("clé devenue invalide : marquée invalide", async () => {
     const { db, ia } = monter({ erreurEnvoi: "cle-invalide" });
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    await expect(ia.tester("u1", { fournisseur: "openai", modele: "m" })).rejects.toMatchObject({
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    await expect(ia.tester("u1", { fournisseur: "gemini" })).rejects.toMatchObject({
       code: "cle-invalide",
     });
-    expect(db.lire("users/u1/prive/ia").cles.openai.valide).toBe(false);
-  });
-
-  it("nom de modèle invalide : refusé", async () => {
-    const { ia } = monter();
-    await expect(
-      ia.tester("u1", { fournisseur: "openai", modele: "modèle avec espaces" }),
-    ).rejects.toBeInstanceOf(EntreeInvalide);
+    expect(db.lire("users/u1/prive/ia").cles.gemini.valide).toBe(false);
   });
 
   it("le journal ne contient jamais la clé ni le message", async () => {
     const { ia, journal } = monter();
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    await ia.tester("u1", { fournisseur: "openai", modele: "m" });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
+    await ia.tester("u1", { fournisseur: "gemini" });
     const tout = JSON.stringify(journal.mock.calls);
     expect(journal).toHaveBeenCalled();
     expect(tout).not.toContain("VraieCle");
@@ -191,13 +182,15 @@ describe("erreurs vers le navigateur", () => {
 });
 
 describe("config/ia", () => {
-  it("valeurs par défaut : OpenAI et Gemini actifs, 300 appels", () => {
+  it("valeurs par défaut : Gemini seul, un modèle imposé, 300 appels", () => {
     const c = normaliserConfig(null);
     expect(c.quotaQuotidien).toBe(300);
-    expect(c.fournisseurs.map((f) => [f.id, f.actif])).toEqual([
-      ["openai", true],
-      ["gemini", true],
-    ]);
+    expect(c.modele).toBe("gemini-3.1-flash-lite");
+    expect(c.fournisseurs.map((f) => [f.id, f.actif])).toEqual([["gemini", true]]);
+  });
+  it("modèle invalide dans config/ia : le modèle par défaut", () => {
+    expect(normaliserConfig({ modele: "avec espace" }).modele).toBe(CONFIG_PAR_DEFAUT.modele);
+    expect(normaliserConfig({ modele: "gemini-x" }).modele).toBe("gemini-x");
   });
   it("lue une fois puis gardée 5 minutes", async () => {
     let t = 0;
@@ -213,7 +206,7 @@ describe("config/ia", () => {
   });
 });
 
-describe("executerUsage : le fournisseur vient des réglages, pas de la requête", () => {
+describe("executerUsage : fournisseur et modèle imposés par config/ia", () => {
   const messages = [{ role: "user", texte: "Bonjour" }];
 
   function avecReglages(ia) {
@@ -221,25 +214,25 @@ describe("executerUsage : le fournisseur vient des réglages, pas de la requête
     m.db.doc("users/u1").set({ reglages: ia ? { ia } : {} });
     return m;
   }
-  const reglagesOpenai = {
-    actif: true,
-    usages: { tags: { fournisseur: "openai", modele: "gpt-choisi" }, recherche: null, chat: null },
-  };
+  const reglagesActifs = { actif: true };
 
-  it("utilise le fournisseur et le modèle des réglages de l'utilisateur", async () => {
-    const { ia, faux, db } = avecReglages(reglagesOpenai);
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+  it("utilise Gemini et le modèle imposé, quels que soient les réglages de l'utilisateur", async () => {
+    const { ia, faux, db } = avecReglages({
+      actif: true,
+      usages: { tags: { fournisseur: "gemini", modele: "gpt-choisi" } },
+    });
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     const r = await ia.executerUsage("u1", { usage: "tags", messages });
     expect(r).toEqual({ texte: "OK", modele: "modele-x" });
     expect(faux.envoyer).toHaveBeenCalledWith(
-      expect.objectContaining({ cle: CLE, modele: "gpt-choisi", messages }),
+      expect.objectContaining({ cle: CLE, modele: CONFIG_PAR_DEFAUT.modele, messages }),
     );
     expect(db.lire("users/u1/prive/quota").appels).toBe(1);
   });
 
   it("un fournisseur ou un modèle envoyé par le navigateur est refusé, rien n'est appelé", async () => {
-    const { ia, faux } = avecReglages(reglagesOpenai);
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const { ia, faux } = avecReglages(reglagesActifs);
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     for (const triche of [{ fournisseur: "gemini" }, { modele: "autre" }]) {
       await expect(
         ia.executerUsage("u1", { usage: "tags", messages, ...triche }),
@@ -248,25 +241,20 @@ describe("executerUsage : le fournisseur vient des réglages, pas de la requête
     expect(faux.envoyer).not.toHaveBeenCalled();
   });
 
-  it("IA désactivée, usage sans modèle, fournisseur sans clé : refusés avant tout appel", async () => {
-    const m1 = avecReglages({ ...reglagesOpenai, actif: false });
+  it("IA désactivée, ou sans clé : refusés avant tout appel", async () => {
+    const m1 = avecReglages({ actif: false });
     await expect(m1.ia.executerUsage("u1", { usage: "tags", messages })).rejects.toMatchObject({
       code: "ia-desactivee",
     });
-    const m2 = avecReglages(reglagesOpenai);
-    await m2.ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    await expect(m2.ia.executerUsage("u1", { usage: "chat", messages })).rejects.toMatchObject({
-      code: "pas-de-modele",
-    });
-    const m3 = avecReglages(reglagesOpenai);
-    await expect(m3.ia.executerUsage("u1", { usage: "tags", messages })).rejects.toMatchObject({
+    const m2 = avecReglages(reglagesActifs);
+    await expect(m2.ia.executerUsage("u1", { usage: "tags", messages })).rejects.toMatchObject({
       code: "cle-absente",
     });
-    for (const m of [m1, m2, m3]) expect(m.faux.envoyer).not.toHaveBeenCalled();
+    for (const m of [m1, m2]) expect(m.faux.envoyer).not.toHaveBeenCalled();
   });
 
   it("usage et messages invalides : refusés", async () => {
-    const { ia } = avecReglages(reglagesOpenai);
+    const { ia } = avecReglages(reglagesActifs);
     for (const d of [
       { usage: "autre", messages },
       { usage: "tags" },
@@ -279,8 +267,8 @@ describe("executerUsage : le fournisseur vient des réglages, pas de la requête
 
   it("modèle retiré chez le fournisseur : code modele-introuvable, message clair", async () => {
     const m = monter({ erreurEnvoi: "modele-introuvable" });
-    m.db.doc("users/u1").set({ reglages: { ia: reglagesOpenai } });
-    await m.ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    m.db.doc("users/u1").set({ reglages: { ia: reglagesActifs } });
+    await m.ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     const e = await m.ia.executerUsage("u1", { usage: "tags", messages }).catch((x) => x);
     expect(versErreurAppel(e)).toMatchObject({
       code: "not-found",
@@ -289,80 +277,9 @@ describe("executerUsage : le fournisseur vient des réglages, pas de la requête
   });
 
   it("le journal n'a ni la clé ni le texte des messages", async () => {
-    const { ia, journal } = avecReglages(reglagesOpenai);
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
+    const { ia, journal } = avecReglages(reglagesActifs);
+    await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     await ia.executerUsage("u1", { usage: "tags", messages });
     expect(JSON.stringify(journal.mock.calls)).not.toMatch(/VraieCle|Bonjour/);
-  });
-});
-
-describe("iaListerModeles", () => {
-  it("renvoie la liste du fournisseur, sans toucher au quota, avec la clé déchiffrée", async () => {
-    const { db, ia, faux } = monter();
-    faux.listerModeles = vi.fn(async ({ cle }) => (cle === CLE ? [{ id: "m1", nom: "M1" }] : []));
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    expect(await ia.listerModeles("u1", { fournisseur: "openai" })).toEqual([
-      { id: "m1", nom: "M1" },
-    ]);
-    expect(db.lire("users/u1/prive/quota")).toBeUndefined();
-  });
-  it("sans clé : refusé ; fournisseur inconnu : refusé ; 200 modèles au plus", async () => {
-    const { ia, faux } = monter();
-    await expect(ia.listerModeles("u1", { fournisseur: "openai" })).rejects.toMatchObject({
-      code: "cle-absente",
-    });
-    await expect(ia.listerModeles("u1", { fournisseur: "mistral" })).rejects.toBeInstanceOf(
-      EntreeInvalide,
-    );
-    faux.listerModeles = vi.fn(async () =>
-      Array.from({ length: 500 }, (_, i) => ({ id: `m${i}`, nom: `M${i}` })),
-    );
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    expect(await ia.listerModeles("u1", { fournisseur: "openai" })).toHaveLength(200);
-  });
-});
-
-describe("iaVerifierModeles", () => {
-  it("dit quels modèles répondent avec la clé : disponible, refusé, incertain", async () => {
-    const { db, ia, faux } = monter();
-    faux.envoyer = vi.fn(async ({ modele }) => {
-      if (modele === "bon") return { texte: "OK", jetonsEntree: 1, jetonsSortie: 1, modele };
-      if (modele === "retire") throw new ErreurFournisseur("modele-introuvable");
-      throw new ErreurFournisseur("limite-fournisseur");
-    });
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    const r = await ia.verifierModeles("u1", {
-      fournisseur: "openai",
-      modeles: ["bon", "retire", "trop-de-demandes"],
-    });
-    expect(r).toEqual([
-      { id: "bon", ok: true },
-      { id: "retire", ok: false },
-      { id: "trop-de-demandes", ok: null },
-    ]);
-    // Une seule unité de quota pour tout le lot.
-    expect(db.lire("users/u1/prive/quota").appels).toBe(1);
-  });
-
-  it("refuse : sans clé, plus de 10 modèles, identifiant invalide ; quota atteint", async () => {
-    const { ia } = monter({ limite: 1 });
-    await expect(
-      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] }),
-    ).rejects.toMatchObject({ code: "cle-absente" });
-    await ia.enregistrerCle("u1", { fournisseur: "openai", cle: CLE });
-    const onze = Array.from({ length: 11 }, (_, i) => `m${i}`);
-    await expect(
-      ia.verifierModeles("u1", { fournisseur: "openai", modeles: onze }),
-    ).rejects.toBeInstanceOf(EntreeInvalide);
-    await expect(
-      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["mauvais id"] }),
-    ).rejects.toBeInstanceOf(EntreeInvalide);
-    await expect(
-      ia.verifierModeles("u1", { fournisseur: "openai", modeles: [] }),
-    ).rejects.toBeInstanceOf(EntreeInvalide);
-    await ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] });
-    await expect(
-      ia.verifierModeles("u1", { fournisseur: "openai", modeles: ["a"] }),
-    ).rejects.toBeInstanceOf(QuotaDepasse);
   });
 });

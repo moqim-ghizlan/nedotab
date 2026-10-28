@@ -1,7 +1,7 @@
 /**
  * Google Gemini adapter. Official API (ai.google.dev, checked on the docs):
  * POST https://generativelanguage.googleapis.com/v1beta/models/{modele}:generateContent and
- * GET https://generativelanguage.googleapis.com/v1beta/models, the key in the
+ * GET https://generativelanguage.googleapis.com/v1beta/models (key check), the key in the
  * "x-goog-api-key" header (never in the URL, which could end up in a log). Roles are "user"
  * and "model"; the system prompt is `systemInstruction`; JSON mode is
  * `generationConfig.responseMimeType`.
@@ -71,35 +71,4 @@ export async function verifierCle({ cle }, options) {
       return { valide: false, raison: e.code };
     throw e;
   }
-}
-
-/**
- * Models the key can use to write text (GET /v1beta/models: those that support
- * generateContent), newest first. The list comes from Google at the time of the
- * call: nothing about models is written in the code.
- * @returns {Promise<Array<{ id: string, nom: string }>>}
- */
-/** Newest first: "gemini-3.1-…" before "gemini-2.5-…" (numbers compared as numbers). */
-const plusRecentsDabord = (a, b) =>
-  b.id.localeCompare(a.id, "en", { numeric: true, sensitivity: "base" });
-
-// Models that answer with pictures, speech or live streams, or that are not for chatting.
-const PAS_TEXTE =
-  /(image|tts|audio|live|embed|robotics|computer-use|imagen|veo|native|learnlm|aqa|vision|banana)/i;
-
-export async function listerModeles({ cle }, options) {
-  const r = await appelJson(
-    `${BASE}/models?pageSize=1000`,
-    { method: "GET", headers: entetes(cle) },
-    options,
-  );
-  return (Array.isArray(r?.models) ? r.models : [])
-    .filter((m) => m?.supportedGenerationMethods?.includes("generateContent"))
-    .filter((m) => !PAS_TEXTE.test(String(m.name ?? "")))
-    .map((m) => ({
-      id: nomModele(String(m.name ?? "")),
-      nom: m.displayName || nomModele(String(m.name)),
-    }))
-    .filter((m) => m.id)
-    .sort(plusRecentsDabord);
 }

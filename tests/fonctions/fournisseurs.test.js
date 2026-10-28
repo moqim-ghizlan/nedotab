@@ -4,7 +4,6 @@ import {
   codeErreur,
   ErreurFournisseur,
 } from "../../functions/src/ia/fournisseurs/commun.js";
-import * as openai from "../../functions/src/ia/fournisseurs/openai.js";
 import * as gemini from "../../functions/src/ia/fournisseurs/gemini.js";
 
 const reponse = (status, corps) => ({
@@ -82,99 +81,36 @@ describe("appelJson", () => {
   });
 });
 
-describe.each([
-  ["OpenAI", openai, { choices: [{ message: { content: "OK" } }], usage: {} }],
-  ["Gemini", gemini, { candidates: [{ content: { parts: [{ text: "OK" }] } }] }],
-])("adaptateur %s : réponses simulées", (_nom, adaptateur, succes) => {
-  const cle = "AIzaSyExempleDeCleTresLongue1234567890";
-  const demande = (f) =>
-    adaptateur.envoyer(
-      { cle, modele: "m", messages: [{ role: "user", texte: "a" }] },
-      { fetch: f },
-    );
+describe.each([["Gemini", gemini, { candidates: [{ content: { parts: [{ text: "OK" }] } }] }]])(
+  "adaptateur %s : réponses simulées",
+  (_nom, adaptateur, succes) => {
+    const cle = "AIzaSyExempleDeCleTresLongue1234567890";
+    const demande = (f) =>
+      adaptateur.envoyer(
+        { cle, modele: "m", messages: [{ role: "user", texte: "a" }] },
+        { fetch: f },
+      );
 
-  it("réponse réussie", async () => {
-    const f = vi.fn().mockResolvedValue(reponse(200, succes));
-    expect((await demande(f)).texte).toBe("OK");
-  });
-  it.each([
-    [401, "cle-invalide"],
-    [429, "limite-fournisseur"],
-    [404, "modele-introuvable"],
-  ])("%i → %s, sans réessai", async (statut, code) => {
-    const f = vi.fn().mockResolvedValue(reponse(statut, {}));
-    await expect(demande(f)).rejects.toMatchObject({ code });
-    expect(f).toHaveBeenCalledTimes(1);
-  });
-  it("500 → fournisseur indisponible, après un seul réessai", async () => {
-    const f = vi.fn().mockResolvedValue(reponse(500, {}));
-    await expect(demande(f)).rejects.toMatchObject({ code: "fournisseur-indisponible" });
-    expect(f).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("adaptateur OpenAI", () => {
-  it("envoie une requête Chat Completions conforme et lit la réponse", async () => {
-    const f = vi.fn().mockResolvedValue(
-      reponse(200, {
-        model: "modele-test-2026",
-        choices: [{ message: { role: "assistant", content: "OK" } }],
-        usage: { prompt_tokens: 12, completion_tokens: 1 },
-      }),
-    );
-    const r = await openai.envoyer(
-      {
-        cle: "sk-abcdefghijklmnopqrstuvwx",
-        modele: "modele-test",
-        systeme: "Tu es concis.",
-        messages: [{ role: "user", texte: "Bonjour" }],
-        maxJetons: 50,
-        formatJson: true,
-      },
-      { fetch: f },
-    );
-    expect(r).toEqual({
-      texte: "OK",
-      jetonsEntree: 12,
-      jetonsSortie: 1,
-      modele: "modele-test-2026",
+    it("réponse réussie", async () => {
+      const f = vi.fn().mockResolvedValue(reponse(200, succes));
+      expect((await demande(f)).texte).toBe("OK");
     });
-    const [url, init] = f.mock.calls[0];
-    expect(url).toBe("https://api.openai.com/v1/chat/completions");
-    expect(init.method).toBe("POST");
-    expect(init.headers.authorization).toBe("Bearer sk-abcdefghijklmnopqrstuvwx");
-    const corps = JSON.parse(init.body);
-    expect(corps).toEqual({
-      model: "modele-test",
-      messages: [
-        { role: "system", content: "Tu es concis." },
-        { role: "user", content: "Bonjour" },
-      ],
-      max_completion_tokens: 50,
-      response_format: { type: "json_object" },
+    it.each([
+      [401, "cle-invalide"],
+      [429, "limite-fournisseur"],
+      [404, "modele-introuvable"],
+    ])("%i → %s, sans réessai", async (statut, code) => {
+      const f = vi.fn().mockResolvedValue(reponse(statut, {}));
+      await expect(demande(f)).rejects.toMatchObject({ code });
+      expect(f).toHaveBeenCalledTimes(1);
     });
-    expect(corps).not.toHaveProperty("max_tokens");
-    expect(corps).not.toHaveProperty("temperature");
-  });
-
-  it("vérifie la clé par la liste des modèles", async () => {
-    const f = vi.fn().mockResolvedValue(reponse(200, { data: [] }));
-    expect(await openai.verifierCle({ cle: "sk-abcdefghijklmnopqrstuvwx" }, { fetch: f })).toEqual({
-      valide: true,
+    it("500 → fournisseur indisponible, après un seul réessai", async () => {
+      const f = vi.fn().mockResolvedValue(reponse(500, {}));
+      await expect(demande(f)).rejects.toMatchObject({ code: "fournisseur-indisponible" });
+      expect(f).toHaveBeenCalledTimes(2);
     });
-    expect(f.mock.calls[0][0]).toBe("https://api.openai.com/v1/models");
-    f.mockResolvedValue(reponse(401, {}));
-    expect(await openai.verifierCle({ cle: "sk-abcdefghijklmnopqrstuvwx" }, { fetch: f })).toEqual({
-      valide: false,
-      raison: "cle-invalide",
-    });
-  });
-
-  it("format de clé tolérant", () => {
-    expect(openai.formatCle.test("sk-proj-AbC_123-xyz7890abcdefgh")).toBe(true);
-    expect(openai.formatCle.test("pas une clé")).toBe(false);
-  });
-});
+  },
+);
 
 describe("adaptateur Gemini", () => {
   const cle = "AIzaSyExempleDeCleGeminiTresLongue1234";
@@ -274,124 +210,5 @@ describe("adaptateur Gemini", () => {
     expect(gemini.formatCle.test("AQ.Ab8RN6Exemple-de_cle.recente1234567")).toBe(true);
     expect(gemini.formatCle.test("trop court")).toBe(false);
     expect(gemini.formatCle.test("deux mots dans une phrase collee")).toBe(false);
-  });
-});
-
-describe("listerModeles : la liste vient du fournisseur", () => {
-  it("Gemini : seulement les modèles qui écrivent du texte, triés", async () => {
-    const f = vi.fn().mockResolvedValue(
-      reponse(200, {
-        models: [
-          {
-            name: "models/z-modele",
-            displayName: "Z",
-            supportedGenerationMethods: ["generateContent"],
-          },
-          {
-            name: "models/embedding-x",
-            displayName: "Emb",
-            supportedGenerationMethods: ["embedContent"],
-          },
-          {
-            name: "models/a-modele",
-            displayName: "A",
-            supportedGenerationMethods: ["generateContent", "countTokens"],
-          },
-        ],
-      }),
-    );
-    const liste = await gemini.listerModeles(
-      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
-      { fetch: f },
-    );
-    expect(liste).toEqual([
-      { id: "z-modele", nom: "Z" },
-      { id: "a-modele", nom: "A" },
-    ]);
-    expect(f.mock.calls[0][0]).toBe(
-      "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
-    );
-    expect(f.mock.calls[0][1].headers["x-goog-api-key"]).toBeTruthy();
-  });
-
-  it("OpenAI : écarte les modèles de voix, d'images, d'embeddings…", async () => {
-    const ids = [
-      "gpt-b",
-      "text-embedding-3-small",
-      "whisper-1",
-      "tts-1",
-      "dall-e-3",
-      "o3",
-      "gpt-image-1",
-      "gpt-a",
-      "omni-moderation-latest",
-      "gpt-4o-realtime-preview",
-    ];
-    const f = vi.fn().mockResolvedValue(reponse(200, { data: ids.map((id) => ({ id })) }));
-    const liste = await openai.listerModeles({ cle: "sk-abcdefghijklmnopqrstuvwx" }, { fetch: f });
-    expect(liste.map((m) => m.id)).toEqual(["o3", "gpt-b", "gpt-a"]);
-  });
-
-  it("clé refusée : erreur normalisée", async () => {
-    const f = vi.fn().mockResolvedValue(reponse(401, {}));
-    await expect(openai.listerModeles({ cle: "sk-x" }, { fetch: f })).rejects.toMatchObject({
-      code: "cle-invalide",
-    });
-  });
-});
-
-describe("listerModeles : les plus récents d'abord", () => {
-  it("les numéros se comparent comme des nombres (3.1 avant 2.5, 10 avant 9)", async () => {
-    const modeles = [
-      "gemini-2.5-flash",
-      "gemini-3.1-flash-lite",
-      "gemini-2.0-flash",
-      "gemini-10-x",
-      "gemini-9-x",
-    ].map((n) => ({
-      name: `models/${n}`,
-      displayName: n,
-      supportedGenerationMethods: ["generateContent"],
-    }));
-    const f = vi.fn().mockResolvedValue(reponse(200, { models: modeles }));
-    const liste = await gemini.listerModeles(
-      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
-      { fetch: f },
-    );
-    expect(liste.map((m) => m.id)).toEqual([
-      "gemini-10-x",
-      "gemini-9-x",
-      "gemini-3.1-flash-lite",
-      "gemini-2.5-flash",
-      "gemini-2.0-flash",
-    ]);
-  });
-});
-
-describe("Gemini : écarte les modèles qui ne servent pas à écrire du texte", () => {
-  it("images, voix, direct, embeddings… ne sont pas proposés", async () => {
-    const noms = [
-      "gemini-3.1-flash-lite",
-      "gemini-3-pro-image-preview",
-      "gemini-2.5-flash-preview-tts",
-      "gemini-live-2.5-flash",
-      "gemini-2.5-flash-native-audio",
-      "gemini-embedding-001",
-      "gemini-3.1-pro",
-    ];
-    const f = vi.fn().mockResolvedValue(
-      reponse(200, {
-        models: noms.map((n) => ({
-          name: `models/${n}`,
-          displayName: n,
-          supportedGenerationMethods: ["generateContent"],
-        })),
-      }),
-    );
-    const liste = await gemini.listerModeles(
-      { cle: "AIzaSyExempleDeCleTresLongue1234567890" },
-      { fetch: f },
-    );
-    expect(liste.map((m) => m.id)).toEqual(["gemini-3.1-pro", "gemini-3.1-flash-lite"]);
   });
 });

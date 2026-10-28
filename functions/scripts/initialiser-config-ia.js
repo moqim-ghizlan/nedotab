@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * V4.0 — Writes config/ia (providers offered, suggested models, daily quota), run by the
+ * V4.0 — Writes config/ia (providers offered, the one model imposed, daily quota), run by the
  * owner. The model ids are taken from the providers' documentation at that moment and put
  * in a copy of config-ia.exemple.json: they are never written in the code.
  *
@@ -25,15 +25,11 @@ const brute = JSON.parse(readFileSync(fichier, "utf8"));
 if (JSON.stringify(brute).includes("<"))
   throw new Error("Le fichier contient encore des valeurs d'exemple « <…> » : complétez-les.");
 const config = normaliserConfig(brute);
-for (const m of config.modelesSuggeres) {
-  if (!config.fournisseurs.some((f) => f.id === m.fournisseur))
-    throw new Error(`Modèle ${m.id} : fournisseur inconnu ${m.fournisseur}.`);
-}
 
 initializeApp({ projectId: projet });
 await getFirestore()
   .doc("config/ia")
   .set({ ...config, majLe: FieldValue.serverTimestamp() });
 console.log(
-  `config/ia écrit sur ${projet} : ${config.fournisseurs.filter((f) => f.actif).length} fournisseur(s) actif(s), ${config.modelesSuggeres.length} modèle(s), quota ${config.quotaQuotidien}/jour.`,
+  `config/ia écrit sur ${projet} : ${config.fournisseurs.filter((f) => f.actif).length} fournisseur(s) actif(s), modèle ${config.modele}, quota ${config.quotaQuotidien}/jour.`,
 );

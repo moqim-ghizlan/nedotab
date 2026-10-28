@@ -4,7 +4,7 @@ import { messageErreurIa } from "../messagesIa.js";
 
 /**
  * What the AI settings screen asks of the server (V4.1): the state of the keys, saving and
- * removing a key, testing a model, and config/ia. Firebase is loaded only when needed. A
+ * removing a key, testing the key with the imposed model, and config/ia. Firebase is loaded only when needed. A
  * failure comes back as `{ ok: false, erreur: "message in French" }`: the screen never
  * handles a raw error (and the key typed is never kept here).
  *
@@ -23,12 +23,7 @@ export function creerServiceIa({ chargerFb = chargerFirebase } = {}) {
     etatCles: () => appeler("iaEtatCles", {}),
     enregistrerCle: (fournisseur, cle) => appeler("iaEnregistrerCle", { fournisseur, cle }),
     supprimerCle: (fournisseur) => appeler("iaSupprimerCle", { fournisseur }),
-    tester: (fournisseur, modele) => appeler("iaTester", { fournisseur, modele }),
-    /** Models the user's key can use, asked to the provider: [{ id, nom }]. */
-    modeles: (fournisseur) => appeler("iaListerModeles", { fournisseur }),
-    /** Which of these models answer with the key: [{ id, ok: true | false | null }]. */
-    verifierModeles: (fournisseur, modeles) =>
-      appeler("iaVerifierModeles", { fournisseur, modeles }),
+    tester: (fournisseur) => appeler("iaTester", { fournisseur }),
     /** config/ia, or the default when it is missing or unreadable (offline). */
     async config() {
       try {
