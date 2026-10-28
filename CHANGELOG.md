@@ -38,6 +38,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Animations réduites »** (Général > Interface, synchronisé) : coupe les animations et les transitions de l'interface.
 
+## [4.5.3] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Masquer la barre de recherche »** (Général > Interface, synchronisé). Le raccourci « / » est alors inactif.
+
 ## [Non publié]
 
 ### Ajouté (V4.5)

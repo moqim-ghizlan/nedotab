@@ -566,6 +566,8 @@ export async function demarrerApp(racine) {
   const appliquerPreferences = (r) => {
     const racineDoc = document.documentElement;
     racineDoc.toggleAttribute("data-animations-reduites", !!r.animationsReduites);
+    racineDoc.toggleAttribute("data-masquer-recherche", !!r.masquerRecherche);
+    document.dispatchEvent(new Event("nedotab:taille-tuiles"));
   };
   let appliques = store.lire();
   appliquerPreferences(appliques.reglages);

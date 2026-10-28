@@ -221,6 +221,11 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "Animations réduites",
       "Coupe les animations et les transitions de l'interface. Utile sur un appareil lent.",
     ],
+    [
+      "masquerRecherche",
+      "Masquer la barre de recherche",
+      "Libère de la place sur l'accueil. Le raccourci « / » ne fait plus rien.",
+    ],
   ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
       type: "checkbox",
@@ -243,7 +248,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites"];
+  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche"];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);

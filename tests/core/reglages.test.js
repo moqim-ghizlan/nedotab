@@ -86,6 +86,10 @@ describe("REGLAGES_MODIFIER", () => {
     expect(active.reglages.animationsReduites).toBe(true);
     expect(modifier({ animationsReduites: false })).toBe(etat);
   });
+  it("masquer la barre de recherche : un interrupteur stocké seulement activé", () => {
+    expect(modifier({ masquerRecherche: true }).reglages.masquerRecherche).toBe(true);
+    expect(modifier({ masquerRecherche: false })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);

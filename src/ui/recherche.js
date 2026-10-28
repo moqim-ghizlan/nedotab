@@ -235,7 +235,8 @@ export function creerRecherche(store, { ouvrirDossier }) {
     if (
       !raccourci ||
       e.target.closest?.(CHAMPS_SAISIE) ||
-      document.querySelector("dialog[open]:modal")
+      document.querySelector("dialog[open]:modal") ||
+      racine.offsetParent === null // hidden by the "Barre de recherche" setting (V4.5.3)
     )
       return;
     e.preventDefault();

@@ -90,3 +90,8 @@ textarea {
   transition-delay: 0s !important;
   scroll-behavior: auto !important;
 }
+
+/* Setting "Masquer la barre de recherche" (V4.5.3). */
+:root[data-masquer-recherche] .recherche {
+  display: none;
+}
