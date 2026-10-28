@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.4.1] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Taille des cartes »** (Réglages > Apparence, curseur de 60 à 200 %, propre à
+  chaque appareil). S'applique à l'accueil (pages et défilement), aux dossiers et aux
+  sous-dossiers.
+
 ## [Non publié]
 
 ### Ajouté (V4.4)

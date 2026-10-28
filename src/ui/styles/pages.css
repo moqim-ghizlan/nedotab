@@ -480,3 +480,15 @@ html.accueil-en-pages .accueil[hidden] {
     animation: none;
   }
 }
+
+/* Folders and sub-folders: same tile size setting, columns widened to fit the zoomed tiles. */
+.grille--dossier {
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(calc(var(--tuile-largeur-min) * var(--taille-tuiles, 1)), 1fr)
+  );
+}
+
+.grille--dossier > .case > .tuile {
+  zoom: var(--taille-tuiles, 1);
+}
