@@ -216,6 +216,11 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "Un clic sur le fond, en dehors de la fenêtre du dossier, la ferme. Désactivé, seule la croix ou Échap la ferme.",
       true,
     ],
+    [
+      "animationsReduites",
+      "Animations réduites",
+      "Coupe les animations et les transitions de l'interface. Utile sur un appareil lent.",
+    ],
   ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
       type: "checkbox",
@@ -238,7 +243,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = ["gardeDossierOuvert"];
+  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites"];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);

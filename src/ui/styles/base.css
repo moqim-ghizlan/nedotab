@@ -78,3 +78,15 @@ textarea {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Setting "Animations réduites" (V4.5.2): nothing moves, everything still works. */
+:root[data-animations-reduites] *,
+:root[data-animations-reduites] *::before,
+:root[data-animations-reduites] *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}

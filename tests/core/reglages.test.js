@@ -81,6 +81,11 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ gardeDossierOuvert: false })).toBe(etat);
     expect(modifier({ gardeDossierOuvert: "oui" })).toBe(etat);
   });
+  it("animations réduites : un interrupteur stocké seulement activé", () => {
+    const active = modifier({ animationsReduites: true });
+    expect(active.reglages.animationsReduites).toBe(true);
+    expect(modifier({ animationsReduites: false })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);

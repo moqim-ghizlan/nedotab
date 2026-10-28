@@ -562,13 +562,20 @@ export async function demarrerApp(racine) {
     plateforme.garderBarreChrome(!!r.barreChrome);
     ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);
   };
+  /** Interface switches of the synced settings, as attributes of the page (V4.5.2). */
+  const appliquerPreferences = (r) => {
+    const racineDoc = document.documentElement;
+    racineDoc.toggleAttribute("data-animations-reduites", !!r.animationsReduites);
+  };
   let appliques = store.lire();
+  appliquerPreferences(appliques.reglages);
   appliquerReglages(visibles(appliques));
   appliquerAppareil(appliques.reglagesAppareil);
   ouvrirSitesDansNouvelOnglet(appliques.reglages.nouvelOnglet);
   store.abonner((e) => {
     if (e.reglages !== appliques.reglages || e.reglagesAppareil !== appliques.reglagesAppareil) {
       appliques = e;
+      appliquerPreferences(e.reglages);
       appliquerReglages(visibles(e));
       appliquerAppareil(e.reglagesAppareil);
       ouvrirSitesDansNouvelOnglet(e.reglages.nouvelOnglet);

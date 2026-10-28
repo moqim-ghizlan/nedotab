@@ -32,6 +32,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Fermer le dossier en cliquant à côté »** (Général > Interface, synchronisé). Activé par défaut ; désactivé, seule la croix ou Échap ferme la fenêtre d'un dossier.
 
+## [4.5.2] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Animations réduites »** (Général > Interface, synchronisé) : coupe les animations et les transitions de l'interface.
+
 ## [Non publié]
 
 ### Ajouté (V4.5)
