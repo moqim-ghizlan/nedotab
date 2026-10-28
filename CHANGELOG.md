@@ -2,6 +2,13 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.4.2] - 2026-10-29
+
+### Modifié
+
+- La fenêtre de dossier s'élargit avec le réglage « Taille des cartes » (jusqu'à 90 % de la
+  hauteur de l'écran), pour éviter le défilement quand les cartes sont grandes.
+
 ## [4.4.1] - 2026-10-29
 
 ### Ajouté

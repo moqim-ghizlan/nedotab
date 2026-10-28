@@ -58,8 +58,8 @@
 /* --- folder window ------------------------------------------------------------------ */
 
 .fenetre-dossier {
-  width: min(640px, calc(100vw - 2 * var(--espace-4)));
-  max-height: 80vh;
+  width: min(calc(640px * max(1, var(--taille-tuiles, 1))), calc(100vw - 2 * var(--espace-4)));
+  max-height: 90vh;
   padding: 0;
   border: 1px solid var(--bordure);
   border-radius: var(--rayon-grand);
