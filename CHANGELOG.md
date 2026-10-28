@@ -56,6 +56,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Confirmer avant de supprimer »** (Général > Interface, synchronisé) : demande une confirmation avant de supprimer un site ou un dossier vide (un dossier rempli la demandait déjà ; l'annulation reste possible).
 
+## [4.5.6] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Vibration au glisser-déposer »** (Général > Interface, propre à l'appareil). Courte vibration quand on attrape ou dépose une icône (Android et Chrome ; sur iPhone, essai par l'astuce de l'interrupteur iOS 17.4+, non garanti).
+
 ## [Non publié]
 
 ### Ajouté (V4.6)

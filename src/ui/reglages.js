@@ -264,6 +264,34 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   const ligneDes = (cles) =>
     interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
 
+  // Device-only: a short vibration when an icon is picked up and dropped.
+  const retourHaptique = el("input", {
+    type: "checkbox",
+    role: "switch",
+    class: "interrupteur-bouton",
+    dataset: { reglage: "retourHaptique" },
+    onchange: (e) => modifier({ retourHaptique: e.currentTarget.checked }),
+  });
+  const ligneHaptique = el(
+    "label",
+    { class: "interrupteur" },
+    el(
+      "span",
+      { class: "interrupteur-texte" },
+      el(
+        "span",
+        { texte: "Vibration au glisser-déposer" },
+        el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
+      ),
+      el("span", {
+        class: "reglages-note",
+        texte:
+          "Une courte vibration quand vous attrapez ou déposez une icône. Selon l'appareil et le navigateur, elle peut ne rien faire.",
+      }),
+    ),
+    retourHaptique,
+  );
+
   // Device-only, on iOS: the browser that opens the sites (Safari otherwise).
   const navigateur = !plateforme.capacites.choixNavigateur
     ? null
@@ -547,7 +575,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
             ]
           : []),
       ),
-      section("Interface", ...ligneDes(CLES_INTERFACE)),
+      section("Interface", ...ligneDes(CLES_INTERFACE), ligneHaptique),
       curseurRecherche
         ? section(
             "Nouvel onglet",
@@ -785,6 +813,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
+    retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {

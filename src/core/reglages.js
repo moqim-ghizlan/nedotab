@@ -258,6 +258,7 @@ export const CLES_APPAREIL = [
   "affichageAccueil",
   "navigateur",
   "tailleTuiles",
+  "retourHaptique",
 ];
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
@@ -286,6 +287,7 @@ export function validerReglagesAppareil(r) {
   if (colonnesValides(r?.colonnes)) resultat.colonnes = r.colonnes;
   if (tailleTuilesValide(r?.tailleTuiles) && r.tailleTuiles !== TAILLE_TUILES_DEFAUT)
     resultat.tailleTuiles = r.tailleTuiles;
+  if (r?.retourHaptique === true) resultat.retourHaptique = true;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -323,7 +325,7 @@ function modifierAppareil(etat, changements) {
     if (changements.navigateur === "safari") delete appareil.navigateur;
     else appareil.navigateur = changements.navigateur;
   }
-  for (const cle of ["debug", "barreChrome"].filter((c) => c in changements)) {
+  for (const cle of ["debug", "barreChrome", "retourHaptique"].filter((c) => c in changements)) {
     if (changements[cle]) appareil[cle] = true;
     else delete appareil[cle];
   }

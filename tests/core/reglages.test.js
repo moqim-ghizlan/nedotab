@@ -208,6 +208,12 @@ describe("schéma 2 : réglages de l'appareil", () => {
 
 describe("réglages propres à l'appareil (V2.9)", () => {
   const modifier = (etat, changements) => reduire(etat, { type: A.REGLAGES_MODIFIER, changements });
+  it("vibration : réglage d'appareil, jamais synchronisé", () => {
+    const etat = modifier(etatInitial(), { retourHaptique: true });
+    expect(etat.reglagesAppareil).toEqual({ retourHaptique: true });
+    expect(etat.reglages).not.toHaveProperty("retourHaptique");
+    expect(modifier(etat, { retourHaptique: false }).reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

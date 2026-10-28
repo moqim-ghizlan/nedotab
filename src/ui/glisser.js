@@ -1,6 +1,7 @@
 import Sortable from "sortablejs";
 import { A } from "../core/actions.js";
 import { trouver } from "../core/arbre.js";
+import { vibrer } from "./haptique.js";
 import { EVENEMENT_EDITION, enEdition } from "./modeEdition.js";
 import { DELAI_APPUI_LONG_MS, SEUIL_MOUVEMENT_PX, brancherAppuiLong } from "./appuiLong.js";
 
@@ -129,6 +130,7 @@ export function activerGlisser(
     invertSwap: true,
     invertedSwapThreshold: 0.7,
     onStart(evt) {
+      vibrer(store);
       glisserEnCours = true;
       annule = false;
       document.body.classList.add("glisser-en-cours");
@@ -148,6 +150,7 @@ export function activerGlisser(
       if (plus?.nextElementSibling) evt.to.append(plus);
     },
     onEnd(evt) {
+      vibrer(store);
       document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
       document.removeEventListener("keydown", surTouche, true);
