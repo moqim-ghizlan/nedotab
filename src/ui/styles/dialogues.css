@@ -486,3 +486,25 @@
     animation: none;
   }
 }
+
+/* V4.6: "Compléter mes sites". */
+.dialogue--rattrapage .rattrapage-barre {
+  width: 100%;
+  height: 0.6rem;
+}
+.dialogue--rattrapage .rattrapage-estimation {
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+.dialogue--rattrapage .rattrapage-facture {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid currentColor;
+  font-size: 0.9em;
+}
+.dialogue--rattrapage .rattrapage-echecs {
+  max-height: 10rem;
+  overflow: auto;
+  padding-left: 1.2rem;
+}

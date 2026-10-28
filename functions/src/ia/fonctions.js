@@ -14,6 +14,7 @@ import { fournisseursActifs } from "./config.js";
 import { messagePage, RAPPEL_FORMAT, SYSTEME_TAGS } from "./prompts/tags.js";
 import { lireSortieTags } from "./tagsSortie.js";
 import { extraitReduit } from "../partage/extraitPage.js";
+import { jourParis } from "../quota.js";
 import { ErreurPage } from "../reseau/recupererPage.js";
 
 /** Page downloads per user and per day (V4.5): the function must not become a crawler. */
@@ -274,7 +275,18 @@ export function creerFonctionsIa(deps) {
     throw new ErreurFournisseur("reponse-invalide");
   }
 
+  /** What is left of today's AI calls. Reads only: nothing is consumed (V4.6). */
+  async function quotaRestant(uid, donnees) {
+    valider(donnees, {});
+    const c = await config();
+    const snap = await db.doc(`users/${uid}/prive/quota`).get();
+    const q = snap.exists ? snap.data() : null;
+    const utilises = q?.jour === jourParis(new Date()) ? (q.appels ?? 0) : 0;
+    return { limite: c.quotaQuotidien, restant: Math.max(0, c.quotaQuotidien - utilises) };
+  }
+
   return {
+    quotaRestant,
     genererTags,
     enregistrerCle,
     supprimerCle,

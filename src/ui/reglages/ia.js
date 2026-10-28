@@ -5,6 +5,7 @@ import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { creerServiceIa } from "../services/ia.js";
+import { ouvrirRattrapage } from "./rattrapage.js";
 import { toast } from "../toast.js";
 
 /**
@@ -228,6 +229,27 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         })()
       : null;
 
+    // V4.6: complete the sites saved before the AI was on (asks, explains the cost, estimates).
+    const service = session?.rattrapage;
+    const etatTraitement = service?.lire();
+    const enCours = etatTraitement && ["en_cours", "pause"].includes(etatTraitement.etat);
+    const completer =
+      service && reglages.actif && avecCle().length
+        ? el(
+            "div",
+            { class: "ia-usage" },
+            el("button", {
+              type: "button",
+              class: "bouton",
+              texte: enCours
+                ? `Traitement des sites (${etatTraitement.restants.length} restants)`
+                : "Compléter mes sites",
+              onclick: () => ouvrirRattrapage(service, store),
+            }),
+            el("span", { class: "reglages-note", texte: "Tags et descriptions pour vos sites existants. Facturé par Google sur votre clé." }),
+          )
+        : null;
+
     // Empty slots (null) must not reach replaceChildren: they would be written as "null".
     racine.replaceChildren(
       ...[
@@ -243,6 +265,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         el("ul", { class: "ia-liste" }, lignesCles),
         note("Votre clé est chiffrée et n'est jamais affichée ni renvoyée à votre appareil."),
         testeur,
+        completer,
       ].filter(Boolean),
     );
   }

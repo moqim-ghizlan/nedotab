@@ -36,6 +36,18 @@ async function monter(lirePage) {
   return { db, ia, faux };
 }
 
+describe("quotaRestant (V4.6)", () => {
+  it("lit sans consommer", async () => {
+    const { db, ia } = await monter(async () => null);
+    const avant = await ia.quotaRestant("u1", {});
+    expect(avant.restant).toBe(avant.limite);
+    await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait: { titre: "A" } });
+    expect((await ia.quotaRestant("u1", {})).restant).toBe(avant.limite - 1);
+    expect((await ia.quotaRestant("u1", {})).restant).toBe(avant.limite - 1);
+    expect(db.lire("users/u1/prive/quota").appels).toBe(1);
+  });
+});
+
 describe("genererTags sans extrait (V4.5)", () => {
   it("le serveur lit la page ; le téléchargement a son quota de 60 par jour", async () => {
     const lirePage = vi.fn(async () => ({ titre: "A", texte: "t" }));

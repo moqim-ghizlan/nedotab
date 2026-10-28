@@ -42,8 +42,11 @@ export function creerEnrichissement({
         titre: titre ?? "",
       });
       definir(id, { etat: "ok", tags: r.tags, description: r.description, majLe: horloge() });
+      return { ok: true };
     } catch (e) {
-      definir(id, { etat: "echec", erreur: codeErreur(e), majLe: horloge() });
+      const code = codeErreur(e);
+      definir(id, { etat: "echec", erreur: code, majLe: horloge() });
+      return { ok: false, code };
     }
   }
 
@@ -69,6 +72,14 @@ export function creerEnrichissement({
       attente.push({ id: site.id, url: site.url, titre: site.titre });
       suite();
       return true;
+    },
+    /**
+     * One generation now, outside the queue (the catch-up of V4.6 drives its own pace):
+     * resolves { ok } or { ok: false, code }. The site is marked "en_attente" first.
+     */
+    async executer(site) {
+      definir(site.id, { etat: "en_attente" });
+      return generer({ id: site.id, url: site.url, titre: site.titre });
     },
     /** For the tests. */
     enAttente: () => attente.length + enCours,

@@ -58,6 +58,22 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ## [Non publié]
 
+### Ajouté (V4.6)
+
+- **Compléter mes sites** (Réglages → IA) : tags et descriptions pour les sites déjà enregistrés,
+  sur demande seulement. Fenêtre qui explique que **l'action est facturée par Google sur votre
+  clé Gemini**, choix de la portée (sites sans tags, un dossier, tous sauf tags écrits à la main)
+  et estimation (sites, appels, quota restant aujourd'hui).
+  - Traitement par lots : 2 appels simultanés au plus, 300 ms entre deux lancements, pause,
+    reprise, arrêt, rapport final avec « Réessayer les échecs ». L'état est gardé sur l'appareil :
+    après fermeture, le traitement se retrouve en pause, prêt à reprendre.
+  - Arrêt automatique sur erreur bloquante (clé refusée ou sans crédit, assistant désactivé,
+    limite quotidienne) ; une page illisible ne fait échouer que son site.
+  - Verrou léger entre appareils (`reglages.ia.rattrapage`, expire après 10 minutes sans progrès).
+  - Fonction `iaQuotaRestant` (lecture seule, ne consomme rien).
+  - Pas encore fait : indicateur près de l'avatar, suggestion unique après l'activation de l'IA,
+    affichage « Traitement en cours sur… » d'un autre appareil.
+
 ### Ajouté (V4.5)
 
 - **Tags et description depuis la PWA (iPhone, iPad)** : sans extrait, `iaGenererTags` lit la page

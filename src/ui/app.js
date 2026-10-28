@@ -16,6 +16,7 @@ import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
 import { iaDe } from "../core/ia.js";
 import { creerEnrichissement, installerEnrichissement } from "./services/enrichissement.js";
+import { creerRattrapage } from "./services/rattrapage.js";
 import { creerServiceIa } from "./services/ia.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
@@ -323,8 +324,7 @@ export async function demarrerApp(racine) {
   // V4.4: tags and description proposed by the AI after an adding (extension only).
   {
     let cles = null;
-    installerEnrichissement(
-      creerEnrichissement({
+    const moteur = creerEnrichissement({
         store,
         plateforme,
         appeler: async (nom, donnees) => (await chargerFirebase()).appelerIa(nom, donnees),
@@ -337,8 +337,17 @@ export async function demarrerApp(racine) {
           }
           return { ia, modeCompte, enLigne: navigator.onLine, cles: cles ?? [] };
         },
-      }),
-    );
+      });
+    installerEnrichissement(moteur);
+    // V4.6: catch-up of the existing sites, only on request (Settings → AI).
+    session.rattrapage = creerRattrapage({
+      store,
+      enrichissement: moteur,
+      quotaRestant: async () => (await (await chargerFirebase()).appelerIa("iaQuotaRestant", {})).restant,
+      preferences: plateforme.preferences,
+      idAppareil: plateforme.idAppareil,
+    });
+    session.rattrapage.retrouver().catch(() => {});
   }
   // Automatic backup: once the account is synced (first server snapshot), at most daily.
   let sauvegardeVerifiee = false;
@@ -557,6 +566,7 @@ export async function demarrerApp(racine) {
       racineDoc.style.removeProperty("--colonnes");
     }
     racineDoc.style.setProperty("--taille-tuiles", String((r.tailleTuiles ?? 100) / 100));
+    racineDoc.dataset.animationPage = r.animationPage ?? "glisse";
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
     activerJournal(r.debug || modeDebug(store));
     plateforme.garderBarreChrome(!!r.barreChrome);

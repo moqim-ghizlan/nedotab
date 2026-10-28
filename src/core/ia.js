@@ -17,11 +17,16 @@ export const iaParDefaut = () => ({ actif: false });
 
 /** Valid, complete settings (anything wrong falls back to the default). */
 export function validerIa(ia) {
-  return { actif: ia?.actif === true };
+  const resultat = { actif: ia?.actif === true };
+  // V4.6: light lock of the catch-up between devices (who, last progress).
+  const r = ia?.rattrapage;
+  if (typeof r?.appareil === "string" && r.appareil.length <= 64 && Number.isFinite(r.maj))
+    resultat.rattrapage = { appareil: r.appareil, maj: r.maj };
+  return resultat;
 }
 
 /** True when the settings are the default: nothing needs to be stored. */
-export const estIaParDefaut = (ia) => !validerIa(ia).actif;
+export const estIaParDefaut = (ia) => !validerIa(ia).actif && !validerIa(ia).rattrapage;
 
 /** What is stored: nothing for the default settings. */
 export const iaAStocker = (ia) => (estIaParDefaut(ia) ? undefined : validerIa(ia));
@@ -30,6 +35,13 @@ export const iaAStocker = (ia) => (estIaParDefaut(ia) ? undefined : validerIa(ia
 export const iaDe = (reglages) => validerIa(reglages?.ia);
 
 export const avecActif = (ia, actif) => ({ ...ia, actif: actif === true });
+
+/** The lock set (or removed with null) by the device that processes. */
+export const avecRattrapage = (ia, verrou) => {
+  const reste = { ...ia };
+  delete reste.rattrapage;
+  return verrou ? { ...reste, rattrapage: verrou } : reste;
+};
 
 /**
  * Is the AI ready? Used by every AI feature to show itself or to say what to do.
