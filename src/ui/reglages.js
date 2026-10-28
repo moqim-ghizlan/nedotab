@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  espacementDe,
   formeIconesDe,
   COTE_TELEPHONE,
   FLOU_MAX,
@@ -275,6 +276,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     ],
     formeIconesDe(store.lire().reglagesAppareil),
     (v) => modifier({ formeIcones: v }),
+  );
+
+  // Device-only (V4.5.8): space between the tiles.
+  const espacement = segments(
+    "Espacement des cartes",
+    [
+      ["serre", "Serré"],
+      ["normal", "Normal"],
+      ["large", "Large"],
+    ],
+    espacementDe(store.lire().reglagesAppareil),
+    (v) => modifier({ espacement: v }),
   );
 
   // Device-only: a short vibration when an icon is picked up and dropped.
@@ -567,6 +580,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         tailleTuiles,
         libelleAppareil("Forme des icônes"),
         formeIcones.groupe,
+        libelleAppareil("Espacement des cartes"),
+        espacement.groupe,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -829,6 +844,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
     formeIcones.maj(formeIconesDe(store.lire().reglagesAppareil));
+    espacement.maj(espacementDe(store.lire().reglagesAppareil));
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

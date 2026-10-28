@@ -68,6 +68,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Forme des icônes »** (Apparence, propre à l'appareil) : carrées, arrondies (par défaut) ou rondes.
 
+## [4.5.8] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Espacement des cartes »** (Apparence, propre à l'appareil) : serré, normal (par défaut) ou large. Agit sur l'écart entre les cartes du défilement vertical et des dossiers ; en pages, les cases remplissent l'écran, l'écart y change peu (la taille des cartes y règle l'espace).
+
 ## [Non publié]
 
 ### Ajouté (V4.6)

@@ -221,6 +221,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { formeIcones: "arrondi" });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("espacement : normal par défaut et non stocké", () => {
+    let etat = modifier(etatInitial(), { espacement: "large" });
+    expect(etat.reglagesAppareil).toEqual({ espacement: "large" });
+    expect(modifier(etat, { espacement: "énorme" })).toBe(etat);
+    etat = modifier(etat, { espacement: "normal" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

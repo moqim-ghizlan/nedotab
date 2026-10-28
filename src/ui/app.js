@@ -9,6 +9,7 @@ import {
   COTE_TELEPHONE,
   fondEffectif,
   fondsAPurger,
+  espacementDe,
   formeIconesDe,
 } from "../core/reglages.js";
 import { petitCote, suivreClavier } from "./ecran.js";
@@ -570,6 +571,8 @@ export async function demarrerApp(racine) {
     racineDoc.dataset.animationPage = r.animationPage ?? "glisse";
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
     racineDoc.dataset.forme = formeIconesDe(r);
+    racineDoc.dataset.espacement = espacementDe(r);
+    document.dispatchEvent(new Event("nedotab:taille-tuiles"));
     activerJournal(r.debug || modeDebug(store));
     plateforme.garderBarreChrome(!!r.barreChrome);
     ouvrirSitesAvec(plateforme.capacites.choixNavigateur ? r.navigateur : null);

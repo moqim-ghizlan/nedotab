@@ -260,6 +260,7 @@ export const CLES_APPAREIL = [
   "tailleTuiles",
   "retourHaptique",
   "formeIcones",
+  "espacement",
 ];
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
@@ -271,6 +272,14 @@ export const FORMES_ICONES = ["carre", "arrondi", "rond"];
 export function formeIconesDe(reglagesAppareil) {
   const choisie = reglagesAppareil?.formeIcones;
   return FORMES_ICONES.includes(choisie) ? choisie : "arrondi";
+}
+
+/** Space between the tiles on this device (V4.5.8): normal by default, then not stored. */
+export const ESPACEMENTS = ["serre", "normal", "large"];
+
+export function espacementDe(reglagesAppareil) {
+  const choisi = reglagesAppareil?.espacement;
+  return ESPACEMENTS.includes(choisi) ? choisi : "normal";
 }
 
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
@@ -299,6 +308,8 @@ export function validerReglagesAppareil(r) {
   if (r?.retourHaptique === true) resultat.retourHaptique = true;
   if (FORMES_ICONES.includes(r?.formeIcones) && r.formeIcones !== "arrondi")
     resultat.formeIcones = r.formeIcones;
+  if (ESPACEMENTS.includes(r?.espacement) && r.espacement !== "normal")
+    resultat.espacement = r.espacement;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -329,6 +340,11 @@ function modifierAppareil(etat, changements) {
     if (!FORMES_ICONES.includes(changements.formeIcones)) return etat;
     if (changements.formeIcones === "arrondi") delete appareil.formeIcones;
     else appareil.formeIcones = changements.formeIcones;
+  }
+  if ("espacement" in changements) {
+    if (!ESPACEMENTS.includes(changements.espacement)) return etat;
+    if (changements.espacement === "normal") delete appareil.espacement;
+    else appareil.espacement = changements.espacement;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;

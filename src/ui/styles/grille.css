@@ -12,7 +12,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--tuile-largeur-min), 1fr));
-  gap: var(--espace-4) var(--espace-3);
+  gap: calc(var(--espace-4) * var(--espacement, 1)) calc(var(--espace-3) * var(--espacement, 1));
 }
 
 /* Columns forced on this device (V2.9): the home grid only, folders stay automatic. */
@@ -497,7 +497,7 @@
   .grille:not(.page-grille) {
     --icone: 60px;
     grid-template-columns: repeat(var(--colonnes-auto, 6), minmax(0, 1fr));
-    gap: var(--espace-4) var(--espace-2);
+    gap: calc(var(--espace-4) * var(--espacement, 1)) calc(var(--espace-2) * var(--espacement, 1));
   }
   .grille--dossier {
     --icone: 56px;
@@ -591,7 +591,7 @@
 @container (min-width: 900px) {
   .grille:not(.page-grille, .grille--dossier) {
     --icone: 64px;
-    gap: var(--espace-5) var(--espace-4);
+    gap: calc(var(--espace-5) * var(--espacement, 1)) calc(var(--espace-4) * var(--espacement, 1));
   }
 }
 
@@ -601,6 +601,6 @@
     padding-top: var(--espace-2);
   }
   .grille:not(.page-grille) {
-    gap: var(--espace-2) var(--espace-2);
+    gap: calc(var(--espace-2) * var(--espacement, 1)) calc(var(--espace-2) * var(--espacement, 1));
   }
 }

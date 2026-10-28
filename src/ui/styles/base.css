@@ -122,3 +122,12 @@ textarea {
 :root[data-forme="rond"] .grille .tuile > .tuile-icone--dossier {
   border-radius: 34%;
 }
+
+/* Setting "Espacement des cartes" (V4.5.8): multiplies the gaps of the grids. */
+:root[data-espacement="serre"] {
+  --espacement: 0.35;
+}
+
+:root[data-espacement="large"] {
+  --espacement: 1.8;
+}
