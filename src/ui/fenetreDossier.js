@@ -317,9 +317,9 @@ export function ouvrirFenetreDossier(
   }
   const desabonner = store.abonner(actualiser);
 
-  // Click on the backdrop closes the window.
+  // Click on the backdrop closes the window, unless the user turned that off (V4.5.1).
   dialogue.addEventListener("click", (e) => {
-    if (e.target === dialogue) dialogue.close();
+    if (e.target === dialogue && !store.lire().reglages.gardeDossierOuvert) dialogue.close();
   });
   // Escape goes up one level; at level 1 it closes.
   dialogue.addEventListener("cancel", (e) => {

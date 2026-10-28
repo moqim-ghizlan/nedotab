@@ -75,6 +75,12 @@ describe("REGLAGES_MODIFIER", () => {
     expect(modifier({ rechercheNouvelOnglet: false })).toBe(etat);
     expect(modifier({ rechercheNouvelOnglet: 1 })).toBe(etat);
   });
+  it("garder le dossier ouvert : un interrupteur stocké seulement activé", () => {
+    const active = modifier({ gardeDossierOuvert: true });
+    expect(active.reglages.gardeDossierOuvert).toBe(true);
+    expect(modifier({ gardeDossierOuvert: false })).toBe(etat);
+    expect(modifier({ gardeDossierOuvert: "oui" })).toBe(etat);
+  });
   it("refuse une clé inconnue", () => {
     expect(modifier({ police: "Comic" })).toBe(etat);
     expect(modifier({ theme: "clair", police: "Comic" })).toBe(etat);

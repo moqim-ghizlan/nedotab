@@ -197,7 +197,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     reglagesDefilement.hidden = pages;
   };
 
-  // Synced switches: where links open (key of the settings, label, explanation).
+  // Synced switches (key of the settings, label, explanation, inverse). `inverse`: the switch
+  // shows the opposite of the stored flag, for behaviours that are on by default.
   const interrupteurs = [
     [
       "nouvelOnglet",
@@ -209,13 +210,19 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       "Ouvrir les recherches web dans un nouvel onglet",
       "Recherche lancée depuis la barre avec votre moteur habituel.",
     ],
-  ].map(([cle, libelle, note]) => {
+    [
+      "gardeDossierOuvert",
+      "Fermer le dossier en cliquant à côté",
+      "Un clic sur le fond, en dehors de la fenêtre du dossier, la ferme. Désactivé, seule la croix ou Échap la ferme.",
+      true,
+    ],
+  ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
       type: "checkbox",
       role: "switch",
       class: "interrupteur-bouton",
       dataset: { reglage: cle },
-      onchange: (e) => modifier({ [cle]: e.currentTarget.checked }),
+      onchange: (e) => modifier({ [cle]: e.currentTarget.checked !== inverse }),
     });
     const ligne = el(
       "label",
@@ -228,8 +235,13 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       ),
       bouton,
     );
-    return { cle, bouton, ligne };
+    return { cle, bouton, ligne, inverse };
   });
+
+  const CLES_INTERFACE = ["gardeDossierOuvert"];
+  const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
+  const ligneDes = (cles) =>
+    interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
 
   // Device-only, on iOS: the browser that opens the sites (Safari otherwise).
   const navigateur = !plateforme.capacites.choixNavigateur
@@ -501,7 +513,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       section(
         "Ouverture des liens",
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
-        ...interrupteurs.map((i) => i.ligne),
+        ...ligneDes(CLES_LIENS),
         ...(navigateur
           ? [
               libelleAppareil("Ouvrir les sites avec"),
@@ -514,6 +526,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
             ]
           : []),
       ),
+      section("Interface", ...ligneDes(CLES_INTERFACE)),
       curseurRecherche
         ? section(
             "Nouvel onglet",
@@ -750,7 +763,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     lignesAccueil.maj(String(grilleActuelle().lignes));
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
-    for (const i of interrupteurs) i.bouton.checked = !!r[i.cle];
+    for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;
     for (const b of nuancesCouleur.children) {

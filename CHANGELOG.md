@@ -26,6 +26,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
   chaque appareil). S'applique à l'accueil (pages et défilement), aux dossiers et aux
   sous-dossiers.
 
+## [4.5.1] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Fermer le dossier en cliquant à côté »** (Général > Interface, synchronisé). Activé par défaut ; désactivé, seule la croix ou Échap ferme la fenêtre d'un dossier.
+
 ## [Non publié]
 
 ### Ajouté (V4.5)

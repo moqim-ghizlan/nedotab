@@ -139,9 +139,10 @@ export function validerFond(fond) {
 /**
  * Synced on/off settings, all off by default and stored only when on (settings saved before
  * one existed stay unchanged): nouvelOnglet opens the grid's sites in a new tab (V2.10.3),
- * rechercheNouvelOnglet the web searches of the search bar (V2.10.6).
+ * rechercheNouvelOnglet the web searches of the search bar (V2.10.6), gardeDossierOuvert stops a
+ * click outside a folder window from closing it (V4.5.1).
  */
-export const INTERRUPTEURS = ["nouvelOnglet", "rechercheNouvelOnglet"];
+export const INTERRUPTEURS = ["nouvelOnglet", "rechercheNouvelOnglet", "gardeDossierOuvert"];
 
 /**
  * Applies `changements` (whitelisted keys: theme, fond, grilleAccueil, ia and the INTERRUPTEURS)
