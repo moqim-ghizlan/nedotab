@@ -18,18 +18,22 @@ import {
   SYSTEME_RECHERCHE,
 } from "./prompts/recherche.js";
 import { lireSortieRecherche } from "./rechercheSortie.js";
-import { construireListe, sitesDe } from "../partage/listeCompacte.js";
+import { SYSTEME_CHAT } from "./prompts/chat.js";
+import { CHAMPS_LISTE, construireListe, sitesDe } from "../partage/listeCompacte.js";
 import { preFiltrer } from "../partage/preFiltre.js";
 import { lireSortieTags } from "./tagsSortie.js";
 import { extraitReduit } from "../partage/extraitPage.js";
 import { jourParis } from "../quota.js";
 import { ErreurPage } from "../reseau/recupererPage.js";
 
-
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
 
 const USAGES = ["tags", "recherche", "chat"];
+
+/** One message of a call: the list of the sites of the smart search can be long (V4.9). */
+export const MESSAGE_TEXTE_MAX = 150000;
+const LISTE_MAX = 120000;
 
 function verifierMessages(v) {
   if (!Array.isArray(v) || v.length < 1 || v.length > 50)
@@ -37,9 +41,30 @@ function verifierMessages(v) {
   for (const m of v) {
     if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role))
       throw new EntreeInvalide("messages : rôle invalide.");
-    if (typeof m.texte !== "string" || m.texte.length < 1 || m.texte.length > 20000)
+    if (typeof m.texte !== "string" || m.texte.length < 1 || m.texte.length > MESSAGE_TEXTE_MAX)
       throw new EntreeInvalide("messages : texte invalide.");
   }
+}
+
+export const CHAT_MESSAGES_MAX = 40;
+export const CHAT_MESSAGE_MAX = 4000;
+export const CHAT_TOTAL_MAX = 30000;
+
+/** Conversation of the chat (V4.11): 1 to 40 messages, the last one from the user. */
+function verifierMessagesChat(v) {
+  if (!Array.isArray(v) || v.length < 1 || v.length > CHAT_MESSAGES_MAX)
+    throw new EntreeInvalide(`messages : 1 à ${CHAT_MESSAGES_MAX} messages attendus.`);
+  let total = 0;
+  for (const m of v) {
+    if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role))
+      throw new EntreeInvalide("messages : rôle invalide.");
+    if (typeof m.texte !== "string" || !m.texte.trim() || m.texte.length > CHAT_MESSAGE_MAX)
+      throw new EntreeInvalide(`messages : texte de 1 à ${CHAT_MESSAGE_MAX} caractères attendu.`);
+    total += m.texte.length;
+  }
+  if (total > CHAT_TOTAL_MAX) throw new EntreeInvalide("messages : conversation trop longue.");
+  if (v.at(-1).role !== "user")
+    throw new EntreeInvalide("messages : le dernier message doit être de l'utilisateur.");
 }
 
 /** Extract of a page (V4.3): same limits as extraitPage.js; a bad shape is refused. */
@@ -241,7 +266,12 @@ export function creerFonctionsIa(deps) {
         dureeMs: horloge() - debut,
         jetons: r.jetonsEntree + r.jetonsSortie,
       });
-      return { texte: r.texte, modele: r.modele };
+      return {
+        texte: r.texte,
+        modele: r.modele,
+        jetonsEntree: r.jetonsEntree,
+        jetonsSortie: r.jetonsSortie,
+      };
     } catch (e) {
       journal({ action: usage, fournisseur, modele, dureeMs: horloge() - debut, code: e?.code });
       throw e;
@@ -285,7 +315,11 @@ export function creerFonctionsIa(deps) {
         messages:
           essai === 0
             ? messages
-            : [...messages, { role: "assistant", texte: "..." }, { role: "user", texte: RAPPEL_FORMAT }],
+            : [
+                ...messages,
+                { role: "assistant", texte: "..." },
+                { role: "user", texte: RAPPEL_FORMAT },
+              ],
         maxJetons: 1024,
         formatJson: true,
       });
@@ -311,7 +345,13 @@ export function creerFonctionsIa(deps) {
     // Nothing to search: no call, nothing paid.
     if (sites.length === 0) return { resultats: [], aucunResultat: true, preFiltre: false };
     const { sites: retenus, preFiltre } = preFiltrer(sites, question);
-    const { lignes, table } = construireListe(retenus);
+    let { lignes, table } = construireListe(retenus);
+    // A very long list (long descriptions): the descriptions are left out rather than refused.
+    if (lignes.join("\n").length > LISTE_MAX) {
+      ({ lignes, table } = construireListe(retenus, {
+        champs: CHAMPS_LISTE.filter((c) => c !== "description"),
+      }));
+    }
     const date = new Date(horloge()).toISOString().slice(0, 10);
     const messages = [{ role: "user", texte: messageRecherche({ date, question, lignes }) }];
     for (let essai = 0; essai < 2; essai++) {
@@ -334,6 +374,30 @@ export function creerFonctionsIa(deps) {
       if (sortie) return { ...sortie, modele: r.modele, preFiltre };
     }
     throw new ErreurFournisseur("reponse-invalide");
+  }
+
+  /**
+   * V4.11: one answer of the chat (not streamed yet). The browser sends the history of the
+   * current conversation; each message sent counts for 1 in the quota. Nothing is kept on the
+   * server.
+   */
+  async function chat(uid, donnees) {
+    const { messages } = valider(donnees, {
+      messages: { type: "libre", requis: true, verifier: verifierMessagesChat },
+    });
+    const r = await executerUsage(uid, {
+      usage: "chat",
+      systeme: SYSTEME_CHAT,
+      messages,
+      maxJetons: 1000,
+      temperature: 0.5,
+    });
+    return {
+      texte: r.texte,
+      modele: r.modele,
+      jetonsEntree: r.jetonsEntree,
+      jetonsSortie: r.jetonsSortie,
+    };
   }
 
   /**
@@ -380,6 +444,7 @@ export function creerFonctionsIa(deps) {
     definirQuota,
     genererTags,
     rechercher,
+    chat,
     enregistrerCle,
     supprimerCle,
     etatCles,

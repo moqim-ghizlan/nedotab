@@ -30,6 +30,7 @@ import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerHorloge } from "./horloge.js";
 import { creerRecherche } from "./recherche.js";
+import { creerChat } from "./chat/panneau.js";
 import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
 import { creerCompte } from "./services/compte.js";
@@ -457,6 +458,23 @@ export async function demarrerApp(racine) {
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
   });
+  // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
+  const chat = creerChat({
+    contexteIa,
+    appeler: async (messages) => (await chargerFirebase()).appelerIa("iaChat", { messages }),
+    ouvrirReglagesIa: () =>
+      ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
+    confirmer: async ({ titre, message, valider }) =>
+      (await demander({
+        titre,
+        message,
+        boutons: [
+          { libelle: "Annuler", valeur: false },
+          { libelle: valider, valeur: true, principal: true },
+        ],
+      })) === true,
+  });
+  document.body.append(chat.bouton, chat.panneau);
   page.insertBefore(recherche.racine, vide);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.

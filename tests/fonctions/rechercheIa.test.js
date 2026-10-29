@@ -283,3 +283,81 @@ describe("rechercher (fonction serveur)", () => {
     await expect(ia.rechercher("u1", { question: "ok", fournisseur: "autre" })).rejects.toThrow();
   });
 });
+
+describe("chat (V4.11)", () => {
+  const conversation = [
+    { role: "user", texte: "Bonjour" },
+    { role: "assistant", texte: "Salut !" },
+    { role: "user", texte: "Explique le DNS" },
+  ];
+
+  it("une réponse complète, 1 appel de quota, température 0,5, prompt système", async () => {
+    const { ia, envoyer, db } = await monter(["Le DNS traduit les noms en adresses."]);
+    const r = await ia.chat("u1", { messages: conversation });
+    expect(r).toMatchObject({ texte: "Le DNS traduit les noms en adresses.", modele: "m" });
+    expect(r.jetonsEntree).toBe(1);
+    const appel = envoyer.mock.calls[0][0];
+    expect(appel.temperature).toBe(0.5);
+    expect(appel.maxJetons).toBe(1000);
+    expect(appel.systeme).toMatch(/NedoTab/);
+    expect(appel.systeme).toMatch(/pas accès à Internet/);
+    expect(appel.messages).toEqual(conversation);
+    expect(db.lire("users/u1/prive/quota").appels).toBe(1);
+  });
+
+  it("validation : vide, trop de messages, texte trop long, total trop long, dernier message", async () => {
+    const { ia, envoyer } = await monter([]);
+    const user = (texte) => ({ role: "user", texte });
+    const refus = (messages) => expect(ia.chat("u1", { messages })).rejects.toThrow();
+    await refus([]);
+    await refus(Array.from({ length: 41 }, () => user("a")));
+    await refus([user("x".repeat(4001))]);
+    await refus(Array.from({ length: 8 }, () => user("x".repeat(4000))));
+    await refus([user("a"), { role: "assistant", texte: "b" }]);
+    await refus([{ role: "system", texte: "a" }]);
+    await refus([user("   ")]);
+    await expect(ia.chat("u1", { messages: [user("a")], fournisseur: "autre" })).rejects.toThrow();
+    expect(envoyer).not.toHaveBeenCalled();
+  });
+
+  it("IA désactivée refusée", async () => {
+    const { ia, db } = await monter([]);
+    await db.doc("users/u1").set({ reglages: { ia: { actif: false } } });
+    await expect(ia.chat("u1", { messages: conversation })).rejects.toMatchObject({
+      code: "ia-desactivee",
+    });
+  });
+});
+
+describe("grande collection (liste longue)", () => {
+  const gros = (n, description) =>
+    Array.from({ length: n }, (_, i) =>
+      site(`g${i}`, `Site numéro ${i}`, `https://site${i}.exemple.fr`, {
+        tags: ["tag un", "tag deux", "tag trois"],
+        description,
+      }),
+    );
+
+  it("300 sites avec descriptions : la liste dépasse 20 000 caractères et passe", async () => {
+    const { ia, envoyer } = await monter(
+      ['{"resultats":[{"id":"s1","score":0.9}]}'],
+      gros(300, "d".repeat(115)),
+    );
+    const r = await ia.rechercher("u1", { question: "site" });
+    expect(r.resultats[0].id).toBe("g0");
+    const texte = envoyer.mock.calls[0][0].messages[0].texte;
+    expect(texte.length).toBeGreaterThan(20000);
+    expect(texte).toContain("d".repeat(100));
+  });
+
+  it("liste démesurée : les descriptions sont retirées plutôt que la demande refusée", async () => {
+    const { ia, envoyer } = await monter(
+      ['{"resultats":[]}'],
+      gros(400, "d".repeat(500)).map((s) => ({ ...s, titre: "T".repeat(300) })),
+    );
+    await ia.rechercher("u1", { question: "site" });
+    const texte = envoyer.mock.calls[0][0].messages[0].texte;
+    expect(texte.length).toBeLessThan(150000);
+    expect(texte).not.toContain("d".repeat(100));
+  });
+});

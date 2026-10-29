@@ -17,6 +17,7 @@ export const RACCOURCIS = [
   { groupe: "Icône", touche: "Maj + F10  ou  Menu", action: "Ouvrir le menu de l'icône" },
   { groupe: "Fenêtres", touche: "Échap", action: "Fermer, ou remonter d'un niveau" },
   { groupe: "Fenêtres", touche: "Cmd + ,", action: "Ouvrir les réglages" },
+  { groupe: "Assistant", touche: "Cmd + I", action: "Ouvrir ou fermer l'assistant" },
   { groupe: "Aide", touche: "?", action: "Afficher cette aide" },
 ];
 

@@ -223,7 +223,7 @@ describe("executerUsage : fournisseur et modèle imposés par config/ia", () => 
     });
     await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
     const r = await ia.executerUsage("u1", { usage: "tags", messages });
-    expect(r).toEqual({ texte: "OK", modele: "modele-x" });
+    expect(r).toMatchObject({ texte: "OK", modele: "modele-x" });
     expect(faux.envoyer).toHaveBeenCalledWith(
       expect.objectContaining({ cle: CLE, modele: CONFIG_PAR_DEFAUT.modele, messages }),
     );

@@ -2,6 +2,33 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.11.0] - 2026-10-29
+
+### Ajouté
+
+- **Fenêtre de chat avec l'assistant** (réponse complète d'un coup ; le streaming arrive en V4.12).
+  - **Bouton robot** (icône dessinée pour le projet) en bas à droite, visible si l'IA est activée ;
+    `Ctrl/Cmd+I` ouvre et ferme ; hors ligne il reste visible et le panneau le dit ; sans clé, le
+    panneau renvoie vers les réglages de l'assistant ; les messages d'information se décalent pour
+    ne pas passer sous le bouton.
+  - **Panneau** : à droite sur ordinateur et grande tablette (400 px, non modal, la page garde sa
+    place à gauche), feuille plein écran sur téléphone (glisser l'en-tête vers le bas pour la
+    fermer, suit la hauteur visible quand le clavier s'ouvre). Messages (vous à droite, l'assistant
+    à gauche), saisie de 1 à 6 lignes (Entrée envoie, Maj+Entrée = nouvelle ligne ; sur écran
+    tactile le bouton envoie), 4 000 caractères au plus (compteur dès 3 500), bouton
+    « ↓ Derniers messages » si l'on remonte lire, « Arrêter » pendant l'attente, « Non envoyé —
+    Réessayer » en cas d'erreur, « Copier » sur chaque réponse, « Nouvelle conversation »
+    (confirmation au-delà de 4 messages), Échap ferme et rend le focus au bouton.
+  - **Fonction `iaChat`** : 1 à 40 messages de 4 000 caractères au plus (30 000 au total), le dernier
+    de l'utilisateur ; 1 appel du quota par message ; prompt versionné `PROMPT_CHAT_VERSION = 1`,
+    température 0,5, 1 000 jetons ; le client écarte les plus anciens messages si besoin. La
+    conversation n'est pas gardée (ni côté serveur ni après fermeture : l'historique est la V4.15).
+  - **Rendu Markdown sûr** (`marked` + `DOMPurify`, liste blanche stricte, liens http(s) seulement
+    en nouvel onglet, jamais d'image, aucun `innerHTML`), documenté dans `docs/securite.md` et testé
+    contre les injections.
+  - Nouvelles dépendances : `marked`, `dompurify` ; `jsdom` pour les tests (DOMPurify a besoin d'un
+    DOM fidèle, ce que happy-dom n'est pas).
+
 ## [4.10.0] - 2026-10-29
 
 ### Ajouté

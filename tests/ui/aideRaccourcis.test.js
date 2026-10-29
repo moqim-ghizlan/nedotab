@@ -49,7 +49,14 @@ describe("raccourcis globaux", () => {
 describe("table des raccourcis", () => {
   it("regroupée dans l'ordre, sans perdre de ligne", () => {
     const groupes = raccourcisParGroupe();
-    expect(groupes.map(([g]) => g)).toEqual(["Recherche", "Grille", "Icône", "Fenêtres", "Aide"]);
+    expect(groupes.map(([g]) => g)).toEqual([
+      "Recherche",
+      "Grille",
+      "Icône",
+      "Fenêtres",
+      "Assistant",
+      "Aide",
+    ]);
     expect(groupes.flatMap(([, l]) => l)).toHaveLength(RACCOURCIS.length);
   });
   it("aucun conflit avec les raccourcis de Safari et d'iPadOS", () => {
