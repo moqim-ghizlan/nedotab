@@ -77,19 +77,11 @@ export default defineConfig(({ mode }) => {
             navigateFallbackDenylist: [/^\/__\//],
             cleanupOutdatedCaches: true,
             // Firebase requests (Firestore, Storage, Auth) are never cached here: the SDK
-            // and its IndexedDB cache handle them.
-            runtimeCaching: [
-              {
-                urlPattern: ({ url }) =>
-                  url.hostname === "www.google.com" && url.pathname.startsWith("/s2/favicons"),
-                handler: "StaleWhileRevalidate",
-                options: {
-                  cacheName: "favicons",
-                  expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 30 },
-                  cacheableResponse: { statuses: [0, 200] },
-                },
-              },
-            ],
+            // and its IndexedDB cache handle them. Favicons are not cached either: <img>
+            // requests are opaque (status 0), so errors and Google's default icon were cached
+            // as successes and came back on every normal reload (only Ctrl+Shift+R fixed it).
+            // The browser's HTTP cache is enough.
+            runtimeCaching: [],
           },
         }),
       ],

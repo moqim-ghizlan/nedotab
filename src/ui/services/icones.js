@@ -109,11 +109,33 @@ export function urlFaviconGoogleAdresse(url) {
   return `https://www.google.com/s2/favicons?domain_url=${encodeURIComponent(url)}&sz=128`;
 }
 
-/** Google's icon URLs to try: the full address, the site's domain, then its parent domains. */
-export const urlsFaviconGoogle = (url) => [
-  urlFaviconGoogleAdresse(url),
-  ...domainesParents(url).map((d) => urlFaviconGoogle(url, d)),
-];
+/** Google's newer favicon endpoint: real 128 px icons (Gmail…), 404 when it knows nothing. */
+export function urlFaviconGstatic(adresse) {
+  return `https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(adresse)}&size=128`;
+}
+
+/** DuckDuckGo's icon service, a second opinion when Google's endpoints fail or are blocked. */
+export const urlFaviconDuckDuckGo = (nom) => `https://icons.duckduckgo.com/ip3/${nom}.ico`;
+
+/**
+ * Icon URLs to try: Google's newer endpoint (full address, then site root), the legacy
+ * endpoint (full address, domain, parent domains), then DuckDuckGo.
+ */
+export const urlsFaviconGoogle = (url) => {
+  let racine = url;
+  try {
+    racine = new URL(url).origin;
+  } catch {
+    /* keep the address as is */
+  }
+  return [
+    urlFaviconGstatic(url),
+    ...(racine !== url ? [urlFaviconGstatic(racine)] : []),
+    urlFaviconGoogleAdresse(url),
+    ...domainesParents(url).map((d) => urlFaviconGoogle(url, d)),
+    urlFaviconDuckDuckGo(domaine(url)),
+  ];
+};
 
 async function depuisGoogle(url, signal) {
   for (const src of urlsFaviconGoogle(url)) {
