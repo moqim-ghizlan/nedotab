@@ -77,9 +77,53 @@ export function creerAccueilPagine({ annoncer, actif = () => true, disposition }
 
   const indicateur = creerIndicateur({ allerA: (p) => allerA(p) });
 
+  let pageAffichee = 0; // page shown before the last change, for the direction of the animation
+
+  /** Animation chosen in the settings (device-only); "glisse" is the sliding track. */
+  const modeAnimation = () => {
+    const racine = document.documentElement;
+    if (racine.hasAttribute("data-animations-reduites")) return "glisse";
+    return racine.dataset.animationPage ?? "glisse";
+  };
+
+  // Entering page of each prototype, `s` = +1 when going to the right.
+  const ENTREES = {
+    fondu: () => [{ opacity: 0 }, { opacity: 1 }],
+    zoom: () => [
+      { opacity: 0, transform: "scale(0.85)" },
+      { opacity: 1, transform: "scale(1)" },
+    ],
+    cube: (s) => [
+      { opacity: 0.2, transform: `perspective(1200px) rotateY(${s * 75}deg)`, transformOrigin: s > 0 ? "left center" : "right center" },
+      { opacity: 1, transform: "perspective(1200px) rotateY(0deg)", transformOrigin: s > 0 ? "left center" : "right center" },
+    ],
+    ressort: (s) => [
+      { opacity: 0, transform: `translateX(${s * 18}%) scale(0.94)` },
+      { opacity: 1, transform: "translateX(0) scale(1)" },
+    ],
+  };
+  const DUREES = { fondu: 260, zoom: 300, cube: 420, ressort: 520 };
+  const COURBES = {
+    fondu: "ease-out",
+    zoom: "cubic-bezier(.2,.8,.2,1)",
+    cube: "cubic-bezier(.2,.8,.2,1)",
+    ressort: "cubic-bezier(.34,1.56,.64,1)",
+  };
+
   const appliquer = (animer) => {
-    piste.classList.toggle("piste--sans-transition", !animer || !!REDUIT?.matches);
+    const mode = modeAnimation();
+    const entree = animer && !glisserEn && !REDUIT?.matches && mode !== "glisse" ? ENTREES[mode] : null;
+    const sens = pageCourante >= pageAffichee ? 1 : -1;
+    const change = pageCourante !== pageAffichee;
+    pageAffichee = pageCourante;
+    piste.classList.toggle("piste--sans-transition", !animer || !!REDUIT?.matches || !!entree);
     piste.style.transform = `translateX(${-pageCourante * 100}%)`;
+    if (entree && change) {
+      pages[pageCourante]?.animate(entree(sens), {
+        duration: DUREES[mode],
+        easing: COURBES[mode],
+      });
+    }
     pages.forEach((ul, i) => {
       // Pages out of view cannot get the focus nor be read, except during a drag.
       ul.inert = !glisserEn && i !== pageCourante;

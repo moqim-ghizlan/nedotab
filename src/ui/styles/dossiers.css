@@ -492,3 +492,43 @@
 .case--insertion-apres::before {
   right: -4px;
 }
+
+/*
+ * Folder animation chosen in the settings (device-only, data-animation-dossier on <html>):
+ * opening of the window, and the body when going into or out of a sub-folder. "zoom" is the
+ * default above. "Animations réduites" cuts them all (base.css).
+ */
+:root[data-animation-dossier="fondu"] .fenetre-dossier[open] { animation: dossier-fondu 220ms ease-out; }
+:root[data-animation-dossier="bas"] .fenetre-dossier[open] { animation: dossier-bas 300ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+:root[data-animation-dossier="rebond"] .fenetre-dossier[open] { animation: dossier-rebond 460ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+:root[data-animation-dossier="bascule"] .fenetre-dossier[open] {
+  transform-origin: top center;
+  animation: dossier-bascule 440ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root[data-animation-dossier="fondu"] .fenetre-corps--droite,
+:root[data-animation-dossier="fondu"] .fenetre-corps--gauche { animation: dossier-fondu 220ms ease-out; }
+:root[data-animation-dossier="bas"] .fenetre-corps--droite { animation: dossier-corps-bas 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+:root[data-animation-dossier="bas"] .fenetre-corps--gauche { animation: dossier-corps-haut 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+:root[data-animation-dossier="rebond"] .fenetre-corps--droite,
+:root[data-animation-dossier="rebond"] .fenetre-corps--gauche { animation: dossier-corps-rebond 420ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+:root[data-animation-dossier="bascule"] .fenetre-corps--droite { animation: dossier-corps-bascule-d 380ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+:root[data-animation-dossier="bascule"] .fenetre-corps--gauche { animation: dossier-corps-bascule-g 380ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+@keyframes dossier-fondu { from { opacity: 0; } }
+@keyframes dossier-bas { from { opacity: 0; transform: translateY(48px); } }
+@keyframes dossier-rebond { from { opacity: 0; transform: scale(0.7); } }
+@keyframes dossier-bascule { from { opacity: 0; transform: perspective(1000px) rotateX(-70deg); } }
+@keyframes dossier-corps-bas { from { opacity: 0; transform: translateY(32px); } }
+@keyframes dossier-corps-haut { from { opacity: 0; transform: translateY(-32px); } }
+@keyframes dossier-corps-rebond { from { opacity: 0; transform: scale(0.85); } }
+@keyframes dossier-corps-bascule-d { from { opacity: 0; transform: perspective(900px) rotateY(60deg); transform-origin: left center; } }
+@keyframes dossier-corps-bascule-g { from { opacity: 0; transform: perspective(900px) rotateY(-60deg); transform-origin: right center; } }
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-animation-dossier] .fenetre-dossier[open],
+  :root[data-animation-dossier] .fenetre-corps--droite,
+  :root[data-animation-dossier] .fenetre-corps--gauche {
+    animation: none;
+  }
+}

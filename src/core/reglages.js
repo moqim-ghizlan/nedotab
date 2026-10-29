@@ -258,10 +258,30 @@ export const CLES_APPAREIL = [
   "affichageAccueil",
   "navigateur",
   "tailleTuiles",
+  "animationPage",
+  "animationDossier",
   "retourHaptique",
   "formeIcones",
   "espacement",
 ];
+
+/** Animation played when the home changes page (prototypes): slide by default, then not stored. */
+export const ANIMATIONS_PAGE = ["glisse", "fondu", "zoom", "cube", "ressort"];
+
+/** Animation of the page change on this device. */
+export function animationPageDe(reglagesAppareil) {
+  const choisie = reglagesAppareil?.animationPage;
+  return ANIMATIONS_PAGE.includes(choisie) ? choisie : "glisse";
+}
+
+/** Animation of the folder window, opening and going into a sub-folder (prototypes): zoom by default. */
+export const ANIMATIONS_DOSSIER = ["zoom", "fondu", "bas", "rebond", "bascule"];
+
+/** Animation of the folder window on this device. */
+export function animationDossierDe(reglagesAppareil) {
+  const choisie = reglagesAppareil?.animationDossier;
+  return ANIMATIONS_DOSSIER.includes(choisie) ? choisie : "zoom";
+}
 
 /** How the home grid is shown on this device (V2.11): pages by default, or one scrolling grid. */
 export const AFFICHAGES_ACCUEIL = ["pages", "defilement"];
@@ -314,8 +334,12 @@ export function validerReglagesAppareil(r) {
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
     resultat.affichageAccueil = r.affichageAccueil;
+  if (ANIMATIONS_DOSSIER.includes(r?.animationDossier) && r.animationDossier !== "zoom")
+    resultat.animationDossier = r.animationDossier;
   if (NAVIGATEURS.includes(r?.navigateur) && r.navigateur !== "safari")
     resultat.navigateur = r.navigateur;
+  if (ANIMATIONS_PAGE.includes(r?.animationPage) && r.animationPage !== "glisse")
+    resultat.animationPage = r.animationPage;
   return resultat;
 }
 
@@ -351,6 +375,16 @@ function modifierAppareil(etat, changements) {
     else if (AFFICHAGES_ACCUEIL.includes(changements.affichageAccueil))
       appareil.affichageAccueil = changements.affichageAccueil;
     else return etat;
+  }
+  if ("animationPage" in changements) {
+    if (!ANIMATIONS_PAGE.includes(changements.animationPage)) return etat;
+    if (changements.animationPage === "glisse") delete appareil.animationPage;
+    else appareil.animationPage = changements.animationPage;
+  }
+  if ("animationDossier" in changements) {
+    if (!ANIMATIONS_DOSSIER.includes(changements.animationDossier)) return etat;
+    if (changements.animationDossier === "zoom") delete appareil.animationDossier;
+    else appareil.animationDossier = changements.animationDossier;
   }
   if ("navigateur" in changements) {
     if (!NAVIGATEURS.includes(changements.navigateur)) return etat;

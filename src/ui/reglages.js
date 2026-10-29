@@ -7,6 +7,8 @@ import {
   affichageAccueilDe,
   espacementDe,
   formeIconesDe,
+  animationDossierDe,
+  animationPageDe,
   COTE_TELEPHONE,
   FLOU_MAX,
   fondEffectif,
@@ -154,6 +156,68 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
       modifier({ affichageAccueil: v });
       montrerSelonAffichage();
     },
+  );
+
+  // Device-only: cards with a looping mini demo of each effect (5 prototypes each).
+  const cartesAnimation = (libelle, type, options, valeur, onChoix) => {
+    const groupe = el("div", { class: "demos-animation", role: "radiogroup", "aria-label": libelle });
+    const maj = (v) => {
+      for (const b of groupe.children) b.setAttribute("aria-checked", String(b.dataset.valeur === v));
+    };
+    const page = (classe) =>
+      el("span", { class: `demo-page ${classe}` }, ...[1, 2, 3, 4].map(() => el("i")));
+    for (const [v, texte] of options) {
+      groupe.append(
+        el(
+          "button",
+          {
+            type: "button",
+            class: "demo-animation",
+            role: "radio",
+            dataset: { valeur: v },
+            onclick: () => {
+              maj(v);
+              onChoix(v);
+            },
+          },
+          el(
+            "span",
+            { class: "demo-cadre", dataset: { type, effet: v } },
+            page("demo-page--a"),
+            page("demo-page--b"),
+          ),
+          el("span", { class: "demo-nom", texte }),
+        ),
+      );
+    }
+    maj(valeur);
+    return { groupe, maj };
+  };
+  const animationPage = cartesAnimation(
+    "Animation de changement de page",
+    "page",
+    [
+      ["glisse", "Glissement"],
+      ["fondu", "Fondu"],
+      ["zoom", "Zoom"],
+      ["cube", "Cube"],
+      ["ressort", "Ressort"],
+    ],
+    animationPageDe(store.lire().reglagesAppareil),
+    (v) => modifier({ animationPage: v }),
+  );
+  const animationDossier = cartesAnimation(
+    "Animation des dossiers",
+    "dossier",
+    [
+      ["zoom", "Zoom"],
+      ["fondu", "Fondu"],
+      ["bas", "Depuis le bas"],
+      ["rebond", "Rebond"],
+      ["bascule", "Bascule 3D"],
+    ],
+    animationDossierDe(store.lire().reglagesAppareil),
+    (v) => modifier({ animationDossier: v }),
   );
 
   // Synced (V2.12): the grid of the home pages, the same on every device.
@@ -587,6 +651,23 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         reglagesPages,
         reglagesDefilement,
       ),
+      section(
+        "Animation",
+        libelleAppareil("Passage d'une page à l'autre"),
+        animationPage.groupe,
+        el("p", {
+          class: "reglages-note",
+          texte:
+            "Effet joué quand l'accueil change de page. Sans effet avec « Animations réduites » ou en défilement vertical.",
+        }),
+        libelleAppareil("Ouverture des dossiers et sous-dossiers"),
+        animationDossier.groupe,
+        el("p", {
+          class: "reglages-note",
+          texte:
+            "Effet joué à l'ouverture d'un dossier et quand on entre dans un sous-dossier ou qu'on en sort.",
+        }),
+      ),
     ],
     general: [
       section(
@@ -839,6 +920,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     galerie.maj();
     colonnes.maj(String(store.lire().reglagesAppareil?.colonnes ?? "auto"));
     affichageAccueil.maj(affichageAccueilDe(store.lire().reglagesAppareil));
+    animationPage.maj(animationPageDe(store.lire().reglagesAppareil));
+    animationDossier.maj(animationDossierDe(store.lire().reglagesAppareil));
     lignesAccueil.maj(String(grilleActuelle().lignes));
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
