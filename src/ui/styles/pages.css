@@ -70,8 +70,15 @@ html.accueil-en-pages .pied {
 }
 
 /* Scrolling grid: the tile size setting applies directly. */
+.grille:not(.page-grille) > .case {
+  container-type: inline-size;
+}
+
 .grille:not(.page-grille):not(.grille--dossier) > .case > .tuile {
+  /* Never wider than its column: the zoom stops where the icon fills the cell (68px = icon
+   * and padding). The first line is for browsers without typed arithmetic in calc(). */
   zoom: var(--taille-tuiles, 1);
+  zoom: min(var(--taille-tuiles, 1), calc(100cqw / 68px));
 }
 
 /* Sample tile used to measure a tile: present for a moment, never seen, never zoomed. */
@@ -491,4 +498,5 @@ html.accueil-en-pages .accueil[hidden] {
 
 .grille--dossier > .case > .tuile {
   zoom: var(--taille-tuiles, 1);
+  zoom: min(var(--taille-tuiles, 1), calc(100cqw / 68px));
 }

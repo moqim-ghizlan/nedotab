@@ -104,6 +104,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Opacité de la fenêtre de dossier »** (Apparence, propre à l'appareil) : de 60 à 100 %.
 
+## [4.5.14] - 2026-10-29
+
+### Ajouté
+
+- **Correctif : cartes qui se chevauchent** en défilement vertical et dans les dossiers avec une grande « Taille des cartes ». La taille s'arrête désormais là où l'icône remplit sa case.
+
 ## [Non publié]
 
 ### Ajouté
