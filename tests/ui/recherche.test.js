@@ -82,3 +82,153 @@ describe("barre de recherche : tags et description (V4.7)", () => {
     ).toBe(true);
   });
 });
+
+describe("barre à deux modes (V4.8)", () => {
+  const PRETE = {
+    ia: { actif: true },
+    modeCompte: true,
+    enLigne: true,
+    cles: [{ fournisseur: "gemini", valide: true }],
+  };
+
+  async function monterModes(contexte = PRETE, extra = {}) {
+    document.body.replaceChildren();
+    const store = { lire: () => ({ grille: GRILLE, reglages: {} }), abonner: () => {} };
+    const questions = [];
+    const reglagesIa = [];
+    const { racine, champ } = creerRecherche(store, {
+      ouvrirDossier: () => {},
+      contexteIa: async () => contexte,
+      ouvrirReglagesIa: () => reglagesIa.push(1),
+      soumettreQuestion: (q) => questions.push(q),
+      ...extra,
+    });
+    document.body.append(racine);
+    await Promise.resolve();
+    await Promise.resolve();
+    const touche = (key, init = {}) => {
+      const e = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init });
+      champ.dispatchEvent(e);
+      return e;
+    };
+    const taper = (texte) => {
+      champ.value = texte;
+      champ.dispatchEvent(new Event("input"));
+    };
+    return {
+      racine,
+      champ,
+      touche,
+      taper,
+      questions,
+      reglagesIa,
+      selecteur: () => racine.querySelector(".mode-selecteur"),
+      lignes: () => [...racine.querySelectorAll("li.resultat")],
+      demander: () => racine.classList.contains("recherche--demander"),
+    };
+  }
+
+  it("IA prête : sélecteur (radiogroup) affiché, mode Rechercher au départ", async () => {
+    const m = await monterModes();
+    expect(m.selecteur().hidden).toBe(false);
+    expect(m.selecteur().getAttribute("role")).toBe("radiogroup");
+    expect(m.demander()).toBe(false);
+    expect(m.champ.getAttribute("enterkeyhint")).toBe("search");
+  });
+
+  it.each([
+    ["désactivée", { ...PRETE, ia: { actif: false } }],
+    ["mode local", { ...PRETE, modeCompte: false }],
+  ])("IA %s : aucune trace, « ? » et Ctrl+J ne font rien", async (_, contexte) => {
+    const m = await monterModes(contexte);
+    expect(m.selecteur().hidden).toBe(true);
+    m.taper("?");
+    expect(m.demander()).toBe(false);
+    expect(m.champ.value).toBe("?");
+    m.champ.value = "";
+    m.touche("j", { ctrlKey: true });
+    expect(m.demander()).toBe(false);
+  });
+
+  it("« ? » en premier caractère → mode question, « ? » retiré ; Retour arrière → recherche", async () => {
+    const m = await monterModes();
+    m.taper("?");
+    expect(m.demander()).toBe(true);
+    expect(m.champ.value).toBe("");
+    expect(m.champ.getAttribute("enterkeyhint")).toBe("send");
+    expect(m.champ.placeholder).toContain("Posez une question");
+    m.touche("Backspace");
+    expect(m.demander()).toBe(false);
+    expect(m.racine.querySelector(".visuellement-cache").textContent).toBe("Mode recherche");
+  });
+
+  it("Tab (champ vide) et Ctrl+J basculent ; Tab dans un champ rempli ne fait rien", async () => {
+    const m = await monterModes();
+    expect(m.touche("Tab").defaultPrevented).toBe(true);
+    expect(m.demander()).toBe(true);
+    expect(m.racine.querySelector(".visuellement-cache").textContent).toBe("Mode question");
+    m.touche("j", { ctrlKey: true });
+    expect(m.demander()).toBe(false);
+    m.taper("git");
+    expect(m.touche("Tab").defaultPrevented).toBe(false);
+    expect(m.demander()).toBe(false);
+  });
+
+  it("clic sur le sélecteur", async () => {
+    const m = await monterModes();
+    m.racine.querySelector(".mode-bouton--demander").click();
+    expect(m.demander()).toBe(true);
+    expect(m.racine.querySelector(".mode-bouton--demander").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    m.racine.querySelector(".mode-bouton--rechercher").click();
+    expect(m.demander()).toBe(false);
+  });
+
+  it("mode question : 3 exemples locaux, pas de résultats instantanés, Entrée envoie", async () => {
+    const m = await monterModes();
+    m.touche("Tab");
+    expect(m.lignes().filter((l) => l.classList.contains("resultat--exemple"))).toHaveLength(3);
+    m.taper("git");
+    expect(m.lignes().map((l) => l.className)).toEqual(["resultat resultat--envoyer"]);
+    m.touche("Enter");
+    expect(m.questions).toEqual(["git"]);
+  });
+
+  it("clic sur un exemple : rempli dans le champ, sans envoi", async () => {
+    const m = await monterModes();
+    m.touche("Tab");
+    m.lignes()[0].click();
+    expect(m.champ.value).not.toBe("");
+    expect(m.questions).toEqual([]);
+  });
+
+  it("500 caractères au plus, compteur à partir de 400", async () => {
+    const m = await monterModes();
+    m.touche("Tab");
+    expect(m.champ.getAttribute("maxlength")).toBe("500");
+    m.taper("a".repeat(399));
+    expect(m.racine.querySelector(".recherche-compteur").hidden).toBe(true);
+    m.taper("a".repeat(400));
+    expect(m.racine.querySelector(".recherche-compteur").textContent).toBe("400/500");
+  });
+
+  it("sans clé : message avec lien vers les réglages, rien n'est envoyé", async () => {
+    const m = await monterModes({ ...PRETE, cles: [] });
+    m.touche("Tab");
+    expect(m.lignes()[0].textContent).toContain("Configurez l'assistant IA");
+    m.lignes()[0].click();
+    expect(m.reglagesIa).toHaveLength(1);
+    expect(m.questions).toEqual([]);
+  });
+
+  it("hors ligne : message, Entrée n'envoie rien", async () => {
+    const m = await monterModes({ ...PRETE, enLigne: false });
+    m.touche("Tab");
+    m.taper("une question");
+    expect(m.lignes()[0].textContent).toContain("Connexion Internet nécessaire");
+    m.touche("Enter");
+    expect(m.questions).toEqual([]);
+    expect(m.reglagesIa).toEqual([]);
+  });
+});

@@ -2,6 +2,25 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.8.0] - 2026-10-29
+
+### Ajouté
+
+- **Barre de recherche à deux modes** : « Rechercher » (par défaut, recherche locale) et
+  « Demander » (une question pour l'IA). Le traitement de la question n'est pas encore branché
+  (« Bientôt disponible », V4.9).
+  - Sélecteur loupe / étincelle à gauche du champ (groupe de boutons radio, cibles de 44 px au
+    doigt). On revient toujours en « Rechercher » à l'ouverture d'un onglet.
+  - Bascule : clic, `?` tapé en premier caractère, `Tab` dans le champ vide, `Ctrl/Cmd+J` ;
+    Retour arrière dans le champ vide quitte le mode question. Annonce « Mode question » /
+    « Mode recherche » pour les lecteurs d'écran.
+  - Mode question : bordure et lueur à la couleur d'accent, texte d'aide dédié, 3 exemples
+    cliquables faits localement à partir de vos tags les plus fréquents, « Envoyer » avec Entrée,
+    500 caractères au plus (compteur dès 400), touche « Envoyer » du clavier iOS.
+  - IA désactivée ou hors connexion au compte : le sélecteur n'apparaît pas et `?` / `Ctrl+J` ne
+    font rien. Sans clé : « Configurez l'assistant IA » avec lien vers les réglages IA. Hors
+    ligne : « Connexion Internet nécessaire ».
+
 ## [4.7.0] - 2026-10-29
 
 ### Ajouté

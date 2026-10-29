@@ -327,28 +327,31 @@ export async function demarrerApp(racine) {
   session.restauration = creerRestauration({ store, session });
   session.donnees = creerDonnees({ store, session });
   // V4.4: tags and description proposed by the AI after an adding (extension only).
+  // AI state read by the tag generation (V4.4) and by the search bar's question mode (V4.8).
+  let clesIa = null;
+  async function contexteIa() {
+    const modeCompte = synchro.lire().mode === "compte";
+    const ia = iaDe(store.lire().reglages);
+    if (modeCompte && ia.actif && navigator.onLine && !clesIa?.length) {
+      const r = await creerServiceIa().etatCles();
+      if (r.ok) clesIa = r.valeur;
+    }
+    return { ia, modeCompte, enLigne: navigator.onLine, cles: clesIa ?? [] };
+  }
   {
-    let cles = null;
     const moteur = creerEnrichissement({
-        store,
-        plateforme,
-        appeler: async (nom, donnees) => (await chargerFirebase()).appelerIa(nom, donnees),
-        async contexte() {
-          const modeCompte = synchro.lire().mode === "compte";
-          const ia = iaDe(store.lire().reglages);
-          if (modeCompte && ia.actif && navigator.onLine && !cles?.length) {
-            const r = await creerServiceIa().etatCles();
-            if (r.ok) cles = r.valeur;
-          }
-          return { ia, modeCompte, enLigne: navigator.onLine, cles: cles ?? [] };
-        },
-      });
+      store,
+      plateforme,
+      appeler: async (nom, donnees) => (await chargerFirebase()).appelerIa(nom, donnees),
+      contexte: contexteIa,
+    });
     installerEnrichissement(moteur);
     // V4.6: catch-up of the existing sites, only on request (Settings → AI).
     session.rattrapage = creerRattrapage({
       store,
       enrichissement: moteur,
-      quotaRestant: async () => (await (await chargerFirebase()).appelerIa("iaQuotaRestant", {})).restant,
+      quotaRestant: async () =>
+        (await (await chargerFirebase()).appelerIa("iaQuotaRestant", {})).restant,
       preferences: plateforme.preferences,
       idAppareil: plateforme.idAppareil,
     });
@@ -446,7 +449,12 @@ export async function demarrerApp(racine) {
     });
 
   // Search bar above the grid; a folder found opens directly at its level.
-  const recherche = creerRecherche(store, { ouvrirDossier: (id) => ouvrirDossier(id) });
+  const recherche = creerRecherche(store, {
+    ouvrirDossier: (id) => ouvrirDossier(id),
+    contexteIa,
+    ouvrirReglagesIa: () =>
+      ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
+  });
   page.insertBefore(recherche.racine, vide);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.

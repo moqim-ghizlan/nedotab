@@ -5,6 +5,18 @@ import { el } from "./dom.js";
 import { creerIcone, ouvrirSite, sitesDansNouvelOnglet } from "./tuile.js";
 import { creerIconeDossier } from "./tuileDossier.js";
 import { entrees } from "./entrees.js";
+import { exemplesQuestions } from "../core/exemplesQuestions.js";
+import {
+  QUESTION_MAX,
+  apresSaisie,
+  autreMode,
+  compteurVisible,
+  etatModes,
+  modeApresTouche,
+} from "../core/modeRecherche.js";
+import { iaPrete } from "../core/ia.js";
+import { creerSelecteurMode } from "./selecteurMode.js";
+import { toast } from "./toast.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 
@@ -50,11 +62,27 @@ function adresseTapee(texte) {
   return r.ok ? r.url : null;
 }
 
+/** V4.8: the question is only plugged to the AI in V4.9. */
+const questionBientot = () => toast("Bientôt disponible");
+
+const PLACEHOLDERS = {
+  rechercher: "Rechercher dans vos sites…",
+  demander: "Posez une question… (ex. : l'outil pour retoucher des photos)",
+};
+
 /**
  * Search bar above the grid (combobox + listbox). Instant, no network: the web search only
  * happens on Enter when nothing local fits, with the user's default engine.
  */
-export function creerRecherche(store, { ouvrirDossier }) {
+export function creerRecherche(
+  store,
+  {
+    ouvrirDossier,
+    contexteIa = null,
+    ouvrirReglagesIa = () => {},
+    soumettreQuestion = questionBientot,
+  },
+) {
   const champ = el("input", {
     type: "search",
     class: "recherche-champ",
@@ -68,10 +96,22 @@ export function creerRecherche(store, { ouvrirDossier }) {
     "aria-autocomplete": "list",
     "aria-label": "Rechercher dans vos sites",
   });
+  // V4.8: "rechercher" (local, instant) or "demander" (a question for the AI). Never kept
+  // between two tabs: one always starts in "rechercher".
+  let mode = "rechercher";
+  let modes = etatModes(null); // what the AI state allows
+  let clavier = false;
+  let precedent = "";
+  const selecteur = creerSelecteurMode({ surChoix: (m) => changerMode(m) });
+  const compteur = el("span", { class: "recherche-compteur", "aria-hidden": "true", hidden: true });
   // The "/" shortcut needs a keyboard: the hint shows while one is probable (V3.9), and goes
   // away when it is unplugged (a bare tablet, a phone).
-  entrees().ecouter(({ clavier }) => {
-    champ.placeholder = clavier ? "Rechercher dans vos sites… (/)" : "Rechercher dans vos sites…";
+  const placeholder = () => {
+    champ.placeholder = PLACEHOLDERS[mode] + (clavier && mode === "rechercher" ? " (/)" : "");
+  };
+  entrees().ecouter((e) => {
+    clavier = e.clavier;
+    placeholder();
   });
   const liste = el("ul", {
     class: "recherche-resultats",
@@ -85,7 +125,9 @@ export function creerRecherche(store, { ouvrirDossier }) {
     "div",
     { class: "recherche", role: "search" },
     el("span", { class: "recherche-loupe", "aria-hidden": "true" }),
+    selecteur.racine,
     champ,
+    compteur,
     liste,
     etat,
   );
@@ -110,7 +152,54 @@ export function creerRecherche(store, { ouvrirDossier }) {
     champ.removeAttribute("aria-activedescendant");
   };
 
-  const rendre = () => {
+  const rendre = () => (mode === "demander" ? rendreQuestion() : rendreRecherche());
+
+  /** Question mode: examples while empty, then "Envoyer"; no instant results. */
+  const rendreQuestion = () => {
+    const texte = champ.value;
+    options = [];
+    if (!modes.envoi) {
+      if (modes.message)
+        options.push({ type: "message", texte: modes.message, action: modes.action });
+    } else if (!texte.trim()) {
+      for (const q of exemplesQuestions(store.lire().grille))
+        options.push({ type: "exemple", texte: q });
+    } else options.push({ type: "envoyer", texte: texte.trim() });
+    liste.replaceChildren(
+      ...options.map((o, i) => {
+        const symbole = { exemple: "✦", envoyer: "↵", message: "!" }[o.type];
+        const titre = o.type === "envoyer" ? `Envoyer : « ${o.texte} »` : o.texte;
+        const li = el(
+          "li",
+          {
+            id: `resultat-${i}`,
+            class: `resultat resultat--${o.type}`,
+            role: "option",
+            "aria-selected": "false",
+            "aria-disabled": o.type === "message" && !o.action ? "true" : null,
+          },
+          el("span", { class: "resultat-icone resultat-icone--symbole", texte: symbole }),
+          el("span", { class: "resultat-titre", texte: titre }),
+        );
+        li.addEventListener("mousedown", (e) => e.preventDefault());
+        li.addEventListener("click", () => valider(i));
+        return li;
+      }),
+    );
+    liste.hidden = options.length === 0;
+    champ.setAttribute("aria-expanded", String(options.length > 0));
+    if (options.length) choisirActif(0);
+    mettreAJourCompteur();
+  };
+
+  const mettreAJourCompteur = () => {
+    const n = [...champ.value].length;
+    const voir = mode === "demander" && compteurVisible(n);
+    compteur.hidden = !voir;
+    if (voir) compteur.textContent = `${n}/${QUESTION_MAX}`;
+  };
+
+  const rendreRecherche = () => {
     const texte = champ.value;
     if (!texte.trim()) {
       options = [];
@@ -216,6 +305,10 @@ export function creerRecherche(store, { ouvrirDossier }) {
 
   function valider(i, { nouvelOnglet = false } = {}) {
     const o = options[i];
+    if (mode === "demander") {
+      validerQuestion(o);
+      return;
+    }
     if (!o) {
       if (champ.value.trim()) chercherSurLeWeb(champ.value.trim(), nouvelOnglet);
       return;
@@ -234,12 +327,92 @@ export function creerRecherche(store, { ouvrirDossier }) {
     }
   }
 
-  champ.addEventListener("input", rendre);
-  champ.addEventListener("focus", () => champ.value.trim() && rendre());
+  function validerQuestion(o) {
+    if (!modes.envoi) {
+      if (o?.action === "reglages" || (!o && modes.action === "reglages")) {
+        fermerListe();
+        ouvrirReglagesIa();
+      }
+      return;
+    }
+    if (o?.type === "exemple") {
+      champ.value = o.texte;
+      precedent = champ.value;
+      champ.focus();
+      rendre();
+      return;
+    }
+    const question = (o?.texte ?? champ.value).trim();
+    if (!question) return;
+    fermerListe();
+    soumettreQuestion(question);
+  }
+
+  /** Changes the mode (click, "?", Tab, Ctrl+J, Backspace) and says so to screen readers. */
+  function changerMode(m, { annoncer = true } = {}) {
+    if (m === mode || (m === "demander" && !modes.afficher)) return;
+    mode = m;
+    const question = mode === "demander";
+    racine.classList.toggle("recherche--demander", question);
+    selecteur.definir(mode);
+    placeholder();
+    const libelle = question ? "Poser une question à l'assistant" : "Rechercher dans vos sites";
+    champ.setAttribute("aria-label", libelle);
+    champ.setAttribute("enterkeyhint", question ? "send" : "search");
+    if (question) champ.setAttribute("maxlength", String(QUESTION_MAX));
+    else champ.removeAttribute("maxlength");
+    if (annoncer) etat.textContent = question ? "Mode question" : "Mode recherche";
+    champ.focus();
+    rendre();
+  }
+
+  /** Reads the AI state: the selector is hidden (and the bar back in "rechercher") if unusable. */
+  async function actualiserIa() {
+    if (!contexteIa) return;
+    try {
+      modes = etatModes(iaPrete(await contexteIa()));
+    } catch {
+      modes = etatModes(null);
+    }
+    selecteur.afficher(modes.afficher);
+    racine.classList.toggle("recherche--modes", modes.afficher);
+    if (!modes.afficher && mode === "demander") changerMode("rechercher", { annoncer: false });
+    else if (mode === "demander") rendre();
+  }
+  selecteur.definir(mode);
+  champ.setAttribute("enterkeyhint", "search");
+  actualiserIa();
+  addEventListener("online", actualiserIa);
+  addEventListener("offline", actualiserIa);
+
+  champ.addEventListener("input", () => {
+    const r = apresSaisie({ mode, avant: precedent, apres: champ.value, actif: modes.afficher });
+    precedent = r.valeur;
+    if (r.valeur !== champ.value) champ.value = r.valeur;
+    if (r.mode !== mode) changerMode(r.mode);
+    else rendre();
+  });
+  champ.addEventListener("focus", () => {
+    actualiserIa();
+    if (mode === "demander" || champ.value.trim()) rendre();
+  });
   champ.addEventListener("compositionstart", () => (composition = true));
   champ.addEventListener("compositionend", () => (composition = false));
   champ.addEventListener("keydown", (e) => {
     if (composition || e.isComposing) return;
+    const nouveau = modeApresTouche({
+      mode,
+      touche: e.key,
+      valeurVide: champ.value === "",
+      ctrl: e.ctrlKey || e.metaKey,
+      maj: e.shiftKey,
+      actif: modes.afficher,
+    });
+    if (nouveau && e.key !== "Backspace") e.preventDefault();
+    if (nouveau) {
+      changerMode(nouveau);
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       if (liste.hidden) rendre();
@@ -254,6 +427,7 @@ export function creerRecherche(store, { ouvrirDossier }) {
       e.preventDefault();
       if (champ.value) {
         champ.value = "";
+        precedent = "";
         rendre();
       } else {
         fermerListe();
@@ -285,6 +459,20 @@ export function creerRecherche(store, { ouvrirDossier }) {
     e.preventDefault();
     champ.focus();
     champ.select();
+  });
+
+  /** Ctrl/Cmd+J: switches the mode from anywhere on the page. */
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "j" || !(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+    if (
+      !modes.afficher ||
+      racine.offsetParent === null ||
+      document.querySelector("dialog[open]:modal")
+    )
+      return;
+    if (e.target === champ) return; // handled by the field itself
+    e.preventDefault();
+    changerMode(autreMode(mode));
   });
 
   return { racine, champ };

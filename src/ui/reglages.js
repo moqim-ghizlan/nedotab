@@ -94,7 +94,7 @@ function section(titre, ...contenu) {
  * shows live, without a "Save" button). Built as independent sections so that later
  * versions can add theirs (account, AI…).
  */
-export function ouvrirReglages(store, { retourFocus, session } = {}) {
+export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   if (ouvert) {
     ouvert.fermer();
     return null;
@@ -1086,9 +1086,9 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   copierFond();
   majPermission();
   panneau.show();
-  let memorise = null;
+  let memorise = onglet ?? null; // asked by the caller (V4.8: the AI tab)
   try {
-    memorise = localStorage.getItem(CLE_ONGLET);
+    memorise ??= localStorage.getItem(CLE_ONGLET);
   } catch {
     /* no remembered tab */
   }
