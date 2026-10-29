@@ -24,6 +24,9 @@ export function creerServiceIa({ chargerFb = chargerFirebase } = {}) {
     enregistrerCle: (fournisseur, cle) => appeler("iaEnregistrerCle", { fournisseur, cle }),
     supprimerCle: (fournisseur) => appeler("iaSupprimerCle", { fournisseur }),
     tester: (fournisseur) => appeler("iaTester", { fournisseur }),
+    /** { limite, utilises, restant, defaut, max } of the day. */
+    quota: () => appeler("iaQuotaRestant", {}),
+    definirQuota: (limite) => appeler("iaDefinirQuota", { limite }),
     /** config/ia, or the default when it is missing or unreadable (offline). */
     async config() {
       try {

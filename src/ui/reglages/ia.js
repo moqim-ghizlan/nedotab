@@ -18,6 +18,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
   let config = null; // config/ia
   let cles = null; // [{ fournisseur, fin, ajouteLe, valide }] | null while loading
   let erreurCles = null;
+  let quota = null; // { limite, utilises, restant, defaut, max } | null
   const racine = el("div", { class: "ia-reglages" });
   const section = el(
     "section",
@@ -42,6 +43,10 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     const r = await service.etatCles();
     cles = r.ok ? r.valeur : null;
     erreurCles = r.ok ? null : r.erreur;
+    if (r.ok && service.quota) {
+      const q = await service.quota();
+      quota = q.ok ? q.valeur : null;
+    }
     rendre();
   }
 
@@ -114,6 +119,26 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     const r = await service.supprimerCle(fournisseur);
     if (!r.ok) toast(r.erreur, { type: "erreur", duree: 6000 });
     await charger();
+  }
+
+  // --- daily limit ---------------------------------------------------------------------------
+  /** The user raises (or lowers) their own daily limit, within the ceiling set by the server. */
+  async function changerLimite(champ, bouton) {
+    const valeur = Number(champ.value);
+    if (!Number.isInteger(valeur) || valeur < 1 || valeur > quota.max) {
+      toast(`Entrez un nombre entier entre 1 et ${quota.max}.`, { type: "erreur", duree: 5000 });
+      return;
+    }
+    bouton.disabled = true;
+    const r = await service.definirQuota(valeur);
+    if (!r.ok) {
+      toast(r.erreur, { type: "erreur", duree: 6000 });
+      bouton.disabled = false;
+      return;
+    }
+    quota = r.valeur;
+    toast(`Limite quotidienne : ${quota.limite} appels`, { duree: 3000, cle: "ia-quota" });
+    rendre();
   }
 
   // --- test ------------------------------------------------------------------------------------
@@ -293,6 +318,41 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         : null;
 
     // Empty slots (null) must not reach replaceChildren: they would be written as "null".
+    const carteQuota =
+      quota && reglages.actif && avecCle().length
+        ? (() => {
+            const champ = el("input", {
+              id: "ia-limite",
+              type: "number",
+              class: "ia-limite",
+              min: "1",
+              max: String(quota.max),
+              step: "1",
+              inputmode: "numeric",
+              value: String(quota.limite),
+            });
+            const bouton = el("button", {
+              type: "button",
+              class: "bouton",
+              texte: "Enregistrer",
+              onclick: () => changerLimite(champ, bouton),
+            });
+            return el(
+              "div",
+              { class: "ia-carte ia-carte--action" },
+              el(
+                "div",
+                { class: "ia-carte-texte" },
+                el("label", { for: "ia-limite", texte: "Limite quotidienne d'appels" }),
+                el("span", {
+                  class: "ia-discret",
+                  texte: `${quota.utilises} utilisés aujourd'hui sur ${quota.limite} (maximum ${quota.max}). Remis à zéro chaque nuit.`,
+                }),
+              ),
+              el("div", { class: "ia-limite-champ" }, champ, bouton),
+            );
+          })()
+        : null;
     const carteCle = fournisseursOffertes().length
       ? el("div", { class: "ia-carte" }, el("ul", { class: "ia-liste" }, lignesCles), testeur)
       : null;
@@ -304,6 +364,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         guide,
         carteCle,
         completer,
+        carteQuota,
         mentions,
       ].filter(Boolean),
     );

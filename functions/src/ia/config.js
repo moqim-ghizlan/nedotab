@@ -3,7 +3,7 @@
  * (console or functions/scripts/initialiser-config-ia.js), read by the functions and kept
  * 5 minutes in the instance. Model ids are never written in the code: they change often.
  */
-import { QUOTA_PAR_DEFAUT } from "../quota.js";
+import { QUOTA_MAX_PAR_DEFAUT, QUOTA_PAR_DEFAUT } from "../quota.js";
 
 export const DUREE_CACHE_MS = 5 * 60 * 1000;
 
@@ -13,6 +13,8 @@ export const DUREE_CACHE_MS = 5 * 60 * 1000;
  */
 export const CONFIG_PAR_DEFAUT = {
   quotaQuotidien: QUOTA_PAR_DEFAUT,
+  // Highest daily limit a user may choose for themselves (V4.7).
+  quotaMax: QUOTA_MAX_PAR_DEFAUT,
   modele: "gemini-3.1-flash-lite",
   fournisseurs: [
     {
@@ -31,6 +33,8 @@ export function normaliserConfig(brute) {
     Number.isInteger(c.quotaQuotidien) && c.quotaQuotidien > 0 ? c.quotaQuotidien : null;
   return {
     quotaQuotidien: quota ?? CONFIG_PAR_DEFAUT.quotaQuotidien,
+    quotaMax:
+      Number.isInteger(c.quotaMax) && c.quotaMax > 0 ? c.quotaMax : CONFIG_PAR_DEFAUT.quotaMax,
     modele:
       typeof c.modele === "string" && /^[\w.:/-]{1,100}$/.test(c.modele)
         ? c.modele

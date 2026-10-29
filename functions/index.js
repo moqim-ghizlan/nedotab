@@ -111,3 +111,4 @@ export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
 export const iaGenererTags = appelIa(fonctionsIa.genererTags);
 export const iaQuotaRestant = appelIa(fonctionsIa.quotaRestant);
+export const iaDefinirQuota = appelIa(fonctionsIa.definirQuota);

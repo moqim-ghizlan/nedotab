@@ -2003,3 +2003,34 @@ body.fond-clair .carte-action--principale {
   100% { opacity: 0; transform: translateX(0) scale(1); }
 }
 .demo-cadre[data-effet="cube"] .demo-page--b { transform-origin: left center; }
+
+/* Daily limit of AI calls (V4.7). */
+.ia-limite-champ {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.ia-limite {
+  width: 5.5rem;
+  min-height: 40px;
+  padding: 8px var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--fond);
+  color: var(--texte);
+  font-size: var(--taille-s);
+}
+
+.ia-limite:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+@media (max-width: 480px) {
+  .ia-carte--action:has(.ia-limite-champ) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

@@ -76,6 +76,14 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 ## [Non publié]
 
+### Ajouté
+
+- **Limite quotidienne réglable** (Réglages → IA) : chacun choisit sa limite d'appels IA par
+  jour, de 1 au plafond du serveur (`config/ia.quotaMax`, 1 000 par défaut ; 300 sans réglage).
+  Affiche les appels utilisés aujourd'hui. Utile pour « Compléter mes sites », qui épuise vite la
+  limite. Fonction `iaDefinirQuota` ; la limite est stockée côté serveur (`prive/reglageQuota`),
+  jamais écrite par le navigateur.
+
 ### Ajouté (V4.6)
 
 - **Compléter mes sites** (Réglages → IA) : tags et descriptions pour les sites déjà enregistrés,

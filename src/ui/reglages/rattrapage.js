@@ -8,7 +8,7 @@ const RAISONS = {
   "cle-sans-credit": "Pause : votre clé n'a plus de crédit chez Google.",
   "cle-absente": "Pause : aucune clé enregistrée.",
   "ia-desactivee": "Pause : l'assistant IA est désactivé.",
-  "quota-depasse": "Limite quotidienne atteinte : le traitement reprendra demain, là où il s'est arrêté.",
+  "quota-depasse": "Limite quotidienne atteinte : le traitement reprendra demain, là où il s'est arrêté. Vous pouvez aussi relever la limite dans Réglages → IA, puis reprendre.",
   "pas-de-modele": "Pause : aucun modèle d'IA n'est disponible.",
 };
 

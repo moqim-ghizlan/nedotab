@@ -143,7 +143,7 @@ export function creerFonctionsIa(deps) {
     const cles = await lireCles(uid);
     const entree = cles[fournisseur];
     if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
-    await consommer(uid, { n: 1, limite: c.quotaQuotidien });
+    await consommer(uid, { n: 1, limite: await limiteDe(uid, c) });
     const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
     const debut = horloge();
     try {
@@ -208,7 +208,7 @@ export function creerFonctionsIa(deps) {
     const entree = (await lireCles(uid))[fournisseur];
     if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
     const c = await config();
-    await consommer(uid, { n: 1, limite: c.quotaQuotidien });
+    await consommer(uid, { n: 1, limite: await limiteDe(uid, c) });
     const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
     const debut = horloge();
     try {
@@ -275,18 +275,48 @@ export function creerFonctionsIa(deps) {
     throw new ErreurFournisseur("reponse-invalide");
   }
 
+  /**
+   * The daily limit of a user (V4.7): the one they chose in the settings, never above the
+   * ceiling of config/ia (quotaMax), else the default of config/ia.
+   */
+  async function limiteDe(uid, c) {
+    const snap = await db.doc(`users/${uid}/prive/reglageQuota`).get();
+    const choisie = snap.exists ? snap.data()?.limite : null;
+    const plafond = Math.max(c.quotaMax, c.quotaQuotidien);
+    return Number.isInteger(choisie) && choisie > 0 ? Math.min(choisie, plafond) : c.quotaQuotidien;
+  }
+
   /** What is left of today's AI calls. Reads only: nothing is consumed (V4.6). */
   async function quotaRestant(uid, donnees) {
     valider(donnees, {});
     const c = await config();
+    const limite = await limiteDe(uid, c);
     const snap = await db.doc(`users/${uid}/prive/quota`).get();
     const q = snap.exists ? snap.data() : null;
     const utilises = q?.jour === jourParis(new Date()) ? (q.appels ?? 0) : 0;
-    return { limite: c.quotaQuotidien, restant: Math.max(0, c.quotaQuotidien - utilises) };
+    return {
+      limite,
+      utilises,
+      restant: Math.max(0, limite - utilises),
+      defaut: c.quotaQuotidien,
+      max: Math.max(c.quotaMax, c.quotaQuotidien),
+    };
+  }
+
+  /** The user sets their own daily limit, between 1 and the ceiling of config/ia. */
+  async function definirQuota(uid, donnees) {
+    const c = await config();
+    const plafond = Math.max(c.quotaMax, c.quotaQuotidien);
+    const { limite } = valider(donnees, {
+      limite: { type: "entier", requis: true, min: 1, max: plafond },
+    });
+    await db.doc(`users/${uid}/prive/reglageQuota`).set({ limite });
+    return quotaRestant(uid, {});
   }
 
   return {
     quotaRestant,
+    definirQuota,
     genererTags,
     enregistrerCle,
     supprimerCle,

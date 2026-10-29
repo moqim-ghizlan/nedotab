@@ -5,6 +5,8 @@
  * cannot both take the last unit).
  */
 export const QUOTA_PAR_DEFAUT = 300;
+/** Highest limit a user may set for themselves (config/ia.quotaMax overrides it). */
+export const QUOTA_MAX_PAR_DEFAUT = 1000;
 
 /** "AAAA-MM-JJ" of `date` in Europe/Paris. */
 export function jourParis(date = new Date()) {
