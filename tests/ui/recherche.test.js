@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { creerRecherche } from "../../src/ui/recherche.js";
 
 const site = (id, titre, url, tags = [], description = "") => ({
@@ -91,6 +91,8 @@ describe("barre à deux modes (V4.8)", () => {
     cles: [{ fournisseur: "gemini", valide: true }],
   };
 
+  let reponseIa = { resultats: [] };
+
   async function monterModes(contexte = PRETE, extra = {}) {
     document.body.replaceChildren();
     const store = { lire: () => ({ grille: GRILLE, reglages: {} }), abonner: () => {} };
@@ -100,7 +102,10 @@ describe("barre à deux modes (V4.8)", () => {
       ouvrirDossier: () => {},
       contexteIa: async () => contexte,
       ouvrirReglagesIa: () => reglagesIa.push(1),
-      soumettreQuestion: (q) => questions.push(q),
+      demanderIa: async (q) => {
+        questions.push(q);
+        return reponseIa;
+      },
       ...extra,
     });
     document.body.append(racine);
@@ -230,5 +235,93 @@ describe("barre à deux modes (V4.8)", () => {
     m.touche("Enter");
     expect(m.questions).toEqual([]);
     expect(m.reglagesIa).toEqual([]);
+  });
+  const titres = (m) =>
+    m
+      .lignes()
+      .filter((l) => l.classList.contains("resultat--site"))
+      .map((l) => l.querySelector(".resultat-titre").textContent);
+  const entete = (m) => m.racine.querySelector(".resultat-entete")?.textContent;
+
+  async function demander(m, question) {
+    m.touche("Tab");
+    m.taper(question);
+    m.touche("Enter");
+    await vi.waitFor(() => expect(m.racine.querySelector(".resultat--attente")).toBeNull());
+  }
+
+  it("V4.9 : résultats de l'assistant dans la même liste, dans l'ordre du serveur", async () => {
+    reponseIa = {
+      resultats: [
+        { id: "gh", score: 0.9 },
+        { id: "pix", score: 0.5 },
+      ],
+    };
+    const m = await monterModes();
+    await demander(m, "où est mon code ?");
+    expect(entete(m)).toBe("Résultats de l'assistant");
+    expect(titres(m)).toEqual(["GitHub", "Pixlr"]);
+    expect(m.lignes().at(-1).classList.contains("resultat--web")).toBe(true);
+  });
+
+  it("V4.9 : un site supprimé entre la question et la réponse est ignoré", async () => {
+    reponseIa = { resultats: [{ id: "disparu" }, { id: "ed" }] };
+    const m = await monterModes();
+    await demander(m, "photos");
+    expect(titres(m)).toEqual(["Éditeur"]);
+  });
+
+  it("V4.9 : aucun résultat → message + recherche web", async () => {
+    reponseIa = { resultats: [], aucunResultat: true };
+    const m = await monterModes();
+    await demander(m, "heure à Tokyo");
+    expect(m.lignes()[0].textContent).toContain("Aucun de vos sites ne correspond");
+    expect(m.lignes()[1].classList.contains("resultat--web")).toBe(true);
+  });
+
+  it("V4.9 : erreur → message court et repli sur la recherche locale", async () => {
+    const m = await monterModes(PRETE, {
+      demanderIa: async () => Promise.reject({ code: "functions/unavailable" }),
+    });
+    await demander(m, "github");
+    expect(m.lignes()[0].textContent).toContain("Service indisponible");
+    expect(entete(m)).toBe("Voici les résultats de la recherche simple");
+    expect(titres(m)).toEqual(["GitHub"]);
+  });
+
+  it("V4.9 : chargement visible, Annuler ignore la réponse tardive", async () => {
+    let finir;
+    const m = await monterModes(PRETE, {
+      demanderIa: () => new Promise((r) => (finir = r)),
+    });
+    m.touche("Tab");
+    m.taper("code");
+    m.touche("Enter");
+    expect(m.lignes()[0].textContent).toContain("Recherche dans vos sites…");
+    const annuler = m.lignes().find((l) => l.classList.contains("resultat--annuler"));
+    annuler.click();
+    finir({ resultats: [{ id: "gh" }] });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(titres(m)).toEqual([]);
+    expect(m.racine.querySelector(".resultat--attente")).toBeNull();
+  });
+
+  it("V4.9 : la dernière question reste disponible dans la session", async () => {
+    reponseIa = { resultats: [{ id: "gh" }] };
+    const m = await monterModes();
+    await demander(m, "code");
+    m.touche("Escape"); // clears the field
+    expect(m.champ.value).toBe("");
+    expect(entete(m)).toBe("Dernière question : « code »");
+    expect(titres(m)).toEqual(["GitHub"]);
+  });
+
+  it("V4.9 : un texte modifié après la réponse redevient « Envoyer »", async () => {
+    reponseIa = { resultats: [{ id: "gh" }] };
+    const m = await monterModes();
+    await demander(m, "code");
+    m.taper("code git");
+    expect(m.lignes().map((l) => l.className)).toEqual(["resultat resultat--envoyer"]);
   });
 });

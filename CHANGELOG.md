@@ -2,6 +2,29 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.9.0] - 2026-10-29
+
+### Ajouté
+
+- **Recherche intelligente dans vos propres sites** : en mode « Demander », une question en langage
+  naturel (« l'outil pour retoucher des photos ajouté le mois dernier ») renvoie vos sites les plus
+  pertinents, classés, dans la même liste que la recherche locale (flèches, Entrée, clic).
+  - Nouvelle fonction **`iaRechercher`** : le navigateur n'envoie que la question ; le serveur lit
+    la grille, construit une liste compacte (une ligne par site : identifiant court, titre,
+    domaine, tags, description tronquée, dossier, mois d'ajout) et ne garde du modèle que des
+    identifiants, validés (inventés ou en double retirés, 8 au plus). Température 0, date du jour
+    fournie, la liste est présentée comme une donnée (balises `<sites>` neutralisées).
+  - Au-delà de **400 sites**, pré-filtre côté serveur : les 150 meilleurs + des sites de chaque
+    dossier, 200 lignes au plus.
+  - Prompt versionné : `PROMPT_RECHERCHE_VERSION = 1`.
+  - Une question = 1 appel du quota quotidien ; collection vide : aucun appel.
+  - Chargement avec « Annuler », « Aucun de vos sites ne correspond » + recherche web, erreur :
+    message court et **repli automatique** sur la recherche locale. La dernière question reste
+    disponible tant que l'onglet est ouvert.
+  - Code partagé client / serveur (`listeCompacte`, `preFiltre`), copies vérifiées par les tests.
+  - Taux de réussite du jeu d'essai (`docs/tests/recherche-ia.md`) : **à mesurer** avec une vraie
+    clé sur 60 sites ou plus.
+
 ## [4.8.0] - 2026-10-29
 
 ### Ajouté

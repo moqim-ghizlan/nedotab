@@ -17,6 +17,7 @@ import {
 import { iaPrete } from "../core/ia.js";
 import { creerSelecteurMode } from "./selecteurMode.js";
 import { toast } from "./toast.js";
+import { messageErreurIa } from "./messagesIa.js";
 
 const CHAMPS_SAISIE = "input, textarea, select, [contenteditable]";
 
@@ -62,9 +63,6 @@ function adresseTapee(texte) {
   return r.ok ? r.url : null;
 }
 
-/** V4.8: the question is only plugged to the AI in V4.9. */
-const questionBientot = () => toast("Bientôt disponible");
-
 const PLACEHOLDERS = {
   rechercher: "Rechercher dans vos sites…",
   demander: "Posez une question… (ex. : l'outil pour retoucher des photos)",
@@ -80,7 +78,7 @@ export function creerRecherche(
     ouvrirDossier,
     contexteIa = null,
     ouvrirReglagesIa = () => {},
-    soumettreQuestion = questionBientot,
+    demanderIa = null, // async (question) => { resultats: [{ id, score }] } (V4.9)
   },
 ) {
   const champ = el("input", {
@@ -139,7 +137,7 @@ export function creerRecherche(
   const choisirActif = (i) => {
     if (options.length === 0) return;
     actif = (i + options.length) % options.length;
-    for (const [j, li] of [...liste.children].entries()) {
+    for (const [j, li] of [...liste.querySelectorAll('[role="option"]')].entries()) {
       li.setAttribute("aria-selected", String(j === actif));
       if (j === actif) li.scrollIntoView({ block: "nearest" });
     }
@@ -154,21 +152,59 @@ export function creerRecherche(
 
   const rendre = () => (mode === "demander" ? rendreQuestion() : rendreRecherche());
 
-  /** Question mode: examples while empty, then "Envoyer"; no instant results. */
-  const rendreQuestion = () => {
-    const texte = champ.value;
-    options = [];
-    if (!modes.envoi) {
-      if (modes.message)
-        options.push({ type: "message", texte: modes.message, action: modes.action });
-    } else if (!texte.trim()) {
-      for (const q of exemplesQuestions(store.lire().grille))
-        options.push({ type: "exemple", texte: q });
-    } else options.push({ type: "envoyer", texte: texte.trim() });
+  /** What each row shows (icon, title…): one builder for the search and the question modes. */
+  function contenuOption(o) {
+    const symbole = (texte) =>
+      el("span", { class: "resultat-icone resultat-icone--symbole", texte });
+    const titre = (texte) => el("span", { class: "resultat-titre", texte });
+    switch (o.type) {
+      case "adresse":
+        return [symbole("↗"), titre(`Aller sur ${o.url.replace(/^https?:\/\//, "")}`)];
+      case "tag":
+        return [symbole("#"), titre(o.tag)];
+      case "web":
+        return [symbole("⌕"), titre(`Rechercher « ${o.texte} » sur le web`)];
+      case "exemple":
+        return [symbole("✦"), titre(o.texte)];
+      case "envoyer":
+        return [symbole("↵"), titre(`Envoyer : « ${o.texte} »`)];
+      case "message":
+        return [symbole("!"), titre(o.texte)];
+      case "attente":
+        return [symbole("…"), titre(o.texte)];
+      case "annuler":
+        return [symbole("✕"), titre("Annuler")];
+      default: {
+        const { entree, plages, raison } = o.resultat;
+        return [
+          el(
+            "span",
+            { class: "resultat-icone" },
+            entree.type === "dossier"
+              ? creerIconeDossier(entree.element)
+              : creerIcone(entree.element),
+          ),
+          titreSurligne(entree.titre, plages),
+          entree.domaine ? el("span", { class: "resultat-domaine", texte: entree.domaine }) : null,
+          entree.chemin.length
+            ? el("span", { class: "resultat-chemin", texte: entree.cheminTexte })
+            : null,
+          raison && (raison.champ === "tag" || raison.champ === "description") && raison.texte
+            ? raisonSurlignee(raison)
+            : null,
+        ];
+      }
+    }
+  }
+
+  /** The list is built from `options`, with an optional heading that is not an option. */
+  function monterListe(entete = null) {
     liste.replaceChildren(
+      ...(entete
+        ? [el("li", { class: "resultat-entete", role: "presentation", texte: entete })]
+        : []),
       ...options.map((o, i) => {
-        const symbole = { exemple: "✦", envoyer: "↵", message: "!" }[o.type];
-        const titre = o.type === "envoyer" ? `Envoyer : « ${o.texte} »` : o.texte;
+        const inerte = o.type === "attente" || (o.type === "message" && !o.action);
         const li = el(
           "li",
           {
@@ -176,19 +212,83 @@ export function creerRecherche(
             class: `resultat resultat--${o.type}`,
             role: "option",
             "aria-selected": "false",
-            "aria-disabled": o.type === "message" && !o.action ? "true" : null,
+            "aria-disabled": inerte ? "true" : null,
           },
-          el("span", { class: "resultat-icone resultat-icone--symbole", texte: symbole }),
-          el("span", { class: "resultat-titre", texte: titre }),
+          ...contenuOption(o),
         );
-        li.addEventListener("mousedown", (e) => e.preventDefault());
-        li.addEventListener("click", () => valider(i));
+        li.addEventListener("mousedown", (e) => e.preventDefault()); // keep the focus in the field
+        li.addEventListener("click", (e) => valider(i, { nouvelOnglet: e.ctrlKey || e.metaKey }));
+        li.addEventListener("auxclick", (e) => {
+          if (e.button === 1) valider(i, { nouvelOnglet: true });
+        });
         return li;
       }),
     );
     liste.hidden = options.length === 0;
     champ.setAttribute("aria-expanded", String(options.length > 0));
     if (options.length) choisirActif(0);
+  }
+
+  // V4.9: the last question of the session and what the assistant answered (nothing is kept
+  // after the tab is closed). `etat`: "chargement" | "resultats" | "aucun" | "erreur".
+  let assistant = null;
+  let sequence = 0; // a cancelled or replaced question ignores its late answer
+
+  /** Rows of the assistant's answer, rebuilt from the current grid (a deleted site is dropped). */
+  function vueAssistant() {
+    const grille = store.lire().grille;
+    const index = indexer(grille);
+    const web = { type: "web", texte: assistant.texte };
+    const sites = (ids) =>
+      ids
+        .map((id) => index.find((e) => e.id === id && e.type === "site"))
+        .filter(Boolean)
+        .map((entree) => ({ type: "site", resultat: { entree, plages: [], raison: null } }));
+    if (assistant.etat === "chargement")
+      return {
+        options: [{ type: "attente", texte: "Recherche dans vos sites…" }, { type: "annuler" }],
+      };
+    if (assistant.etat === "resultats") {
+      const trouves = sites(assistant.ids);
+      if (trouves.length) return { entete: "Résultats de l'assistant", options: [...trouves, web] };
+    }
+    if (assistant.etat === "erreur") {
+      const locaux = rechercher(index, assistant.texte).map((resultat) => ({
+        type: resultat.entree.type,
+        resultat,
+      }));
+      return {
+        entete: locaux.length ? "Voici les résultats de la recherche simple" : null,
+        options: [{ type: "message", texte: assistant.message }, ...locaux, web],
+      };
+    }
+    return {
+      options: [{ type: "message", texte: "Aucun de vos sites ne correspond" }, web],
+    };
+  }
+
+  /** Question mode: examples while empty, then "Envoyer"; no instant results while typing. */
+  const rendreQuestion = () => {
+    const texte = champ.value.trim();
+    options = [];
+    let entete = null;
+    if (!modes.envoi) {
+      if (modes.message)
+        options.push({ type: "message", texte: modes.message, action: modes.action });
+    } else if (
+      assistant &&
+      (texte === assistant.texte || (!texte && assistant.etat !== "chargement"))
+    ) {
+      const vue = vueAssistant();
+      options = vue.options;
+      entete = !texte ? `Dernière question : « ${assistant.texte} »` : (vue.entete ?? null);
+      const n = options.filter((o) => o.resultat).length;
+      etat.textContent = n ? `${n} résultat${n > 1 ? "s" : ""}` : "";
+    } else if (!texte) {
+      for (const q of exemplesQuestions(store.lire().grille))
+        options.push({ type: "exemple", texte: q });
+    } else options.push({ type: "envoyer", texte });
+    monterListe(entete);
     mettreAJourCompteur();
   };
 
@@ -222,71 +322,8 @@ export function creerRecherche(
     if (!(debutTag === "" && filtreSeul && !resultats.length))
       options.push({ type: "web", texte: texte.trim() });
 
-    liste.replaceChildren(
-      ...options.map((o, i) => {
-        let contenu;
-        if (o.type === "adresse") {
-          contenu = [
-            el("span", { class: "resultat-icone resultat-icone--symbole", texte: "↗" }),
-            el("span", {
-              class: "resultat-titre",
-              texte: `Aller sur ${o.url.replace(/^https?:\/\//, "")}`,
-            }),
-          ];
-        } else if (o.type === "tag") {
-          contenu = [
-            el("span", { class: "resultat-icone resultat-icone--symbole", texte: "#" }),
-            el("span", { class: "resultat-titre", texte: o.tag }),
-          ];
-        } else if (o.type === "web") {
-          contenu = [
-            el("span", { class: "resultat-icone resultat-icone--symbole", texte: "⌕" }),
-            el("span", { class: "resultat-titre", texte: `Rechercher « ${o.texte} » sur le web` }),
-          ];
-        } else {
-          const { entree, plages, raison } = o.resultat;
-          contenu = [
-            el(
-              "span",
-              { class: "resultat-icone" },
-              entree.type === "dossier"
-                ? creerIconeDossier(entree.element)
-                : creerIcone(entree.element),
-            ),
-            titreSurligne(entree.titre, plages),
-            entree.domaine
-              ? el("span", { class: "resultat-domaine", texte: entree.domaine })
-              : null,
-            entree.chemin.length
-              ? el("span", { class: "resultat-chemin", texte: entree.cheminTexte })
-              : null,
-            raison && (raison.champ === "tag" || raison.champ === "description") && raison.texte
-              ? raisonSurlignee(raison)
-              : null,
-          ];
-        }
-        const li = el(
-          "li",
-          {
-            id: `resultat-${i}`,
-            class: `resultat resultat--${o.type}`,
-            role: "option",
-            "aria-selected": "false",
-          },
-          ...contenu,
-        );
-        li.addEventListener("mousedown", (e) => e.preventDefault()); // keep the focus in the field
-        li.addEventListener("click", (e) => valider(i, { nouvelOnglet: e.ctrlKey || e.metaKey }));
-        li.addEventListener("auxclick", (e) => {
-          if (e.button === 1) valider(i, { nouvelOnglet: true });
-        });
-        return li;
-      }),
-    );
-    liste.hidden = false;
-    champ.setAttribute("aria-expanded", "true");
     // The first result is preselected (the address proposal comes first when typed).
-    choisirActif(0);
+    monterListe();
     const n = options.filter((o) => o.resultat).length;
     const nTags = options.filter((o) => o.type === "tag").length;
     if (n) etat.textContent = `${n} résultat${n > 1 ? "s" : ""}`;
@@ -303,9 +340,11 @@ export function creerRecherche(
       nouvelOnglet: nouvelOnglet || !!store.lire().reglages.rechercheNouvelOnglet,
     });
 
+  const TYPES_QUESTION = new Set(["exemple", "envoyer", "message", "attente", "annuler"]);
+
   function valider(i, { nouvelOnglet = false } = {}) {
     const o = options[i];
-    if (mode === "demander") {
+    if (mode === "demander" && (!o || TYPES_QUESTION.has(o.type))) {
       validerQuestion(o);
       return;
     }
@@ -342,10 +381,36 @@ export function creerRecherche(
       rendre();
       return;
     }
+    if (o?.type === "annuler") {
+      sequence++; // the late answer is ignored
+      assistant = null;
+      rendre();
+      return;
+    }
+    if (o?.type === "attente" || o?.type === "message") return;
     const question = (o?.texte ?? champ.value).trim();
-    if (!question) return;
-    fermerListe();
-    soumettreQuestion(question);
+    if (question) poserQuestion(question);
+  }
+
+  /** Enter in the question mode: one call, shown in the same list as the local search. */
+  async function poserQuestion(question) {
+    if (!demanderIa) {
+      toast("Bientôt disponible");
+      return;
+    }
+    const numero = ++sequence;
+    assistant = { texte: question, etat: "chargement" };
+    rendre();
+    try {
+      const reponse = await demanderIa(question);
+      if (numero !== sequence) return;
+      const ids = (reponse?.resultats ?? []).map((r) => r.id);
+      assistant = { texte: question, etat: ids.length ? "resultats" : "aucun", ids };
+    } catch (e) {
+      if (numero !== sequence) return;
+      assistant = { texte: question, etat: "erreur", message: messageErreurIa(e) };
+    }
+    if (mode === "demander") rendre();
   }
 
   /** Changes the mode (click, "?", Tab, Ctrl+J, Backspace) and says so to screen readers. */

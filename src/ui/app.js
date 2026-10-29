@@ -452,6 +452,8 @@ export async function demarrerApp(racine) {
   const recherche = creerRecherche(store, {
     ouvrirDossier: (id) => ouvrirDossier(id),
     contexteIa,
+    demanderIa: async (question) =>
+      (await chargerFirebase()).appelerIa("iaRechercher", { question }),
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
   });

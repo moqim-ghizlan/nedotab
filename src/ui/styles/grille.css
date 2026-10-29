@@ -475,6 +475,13 @@
   display: none;
 }
 
+.resultat-entete {
+  padding: 6px var(--espace-3) 2px;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  list-style: none;
+}
+
 .resultat[aria-disabled="true"] {
   cursor: default;
   opacity: 0.75;

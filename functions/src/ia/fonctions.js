@@ -12,6 +12,14 @@ import { EntreeInvalide, valider } from "../validation.js";
 import { ErreurFournisseur } from "./fournisseurs/commun.js";
 import { fournisseursActifs } from "./config.js";
 import { messagePage, RAPPEL_FORMAT, SYSTEME_TAGS } from "./prompts/tags.js";
+import {
+  messageRecherche,
+  RAPPEL_FORMAT as RAPPEL_RECHERCHE,
+  SYSTEME_RECHERCHE,
+} from "./prompts/recherche.js";
+import { lireSortieRecherche } from "./rechercheSortie.js";
+import { construireListe, sitesDe } from "../partage/listeCompacte.js";
+import { preFiltrer } from "../partage/preFiltre.js";
 import { lireSortieTags } from "./tagsSortie.js";
 import { extraitReduit } from "../partage/extraitPage.js";
 import { jourParis } from "../quota.js";
@@ -195,12 +203,19 @@ export function creerFonctionsIa(deps) {
    * else: a "fournisseur" or "modele" sent by the browser is refused.
    */
   async function executerUsage(uid, donnees) {
-    const { usage, systeme, messages, maxJetons, formatJson } = valider(donnees, {
+    const { usage, systeme, messages, maxJetons, formatJson, temperature } = valider(donnees, {
       usage: { type: "chaine", requis: true, valeurs: () => USAGES },
       systeme: { type: "chaine", max: 20000 },
       messages: { type: "libre", requis: true, verifier: verifierMessages },
       maxJetons: { type: "entier", min: 1, max: 8192 },
       formatJson: { type: "booleen" },
+      temperature: {
+        type: "libre",
+        verifier: (v) => {
+          if (typeof v !== "number" || !(v >= 0 && v <= 2))
+            throw new EntreeInvalide("temperature : nombre entre 0 et 2 attendu.");
+        },
+      },
     });
     const { fournisseur, modele } = await choixDeLUsage(uid);
     const entree = (await lireCles(uid))[fournisseur];
@@ -216,6 +231,7 @@ export function creerFonctionsIa(deps) {
         systeme,
         messages,
         maxJetons,
+        temperature,
         formatJson,
       });
       journal({
@@ -280,6 +296,47 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
+   * V4.9: smart search among the user's own sites. The browser sends only the question: the
+   * server reads the grid itself, builds the compact list (pre-filtered when it is large),
+   * and the model answers with short ids only, validated and turned back into real ids.
+   * Same retry as the tags: one reminder of the format, then "reponse-invalide".
+   */
+  async function rechercher(uid, donnees) {
+    const { question } = valider(donnees, {
+      question: { type: "chaine", requis: true, min: 1, max: 500 },
+    });
+    if (!question.trim()) throw new EntreeInvalide("question : texte attendu.");
+    const snap = await db.doc(`users/${uid}`).get();
+    const sites = sitesDe(snap.exists ? snap.data()?.grille : []);
+    // Nothing to search: no call, nothing paid.
+    if (sites.length === 0) return { resultats: [], aucunResultat: true, preFiltre: false };
+    const { sites: retenus, preFiltre } = preFiltrer(sites, question);
+    const { lignes, table } = construireListe(retenus);
+    const date = new Date(horloge()).toISOString().slice(0, 10);
+    const messages = [{ role: "user", texte: messageRecherche({ date, question, lignes }) }];
+    for (let essai = 0; essai < 2; essai++) {
+      const r = await executerUsage(uid, {
+        usage: "recherche",
+        systeme: SYSTEME_RECHERCHE,
+        messages:
+          essai === 0
+            ? messages
+            : [
+                ...messages,
+                { role: "assistant", texte: "..." },
+                { role: "user", texte: RAPPEL_RECHERCHE },
+              ],
+        maxJetons: 512,
+        temperature: 0,
+        formatJson: true,
+      });
+      const sortie = lireSortieRecherche(r.texte, table);
+      if (sortie) return { ...sortie, modele: r.modele, preFiltre };
+    }
+    throw new ErreurFournisseur("reponse-invalide");
+  }
+
+  /**
    * The daily limit of a user (V4.7): the one they chose in the settings, never above the
    * ceiling of config/ia (quotaMax), else the default of config/ia.
    */
@@ -322,6 +379,7 @@ export function creerFonctionsIa(deps) {
     quotaRestant,
     definirQuota,
     genererTags,
+    rechercher,
     enregistrerCle,
     supprimerCle,
     etatCles,
