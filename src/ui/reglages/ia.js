@@ -146,21 +146,41 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
 
     const interrupteur = el("input", {
       type: "checkbox",
+      role: "switch",
+      class: "interrupteur-bouton",
       checked: reglages.actif,
       onchange: (e) => changer(avecActif(ia(), e.currentTarget.checked)),
     });
     const activation = el(
       "label",
-      { class: "reglages-case" },
+      { class: "interrupteur" },
+      el(
+        "span",
+        { class: "interrupteur-texte" },
+        el("span", { texte: "Activer l'assistant" }),
+        el("span", {
+          class: "reglages-note",
+          texte: "Propose des tags et une description pour vos sites.",
+        }),
+      ),
       interrupteur,
-      el("span", { texte: "Activer l'assistant IA" }),
     );
 
-    const infoServeur = plateforme.capacites?.extraitServeur
-      ? note(
-          "Sur iPhone et iPad, la page est lue par notre serveur pour proposer des tags. Aucune donnée de connexion n'est envoyée au site.",
-        )
-      : null;
+    // What the user should know once, kept together and quiet.
+    const mentions = el(
+      "ul",
+      { class: "ia-mentions" },
+      el("li", {
+        texte:
+          "Les appels sont facturés par Google sur votre compte. Rien n'est envoyé tant que l'assistant est désactivé.",
+      }),
+      plateforme.capacites?.extraitServeur
+        ? el("li", {
+            texte:
+              "Sur iPhone et iPad, la page est lue par notre serveur pour proposer des tags, sans aucune donnée de connexion.",
+          })
+        : null,
+    );
 
     const lignesCles = fournisseursOffertes().map((f) => {
       const c = cleDe(f.id);
@@ -171,14 +191,19 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
           "div",
           { class: "ia-cle-texte" },
           el("strong", { texte: f.nom }),
-          el("span", {
-            class: c?.valide === false ? "ia-cle-etat ia-cle-etat--alerte" : "ia-cle-etat",
-            texte: c
+          el(
+            "span",
+            { class: c?.valide === false ? "ia-cle-etat ia-cle-etat--alerte" : "ia-cle-etat" },
+            el("span", {
+              class: `ia-pastille${c ? (c.valide === false ? " ia-pastille--alerte" : " ia-pastille--ok") : ""}`,
+              "aria-hidden": "true",
+            }),
+            c
               ? c.valide === false
                 ? `Clé …${c.fin} · À vérifier`
                 : `Clé …${c.fin} · ajoutée le ${dateHeure(c.ajouteLe ?? Date.now()).slice(0, 10)}`
               : "Pas de clé",
-          }),
+          ),
         ),
         el(
           "div",
@@ -225,7 +250,16 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
             disabled: inactif,
           });
           bouton.addEventListener("click", () => essayer(avecCle()[0], sortie, bouton));
-          return el("div", { class: "ia-usage" }, bouton, sortie);
+          return el(
+            "div",
+            { class: "ia-usage ia-carte-pied" },
+            bouton,
+            sortie,
+            el("span", {
+              class: "ia-discret",
+              texte: "Clé chiffrée, jamais renvoyée à votre appareil.",
+            }),
+          );
         })()
       : null;
 
@@ -237,35 +271,40 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       service && reglages.actif && avecCle().length
         ? el(
             "div",
-            { class: "ia-usage" },
+            { class: "ia-carte ia-carte--action" },
+            el(
+              "div",
+              { class: "ia-carte-texte" },
+              el("strong", { texte: "Compléter mes sites" }),
+              el("span", {
+                class: "ia-discret",
+                texte: enCours
+                  ? `Traitement en cours : ${etatTraitement.restants.length} sites restants.`
+                  : "Génère les tags et descriptions des sites déjà enregistrés. Facturé sur votre clé.",
+              }),
+            ),
             el("button", {
               type: "button",
-              class: "bouton",
-              texte: enCours
-                ? `Traitement des sites (${etatTraitement.restants.length} restants)`
-                : "Compléter mes sites",
+              class: "bouton bouton--principal ia-bouton",
+              texte: enCours ? "Voir le traitement" : "Compléter",
               onclick: () => ouvrirRattrapage(service, store),
             }),
-            el("span", { class: "reglages-note", texte: "Tags et descriptions pour vos sites existants. Facturé par Google sur votre clé." }),
           )
         : null;
 
     // Empty slots (null) must not reach replaceChildren: they would be written as "null".
+    const carteCle = fournisseursOffertes().length
+      ? el("div", { class: "ia-carte" }, el("ul", { class: "ia-liste" }, lignesCles), testeur)
+      : null;
     racine.replaceChildren(
       ...[
         activation,
-        note(
-          "Chaque fonction IA utilise votre propre clé Gemini : les appels sont facturés par Google sur votre compte. Rien n'est envoyé tant que l'assistant est désactivé.",
-        ),
-        infoServeur,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,
-        el("h4", { texte: "Ma clé" }),
-        el("ul", { class: "ia-liste" }, lignesCles),
-        note("Votre clé est chiffrée et n'est jamais affichée ni renvoyée à votre appareil."),
-        testeur,
+        carteCle,
         completer,
+        mentions,
       ].filter(Boolean),
     );
   }

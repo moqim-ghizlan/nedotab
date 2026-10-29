@@ -1760,7 +1760,7 @@ body.fond-clair .carte-action--principale {
 .ia-reglages {
   display: flex;
   flex-direction: column;
-  gap: var(--espace-3);
+  gap: var(--espace-4);
 }
 
 .ia-reglages h4 {
@@ -1771,22 +1771,98 @@ body.fond-clair .carte-action--principale {
 .ia-liste {
   display: flex;
   flex-direction: column;
-  gap: var(--espace-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ia-cle,
-.ia-modele {
+/* A card groups one subject: the key and its test, or the catch-up. */
+.ia-carte {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--bordure) 80%, transparent);
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.ia-carte--action {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-4);
+  padding: var(--espace-4);
+}
+
+.ia-carte-texte {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ia-carte-pied {
+  padding: var(--espace-3) var(--espace-4);
+  border-top: 1px solid color-mix(in srgb, var(--bordure) 80%, transparent);
+}
+
+.ia-bouton {
+  flex: none;
+  white-space: nowrap;
+}
+
+.ia-discret {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.ia-carte-pied .bouton {
+  flex: none;
+}
+
+.ia-carte-pied .ia-discret {
+  margin-left: auto;
+  text-align: right;
+}
+
+.ia-mentions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin: 0;
+  padding: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  line-height: 1.5;
+  list-style: none;
+}
+
+.ia-pastille {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--texte-secondaire);
+  vertical-align: 1px;
+}
+
+.ia-pastille--ok {
+  background: var(--accent);
+}
+
+.ia-pastille--alerte {
+  background: var(--danger);
+}
+
+.ia-cle {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--espace-2) var(--espace-3);
-  padding: var(--espace-3);
-  border-radius: var(--rayon-petit);
-  background: var(--surface-2);
+  padding: var(--espace-4);
 }
 
 .ia-cle-texte {
@@ -1826,16 +1902,8 @@ body.fond-clair .carte-action--principale {
   gap: var(--espace-2) var(--espace-3);
 }
 
-.ia-usage label {
-  display: flex;
-  flex: 1 1 220px;
-  flex-direction: column;
-  gap: 2px;
-  font-size: var(--taille-s);
-}
-
 .ia-test {
-  flex-basis: 100%;
+  min-height: 1em;
   color: var(--texte-secondaire);
   font-size: var(--taille-xs);
 }
@@ -1844,70 +1912,94 @@ body.fond-clair .carte-action--principale {
   color: var(--danger);
 }
 
-.ia-modele code {
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--texte-secondaire);
-  font-size: var(--taille-xs);
-  text-overflow: ellipsis;
+/* Animation of the page change: cards with a looping mini demo of each effect. */
+.demos-animation {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: var(--espace-2);
 }
 
-/* Model lists and fields of the AI settings: the same look as the other fields (V4.1). */
-.ia-reglages select {
-  width: 100%;
-  min-height: 40px;
-  padding: 8px var(--espace-3);
-  border: 1px solid var(--bordure);
+.demo-animation {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  border: 2px solid transparent;
   border-radius: var(--rayon-petit);
-  background: var(--surface-2);
-  color: var(--texte);
-  font-size: var(--taille-s);
+  background: var(--fond);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
   cursor: pointer;
 }
 
-.ia-reglages select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-
-.ia-reglages select:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.ia-usage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: var(--espace-1) var(--espace-3);
-  padding: var(--espace-3);
-  border-radius: var(--rayon-petit);
-  background: var(--surface-2);
-}
-
-.ia-usage label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--espace-1);
-  color: var(--texte-secondaire);
+.demo-animation[aria-checked="true"] {
+  border-color: var(--accent);
+  color: var(--texte);
   font-weight: 600;
 }
 
-.ia-usage select {
-  background: var(--fond);
+.demo-cadre {
+  position: relative;
+  display: block;
+  height: 54px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--surface);
 }
 
-.ia-usage .bouton {
-  min-height: 40px;
+.demo-page {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 8px 14px;
 }
 
-.ia-test {
-  grid-column: 1 / -1;
-  min-height: 1em;
-  color: var(--texte-secondaire);
-  font-size: var(--taille-xs);
+.demo-page i {
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-.ia-test:empty {
-  display: none;
+.demo-page--b {
+  background: var(--surface);
+  animation: var(--demo-effet, demo-glisse) 3s infinite both;
 }
+
+.demo-page--b i {
+  background: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.demo-cadre[data-effet="glisse"] .demo-page--b { --demo-effet: demo-glisse; }
+.demo-cadre[data-effet="fondu"] .demo-page--b { --demo-effet: demo-fondu; }
+.demo-cadre[data-effet="zoom"] .demo-page--b { --demo-effet: demo-zoom; }
+.demo-cadre[data-effet="cube"] .demo-page--b { --demo-effet: demo-cube; }
+.demo-cadre[data-effet="ressort"] .demo-page--b { --demo-effet: demo-ressort; }
+.demo-cadre[data-effet="cube"] { perspective: 400px; }
+
+@keyframes demo-glisse {
+  0%, 8% { transform: translateX(100%); animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  30%, 80% { transform: translateX(0); }
+  100% { transform: translateX(0); opacity: 0; }
+}
+@keyframes demo-fondu {
+  0%, 8% { opacity: 0; }
+  30%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes demo-zoom {
+  0%, 8% { opacity: 0; transform: scale(.85); animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  30%, 80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes demo-cube {
+  0%, 8% { opacity: .2; transform: rotateY(75deg); animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+  35%, 80% { opacity: 1; transform: rotateY(0); }
+  100% { opacity: 0; transform: rotateY(0); }
+}
+@keyframes demo-ressort {
+  0%, 8% { opacity: 0; transform: translateX(18%) scale(.94); animation-timing-function: cubic-bezier(.34,1.56,.64,1); }
+  38%, 80% { opacity: 1; transform: translateX(0) scale(1); }
+  100% { opacity: 0; transform: translateX(0) scale(1); }
+}
+.demo-cadre[data-effet="cube"] .demo-page--b { transform-origin: left center; }
