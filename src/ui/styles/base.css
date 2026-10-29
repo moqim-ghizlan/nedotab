@@ -131,3 +131,32 @@ textarea {
 :root[data-espacement="large"] {
   --espacement: 1.8;
 }
+
+/* Setting "Heure et date" (V4.5.9). */
+.horloge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 var(--espace-4);
+  color: var(--texte-sur-fond, var(--texte));
+  text-shadow: var(--ombre-texte, none);
+  text-align: center;
+}
+
+.horloge[hidden] {
+  display: none;
+}
+
+.horloge-heure {
+  font-size: clamp(2rem, 8cqi, 3.25rem);
+  font-weight: 300;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.horloge-date {
+  font-size: var(--taille-s);
+  text-transform: capitalize;
+  opacity: 0.85;
+}

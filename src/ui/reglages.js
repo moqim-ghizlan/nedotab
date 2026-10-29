@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  affichageHeureDe,
   espacementDe,
   formeIconesDe,
   animationDossierDe,
@@ -354,6 +355,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ espacement: v }),
   );
 
+  // Device-only (V4.5.9): heure et date.
+  const affichageHeure = segments(
+    "Heure et date",
+    [
+      ["aucun", "Masquées"],
+      ["24h", "24 h"],
+      ["12h", "12 h"],
+    ],
+    affichageHeureDe(store.lire().reglagesAppareil),
+    (v) => modifier({ affichageHeure: v }),
+  );
+
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
     type: "checkbox",
@@ -686,7 +699,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
             ]
           : []),
       ),
-      section("Interface", ...ligneDes(CLES_INTERFACE), ligneHaptique),
+      section("Interface", ...ligneDes(CLES_INTERFACE), ligneHaptique, libelleAppareil("Heure et date"), affichageHeure.groupe),
       curseurRecherche
         ? section(
             "Nouvel onglet",
@@ -928,6 +941,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
     formeIcones.maj(formeIconesDe(store.lire().reglagesAppareil));
     espacement.maj(espacementDe(store.lire().reglagesAppareil));
+    affichageHeure.maj(affichageHeureDe(store.lire().reglagesAppareil));
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

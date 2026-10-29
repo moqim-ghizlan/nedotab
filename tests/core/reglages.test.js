@@ -228,6 +228,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { espacement: "normal" });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("heure et date : masquées par défaut et non stockées", () => {
+    let etat = modifier(etatInitial(), { affichageHeure: "12h" });
+    expect(etat.reglagesAppareil).toEqual({ affichageHeure: "12h" });
+    expect(modifier(etat, { affichageHeure: "midi" })).toBe(etat);
+    etat = modifier(etat, { affichageHeure: "aucun" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

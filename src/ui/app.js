@@ -26,6 +26,7 @@ import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
+import { creerHorloge } from "./horloge.js";
 import { creerRecherche } from "./recherche.js";
 import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
@@ -445,6 +446,7 @@ export async function demarrerApp(racine) {
   // Search bar above the grid; a folder found opens directly at its level.
   const recherche = creerRecherche(store, { ouvrirDossier: (id) => ouvrirDossier(id) });
   page.insertBefore(recherche.racine, vide);
+  page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
   // The "?focus=1" marker is then removed from the address shown by Chrome.
   if (new URLSearchParams(location.search).has("focus")) {

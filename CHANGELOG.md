@@ -74,6 +74,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Espacement des cartes »** (Apparence, propre à l'appareil) : serré, normal (par défaut) ou large. Agit sur l'écart entre les cartes du défilement vertical et des dossiers ; en pages, les cases remplissent l'écran, l'écart y change peu (la taille des cartes y règle l'espace).
 
+## [4.5.9] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Heure et date »** (Général > Interface, propre à l'appareil) : affichées au-dessus de la barre de recherche, en 24 h ou 12 h. Masquées par défaut.
+
 ## [Non publié]
 
 ### Ajouté

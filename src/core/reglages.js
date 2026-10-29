@@ -263,6 +263,7 @@ export const CLES_APPAREIL = [
   "retourHaptique",
   "formeIcones",
   "espacement",
+  "affichageHeure",
 ];
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
@@ -302,6 +303,14 @@ export function espacementDe(reglagesAppareil) {
   return ESPACEMENTS.includes(choisi) ? choisi : "normal";
 }
 
+/** Heure et date (V4.5.9): "aucun" by default, then not stored. */
+export const AFFICHAGES_HEURE = ["aucun", "24h", "12h"];
+
+export function affichageHeureDe(reglagesAppareil) {
+  const choisi = reglagesAppareil?.affichageHeure;
+  return AFFICHAGES_HEURE.includes(choisi) ? choisi : "aucun";
+}
+
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
@@ -330,6 +339,8 @@ export function validerReglagesAppareil(r) {
     resultat.formeIcones = r.formeIcones;
   if (ESPACEMENTS.includes(r?.espacement) && r.espacement !== "normal")
     resultat.espacement = r.espacement;
+  if (AFFICHAGES_HEURE.includes(r?.affichageHeure) && r.affichageHeure !== "aucun")
+    resultat.affichageHeure = r.affichageHeure;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -369,6 +380,11 @@ function modifierAppareil(etat, changements) {
     if (!ESPACEMENTS.includes(changements.espacement)) return etat;
     if (changements.espacement === "normal") delete appareil.espacement;
     else appareil.espacement = changements.espacement;
+  }
+  if ("affichageHeure" in changements) {
+    if (!AFFICHAGES_HEURE.includes(changements.affichageHeure)) return etat;
+    if (changements.affichageHeure === "aucun") delete appareil.affichageHeure;
+    else appareil.affichageHeure = changements.affichageHeure;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;
