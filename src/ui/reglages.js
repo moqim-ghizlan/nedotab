@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  ombreIconesDe,
   affichageHeureDe,
   espacementDe,
   formeIconesDe,
@@ -379,6 +380,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
   });
   tailleTitres.addEventListener("input", () => modifier({ tailleTitres: Number(tailleTitres.value) }));
 
+  // Device-only (V4.5.11): ombre sous les icônes.
+  const ombreIcones = segments(
+    "Ombre sous les icônes",
+    [
+      ["aucune", "Aucune"],
+      ["legere", "Légère"],
+      ["forte", "Forte"],
+    ],
+    ombreIconesDe(store.lire().reglagesAppareil),
+    (v) => modifier({ ombreIcones: v }),
+  );
+
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
     type: "checkbox",
@@ -673,6 +686,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         espacement.groupe,
         libelleAppareil("Taille du texte des titres"),
         tailleTitres,
+        libelleAppareil("Ombre sous les icônes"),
+        ombreIcones.groupe,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -957,6 +972,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     espacement.maj(espacementDe(store.lire().reglagesAppareil));
     affichageHeure.maj(affichageHeureDe(store.lire().reglagesAppareil));
     tailleTitres.value = String(store.lire().reglagesAppareil?.tailleTitres ?? 100);
+    ombreIcones.maj(ombreIconesDe(store.lire().reglagesAppareil));
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

@@ -165,3 +165,17 @@ textarea {
 :root[data-taille-titres] .tuile-titre {
   font-size: calc(var(--taille-s) * var(--taille-titres, 1));
 }
+
+/* Setting "Ombre sous les icônes" (V4.5.11): the icons of the grid, not the mini icons. */
+:root[data-ombre-icones="aucune"] .tuile > .tuile-icone,
+:root[data-ombre-icones="aucune"] .tuile:hover > .tuile-icone {
+  box-shadow: none;
+}
+
+:root[data-ombre-icones="forte"] .tuile > .tuile-icone {
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.42);
+}
+
+:root[data-ombre-icones="forte"] .tuile:hover > .tuile-icone {
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.5);
+}

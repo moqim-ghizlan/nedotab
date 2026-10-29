@@ -86,6 +86,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Taille du texte des titres »** (Apparence, propre à l'appareil) : de 80 à 160 %.
 
+## [4.5.11] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Ombre sous les icônes »** (Apparence, propre à l'appareil) : aucune, légère (par défaut) ou forte.
+
 ## [Non publié]
 
 ### Ajouté

@@ -265,6 +265,7 @@ export const CLES_APPAREIL = [
   "espacement",
   "affichageHeure",
   "tailleTitres",
+  "ombreIcones",
 ];
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
@@ -318,6 +319,14 @@ export const TAILLETITRES_MAX = 160;
 export const TAILLETITRES_DEFAUT = 100;
 const tailleTitresValide = (n) => Number.isInteger(n) && n >= TAILLETITRES_MIN && n <= TAILLETITRES_MAX;
 
+/** Ombre sous les icônes (V4.5.11): "legere" by default, then not stored. */
+export const OMBRES_ICONES = ["aucune", "legere", "forte"];
+
+export function ombreIconesDe(reglagesAppareil) {
+  const choisi = reglagesAppareil?.ombreIcones;
+  return OMBRES_ICONES.includes(choisi) ? choisi : "legere";
+}
+
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
@@ -349,6 +358,8 @@ export function validerReglagesAppareil(r) {
   if (AFFICHAGES_HEURE.includes(r?.affichageHeure) && r.affichageHeure !== "aucun")
     resultat.affichageHeure = r.affichageHeure;
   if (tailleTitresValide(r?.tailleTitres) && r.tailleTitres !== TAILLETITRES_DEFAUT) resultat.tailleTitres = r.tailleTitres;
+  if (OMBRES_ICONES.includes(r?.ombreIcones) && r.ombreIcones !== "legere")
+    resultat.ombreIcones = r.ombreIcones;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -399,6 +410,11 @@ function modifierAppareil(etat, changements) {
     if (t == null || t === TAILLETITRES_DEFAUT) delete appareil.tailleTitres;
     else if (tailleTitresValide(t)) appareil.tailleTitres = t;
     else return etat;
+  }
+  if ("ombreIcones" in changements) {
+    if (!OMBRES_ICONES.includes(changements.ombreIcones)) return etat;
+    if (changements.ombreIcones === "legere") delete appareil.ombreIcones;
+    else appareil.ombreIcones = changements.ombreIcones;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;

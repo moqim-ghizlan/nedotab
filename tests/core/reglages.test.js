@@ -242,6 +242,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { tailleTitres: 100 });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("ombre des icônes : légère par défaut et non stockée", () => {
+    let etat = modifier(etatInitial(), { ombreIcones: "forte" });
+    expect(etat.reglagesAppareil).toEqual({ ombreIcones: "forte" });
+    expect(modifier(etat, { ombreIcones: "immense" })).toBe(etat);
+    etat = modifier(etat, { ombreIcones: "legere" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

@@ -9,6 +9,7 @@ import {
   COTE_TELEPHONE,
   fondEffectif,
   fondsAPurger,
+  ombreIconesDe,
   espacementDe,
   formeIconesDe,
 } from "../core/reglages.js";
@@ -575,6 +576,7 @@ export async function demarrerApp(racine) {
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
     racineDoc.style.setProperty("--taille-titres", String((r.tailleTitres ?? 100) / 100));
     racineDoc.toggleAttribute("data-taille-titres", !!r.tailleTitres);
+    racineDoc.dataset.ombreIcones = ombreIconesDe(r);
     racineDoc.dataset.forme = formeIconesDe(r);
     racineDoc.dataset.espacement = espacementDe(r);
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
