@@ -36,7 +36,7 @@ function titreSurligne(titre, plages) {
 
 /** Why a site matched (tag or description), with <mark> on the word; text nodes only. */
 function raisonSurlignee(raison) {
-  const span = el("span", { class: "resultat-raison" });
+  const span = el("span", { class: "resultat-raison", title: raison.texte });
   const { texte, plages } = raison;
   if (raison.champ === "tag") span.append(document.createTextNode("tag : "));
   let pos = 0;
@@ -189,13 +189,19 @@ export function creerRecherche(
           entree.chemin.length
             ? el("span", { class: "resultat-chemin", texte: entree.cheminTexte })
             : null,
-          raison && (raison.champ === "tag" || raison.champ === "description") && raison.texte
+          raison && ["tag", "description", "assistant"].includes(raison.champ) && raison.texte
             ? raisonSurlignee(raison)
             : null,
         ];
       }
     }
   }
+
+  /** "GitHub, dépôt de code" for an assistant result with a reason; null otherwise. */
+  const libelleAccessible = (o) => {
+    const r = o.resultat?.raison;
+    return r?.champ === "assistant" ? `${o.resultat.entree.titre}, ${r.texte}` : null;
+  };
 
   /** The list is built from `options`, with an optional heading that is not an option. */
   function monterListe(entete = null) {
@@ -213,6 +219,8 @@ export function creerRecherche(
             role: "option",
             "aria-selected": "false",
             "aria-disabled": inerte ? "true" : null,
+            // The reason is part of the option's name for screen readers (V4.10).
+            "aria-label": libelleAccessible(o),
           },
           ...contenuOption(o),
         );
@@ -243,7 +251,17 @@ export function creerRecherche(
       ids
         .map((id) => index.find((e) => e.id === id && e.type === "site"))
         .filter(Boolean)
-        .map((entree) => ({ type: "site", resultat: { entree, plages: [], raison: null } }));
+        .map((entree) => ({
+          type: "site",
+          resultat: {
+            entree,
+            plages: [],
+            // V4.10: the reason given by the assistant, shown under the title.
+            raison: assistant.raisons?.[entree.id]
+              ? { champ: "assistant", texte: assistant.raisons[entree.id], plages: [] }
+              : null,
+          },
+        }));
     if (assistant.etat === "chargement")
       return {
         options: [{ type: "attente", texte: "Recherche dans vos sites…" }, { type: "annuler" }],
@@ -405,7 +423,10 @@ export function creerRecherche(
       const reponse = await demanderIa(question);
       if (numero !== sequence) return;
       const ids = (reponse?.resultats ?? []).map((r) => r.id);
-      assistant = { texte: question, etat: ids.length ? "resultats" : "aucun", ids };
+      const raisons = Object.fromEntries(
+        (reponse?.resultats ?? []).filter((r) => r.raison).map((r) => [r.id, String(r.raison)]),
+      );
+      assistant = { texte: question, etat: ids.length ? "resultats" : "aucun", ids, raisons };
     } catch (e) {
       if (numero !== sequence) return;
       assistant = { texte: question, etat: "erreur", message: messageErreurIa(e) };

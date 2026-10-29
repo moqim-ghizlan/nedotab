@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { CONFIG_PAR_DEFAUT } from "../../functions/src/ia/config.js";
 import { creerFonctionsIa } from "../../functions/src/ia/fonctions.js";
-import { lireSortieRecherche } from "../../functions/src/ia/rechercheSortie.js";
+import { lireSortieRecherche, nettoyerRaison } from "../../functions/src/ia/rechercheSortie.js";
 import { messageRecherche } from "../../functions/src/ia/prompts/recherche.js";
 import { consommer } from "../../functions/src/quota.js";
 import { construireListe, sitesDe } from "../../src/core/listeCompacte.js";
@@ -148,6 +148,51 @@ describe("lireSortieRecherche", () => {
       lireSortieRecherche('{"resultats":[{"id":"constructor"},{"id":"__proto__"}]}', table)
         .resultats,
     ).toEqual([]);
+  });
+});
+
+describe("raison de chaque résultat (V4.10)", () => {
+  const table = { s1: "a1", s2: "c1" };
+  it("la raison est gardée avec le résultat", () => {
+    const r = lireSortieRecherche(
+      '{"resultats":[{"id":"s1","score":0.9,"raison":"Éditeur en ligne, ajouté en septembre"}]}',
+      table,
+    );
+    expect(r.resultats[0]).toEqual({
+      id: "a1",
+      score: 0.9,
+      raison: "Éditeur en ligne, ajouté en septembre",
+    });
+  });
+  it("absente ou invalide : le résultat est gardé sans raison", () => {
+    const r = lireSortieRecherche(
+      '{"resultats":[{"id":"s1"},{"id":"s2","raison":42},{"id":"s1","raison":"doublon"}]}',
+      table,
+    );
+    expect(r.resultats).toEqual([
+      { id: "a1", score: 0 },
+      { id: "c1", score: 0 },
+    ]);
+  });
+  it("HTML, URL et retours à la ligne retirés", () => {
+    expect(
+      nettoyerRaison("Voir <b>ce site</b>\n sur https://x.fr/y ou www.z.com pour retoucher"),
+    ).toBe("Voir ce site sur ou pour retoucher");
+    expect(nettoyerRaison("   ")).toBeNull();
+    expect(nettoyerRaison("<i></i>")).toBeNull();
+  });
+  it("trop longue : coupée proprement à 120 caractères au plus, avec « … »", () => {
+    const r = nettoyerRaison("mot ".repeat(60));
+    expect(r.length).toBeLessThanOrEqual(120);
+    expect(r.endsWith("…")).toBe(true);
+    expect(r).not.toMatch(/\s…$/);
+  });
+  it("le prompt demande 12 mots au plus, fondés sur la liste (version 2)", async () => {
+    const { PROMPT_RECHERCHE_VERSION, SYSTEME_RECHERCHE } =
+      await import("../../functions/src/ia/prompts/recherche.js");
+    expect(PROMPT_RECHERCHE_VERSION).toBe(2);
+    expect(SYSTEME_RECHERCHE).toMatch(/12 mots au maximum/);
+    expect(SYSTEME_RECHERCHE).toMatch(/UNIQUEMENT sur les informations de la liste/);
   });
 });
 

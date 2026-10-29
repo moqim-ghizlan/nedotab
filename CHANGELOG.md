@@ -2,6 +2,23 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.10.0] - 2026-10-29
+
+### Ajouté
+
+- **Explication de chaque résultat de la recherche intelligente** : sous chaque site, une courte
+  phrase dit pourquoi il correspond (12 mots au plus, en français, fondée uniquement sur la liste
+  de vos sites). Elle vient de la même réponse que le classement : aucun appel de plus, donc
+  aucun coût de plus.
+  - Prompt de recherche passé en **version 2** (`PROMPT_RECHERCHE_VERSION = 2`) ; jetons de sortie
+    portés à 768.
+  - Raison nettoyée côté serveur : HTML, adresses et retours à la ligne retirés, 120 caractères au
+    plus, coupée proprement. Absente ou inutilisable : le site reste affiché sans raison.
+  - Affichage : ligne secondaire en petit gris (une ligne, titre complet en infobulle), faite de
+    nœuds texte ; la raison fait partie du nom de l'option pour les lecteurs d'écran.
+  - Qualité (aucune raison inventée) : **à vérifier** en rejouant le jeu d'essai de la V4.9 avec une
+    vraie clé.
+
 ## [4.9.0] - 2026-10-29
 
 ### Ajouté

@@ -6,10 +6,33 @@
  */
 import { RESULTATS_MAX } from "./prompts/recherche.js";
 
+export const RAISON_MAX = 120;
+
+/**
+ * The reason of a result: a short sentence for the user. Text only: HTML, URLs and line breaks
+ * are removed, a too long one is cut at a word. Absent or unusable → null (the result is kept
+ * without a reason, never rejected).
+ */
+export function nettoyerRaison(brut) {
+  if (typeof brut !== "string") return null;
+  let texte = brut
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (texte.length > RAISON_MAX) {
+    texte = texte.slice(0, RAISON_MAX - 1);
+    const dernierEspace = texte.lastIndexOf(" ");
+    if (dernierEspace > RAISON_MAX / 2) texte = texte.slice(0, dernierEspace);
+    texte = `${texte.replace(/[\s,;:.]+$/, "")}…`;
+  }
+  return texte || null;
+}
+
 /**
  * @param {string} texte raw answer of the model
  * @param {Record<string, string>} table short id → real id
- * @returns {{ resultats: { id: string, score: number }[], aucunResultat: boolean } | null}
+ * @returns {{ resultats: { id: string, score: number, raison?: string }[], aucunResultat: boolean } | null}
  *   null when the answer is not usable (then one retry, then "reponse-invalide")
  */
 export function lireSortieRecherche(texte, table) {
@@ -33,7 +56,8 @@ export function lireSortieRecherche(texte, table) {
     vus.add(court);
     const brutScore = Number(r.score);
     const score = Number.isFinite(brutScore) ? Math.min(1, Math.max(0, brutScore)) : 0;
-    resultats.push({ id: table[court], score });
+    const raison = nettoyerRaison(r.raison);
+    resultats.push({ id: table[court], score, ...(raison ? { raison } : {}) });
     if (resultats.length === RESULTATS_MAX) break;
   }
   return { resultats, aucunResultat: resultats.length === 0 };

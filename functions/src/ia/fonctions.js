@@ -326,7 +326,7 @@ export function creerFonctionsIa(deps) {
                 { role: "assistant", texte: "..." },
                 { role: "user", texte: RAPPEL_RECHERCHE },
               ],
-        maxJetons: 512,
+        maxJetons: 768,
         temperature: 0,
         formatJson: true,
       });

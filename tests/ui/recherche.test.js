@@ -264,6 +264,24 @@ describe("barre à deux modes (V4.8)", () => {
     expect(m.lignes().at(-1).classList.contains("resultat--web")).toBe(true);
   });
 
+  it("V4.10 : la raison s'affiche sous le titre, dans le nom de l'option et en infobulle", async () => {
+    reponseIa = {
+      resultats: [
+        { id: "gh", score: 0.9, raison: "Dépôt de code en ligne" },
+        { id: "pix", score: 0.5 },
+      ],
+    };
+    const m = await monterModes();
+    await demander(m, "code");
+    const [gh, pix] = m.lignes();
+    const raison = gh.querySelector(".resultat-raison");
+    expect(raison.textContent).toBe("Dépôt de code en ligne");
+    expect(raison.title).toBe("Dépôt de code en ligne");
+    expect(gh.getAttribute("aria-label")).toBe("GitHub, Dépôt de code en ligne");
+    expect(pix.querySelector(".resultat-raison")).toBeNull();
+    expect(pix.getAttribute("aria-label")).toBeNull();
+  });
+
   it("V4.9 : un site supprimé entre la question et la réponse est ignoré", async () => {
     reponseIa = { resultats: [{ id: "disparu" }, { id: "ed" }] };
     const m = await monterModes();
