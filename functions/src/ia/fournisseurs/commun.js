@@ -25,6 +25,43 @@ export const CODES = [
   "fournisseur-indisponible",
 ];
 
+/**
+ * Server-Sent Events of a streamed answer (V4.12): yields the `data` of each event, whatever
+ * the way the network cut the packets (a line, a "\r\n" or a character may be split in two).
+ * Comment lines (":") and other fields are ignored; "[DONE]" is a marker, not an event.
+ * @param {AsyncIterable<Uint8Array>} corps body of the response
+ */
+export async function* analyserSse(corps) {
+  const decodeur = new TextDecoder();
+  let tampon = "";
+  let donnees = [];
+  function* evenements(fin) {
+    // A "\r" at the very end may be the first half of a "\r\n": wait for the next packet.
+    const attente = !fin && tampon.endsWith("\r") ? "\r" : "";
+    const lignes = tampon.slice(0, tampon.length - attente.length).split(/\r\n|\n|\r/);
+    tampon = fin ? "" : lignes.pop() + attente;
+    for (const ligne of lignes) {
+      if (ligne === "") {
+        if (donnees.length) yield donnees.join("\n");
+        donnees = [];
+      } else if (ligne.startsWith("data:")) donnees.push(ligne.slice(5).replace(/^ /, ""));
+    }
+    if (fin && donnees.length) {
+      yield donnees.join("\n");
+      donnees = [];
+    }
+  }
+  for await (const paquet of corps) {
+    tampon += decodeur.decode(paquet, { stream: true });
+    for (const e of evenements(false)) {
+      if (e === "[DONE]") return;
+      yield e;
+    }
+  }
+  tampon += decodeur.decode();
+  for (const e of evenements(true)) if (e !== "[DONE]") yield e;
+}
+
 /** An error of a provider, with a common code (one of CODES) and no secret in it. */
 export class ErreurFournisseur extends Error {
   constructor(code, statut = null) {
