@@ -5,6 +5,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { LIBELLES_NAVIGATEURS, NAVIGATEURS } from "../core/navigateurs.js";
 import {
   affichageAccueilDe,
+  styleDossierDe,
   ombreIconesDe,
   affichageHeureDe,
   espacementDe,
@@ -392,6 +393,17 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ ombreIcones: v }),
   );
 
+  // Device-only (V4.5.12): style des dossiers.
+  const styleDossier = segments(
+    "Style des dossiers",
+    [
+      ["apercu", "Aperçu du contenu"],
+      ["icone", "Icône de dossier"],
+    ],
+    styleDossierDe(store.lire().reglagesAppareil),
+    (v) => modifier({ styleDossier: v }),
+  );
+
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
     type: "checkbox",
@@ -688,6 +700,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         tailleTitres,
         libelleAppareil("Ombre sous les icônes"),
         ombreIcones.groupe,
+        libelleAppareil("Style des dossiers"),
+        styleDossier.groupe,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -973,6 +987,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     affichageHeure.maj(affichageHeureDe(store.lire().reglagesAppareil));
     tailleTitres.value = String(store.lire().reglagesAppareil?.tailleTitres ?? 100);
     ombreIcones.maj(ombreIconesDe(store.lire().reglagesAppareil));
+    styleDossier.maj(styleDossierDe(store.lire().reglagesAppareil));
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

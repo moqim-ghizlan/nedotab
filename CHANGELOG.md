@@ -92,6 +92,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Ombre sous les icônes »** (Apparence, propre à l'appareil) : aucune, légère (par défaut) ou forte.
 
+## [4.5.12] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Style des dossiers »** (Apparence, propre à l'appareil) : aperçu du contenu (par défaut) ou simple icône de dossier.
+
 ## [Non publié]
 
 ### Ajouté

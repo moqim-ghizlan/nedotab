@@ -266,6 +266,7 @@ export const CLES_APPAREIL = [
   "affichageHeure",
   "tailleTitres",
   "ombreIcones",
+  "styleDossier",
 ];
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
@@ -327,6 +328,14 @@ export function ombreIconesDe(reglagesAppareil) {
   return OMBRES_ICONES.includes(choisi) ? choisi : "legere";
 }
 
+/** Style des dossiers (V4.5.12): "apercu" by default, then not stored. */
+export const STYLES_DOSSIER = ["apercu", "icone"];
+
+export function styleDossierDe(reglagesAppareil) {
+  const choisi = reglagesAppareil?.styleDossier;
+  return STYLES_DOSSIER.includes(choisi) ? choisi : "apercu";
+}
+
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
@@ -360,6 +369,8 @@ export function validerReglagesAppareil(r) {
   if (tailleTitresValide(r?.tailleTitres) && r.tailleTitres !== TAILLETITRES_DEFAUT) resultat.tailleTitres = r.tailleTitres;
   if (OMBRES_ICONES.includes(r?.ombreIcones) && r.ombreIcones !== "legere")
     resultat.ombreIcones = r.ombreIcones;
+  if (STYLES_DOSSIER.includes(r?.styleDossier) && r.styleDossier !== "apercu")
+    resultat.styleDossier = r.styleDossier;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -415,6 +426,11 @@ function modifierAppareil(etat, changements) {
     if (!OMBRES_ICONES.includes(changements.ombreIcones)) return etat;
     if (changements.ombreIcones === "legere") delete appareil.ombreIcones;
     else appareil.ombreIcones = changements.ombreIcones;
+  }
+  if ("styleDossier" in changements) {
+    if (!STYLES_DOSSIER.includes(changements.styleDossier)) return etat;
+    if (changements.styleDossier === "apercu") delete appareil.styleDossier;
+    else appareil.styleDossier = changements.styleDossier;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;

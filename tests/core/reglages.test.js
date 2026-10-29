@@ -249,6 +249,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { ombreIcones: "legere" });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("style des dossiers : aperçu par défaut et non stocké", () => {
+    let etat = modifier(etatInitial(), { styleDossier: "icone" });
+    expect(etat.reglagesAppareil).toEqual({ styleDossier: "icone" });
+    expect(modifier(etat, { styleDossier: "cube" })).toBe(etat);
+    etat = modifier(etat, { styleDossier: "apercu" });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });
