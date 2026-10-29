@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.7.0] - 2026-10-29
+
+### Ajouté
+
+- **Recherche dans les tags et les descriptions** (barre de recherche, sans IA ni réseau). « photo »
+  trouve un site taggé « retouche photo » ; les correspondances du titre restent devant.
+  - Poids : tag égal +50, début de tag +35, tag contenant +20, description (début de mot) +15,
+    description (milieu) +5.
+  - **Raison de la correspondance** sous le résultat : « tag : retouche photo » ou un extrait de
+    60 caractères de la description, avec le mot en évidence.
+  - **Filtre `#tag`** : `#dev` garde les sites dont un tag commence par « dev » ; `#dev git`
+    combine filtre et recherche ; plusieurs `#` sont tous requis. `#` seul propose les 10 tags
+    les plus utilisés, complétés au fil de la saisie ; un clic applique le filtre.
+
 ## [4.4.3] - 2026-10-29
 
 ### Modifié
@@ -110,7 +124,7 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Correctif : cartes qui se chevauchent** en défilement vertical et dans les dossiers avec une grande « Taille des cartes ». La taille s'arrête désormais là où l'icône remplit sa case.
 
-## [Non publié]
+## [4.6.0] - 2026-10-29
 
 ### Ajouté
 

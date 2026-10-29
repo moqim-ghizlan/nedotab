@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indexer, normaliser, rechercher } from "../../src/core/recherche.js";
+import { indexer, normaliser, rechercher, suggererTags } from "../../src/core/recherche.js";
 
 const site = (id, titre, url) => ({ id, type: "site", titre, url, creeLe: 0 });
 const dossier = (id, titre, items) => ({ id, type: "dossier", titre, items, creeLe: 0 });
@@ -93,6 +93,105 @@ describe("index", () => {
     for (let essai = 0; essai < 5; essai++) {
       const debut = performance.now();
       for (const q of ["p", "pr", "pro", "proj", "projet be"]) rechercher(index, q);
+      parFrappe = Math.min(parFrappe, (performance.now() - debut) / 5);
+    }
+    expect(parFrappe).toBeLessThan(5);
+  });
+});
+
+describe("tags et description (V4.7)", () => {
+  const enrichi = (id, titre, url, tags, description = "") => ({
+    ...site(id, titre, url),
+    tags,
+    description,
+  });
+  const G = [
+    enrichi("pix", "Pixlr", "https://pixlr.com", ["retouche photo", "dev"], "Éditeur en ligne"),
+    enrichi("ph", "Photo Club", "https://club.fr", [], ""),
+    enrichi(
+      "ed",
+      "Éditeur",
+      "https://editeur.fr",
+      ["outil"],
+      "Un outil en ligne pour retoucher des photos et des images, très pratique au quotidien",
+    ),
+    enrichi("gh2", "GitHub", "https://github.com", ["dev", "git"]),
+    enrichi("dm", "Domaine photo", "https://photo-exemple.fr", []),
+    dossier("d", "Dossier", [enrichi("x", "X", "https://x.fr", ["dev"])]),
+  ];
+  const index = indexer(G);
+
+  it("« photo » trouve le site taggé ; le titre passe devant", () => {
+    const r = rechercher(index, "photo");
+    expect(ids(r)).toContain("pix");
+    expect(ids(r).indexOf("ph")).toBeLessThan(ids(r).indexOf("pix"));
+    expect(ids(r).indexOf("pix")).toBeLessThan(ids(r).indexOf("ed")); // tag avant description
+  });
+  it("raison : tag", () => {
+    const r = rechercher(index, "photo").find((x) => x.entree.id === "pix");
+    expect(r.raison.champ).toBe("tag");
+    expect(r.raison.texte).toBe("retouche photo");
+    expect(r.raison.plages).toEqual([[9, 14]]);
+  });
+  it("« retoucher » trouve via la description, extrait autour du mot", () => {
+    const [r] = rechercher(index, "retoucher");
+    expect(r.entree.id).toBe("ed");
+    expect(r.raison.champ).toBe("description");
+    expect(r.raison.texte.length).toBeLessThanOrEqual(70);
+    const [a, b] = r.raison.plages[0];
+    expect(r.raison.texte.slice(a, b)).toBe("retoucher");
+  });
+  it("titre, domaine et chemin gardent leur raison", () => {
+    expect(rechercher(index, "github")[0].raison.champ).toBe("titre");
+    expect(rechercher(index, "pixlr.com")[0].raison.champ).toBe("domaine");
+    expect(rechercher(index, "exemple")[0].raison.champ).toBe("domaine");
+    expect(rechercher(indexer(GRILLE), "clients").at(-1).raison.champ).toBeDefined();
+  });
+  it("un tag exact passe devant un domaine partiel", () => {
+    const g = [
+      enrichi("a", "Alpha", "https://devnet.fr", []),
+      enrichi("b", "Beta", "https://beta.fr", ["dev"]),
+    ];
+    expect(ids(rechercher(indexer(g), "dev"))).toEqual(["b", "a"]);
+  });
+  it("#dev filtre sur le début des tags", () => {
+    expect(ids(rechercher(index, "#dev")).sort()).toEqual(["gh2", "pix", "x"]);
+    expect(ids(rechercher(index, "#de")).sort()).toEqual(["gh2", "pix", "x"]);
+  });
+  it("#dev git combine filtre et recherche ; plusieurs # = tous requis", () => {
+    expect(ids(rechercher(index, "#dev git"))).toEqual(["gh2"]);
+    expect(ids(rechercher(index, "#dev #git"))).toEqual(["gh2"]);
+    expect(ids(rechercher(index, "#dev #outil"))).toEqual([]);
+  });
+  it("#inconnu → aucun résultat ; # seul → rien", () => {
+    expect(rechercher(index, "#inconnu")).toEqual([]);
+    expect(rechercher(index, "#")).toEqual([]);
+  });
+  it("filtre seul : la raison est le tag", () => {
+    const [r] = rechercher(index, "#git");
+    expect(r.raison).toMatchObject({ champ: "tag", texte: "git" });
+  });
+  it("suggererTags : les plus utilisés d'abord, filtrés par préfixe", () => {
+    expect(suggererTags(G)[0]).toBe("dev");
+    expect(suggererTags(G, "gi")).toEqual(["git"]);
+    expect(suggererTags(G, "zz")).toEqual([]);
+  });
+  it("performance indicative : 2 000 sites avec tags et descriptions", () => {
+    const g = Array.from({ length: 2000 }, (_, i) =>
+      enrichi(
+        `p${i}`,
+        `Projet ${i}`,
+        `https://projet${i}.fr`,
+        [`tag${i % 40}`, "outil"],
+        `Une description assez longue pour le site numéro ${i}, utile pour tester la vitesse`,
+      ),
+    );
+    const idx = indexer(g);
+    rechercher(idx, "out");
+    let parFrappe = Infinity;
+    for (let essai = 0; essai < 15; essai++) {
+      const debut = performance.now();
+      for (const q of ["ou", "out", "desc", "descrip", "#tag1 vitesse"]) rechercher(idx, q);
       parFrappe = Math.min(parFrappe, (performance.now() - debut) / 5);
     }
     expect(parFrappe).toBeLessThan(5);

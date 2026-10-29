@@ -1,4 +1,4 @@
-import { indexer, rechercher } from "../core/recherche.js";
+import { decouperRequete, indexer, rechercher, suggererTags } from "../core/recherche.js";
 import { normaliserUrl } from "../core/url.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
@@ -19,6 +19,27 @@ function titreSurligne(titre, plages) {
   }
   if (pos < titre.length) span.append(document.createTextNode(titre.slice(pos)));
   return span;
+}
+
+/** Why a site matched (tag or description), with <mark> on the word; text nodes only. */
+function raisonSurlignee(raison) {
+  const span = el("span", { class: "resultat-raison" });
+  const { texte, plages } = raison;
+  if (raison.champ === "tag") span.append(document.createTextNode("tag : "));
+  let pos = 0;
+  for (const [debut, fin] of plages) {
+    if (debut > pos) span.append(document.createTextNode(texte.slice(pos, debut)));
+    span.append(el("mark", { texte: texte.slice(debut, fin) }));
+    pos = fin;
+  }
+  if (pos < texte.length) span.append(document.createTextNode(texte.slice(pos)));
+  return span;
+}
+
+/** Last word of the field when it starts with "#" (a tag being typed), without the "#". */
+function tagEnCours(texte) {
+  const m = texte.match(/(?:^|\s)#(\S*)$/);
+  return m ? m[1] : null;
 }
 
 /** Text typed that looks like an address ("exemple.com/page"), or null. */
@@ -97,12 +118,20 @@ export function creerRecherche(store, { ouvrirDossier }) {
       fermerListe();
       return;
     }
-    const resultats = rechercher(indexer(store.lire().grille), texte);
+    const grille = store.lire().grille;
+    const resultats = rechercher(indexer(grille), texte);
     options = [];
     const adresse = adresseTapee(texte);
     if (adresse) options.push({ type: "adresse", url: adresse });
     for (const r of resultats) options.push({ type: r.entree.type, resultat: r });
-    options.push({ type: "web", texte: texte.trim() });
+    // "#": the tags to pick from (most used first, completed as you type).
+    const debutTag = tagEnCours(texte);
+    if (debutTag !== null) {
+      for (const tag of suggererTags(grille, debutTag)) options.push({ type: "tag", tag });
+    }
+    const filtreSeul = decouperRequete(texte).mots.length === 0;
+    if (!(debutTag === "" && filtreSeul && !resultats.length))
+      options.push({ type: "web", texte: texte.trim() });
 
     liste.replaceChildren(
       ...options.map((o, i) => {
@@ -115,13 +144,18 @@ export function creerRecherche(store, { ouvrirDossier }) {
               texte: `Aller sur ${o.url.replace(/^https?:\/\//, "")}`,
             }),
           ];
+        } else if (o.type === "tag") {
+          contenu = [
+            el("span", { class: "resultat-icone resultat-icone--symbole", texte: "#" }),
+            el("span", { class: "resultat-titre", texte: o.tag }),
+          ];
         } else if (o.type === "web") {
           contenu = [
             el("span", { class: "resultat-icone resultat-icone--symbole", texte: "⌕" }),
             el("span", { class: "resultat-titre", texte: `Rechercher « ${o.texte} » sur le web` }),
           ];
         } else {
-          const { entree, plages } = o.resultat;
+          const { entree, plages, raison } = o.resultat;
           contenu = [
             el(
               "span",
@@ -136,6 +170,9 @@ export function creerRecherche(store, { ouvrirDossier }) {
               : null,
             entree.chemin.length
               ? el("span", { class: "resultat-chemin", texte: entree.cheminTexte })
+              : null,
+            raison && (raison.champ === "tag" || raison.champ === "description") && raison.texte
+              ? raisonSurlignee(raison)
               : null,
           ];
         }
@@ -162,9 +199,11 @@ export function creerRecherche(store, { ouvrirDossier }) {
     // The first result is preselected (the address proposal comes first when typed).
     choisirActif(0);
     const n = options.filter((o) => o.resultat).length;
-    etat.textContent = n
-      ? `${n} résultat${n > 1 ? "s" : ""}`
-      : "Aucun site trouvé, Entrée pour chercher sur le web";
+    const nTags = options.filter((o) => o.type === "tag").length;
+    if (n) etat.textContent = `${n} résultat${n > 1 ? "s" : ""}`;
+    else if (nTags)
+      etat.textContent = `${nTags} tag${nTags > 1 ? "s" : ""} proposé${nTags > 1 ? "s" : ""}`;
+    else etat.textContent = "Aucun site trouvé, Entrée pour chercher sur le web";
   };
 
   const ouvrirUrl = (url, nouvelOnglet) => ouvrirSite(url, { nouvelOnglet });
@@ -181,7 +220,11 @@ export function creerRecherche(store, { ouvrirDossier }) {
       if (champ.value.trim()) chercherSurLeWeb(champ.value.trim(), nouvelOnglet);
       return;
     }
-    if (o.type === "adresse") ouvrirUrl(o.url, nouvelOnglet);
+    if (o.type === "tag") {
+      champ.value = champ.value.replace(/#\S*$/, `#${o.tag} `);
+      champ.focus();
+      rendre();
+    } else if (o.type === "adresse") ouvrirUrl(o.url, nouvelOnglet);
     else if (o.type === "web") chercherSurLeWeb(o.texte, nouvelOnglet);
     else if (o.type === "site")
       ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet || sitesDansNouvelOnglet());

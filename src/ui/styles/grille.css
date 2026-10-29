@@ -401,6 +401,7 @@
 
 .resultat {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--espace-3);
   padding: 8px var(--espace-3);
@@ -475,6 +476,23 @@
   flex: none;
   color: var(--texte-secondaire);
   font-size: var(--taille-s);
+}
+
+.resultat-raison {
+  flex-basis: 100%;
+  padding-left: 40px; /* under the title, after the icon */
+  min-width: 0;
+  overflow: hidden;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.resultat-raison mark {
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .resultat-chemin {
