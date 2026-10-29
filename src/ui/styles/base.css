@@ -196,3 +196,9 @@ textarea {
   background: color-mix(in srgb, var(--accent) 35%, transparent);
   opacity: 0.85;
 }
+
+/* Setting "Opacité de la fenêtre de dossier" (V4.5.13). */
+:root[data-opacite-dossier] .fenetre-dossier {
+  background: color-mix(in srgb, var(--surface) calc(var(--opacite-dossier, 1) * 100%), transparent);
+  backdrop-filter: blur(12px);
+}

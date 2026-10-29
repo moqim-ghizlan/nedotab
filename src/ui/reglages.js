@@ -404,6 +404,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ styleDossier: v }),
   );
 
+  // Device-only (V4.5.13): opacité de la fenêtre de dossier, in %.
+  const opaciteDossier = el("input", {
+    type: "range",
+    min: "60",
+    max: "100",
+    step: "5",
+    id: "reglage-opaciteDossier",
+    "aria-label": "Opacité de la fenêtre de dossier",
+    value: String(store.lire().reglagesAppareil?.opaciteDossier ?? 100),
+  });
+  opaciteDossier.addEventListener("input", () => modifier({ opaciteDossier: Number(opaciteDossier.value) }));
+
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
     type: "checkbox",
@@ -702,6 +714,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         ombreIcones.groupe,
         libelleAppareil("Style des dossiers"),
         styleDossier.groupe,
+        libelleAppareil("Opacité de la fenêtre de dossier"),
+        opaciteDossier,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -988,6 +1002,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     tailleTitres.value = String(store.lire().reglagesAppareil?.tailleTitres ?? 100);
     ombreIcones.maj(ombreIconesDe(store.lire().reglagesAppareil));
     styleDossier.maj(styleDossierDe(store.lire().reglagesAppareil));
+    opaciteDossier.value = String(store.lire().reglagesAppareil?.opaciteDossier ?? 100);
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

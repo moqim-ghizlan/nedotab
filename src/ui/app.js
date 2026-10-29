@@ -579,6 +579,8 @@ export async function demarrerApp(racine) {
     racineDoc.toggleAttribute("data-taille-titres", !!r.tailleTitres);
     racineDoc.dataset.ombreIcones = ombreIconesDe(r);
     racineDoc.dataset.styleDossier = styleDossierDe(r);
+    racineDoc.style.setProperty("--opacite-dossier", String((r.opaciteDossier ?? 100) / 100));
+    racineDoc.toggleAttribute("data-opacite-dossier", !!r.opaciteDossier);
     racineDoc.dataset.forme = formeIconesDe(r);
     racineDoc.dataset.espacement = espacementDe(r);
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));

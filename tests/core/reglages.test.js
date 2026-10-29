@@ -256,6 +256,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { styleDossier: "apercu" });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("opacité du dossier : 60 à 100 %, 100 par défaut non stocké", () => {
+    let etat = modifier(etatInitial(), { opaciteDossier: 80 });
+    expect(etat.reglagesAppareil).toEqual({ opaciteDossier: 80 });
+    expect(modifier(etat, { opaciteDossier: 30 })).toBe(etat);
+    etat = modifier(etat, { opaciteDossier: 100 });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

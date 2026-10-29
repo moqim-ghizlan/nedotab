@@ -98,6 +98,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Style des dossiers »** (Apparence, propre à l'appareil) : aperçu du contenu (par défaut) ou simple icône de dossier.
 
+## [4.5.13] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Opacité de la fenêtre de dossier »** (Apparence, propre à l'appareil) : de 60 à 100 %.
+
 ## [Non publié]
 
 ### Ajouté

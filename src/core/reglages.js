@@ -267,6 +267,7 @@ export const CLES_APPAREIL = [
   "tailleTitres",
   "ombreIcones",
   "styleDossier",
+  "opaciteDossier",
 ];
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
@@ -336,6 +337,12 @@ export function styleDossierDe(reglagesAppareil) {
   return STYLES_DOSSIER.includes(choisi) ? choisi : "apercu";
 }
 
+/** Opacité de la fenêtre de dossier (V4.5.13), in %: 100 = default, then not stored. */
+export const OPACITEDOSSIER_MIN = 60;
+export const OPACITEDOSSIER_MAX = 100;
+export const OPACITEDOSSIER_DEFAUT = 100;
+const opaciteDossierValide = (n) => Number.isInteger(n) && n >= OPACITEDOSSIER_MIN && n <= OPACITEDOSSIER_MAX;
+
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
@@ -371,6 +378,7 @@ export function validerReglagesAppareil(r) {
     resultat.ombreIcones = r.ombreIcones;
   if (STYLES_DOSSIER.includes(r?.styleDossier) && r.styleDossier !== "apercu")
     resultat.styleDossier = r.styleDossier;
+  if (opaciteDossierValide(r?.opaciteDossier) && r.opaciteDossier !== OPACITEDOSSIER_DEFAUT) resultat.opaciteDossier = r.opaciteDossier;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -431,6 +439,12 @@ function modifierAppareil(etat, changements) {
     if (!STYLES_DOSSIER.includes(changements.styleDossier)) return etat;
     if (changements.styleDossier === "apercu") delete appareil.styleDossier;
     else appareil.styleDossier = changements.styleDossier;
+  }
+  if ("opaciteDossier" in changements) {
+    const t = changements.opaciteDossier;
+    if (t == null || t === OPACITEDOSSIER_DEFAUT) delete appareil.opaciteDossier;
+    else if (opaciteDossierValide(t)) appareil.opaciteDossier = t;
+    else return etat;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;
