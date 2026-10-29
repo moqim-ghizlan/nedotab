@@ -264,6 +264,7 @@ export const CLES_APPAREIL = [
   "formeIcones",
   "espacement",
   "affichageHeure",
+  "tailleTitres",
 ];
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
@@ -311,6 +312,12 @@ export function affichageHeureDe(reglagesAppareil) {
   return AFFICHAGES_HEURE.includes(choisi) ? choisi : "aucun";
 }
 
+/** Taille du texte des titres (V4.5.10), in %: 100 = default, then not stored. */
+export const TAILLETITRES_MIN = 80;
+export const TAILLETITRES_MAX = 160;
+export const TAILLETITRES_DEFAUT = 100;
+const tailleTitresValide = (n) => Number.isInteger(n) && n >= TAILLETITRES_MIN && n <= TAILLETITRES_MAX;
+
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
 
@@ -341,6 +348,7 @@ export function validerReglagesAppareil(r) {
     resultat.espacement = r.espacement;
   if (AFFICHAGES_HEURE.includes(r?.affichageHeure) && r.affichageHeure !== "aucun")
     resultat.affichageHeure = r.affichageHeure;
+  if (tailleTitresValide(r?.tailleTitres) && r.tailleTitres !== TAILLETITRES_DEFAUT) resultat.tailleTitres = r.tailleTitres;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))
@@ -385,6 +393,12 @@ function modifierAppareil(etat, changements) {
     if (!AFFICHAGES_HEURE.includes(changements.affichageHeure)) return etat;
     if (changements.affichageHeure === "aucun") delete appareil.affichageHeure;
     else appareil.affichageHeure = changements.affichageHeure;
+  }
+  if ("tailleTitres" in changements) {
+    const t = changements.tailleTitres;
+    if (t == null || t === TAILLETITRES_DEFAUT) delete appareil.tailleTitres;
+    else if (tailleTitresValide(t)) appareil.tailleTitres = t;
+    else return etat;
   }
   if ("affichageAccueil" in changements) {
     if (changements.affichageAccueil == null) delete appareil.affichageAccueil;

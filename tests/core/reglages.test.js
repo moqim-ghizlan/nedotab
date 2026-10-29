@@ -235,6 +235,13 @@ describe("réglages propres à l'appareil (V2.9)", () => {
     etat = modifier(etat, { affichageHeure: "aucun" });
     expect(etat.reglagesAppareil).toEqual({});
   });
+  it("taille des titres : 80 à 160 %, 100 par défaut non stocké", () => {
+    let etat = modifier(etatInitial(), { tailleTitres: 120 });
+    expect(etat.reglagesAppareil).toEqual({ tailleTitres: 120 });
+    expect(modifier(etat, { tailleTitres: 300 })).toBe(etat);
+    etat = modifier(etat, { tailleTitres: 100 });
+    expect(etat.reglagesAppareil).toEqual({});
+  });
   it("colonnes forcées : 3 à 10, null pour automatique, jamais dans les réglages synchronisés", () => {
     let etat = modifier(etatInitial(), { colonnes: 6 });
     expect(etat.reglagesAppareil).toEqual({ colonnes: 6 });

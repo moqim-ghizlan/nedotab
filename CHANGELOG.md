@@ -80,6 +80,12 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - **Réglage « Heure et date »** (Général > Interface, propre à l'appareil) : affichées au-dessus de la barre de recherche, en 24 h ou 12 h. Masquées par défaut.
 
+## [4.5.10] - 2026-10-29
+
+### Ajouté
+
+- **Réglage « Taille du texte des titres »** (Apparence, propre à l'appareil) : de 80 à 160 %.
+
 ## [Non publié]
 
 ### Ajouté

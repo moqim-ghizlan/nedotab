@@ -573,6 +573,8 @@ export async function demarrerApp(racine) {
     racineDoc.dataset.animationPage = r.animationPage ?? "glisse";
     racineDoc.dataset.animationDossier = r.animationDossier ?? "zoom";
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));
+    racineDoc.style.setProperty("--taille-titres", String((r.tailleTitres ?? 100) / 100));
+    racineDoc.toggleAttribute("data-taille-titres", !!r.tailleTitres);
     racineDoc.dataset.forme = formeIconesDe(r);
     racineDoc.dataset.espacement = espacementDe(r);
     document.dispatchEvent(new Event("nedotab:taille-tuiles"));

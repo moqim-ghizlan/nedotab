@@ -367,6 +367,18 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     (v) => modifier({ affichageHeure: v }),
   );
 
+  // Device-only (V4.5.10): taille du texte des titres, in %.
+  const tailleTitres = el("input", {
+    type: "range",
+    min: "80",
+    max: "160",
+    step: "10",
+    id: "reglage-tailleTitres",
+    "aria-label": "Taille du texte des titres",
+    value: String(store.lire().reglagesAppareil?.tailleTitres ?? 100),
+  });
+  tailleTitres.addEventListener("input", () => modifier({ tailleTitres: Number(tailleTitres.value) }));
+
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
     type: "checkbox",
@@ -659,6 +671,8 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
         formeIcones.groupe,
         libelleAppareil("Espacement des cartes"),
         espacement.groupe,
+        libelleAppareil("Taille du texte des titres"),
+        tailleTitres,
         libelleAppareil("Affichage de l'accueil"),
         affichageAccueil.groupe,
         reglagesPages,
@@ -942,6 +956,7 @@ export function ouvrirReglages(store, { retourFocus, session } = {}) {
     formeIcones.maj(formeIconesDe(store.lire().reglagesAppareil));
     espacement.maj(espacementDe(store.lire().reglagesAppareil));
     affichageHeure.maj(affichageHeureDe(store.lire().reglagesAppareil));
+    tailleTitres.value = String(store.lire().reglagesAppareil?.tailleTitres ?? 100);
     retourHaptique.checked = !!store.lire().reglagesAppareil?.retourHaptique;
     navigateur?.maj(store.lire().reglagesAppareil?.navigateur ?? "safari");
     if (curseurRecherche) curseurRecherche.checked = !store.lire().reglagesAppareil?.barreChrome;

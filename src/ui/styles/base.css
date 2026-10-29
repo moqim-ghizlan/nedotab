@@ -160,3 +160,8 @@ textarea {
   text-transform: capitalize;
   opacity: 0.85;
 }
+
+/* Setting "Taille du texte des titres" (V4.5.10). */
+:root[data-taille-titres] .tuile-titre {
+  font-size: calc(var(--taille-s) * var(--taille-titres, 1));
+}
