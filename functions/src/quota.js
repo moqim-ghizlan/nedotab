@@ -7,6 +7,8 @@
 export const QUOTA_PAR_DEFAUT = 300;
 /** Highest limit a user may set for themselves (config/ia.quotaMax overrides it). */
 export const QUOTA_MAX_PAR_DEFAUT = 1000;
+/** Pages the server may download per user and per day (web app tags), config/ia.quotaPages. */
+export const QUOTA_PAGES_PAR_DEFAUT = 300;
 
 /** "AAAA-MM-JJ" of `date` in Europe/Paris. */
 export function jourParis(date = new Date()) {
@@ -24,9 +26,15 @@ export function jourParis(date = new Date()) {
 }
 
 export class QuotaDepasse extends Error {
-  constructor(limite) {
-    super(`Limite quotidienne atteinte (${limite} appels). Elle se réinitialise à minuit.`);
+  /** @param {{ pages?: boolean }} options pages: the limit of page downloads, not of AI calls */
+  constructor(limite, { pages = false } = {}) {
+    super(
+      pages
+        ? `Limite quotidienne de lecture de pages atteinte (${limite} par jour). Elle se réinitialise à minuit.`
+        : `Limite quotidienne atteinte (${limite} appels). Elle se réinitialise à minuit.`,
+    );
     this.limite = limite;
+    this.pages = pages;
   }
 }
 
@@ -34,9 +42,12 @@ export class QuotaDepasse extends Error {
  * Pure rule: the quota document after `n` more calls today, or QuotaDepasse.
  * @param {{ jour?: string, appels?: number } | undefined} actuel
  */
-export function apresConsommation(actuel, { jour, n = 1, limite = QUOTA_PAR_DEFAUT }) {
+export function apresConsommation(
+  actuel,
+  { jour, n = 1, limite = QUOTA_PAR_DEFAUT, pages = false },
+) {
   const appels = actuel?.jour === jour ? (actuel.appels ?? 0) : 0;
-  if (appels + n > limite) throw new QuotaDepasse(limite);
+  if (appels + n > limite) throw new QuotaDepasse(limite, { pages });
   return { jour, appels: appels + n };
 }
 
@@ -54,7 +65,12 @@ export async function consommer(
   const jour = jourParis(maintenant);
   return db.runTransaction(async (t) => {
     const snap = await t.get(ref);
-    const suivant = apresConsommation(snap.exists ? snap.data() : undefined, { jour, n, limite });
+    const suivant = apresConsommation(snap.exists ? snap.data() : undefined, {
+      jour,
+      n,
+      limite,
+      pages: document !== "quota",
+    });
     t.set(ref, suivant);
     return suivant;
   });

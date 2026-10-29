@@ -49,7 +49,7 @@ describe("quotaRestant (V4.6)", () => {
 });
 
 describe("genererTags sans extrait (V4.5)", () => {
-  it("le serveur lit la page ; le téléchargement a son quota de 60 par jour", async () => {
+  it("le serveur lit la page ; le téléchargement a son quota de 300 par jour", async () => {
     const lirePage = vi.fn(async () => ({ titre: "A", texte: "t" }));
     const { db, ia } = await monter(lirePage);
     const r = await ia.genererTags("u1", { url: "https://a.fr", titre: "A" });
@@ -57,10 +57,11 @@ describe("genererTags sans extrait (V4.5)", () => {
     expect(lirePage).toHaveBeenCalledWith("https://a.fr");
     const quota = db.lire("users/u1/prive/quotaPages");
     expect(quota.appels).toBe(1);
-    await db.doc("users/u1/prive/quotaPages").set({ jour: quota.jour, appels: 60 });
-    await expect(ia.genererTags("u1", { url: "https://a.fr", titre: "A" })).rejects.toThrow(
-      /Limite/,
-    );
+    await db.doc("users/u1/prive/quotaPages").set({ jour: quota.jour, appels: 300 });
+    await expect(ia.genererTags("u1", { url: "https://a.fr", titre: "A" })).rejects.toMatchObject({
+      pages: true,
+      message: expect.stringMatching(/lecture de pages/),
+    });
   });
 
   it("avec un extrait (extension) : aucun téléchargement", async () => {

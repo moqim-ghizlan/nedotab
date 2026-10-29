@@ -9,6 +9,8 @@ const RAISONS = {
   "cle-absente": "Pause : aucune clé enregistrée.",
   "ia-desactivee": "Pause : l'assistant IA est désactivé.",
   "quota-depasse": "Limite quotidienne atteinte : le traitement reprendra demain, là où il s'est arrêté. Vous pouvez aussi relever la limite dans Réglages → IA, puis reprendre.",
+  "quota-pages-depasse":
+    "Limite de lecture de pages par notre serveur atteinte pour aujourd'hui : le traitement reprendra demain. Dans l'extension Chrome, la page est lue par votre ordinateur et cette limite ne s'applique pas.",
   "pas-de-modele": "Pause : aucun modèle d'IA n'est disponible.",
 };
 

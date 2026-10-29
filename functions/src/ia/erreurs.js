@@ -25,7 +25,7 @@ export function versErreurAppel(e) {
   if (e instanceof EntreeInvalide)
     return { code: "invalid-argument", message: e.message, details: { code: "entree-invalide" } };
   if (e instanceof QuotaDepasse)
-    return { code: "resource-exhausted", message: e.message, details: { code: "quota-depasse" } };
+    return { code: "resource-exhausted", message: e.message, details: { code: e.pages ? "quota-pages-depasse" : "quota-depasse" } };
   if (e instanceof ErreurFournisseur && PAR_CODE[e.code]) {
     const [code, message] = PAR_CODE[e.code];
     return { code, message, details: { code: e.code } };

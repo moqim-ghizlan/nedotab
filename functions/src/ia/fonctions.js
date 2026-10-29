@@ -17,8 +17,6 @@ import { extraitReduit } from "../partage/extraitPage.js";
 import { jourParis } from "../quota.js";
 import { ErreurPage } from "../reseau/recupererPage.js";
 
-/** Page downloads per user and per day (V4.5): the function must not become a crawler. */
-export const PAGES_PAR_JOUR = 60;
 
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
@@ -248,7 +246,13 @@ export function creerFonctionsIa(deps) {
     // that cannot be read gives a reduced extract: the tags then come from title and domain.
     let page = extrait;
     if (!page) {
-      await consommer(uid, { n: 1, limite: PAGES_PAR_JOUR, document: "quotaPages" });
+      // Page downloads per user and per day (config/ia.quotaPages): the function must not
+      // become a crawler.
+      await consommer(uid, {
+        n: 1,
+        limite: (await config()).quotaPages,
+        document: "quotaPages",
+      });
       try {
         page = await lirePage(url);
       } catch (e) {

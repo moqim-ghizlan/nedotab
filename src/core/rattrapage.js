@@ -73,5 +73,6 @@ export const ERREURS_BLOQUANTES = [
   "cle-absente",
   "ia-desactivee",
   "quota-depasse",
+  "quota-pages-depasse",
   "pas-de-modele",
 ];
