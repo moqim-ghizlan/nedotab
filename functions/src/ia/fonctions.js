@@ -18,6 +18,7 @@ import {
   SYSTEME_RECHERCHE,
 } from "./prompts/recherche.js";
 import { lireSortieRecherche } from "./rechercheSortie.js";
+import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT } from "./prompts/chat.js";
 import { CHAMPS_LISTE, construireListe, sitesDe } from "../partage/listeCompacte.js";
 import { preFiltrer } from "../partage/preFiltre.js";
@@ -223,6 +224,19 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
+   * Before any paid call: AI on, key present, quota consumed (1), key decrypted in memory.
+   */
+  async function preparerAppel(uid) {
+    const { fournisseur, modele } = await choixDeLUsage(uid);
+    const entree = (await lireCles(uid))[fournisseur];
+    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
+    const c = await config();
+    await consommer(uid, { n: 1, limite: await limiteDe(uid, c) });
+    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
+    return { fournisseur, modele, cle };
+  }
+
+  /**
    * Common path of every AI feature (V4.4 and after): settings → quota → key in memory →
    * provider. `donnees`: { usage, systeme?, messages, maxJetons?, formatJson? } and nothing
    * else: a "fournisseur" or "modele" sent by the browser is refused.
@@ -242,12 +256,7 @@ export function creerFonctionsIa(deps) {
         },
       },
     });
-    const { fournisseur, modele } = await choixDeLUsage(uid);
-    const entree = (await lireCles(uid))[fournisseur];
-    if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
-    const c = await config();
-    await consommer(uid, { n: 1, limite: await limiteDe(uid, c) });
-    const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
+    const { fournisseur, modele, cle } = await preparerAppel(uid);
     const debut = horloge();
     try {
       const r = await fournisseurs[fournisseur].envoyer({
@@ -401,6 +410,57 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
+   * V4.12: the same answer as `chat`, sent to the browser as it is generated. Same checks and
+   * same quota (consumed at the start). `envoyerMorceau` writes a chunk to the browser,
+   * `signal` is aborted when it leaves or presses "Arrêter": the request to the provider is then
+   * cancelled. An error before the first byte is thrown (a normal call error); an error in the
+   * middle is sent as a chunk, the text already sent stays valid.
+   * @returns {Promise<{ ok: boolean, modele?: string, jetonsEntree?: number, jetonsSortie?: number, raisonArret?: string|null }>}
+   */
+  async function chatFlux(uid, donnees, { envoyerMorceau = async () => false, signal } = {}) {
+    const { messages } = valider(donnees, {
+      messages: { type: "libre", requis: true, verifier: verifierMessagesChat },
+    });
+    const { fournisseur, modele, cle } = await preparerAppel(uid);
+    const adaptateurFlux = fournisseurs[fournisseur].envoyerFlux;
+    if (!adaptateurFlux) throw new ErreurFournisseur("fournisseur-indisponible");
+    const debut = horloge();
+    try {
+      const flux = adaptateurFlux({
+        cle,
+        modele,
+        systeme: SYSTEME_CHAT,
+        messages,
+        maxJetons: 1000,
+        temperature: 0.5,
+        signal,
+      });
+      const fin = await diffuser(flux, envoyerMorceau);
+      const jetons = (fin?.jetonsEntree ?? 0) + (fin?.jetonsSortie ?? 0);
+      journal({
+        action: "chatFlux",
+        fournisseur,
+        modele,
+        dureeMs: horloge() - debut,
+        jetons,
+        ...(fin?.type === "erreur" ? { code: fin.code } : {}),
+        ...(signal?.aborted ? { annule: true } : {}),
+      });
+      if (fin?.type !== "fin") return { ok: false };
+      return {
+        ok: true,
+        modele: fin.modele,
+        jetonsEntree: fin.jetonsEntree,
+        jetonsSortie: fin.jetonsSortie,
+        raisonArret: fin.raisonArret ?? null,
+      };
+    } catch (e) {
+      journal({ action: "chatFlux", fournisseur, modele, dureeMs: horloge() - debut, code: e?.code });
+      throw e;
+    }
+  }
+
+  /**
    * The daily limit of a user (V4.7): the one they chose in the settings, never above the
    * ceiling of config/ia (quotaMax), else the default of config/ia.
    */
@@ -445,6 +505,7 @@ export function creerFonctionsIa(deps) {
     genererTags,
     rechercher,
     chat,
+    chatFlux,
     enregistrerCle,
     supprimerCle,
     etatCles,

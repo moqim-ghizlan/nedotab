@@ -129,7 +129,8 @@ describe("chat : conversation", () => {
     m.chat.ouvrir();
     m.ecrire("un");
     m.envoyer();
-    await vi.waitFor(() => expect(m.qa(".chat-bulle--assistant")).toHaveLength(1));
+    // The bubble appears with the first text: wait for the end of the answer.
+    await vi.waitFor(() => expect(m.q(".chat-envoyer").textContent).toBe("Envoyer"));
     m.ecrire("deux");
     m.envoyer();
     await vi.waitFor(() => expect(m.appels).toHaveLength(2));

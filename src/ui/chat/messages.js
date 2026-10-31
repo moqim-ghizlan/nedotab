@@ -6,8 +6,13 @@ import { rendreMarkdown } from "./markdown.js";
  * (left, full width, Markdown made safe by markdown.js). `role="log"` + `aria-live` announce
  * the new answers. The view follows the end of the conversation unless the user scrolled up to
  * read: a "↓ Derniers messages" button then brings it back.
+ *
+ * V4.12: an answer being streamed ({ etat: "flux" }) is rendered again from its whole text by
+ * `majReponse` (the panel calls it at most every 50 ms), always through markdown.js. While it
+ * streams the list is not a live region (a screen reader would read every chunk): a status
+ * line announces the end once.
  */
-export function creerMessages({ surReessayer, surCopier }) {
+export function creerMessages({ surReessayer, surCopier, surReessayerReponse = () => {} }) {
   const liste = el("div", {
     class: "chat-liste",
     role: "log",
@@ -22,7 +27,14 @@ export function creerMessages({ surReessayer, surCopier }) {
     hidden: true,
     onclick: () => defiler(),
   });
-  const racine = el("div", { class: "chat-messages" }, liste, bas);
+  const annonce = el("p", { class: "chat-annonce", role: "status" });
+  const racine = el("div", { class: "chat-messages" }, liste, bas, annonce);
+
+  let etaitEnFlux = false;
+  function annoncer(texte) {
+    annonce.textContent = "";
+    setTimeout(() => (annonce.textContent = texte), 50);
+  }
 
   const enBas = () => liste.scrollHeight - liste.scrollTop - liste.clientHeight < 48;
   function defiler() {
@@ -33,30 +45,63 @@ export function creerMessages({ surReessayer, surCopier }) {
     if (enBas()) bas.hidden = true;
   });
 
-  // An answer is rendered once: its safe nodes are kept while the list is rebuilt.
+  // An answer is a bubble that is kept: only its content is rendered again when its text grows.
   const reponses = new Map();
+  let dernierId = null;
   const bulleReponse = (m) => {
-    if (!reponses.has(m.id)) {
+    let e = reponses.get(m.id);
+    if (!e) {
       const contenu = el("div", { class: "chat-contenu" });
-      contenu.append(rendreMarkdown(m.texte));
-      reponses.set(
-        m.id,
-        el(
-          "div",
-          { class: "chat-bulle chat-bulle--assistant" },
-          contenu,
-          el("button", {
-            type: "button",
-            class: "chat-copier",
-            texte: "Copier",
-            "aria-label": "Copier la réponse",
-            onclick: () => surCopier(m),
-          }),
-        ),
-      );
+      const pied = el("div", { class: "chat-pied" });
+      const copier = el("button", {
+        type: "button",
+        class: "chat-copier",
+        texte: "Copier",
+        "aria-label": "Copier la réponse",
+        onclick: () => surCopier(m),
+      });
+      const bulle = el("div", { class: "chat-bulle chat-bulle--assistant" }, contenu, pied, copier);
+      e = { bulle, contenu, pied, copier, rendu: null };
+      reponses.set(m.id, e);
     }
-    return reponses.get(m.id);
+    if (e.rendu !== m.texte) {
+      e.contenu.replaceChildren(rendreMarkdown(m.texte));
+      e.rendu = m.texte;
+    }
+    const enFlux = m.etat === "flux";
+    e.bulle.classList.toggle("chat-bulle--flux", enFlux);
+    e.bulle.setAttribute("aria-busy", String(enFlux));
+    e.copier.hidden = enFlux;
+    e.pied.replaceChildren(
+      ...(m.echec
+        ? [
+            el(
+              "p",
+              { class: "chat-interrompu", role: "alert" },
+              "Réponse interrompue — ",
+              m.id === dernierId
+                ? el("button", {
+                    type: "button",
+                    class: "chat-reessayer",
+                    texte: "Réessayer",
+                    onclick: () => surReessayerReponse(m),
+                  })
+                : null,
+            ),
+          ]
+        : m.interrompu
+          ? [el("p", { class: "chat-interrompu", texte: "(interrompu)" })]
+          : []),
+    );
+    return e.bulle;
   };
+
+  /** A streamed answer grew: renders it again (the view follows unless the user went up). */
+  function majReponse(m) {
+    const suivre = enBas();
+    bulleReponse(m);
+    if (suivre) defiler();
+  }
 
   /**
    * @param {{ id: number, role: string, texte: string, etat: string, erreur?: string }[]} messages
@@ -65,6 +110,13 @@ export function creerMessages({ surReessayer, surCopier }) {
   function rendre(messages, { enAttente }) {
     const suivre = enBas();
     const dernier = messages.at(-1);
+    dernierId = dernier?.id ?? null;
+    const enFlux = messages.some((m) => m.etat === "flux");
+    liste.setAttribute("aria-live", enFlux ? "off" : "polite");
+    liste.setAttribute("aria-busy", String(enFlux));
+    if (etaitEnFlux && !enFlux && dernier?.role === "assistant" && !dernier.interrompu)
+      annoncer("Réponse de l'assistant reçue");
+    etaitEnFlux = enFlux;
     const enfants = messages.map((m) => {
       if (m.role === "assistant") return bulleReponse(m);
       const estDernier = m === dernier;
@@ -114,5 +166,5 @@ export function creerMessages({ surReessayer, surCopier }) {
     else bas.hidden = false;
   }
 
-  return { racine, liste, rendre, defiler };
+  return { racine, liste, rendre, majReponse, defiler };
 }

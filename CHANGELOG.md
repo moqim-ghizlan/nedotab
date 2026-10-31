@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.12.0] - 2026-10-31
+
+### Ajouté
+
+- **Réponses du chat affichées au fil de l’eau** (streaming). Transport : fonction callable
+  `iaChatFlux` (décision dans `docs/decisions.md`) ; `iaChat` reste le repli.
+  - Adaptateur Gemini en flux (`envoyerFlux`, analyseur SSE tolérant aux paquets coupés), erreurs
+    au milieu du flux, jetons comptés à la fin.
+  - Serveur : mêmes validations et quota que `iaChat` (consommé au début), envois regroupés
+    toutes les 50 ms, timeout 90 s, requête vers le fournisseur annulée quand le client part.
+  - Interface : rendu progressif (Markdown nettoyé à chaque rendu, au plus toutes les 50 ms),
+    curseur clignotant, vrai bouton **Arrêter** (« (interrompu) », texte conservé), « Réponse
+    interrompue — Réessayer » en cas de coupure, repli automatique sur la réponse complète si le
+    flux ne s’ouvre pas. Lecteurs d’écran : pas d’annonce par morceau, une seule à la fin.
+
 ## [4.11.0] - 2026-10-29
 
 ### Ajouté

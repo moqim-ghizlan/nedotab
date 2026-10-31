@@ -8,6 +8,9 @@ import { creerBoutonRobot } from "./boutonRobot.js";
 import { creerMessages } from "./messages.js";
 import { creerSaisie } from "./saisie.js";
 
+/** The streamed answer is rendered again at most this often (V4.12). */
+export const INTERVALLE_RENDU_MS = 50;
+
 /**
  * Chat window with the assistant (V4.11): a side panel on a computer or a wide tablet (the
  * grid stays usable on its left, the panel is not modal), a full-screen sheet on a phone. The
@@ -16,6 +19,8 @@ import { creerSaisie } from "./saisie.js";
  * @param {{
  *   contexteIa: () => Promise<object>,
  *   appeler: (messages: { role: string, texte: string }[]) => Promise<{ texte: string, modele?: string }>,
+ *   flux?: (messages: object[], options: { signal: AbortSignal }) => AsyncIterable<
+ *     { type: "texte", delta: string } | { type: "fin", modele?: string } | { type: "erreur", code: string }>,
  *   ouvrirReglagesIa?: () => void,
  *   confirmer?: (infos: { titre: string, message: string, valider: string }) => Promise<boolean>,
  *   copier?: (texte: string) => Promise<void>,
@@ -25,6 +30,11 @@ import { creerSaisie } from "./saisie.js";
 export function creerChat({
   contexteIa,
   appeler,
+  flux = async function* (messages) {
+    const r = await appeler(messages);
+    yield { type: "texte", delta: String(r?.texte ?? "") };
+    yield { type: "fin", modele: r?.modele };
+  },
   ouvrirReglagesIa = () => {},
   confirmer = async () => true,
   copier = (texte) => navigator.clipboard.writeText(texte),
@@ -37,6 +47,8 @@ export function creerChat({
   let ouvert = false;
   let sequence = 0; // a stopped or replaced answer is ignored when it arrives
   let compteurId = 0;
+  let controleur = null; // closes the stream being read (the server then cancels the provider)
+  let minuteurRendu = null; // the streamed answer is rendered at most every INTERVALLE_RENDU_MS
 
   const bouton = creerBoutonRobot({ surClic: () => ouvrir() });
   const titreModele = el("span", { class: "chat-modele" });
@@ -68,6 +80,13 @@ export function creerChat({
   );
   const liste = creerMessages({
     surReessayer: (m) => demanderReponse(m),
+    surReessayerReponse: (m) => {
+      const i = messages.indexOf(m);
+      const question = messages.slice(0, i).findLast((x) => x.role === "user");
+      if (i < 0 || !question) return;
+      messages.splice(i, 1);
+      demanderReponse(question);
+    },
     surCopier: (m) =>
       copier(m.texte).then(
         () => notifier("Réponse copiée"),
@@ -95,7 +114,7 @@ export function creerChat({
   );
 
   function rendre() {
-    liste.rendre(messages, { enAttente });
+    liste.rendre(messages, { enAttente: enAttente && messages.at(-1)?.etat !== "flux" });
     titreModele.textContent = modele;
     titreModele.hidden = !modele;
     nouvelle.disabled = messages.length === 0 && !enAttente;
@@ -168,43 +187,93 @@ export function creerChat({
     await demanderReponse(message);
   }
 
+  /** Renders the streamed answer again, at most once per interval. */
+  function programmerRendu(reponse) {
+    minuteurRendu ??= setTimeout(() => {
+      minuteurRendu = null;
+      liste.majReponse(reponse);
+    }, INTERVALLE_RENDU_MS);
+  }
+
+  function annulerRendu() {
+    clearTimeout(minuteurRendu);
+    minuteurRendu = null;
+  }
+
   async function demanderReponse(message) {
     if (!modes.envoi || enAttente) return;
     message.etat = "envoi";
     delete message.erreur;
     enAttente = true;
     const numero = ++sequence;
+    const mien = new AbortController();
+    controleur = mien;
+    let reponse = null; // the assistant message, created with the first chunk of text
+    let echec = null; // an error code (sent by the server) or an Error (network)
     rendre();
     try {
       const { messages: envoyes } = preparerEnvoi(messages);
-      const r = await appeler(envoyes);
-      if (numero !== sequence) return;
-      message.etat = "ok";
-      messages.push({
-        id: ++compteurId,
-        role: "assistant",
-        texte: String(r?.texte ?? ""),
-        date: Date.now(),
-        etat: "ok",
-      });
-      if (r?.modele) modele = r.modele;
+      for await (const e of flux(envoyes, { signal: mien.signal })) {
+        if (numero !== sequence) return;
+        if (e.type === "texte" && e.delta) {
+          if (reponse) {
+            reponse.texte += e.delta;
+            programmerRendu(reponse);
+          } else {
+            message.etat = "ok";
+            reponse = {
+              id: ++compteurId,
+              role: "assistant",
+              texte: e.delta,
+              date: Date.now(),
+              etat: "flux",
+            };
+            messages.push(reponse);
+            rendre();
+          }
+        } else if (e.type === "fin") {
+          if (e.modele) modele = e.modele;
+        } else if (e.type === "erreur") echec = e.code;
+      }
     } catch (e) {
       if (numero !== sequence) return;
-      message.etat = "erreur";
-      message.erreur = messageErreurIa(e);
+      echec = e ?? "erreur";
     }
+    if (numero !== sequence) return;
+    annulerRendu();
+    controleur = null;
     enAttente = false;
+    if (reponse) {
+      reponse.etat = "ok";
+      if (echec) {
+        reponse.interrompu = true;
+        reponse.echec = true;
+      }
+    } else {
+      message.etat = "erreur";
+      message.erreur = messageErreurIa(typeof echec === "string" ? { details: { code: echec } } : echec);
+    }
     rendre();
     if (ouvert) saisie.focus();
   }
 
-  /** Stops the wait: the answer, if it comes, is ignored; the message can be sent again. */
+  /**
+   * Stops the answer. A text already received stays, marked "(interrompu)", and the stream is
+   * closed (the server cancels the provider); with nothing received yet, the message can be
+   * sent again.
+   */
   function arreter() {
     if (!enAttente) return;
     sequence++;
+    controleur?.abort();
+    controleur = null;
+    annulerRendu();
     enAttente = false;
     const dernier = messages.at(-1);
-    if (dernier?.etat === "envoi") {
+    if (dernier?.etat === "flux") {
+      dernier.etat = "ok";
+      dernier.interrompu = true;
+    } else if (dernier?.etat === "envoi") {
       dernier.etat = "erreur";
       dernier.erreur = "arrêté.";
     }
@@ -222,6 +291,9 @@ export function creerChat({
       if (!ok) return;
     }
     sequence++;
+    controleur?.abort();
+    controleur = null;
+    annulerRendu();
     messages = [];
     enAttente = false;
     rendre();

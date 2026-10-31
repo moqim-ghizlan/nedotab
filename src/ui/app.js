@@ -462,6 +462,15 @@ export async function demarrerApp(racine) {
   const chat = creerChat({
     contexteIa,
     appeler: async (messages) => (await chargerFirebase()).appelerIa("iaChat", { messages }),
+    // V4.12: streamed answer; iaChat is the fallback when the stream cannot be opened.
+    flux: async function* (messages, options) {
+      const fb = await chargerFirebase();
+      yield* fb.fluxAvecRepli(
+        { ouvrir: fb.lireFluxChat, complet: (m) => fb.appelerIa("iaChat", { messages: m }) },
+        messages,
+        options,
+      );
+    },
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
     confirmer: async ({ titre, message, valider }) =>

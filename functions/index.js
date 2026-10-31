@@ -111,6 +111,29 @@ export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
 export const iaGenererTags = appelIa(fonctionsIa.genererTags);
 export const iaChat = appelIa(fonctionsIa.chat);
+/**
+ * V4.12: the chat answer streamed to the browser (callable streaming, docs/decisions.md). A
+ * request that does not accept a stream is refused: the browser then uses iaChat.
+ */
+export const iaChatFlux = onCall(
+  { ...OPTIONS_IA, timeoutSeconds: 120 },
+  async (requete, reponse) => {
+    if (!requete.auth)
+      throw new HttpsError("unauthenticated", "Connectez-vous pour utiliser l'IA.");
+    if (!requete.acceptsStreaming)
+      throw new HttpsError("failed-precondition", "Flux non pris en charge.");
+    try {
+      return await fonctionsIa.chatFlux(requete.auth.uid, requete.data, {
+        envoyerMorceau: (morceau) => reponse.sendChunk(morceau),
+        signal: reponse.signal,
+      });
+    } catch (e) {
+      const { code, message, details } = versErreurAppel(e);
+      if (code === "internal") logger.error("ia : erreur interne", { nom: e?.name });
+      throw new HttpsError(code, message, details);
+    }
+  },
+);
 export const iaRechercher = appelIa(fonctionsIa.rechercher);
 export const iaQuotaRestant = appelIa(fonctionsIa.quotaRestant);
 export const iaDefinirQuota = appelIa(fonctionsIa.definirQuota);

@@ -452,3 +452,39 @@ body.avec-robot .toasts {
     min-height: 44px;
   }
 }
+
+/* V4.12: streamed answer — blinking cursor at the end of the text, notes under the bubble. */
+.chat-bulle--flux .chat-contenu > :last-child::after {
+  content: "▍";
+  margin-left: 2px;
+  animation: chat-curseur 1s steps(2, start) infinite;
+}
+
+@keyframes chat-curseur {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-bulle--flux .chat-contenu > :last-child::after {
+    animation: none;
+  }
+}
+
+.chat-interrompu {
+  margin: var(--espace-2) 0 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+/* Read once by screen readers when an answer is complete, never shown. */
+.chat-annonce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
