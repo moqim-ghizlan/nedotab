@@ -236,9 +236,9 @@ describe("chat.poserQuestion : une seule conversation", () => {
     });
     document.body.append(chat.bouton, chat.panneau);
     await vider();
-    expect(chat.poserQuestion("première")).toBe(true);
+    expect(await chat.poserQuestion("première")).toBe(true);
     await vider();
-    expect(chat.poserQuestion("seconde")).toBe(false);
+    expect(await chat.poserQuestion("seconde")).toBe(false);
     expect(chat.panneau.querySelector(".chat-zone").value).toBe("seconde");
     finir();
     await vider();
@@ -296,5 +296,25 @@ describe("Entrée dans la barre (V4.13, correctif)", () => {
     await vider();
     expect(champ.value).toBe("comment faire une pâte brisée");
     expect(chat.estOuvert()).toBe(false);
+  });
+});
+
+describe("état du chat périmé (V4.13, correctif)", () => {
+  it("le chat relit l'état de l'IA au moment de la question : prêt maintenant, il s'ouvre", async () => {
+    document.body.replaceChildren();
+    let contexte = { ...PRETE, modeCompte: false }; // not ready when the page opened
+    const chat = creerChat({
+      contexteIa: async () => contexte,
+      appeler: async () => ({ texte: "r" }),
+      flux: async function* () {
+        yield { type: "texte", delta: "ok" };
+      },
+    });
+    document.body.append(chat.bouton, chat.panneau);
+    await vider();
+    expect(chat.bouton.hidden).toBe(true);
+    contexte = PRETE; // the session is ready now, no event told the chat
+    expect(await chat.poserQuestion("comment faire")).toBe(true);
+    expect(chat.estOuvert()).toBe(true);
   });
 });

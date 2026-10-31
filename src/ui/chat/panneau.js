@@ -206,11 +206,14 @@ export function creerChat({
    * When an answer is being written or the assistant is not ready, the question is only put in
    * the field, to be sent by the user.
    */
-  function poserQuestion(texte, { origine = null, sites = [] } = {}) {
+  async function poserQuestion(texte, { origine = null, sites = [] } = {}) {
     const question = String(texte ?? "")
       .trim()
       .slice(0, MESSAGE_MAX);
     if (!question) return false;
+    // The state read when the page opened may be old (settings and keys arrive later): the
+    // search bar reads it again when it gets the focus, the chat does the same here.
+    await actualiser();
     if (!modes.afficher) return null; // not ready, offline, or the assistant is off
     ouvrir();
     if (!modes.envoi || enAttente) {

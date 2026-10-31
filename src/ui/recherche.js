@@ -430,12 +430,13 @@ export function creerRecherche(
     changerMode("rechercher", { annoncer: false });
     mettreAJourCompteur();
     // null: the chat cannot open (assistant not ready): the question goes back in the bar.
-    if (poserAuChat(question, { origine: "barre", sites }) === null) {
+    Promise.resolve(poserAuChat(question, { origine: "barre", sites })).then((ouvert) => {
+      if (ouvert !== null) return;
       champ.value = question;
       precedent = question;
       changerMode("demander", { annoncer: false });
       toast("L'assistant n'est pas disponible pour l'instant.");
-    }
+    });
   }
 
   /**
