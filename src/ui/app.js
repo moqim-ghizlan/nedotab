@@ -496,6 +496,14 @@ export async function demarrerApp(racine) {
     chat.actualiser();
   });
   addEventListener("focus", () => chat.actualiser());
+  // The account is connected a moment after the page opens (the robot stayed hidden until
+  // the first question): the chat reads the AI state again when the synchronisation mode changes.
+  let modeSynchroVu = synchro.lire().mode;
+  synchro.abonner((e) => {
+    if (e.mode === modeSynchroVu) return;
+    modeSynchroVu = e.mode;
+    chat.actualiser();
+  });
   page.insertBefore(recherche.racine, vide);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
