@@ -484,6 +484,16 @@ export async function demarrerApp(racine) {
       })) === true,
   });
   document.body.append(chat.bouton, chat.panneau);
+  // The settings arrive after the first render and change in the settings panel: the robot
+  // follows them (the search bar does the same on focus).
+  let reglagesIaVus = JSON.stringify(store.lire().reglages?.ia ?? null);
+  store.abonner(() => {
+    const vus = JSON.stringify(store.lire().reglages?.ia ?? null);
+    if (vus === reglagesIaVus) return;
+    reglagesIaVus = vus;
+    chat.actualiser();
+  });
+  addEventListener("focus", () => chat.actualiser());
   page.insertBefore(recherche.racine, vide);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
