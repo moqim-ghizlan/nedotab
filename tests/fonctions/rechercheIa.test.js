@@ -300,6 +300,16 @@ describe("rechercher (fonction serveur)", () => {
   });
 });
 
+describe("prompt du chat (V4.13, correctif)", () => {
+  it("version 2 : ne jamais inventer le créateur ou les détails de NedoTab", async () => {
+    const { PROMPT_CHAT_VERSION, SYSTEME_CHAT } =
+      await import("../../functions/src/ia/prompts/chat.js");
+    expect(PROMPT_CHAT_VERSION).toBe(2);
+    expect(SYSTEME_CHAT).toMatch(/ne sais pas qui l'a créé/);
+    expect(SYSTEME_CHAT).toMatch(/N'invente jamais de nom/);
+  });
+});
+
 describe("chat (V4.11)", () => {
   const conversation = [
     { role: "user", texte: "Bonjour" },
