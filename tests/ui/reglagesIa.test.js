@@ -103,7 +103,7 @@ describe("Réglages → Assistant IA", () => {
     const check = section.querySelector("input[type=checkbox]");
     check.checked = true;
     check.dispatchEvent(new Event("change"));
-    expect(section.querySelector("select")).toBeNull();
+    expect(section.querySelector("select:not(#ia-question-barre)")).toBeNull();
     expect(section.textContent).not.toMatch(/modèle/i);
     expect(service.tester).not.toHaveBeenCalled();
     expect(service.modeles).toBeUndefined();

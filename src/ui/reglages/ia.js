@@ -1,5 +1,12 @@
 import { A } from "../../core/actions.js";
-import { avecActif, EXPLICATIONS_IA, FOURNISSEURS, iaDe } from "../../core/ia.js";
+import {
+  avecActif,
+  avecQuestionBarre,
+  EXPLICATIONS_IA,
+  FOURNISSEURS,
+  iaDe,
+} from "../../core/ia.js";
+import { LIBELLES_PREFERENCES, PREFERENCES_QUESTION } from "../../core/routageQuestion.js";
 import { dateHeure } from "../../core/sauvegardes.js";
 import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
@@ -191,6 +198,35 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       interrupteur,
     );
 
+    // V4.13: where a question asked in the search bar goes.
+    const choixQuestion = el(
+      "select",
+      {
+        class: "galerie-select",
+        id: "ia-question-barre",
+        onchange: (e) => changer(avecQuestionBarre(ia(), e.currentTarget.value)),
+      },
+      PREFERENCES_QUESTION.map((p) =>
+        el("option", {
+          value: p,
+          texte: LIBELLES_PREFERENCES[p],
+          selected: (reglages.questionBarre ?? "auto") === p,
+        }),
+      ),
+    );
+    const questionBarre = reglages.actif
+      ? el(
+          "div",
+          { class: "ia-question-barre" },
+          el("label", {
+            class: "reglages-note",
+            for: "ia-question-barre",
+            texte: "Quand je pose une question dans la barre",
+          }),
+          choixQuestion,
+        )
+      : null;
+
     // What the user should know once, kept together and quiet.
     const mentions = el(
       "ul",
@@ -359,6 +395,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     racine.replaceChildren(
       ...[
         activation,
+        questionBarre,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,

@@ -4,7 +4,7 @@
  * list sent are dropped (never trusted), scores are bounded, doubles removed, 8 at most. The
  * short ids are turned back into the real ones.
  */
-import { RESULTATS_MAX } from "./prompts/recherche.js";
+import { INTENTIONS, RESULTATS_MAX } from "./prompts/recherche.js";
 
 export const RAISON_MAX = 120;
 
@@ -32,7 +32,7 @@ export function nettoyerRaison(brut) {
 /**
  * @param {string} texte raw answer of the model
  * @param {Record<string, string>} table short id → real id
- * @returns {{ resultats: { id: string, score: number, raison?: string }[], aucunResultat: boolean } | null}
+ * @returns {{ intention: "site"|"question"|"les_deux", resultats: { id: string, score: number, raison?: string }[], aucunResultat: boolean } | null}
  *   null when the answer is not usable (then one retry, then "reponse-invalide")
  */
 export function lireSortieRecherche(texte, table) {
@@ -60,5 +60,7 @@ export function lireSortieRecherche(texte, table) {
     resultats.push({ id: table[court], score, ...(raison ? { raison } : {}) });
     if (resultats.length === RESULTATS_MAX) break;
   }
-  return { resultats, aucunResultat: resultats.length === 0 };
+  // V4.13: an unknown or missing intention is "site" (the behaviour of V4.9).
+  const intention = INTENTIONS.includes(objet.intention) ? objet.intention : "site";
+  return { intention, resultats, aucunResultat: resultats.length === 0 };
 }

@@ -352,7 +352,8 @@ export function creerFonctionsIa(deps) {
     const snap = await db.doc(`users/${uid}`).get();
     const sites = sitesDe(snap.exists ? snap.data()?.grille : []);
     // Nothing to search: no call, nothing paid.
-    if (sites.length === 0) return { resultats: [], aucunResultat: true, preFiltre: false };
+    if (sites.length === 0)
+      return { intention: "question", resultats: [], aucunResultat: true, preFiltre: false };
     const { sites: retenus, preFiltre } = preFiltrer(sites, question);
     let { lignes, table } = construireListe(retenus);
     // A very long list (long descriptions): the descriptions are left out rather than refused.
@@ -455,7 +456,13 @@ export function creerFonctionsIa(deps) {
         raisonArret: fin.raisonArret ?? null,
       };
     } catch (e) {
-      journal({ action: "chatFlux", fournisseur, modele, dureeMs: horloge() - debut, code: e?.code });
+      journal({
+        action: "chatFlux",
+        fournisseur,
+        modele,
+        dureeMs: horloge() - debut,
+        code: e?.code,
+      });
       throw e;
     }
   }

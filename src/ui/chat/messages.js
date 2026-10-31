@@ -103,6 +103,32 @@ export function creerMessages({ surReessayer, surCopier, surReessayerReponse = (
     if (suivre) defiler();
   }
 
+  /** V4.13: the sites found for a question asked in the bar (links to the user's own sites). */
+  const carteSites = (sites) =>
+    el(
+      "div",
+      { class: "chat-sites" },
+      el("p", { class: "chat-sites-titre", texte: "Sites correspondants" }),
+      el(
+        "ul",
+        { class: "chat-sites-liste" },
+        sites
+          .filter((s) => /^https?:\/\//i.test(s.url))
+          .map((s) =>
+            el(
+              "li",
+              {},
+              el("a", {
+                href: s.url,
+                target: "_blank",
+                rel: "noopener noreferrer",
+                texte: s.titre,
+              }),
+            ),
+          ),
+      ),
+    );
+
   /**
    * @param {{ id: number, role: string, texte: string, etat: string, erreur?: string }[]} messages
    * @param {{ enAttente: boolean }} options
@@ -117,15 +143,18 @@ export function creerMessages({ surReessayer, surCopier, surReessayerReponse = (
     if (etaitEnFlux && !enFlux && dernier?.role === "assistant" && !dernier.interrompu)
       annoncer("Réponse de l'assistant reçue");
     etaitEnFlux = enFlux;
-    const enfants = messages.map((m) => {
-      if (m.role === "assistant") return bulleReponse(m);
+    const enfants = messages.flatMap((m) => {
+      if (m.role === "assistant") return [bulleReponse(m)];
       const estDernier = m === dernier;
-      return el(
+      const bulle = el(
         "div",
         {
           class: `chat-bulle chat-bulle--utilisateur${m.etat === "erreur" ? " chat-bulle--erreur" : ""}`,
         },
         el("p", { class: "chat-texte", texte: m.texte }),
+        m.origine === "barre"
+          ? el("p", { class: "chat-origine", texte: "depuis la barre de recherche" })
+          : null,
         m.etat === "erreur"
           ? el(
               "p",
@@ -142,6 +171,7 @@ export function creerMessages({ surReessayer, surCopier, surReessayerReponse = (
             )
           : null,
       );
+      return m.sites?.length ? [bulle, carteSites(m.sites)] : [bulle];
     });
     if (enAttente)
       enfants.push(

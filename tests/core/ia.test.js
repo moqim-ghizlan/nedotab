@@ -69,3 +69,22 @@ describe("iaPrete : tous les cas", () => {
     expect(iaPrete({ ...base, cles: [{ fournisseur: "gemini", valide: null }] }).prete).toBe(true);
   });
 });
+
+describe("questionBarre (V4.13)", () => {
+  it("absente par défaut ; « sites » et « chat » sont gardés, le reste est ignoré", async () => {
+    const { avecQuestionBarre, iaDe, iaAStocker, validerIa } = await import("../../src/core/ia.js");
+    expect(validerIa({ actif: true })).toEqual({ actif: true });
+    expect(validerIa({ actif: true, questionBarre: "chat" }).questionBarre).toBe("chat");
+    expect(validerIa({ actif: true, questionBarre: "pirate" })).toEqual({ actif: true });
+    expect(iaDe({ ia: { questionBarre: "sites" } }).questionBarre).toBe("sites");
+    // A preference alone is stored, even with the assistant off.
+    expect(iaAStocker({ actif: false, questionBarre: "chat" })).toEqual({
+      actif: false,
+      questionBarre: "chat",
+    });
+    expect(iaAStocker({ actif: false })).toBeUndefined();
+    const ia = avecQuestionBarre({ actif: true }, "chat");
+    expect(ia).toEqual({ actif: true, questionBarre: "chat" });
+    expect(avecQuestionBarre(ia, "auto")).toEqual({ actif: true });
+  });
+});

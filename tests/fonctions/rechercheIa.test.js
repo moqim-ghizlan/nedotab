@@ -110,6 +110,7 @@ describe("lireSortieRecherche", () => {
     expect(
       lireSortieRecherche('{"resultats":[{"id":"s2","score":1.7},{"id":"s1","score":0.4}]}', table),
     ).toEqual({
+      intention: "site",
       resultats: [
         { id: "c1", score: 1 },
         { id: "a1", score: 0.4 },
@@ -126,9 +127,21 @@ describe("lireSortieRecherche", () => {
   });
   it("tout inventé : aucun résultat", () => {
     expect(lireSortieRecherche('{"resultats":[{"id":"s999"}]}', table)).toEqual({
+      intention: "site",
       resultats: [],
       aucunResultat: true,
     });
+  });
+  it("intention (V4.13) : question, les_deux, inconnue ou absente → site", () => {
+    const lire = (intention) =>
+      lireSortieRecherche(JSON.stringify({ ...(intention ? { intention } : {}), resultats: [] }), table)
+        .intention;
+    expect(lire("question")).toBe("question");
+    expect(lire("les_deux")).toBe("les_deux");
+    expect(lire("site")).toBe("site");
+    expect(lire("pirate")).toBe("site");
+    expect(lire(undefined)).toBe("site");
+    expect(lire({ x: 1 })).toBe("site");
   });
   it("20 résultats : 8 au plus", () => {
     const t = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`s${i}`, `id${i}`]));
@@ -187,10 +200,12 @@ describe("raison de chaque résultat (V4.10)", () => {
     expect(r.endsWith("…")).toBe(true);
     expect(r).not.toMatch(/\s…$/);
   });
-  it("le prompt demande 12 mots au plus, fondés sur la liste (version 2)", async () => {
+  it("le prompt demande 12 mots au plus, fondés sur la liste, et une intention (version 3)", async () => {
     const { PROMPT_RECHERCHE_VERSION, SYSTEME_RECHERCHE } =
       await import("../../functions/src/ia/prompts/recherche.js");
-    expect(PROMPT_RECHERCHE_VERSION).toBe(2);
+    expect(PROMPT_RECHERCHE_VERSION).toBe(3);
+    expect(SYSTEME_RECHERCHE).toMatch(/"intention"/);
+    expect(SYSTEME_RECHERCHE).toMatch(/"les_deux"/);
     expect(SYSTEME_RECHERCHE).toMatch(/12 mots au maximum/);
     expect(SYSTEME_RECHERCHE).toMatch(/UNIQUEMENT sur les informations de la liste/);
   });
@@ -263,6 +278,7 @@ describe("rechercher (fonction serveur)", () => {
   it("collection vide : aucun appel, aucun quota consommé", async () => {
     const { ia, envoyer, db } = await monter([], []);
     expect(await ia.rechercher("u1", { question: "crm" })).toEqual({
+      intention: "question",
       resultats: [],
       aucunResultat: true,
       preFiltre: false,

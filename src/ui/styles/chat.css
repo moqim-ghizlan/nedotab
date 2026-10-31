@@ -488,3 +488,29 @@ body.avec-robot .toasts {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* V4.13: a question that came from the search bar, and the sites found for it. */
+.chat-origine {
+  margin: 2px 0 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.chat-sites {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+}
+
+.chat-sites-titre {
+  margin: 0 0 var(--espace-1);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.chat-sites-liste {
+  margin: 0;
+  padding-left: var(--espace-4);
+}

@@ -2,6 +2,30 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.13.0] - 2026-10-31
+
+### Ajouté
+
+- **Barre et chat réunis** : une question posée en mode Demander va au bon endroit.
+  - **Routage local** (`src/core/routageQuestion.js`) : « comment… », « explique… », « traduis… »
+    ou une question dont aucun mot n’est dans vos sites partent directement au chat, sans appel
+    de recherche ; « mon outil de… », « mes sites… » restent une recherche de sites.
+  - **Recherche intelligente, prompt v3** : la réponse porte une `intention` (`site`, `question`
+    ou `les_deux`) ; une valeur inconnue vaut `site`. `question` ouvre le chat, `les_deux` affiche
+    les résultats et ouvre le chat avec une carte « Sites correspondants » (3 au plus).
+  - **Une seule conversation** : la question est ajoutée à la conversation en cours, avec la
+    mention « depuis la barre de recherche ». Si une réponse est en cours d’écriture, la question
+    est mise dans le champ du chat.
+  - **« Demander à l’assistant à la place »** sous les résultats de sites ; en cas d’échec du
+    routage, repli sur la recherche locale avec ce même choix.
+  - **Réglage** Assistant IA → « Quand je pose une question dans la barre » : Automatique,
+    Toujours chercher dans mes sites, Toujours ouvrir le chat (synchronisé).
+
+### Corrigé
+
+- Le bouton robot du chat suit maintenant les réglages de l’IA (il restait caché quand les
+  réglages arrivaient après l’ouverture de la page).
+
 ## [4.12.0] - 2026-10-31
 
 ### Ajouté

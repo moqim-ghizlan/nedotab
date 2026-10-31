@@ -14,7 +14,8 @@ import {
   etatModes,
   modeApresTouche,
 } from "../core/modeRecherche.js";
-import { iaPrete } from "../core/ia.js";
+import { iaDe, iaPrete } from "../core/ia.js";
+import { decider, intentionValide } from "../core/routageQuestion.js";
 import { creerSelecteurMode } from "./selecteurMode.js";
 import { toast } from "./toast.js";
 import { messageErreurIa } from "./messagesIa.js";
@@ -78,7 +79,8 @@ export function creerRecherche(
     ouvrirDossier,
     contexteIa = null,
     ouvrirReglagesIa = () => {},
-    demanderIa = null, // async (question) => { resultats: [{ id, score }] } (V4.9)
+    demanderIa = null, // async (question) => { intention, resultats: [{ id, score }] } (V4.9)
+    poserAuChat = null, // (question, { origine, sites }) => void: the assistant's chat (V4.13)
   },
 ) {
   const champ = el("input", {
@@ -168,6 +170,8 @@ export function creerRecherche(
         return [symbole("✦"), titre(o.texte)];
       case "envoyer":
         return [symbole("↵"), titre(`Envoyer : « ${o.texte} »`)];
+      case "chat":
+        return [symbole("✦"), titre("Demander à l'assistant à la place")];
       case "message":
         return [symbole("!"), titre(o.texte)];
       case "attente":
@@ -247,6 +251,8 @@ export function creerRecherche(
     const grille = store.lire().grille;
     const index = indexer(grille);
     const web = { type: "web", texte: assistant.texte };
+    // V4.13: the user can always send the question to the chat instead.
+    const chat = poserAuChat && !assistant.sansChat ? [{ type: "chat" }] : [];
     const sites = (ids) =>
       ids
         .map((id) => index.find((e) => e.id === id && e.type === "site"))
@@ -268,7 +274,8 @@ export function creerRecherche(
       };
     if (assistant.etat === "resultats") {
       const trouves = sites(assistant.ids);
-      if (trouves.length) return { entete: "Résultats de l'assistant", options: [...trouves, web] };
+      if (trouves.length)
+        return { entete: "Résultats de l'assistant", options: [...trouves, ...chat, web] };
     }
     if (assistant.etat === "erreur") {
       const locaux = rechercher(index, assistant.texte).map((resultat) => ({
@@ -277,11 +284,11 @@ export function creerRecherche(
       }));
       return {
         entete: locaux.length ? "Voici les résultats de la recherche simple" : null,
-        options: [{ type: "message", texte: assistant.message }, ...locaux, web],
+        options: [{ type: "message", texte: assistant.message }, ...locaux, ...chat, web],
       };
     }
     return {
-      options: [{ type: "message", texte: "Aucun de vos sites ne correspond" }, web],
+      options: [{ type: "message", texte: "Aucun de vos sites ne correspond" }, ...chat, web],
     };
   }
 
@@ -358,7 +365,7 @@ export function creerRecherche(
       nouvelOnglet: nouvelOnglet || !!store.lire().reglages.rechercheNouvelOnglet,
     });
 
-  const TYPES_QUESTION = new Set(["exemple", "envoyer", "message", "attente", "annuler"]);
+  const TYPES_QUESTION = new Set(["exemple", "envoyer", "message", "attente", "annuler", "chat"]);
 
   function valider(i, { nouvelOnglet = false } = {}) {
     const o = options[i];
@@ -392,6 +399,10 @@ export function creerRecherche(
       }
       return;
     }
+    if (o?.type === "chat") {
+      if (assistant?.texte) versLeChat(assistant.texte);
+      return;
+    }
     if (o?.type === "exemple") {
       champ.value = o.texte;
       precedent = champ.value;
@@ -410,8 +421,34 @@ export function creerRecherche(
     if (question) poserQuestion(question);
   }
 
-  /** Enter in the question mode: one call, shown in the same list as the local search. */
+  /** The question leaves the bar for the chat (one conversation, V4.13). */
+  function versLeChat(question, sites = []) {
+    sequence++; // a late answer of the search is ignored
+    assistant = null;
+    champ.value = "";
+    precedent = "";
+    fermerListe();
+    changerMode("rechercher", { annoncer: false });
+    mettreAJourCompteur();
+    poserAuChat(question, { origine: "barre", sites });
+  }
+
+  /**
+   * Enter in the question mode. The local rules decide first (routageQuestion.js): a general
+   * question goes straight to the chat, with no call to the search. Otherwise one call to the
+   * smart search, whose answer says what the user wanted: sites, a question or both.
+   */
   async function poserQuestion(question) {
+    const decision = poserAuChat
+      ? decider(question, {
+          preference: iaDe(store.lire().reglages).questionBarre,
+          index: indexer(store.lire().grille),
+        })
+      : { vers: "site" };
+    if (decision.vers === "chat") {
+      versLeChat(question);
+      return;
+    }
     if (!demanderIa) {
       toast("Bientôt disponible");
       return;
@@ -422,11 +459,32 @@ export function creerRecherche(
     try {
       const reponse = await demanderIa(question);
       if (numero !== sequence) return;
+      // A question the local rules already took for a site search stays one.
+      const intention = decision.vers === "site" ? "site" : intentionValide(reponse?.intention);
+      if (intention === "question" && poserAuChat) {
+        versLeChat(question);
+        return;
+      }
       const ids = (reponse?.resultats ?? []).map((r) => r.id);
       const raisons = Object.fromEntries(
         (reponse?.resultats ?? []).filter((r) => r.raison).map((r) => [r.id, String(r.raison)]),
       );
-      assistant = { texte: question, etat: ids.length ? "resultats" : "aucun", ids, raisons };
+      assistant = {
+        texte: question,
+        etat: ids.length ? "resultats" : "aucun",
+        ids,
+        raisons,
+        sansChat: intention === "les_deux",
+      };
+      if (intention === "les_deux" && poserAuChat) {
+        const index = indexer(store.lire().grille);
+        const sites = ids
+          .map((id) => index.find((e) => e.id === id && e.type === "site"))
+          .filter(Boolean)
+          .slice(0, 3)
+          .map((e) => ({ titre: e.titre, url: e.element.url }));
+        poserAuChat(question, { origine: "barre", sites });
+      }
     } catch (e) {
       if (numero !== sequence) return;
       assistant = { texte: question, etat: "erreur", message: messageErreurIa(e) };

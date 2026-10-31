@@ -1,4 +1,4 @@
-import { CONFIRMER_AU_DELA, preparerEnvoi } from "../../core/chat.js";
+import { CONFIRMER_AU_DELA, MESSAGE_MAX, preparerEnvoi } from "../../core/chat.js";
 import { iaPrete } from "../../core/ia.js";
 import { etatModes } from "../../core/modeRecherche.js";
 import { el } from "../dom.js";
@@ -200,6 +200,36 @@ export function creerChat({
     minuteurRendu = null;
   }
 
+  /**
+   * A question from elsewhere (the search bar, V4.13): the panel opens and the question joins
+   * the current conversation (never a new one). `sites`: the first sites found, shown in a card.
+   * When an answer is being written or the assistant is not ready, the question is only put in
+   * the field, to be sent by the user.
+   */
+  function poserQuestion(texte, { origine = null, sites = [] } = {}) {
+    const question = String(texte ?? "")
+      .trim()
+      .slice(0, MESSAGE_MAX);
+    if (!question) return false;
+    ouvrir();
+    if (!modes.envoi || enAttente) {
+      saisie.remplir(question);
+      return false;
+    }
+    const message = {
+      id: ++compteurId,
+      role: "user",
+      texte: question,
+      date: Date.now(),
+      etat: "envoi",
+      ...(origine ? { origine } : {}),
+      ...(sites.length ? { sites: sites.slice(0, 3) } : {}),
+    };
+    messages.push(message);
+    demanderReponse(message);
+    return true;
+  }
+
   async function demanderReponse(message) {
     if (!modes.envoi || enAttente) return;
     message.etat = "envoi";
@@ -251,7 +281,9 @@ export function creerChat({
       }
     } else {
       message.etat = "erreur";
-      message.erreur = messageErreurIa(typeof echec === "string" ? { details: { code: echec } } : echec);
+      message.erreur = messageErreurIa(
+        typeof echec === "string" ? { details: { code: echec } } : echec,
+      );
     }
     rendre();
     if (ouvert) saisie.focus();
@@ -335,5 +367,14 @@ export function creerChat({
   addEventListener("offline", actualiser);
   actualiser();
 
-  return { bouton, panneau, ouvrir, fermer, basculer, actualiser, estOuvert: () => ouvert };
+  return {
+    bouton,
+    panneau,
+    ouvrir,
+    fermer,
+    basculer,
+    actualiser,
+    poserQuestion,
+    estOuvert: () => ouvert,
+  };
 }

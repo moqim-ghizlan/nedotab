@@ -455,6 +455,8 @@ export async function demarrerApp(racine) {
     contexteIa,
     demanderIa: async (question) =>
       (await chargerFirebase()).appelerIa("iaRechercher", { question }),
+    // V4.13: a question of the bar goes to the chat (the chat is created just below).
+    poserAuChat: (question, options) => chat.poserQuestion(question, options),
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
   });

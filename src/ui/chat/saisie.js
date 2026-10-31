@@ -67,6 +67,12 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     zone,
     focus: () => zone.focus(),
     valeur: () => zone.value,
+    /** Puts a text in the field (a question that could not be sent right away). */
+    remplir(texte) {
+      zone.value = texte;
+      ajuster();
+      zone.focus();
+    },
     /** The input and the send button, or nothing (not ready, offline). */
     activer(oui) {
       actif = oui;
