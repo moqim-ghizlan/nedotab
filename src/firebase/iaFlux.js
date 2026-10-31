@@ -16,7 +16,7 @@ export async function* lireFluxChat(messages, { signal } = {}) {
   );
   for await (const morceau of stream) yield morceau;
   const fin = await data;
-  if (fin?.ok) yield { type: "fin", modele: fin.modele };
+  if (fin?.ok) yield { type: "fin", modele: fin.modele, sites: fin.sites, consulte: fin.consulte };
 }
 
 /** Errors that mean "the stream could not be opened here" (network, proxy), not "refused". */
@@ -53,5 +53,5 @@ export async function* fluxAvecRepli({ ouvrir, complet }, messages, { signal } =
   }
   const r = await complet(messages);
   yield { type: "texte", delta: String(r?.texte ?? "") };
-  yield { type: "fin", modele: r?.modele };
+  yield { type: "fin", modele: r?.modele, sites: r?.sites, consulte: r?.consulte };
 }

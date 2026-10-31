@@ -2,10 +2,12 @@ import { A } from "../../core/actions.js";
 import {
   avecActif,
   avecQuestionBarre,
+  avecSitesChat,
   EXPLICATIONS_IA,
   FOURNISSEURS,
   iaDe,
 } from "../../core/ia.js";
+import { LIBELLES_MODES_SITES_CHAT, MODES_SITES_CHAT } from "../../core/besoinContexteSites.js";
 import { LIBELLES_PREFERENCES, PREFERENCES_QUESTION } from "../../core/routageQuestion.js";
 import { dateHeure } from "../../core/sauvegardes.js";
 import { plateforme } from "../../platform/index.js";
@@ -227,6 +229,35 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         )
       : null;
 
+    // V4.14: whether the chat may read the sites to answer.
+    const choixSitesChat = el(
+      "select",
+      {
+        class: "galerie-select",
+        id: "ia-sites-chat",
+        onchange: (e) => changer(avecSitesChat(ia(), e.currentTarget.value)),
+      },
+      MODES_SITES_CHAT.map((m) =>
+        el("option", {
+          value: m,
+          texte: LIBELLES_MODES_SITES_CHAT[m],
+          selected: (reglages.sitesChat ?? "auto") === m,
+        }),
+      ),
+    );
+    const sitesChat = reglages.actif
+      ? el(
+          "div",
+          { class: "ia-question-barre" },
+          el("label", {
+            class: "reglages-note",
+            for: "ia-sites-chat",
+            texte: "Le chat peut consulter mes sites",
+          }),
+          choixSitesChat,
+        )
+      : null;
+
     // What the user should know once, kept together and quiet.
     const mentions = el(
       "ul",
@@ -396,6 +427,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       ...[
         activation,
         questionBarre,
+        sitesChat,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,

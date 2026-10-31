@@ -514,3 +514,92 @@ body.avec-robot .toasts {
   margin: 0;
   padding-left: var(--espace-4);
 }
+
+/* V4.14: card of a site cited by the assistant (built in the DOM from a [[site:…]] reference). */
+.chat-site {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-1) var(--espace-2);
+  max-width: 100%;
+  margin: 2px 0;
+  padding: 4px var(--espace-2);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+  vertical-align: middle;
+}
+
+.chat-site-lien {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.chat-site-lien .tuile-icone {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+}
+
+.chat-site-lien img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.chat-site-titre {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.chat-site-detail {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  overflow-wrap: anywhere;
+}
+
+.chat-site-lien:hover .chat-site-titre,
+.chat-site-lien:focus-visible .chat-site-titre {
+  text-decoration: underline;
+}
+
+.chat-site-grille {
+  padding: 2px var(--espace-2);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-size: var(--taille-xs);
+  cursor: pointer;
+}
+
+.chat-site-grille:hover,
+.chat-site-grille:focus-visible {
+  color: var(--texte);
+  border-color: var(--accent);
+}
+
+.chat-site--attente,
+.chat-site--introuvable {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.chat-consulte {
+  margin: var(--espace-1) 0 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.tuile.tuile--reperee .tuile-icone {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  transition: outline-color 0.3s;
+}

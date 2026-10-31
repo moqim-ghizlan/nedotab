@@ -6,6 +6,7 @@ import { messageErreurIa } from "../messagesIa.js";
 import { toast } from "../toast.js";
 import { creerBoutonRobot } from "./boutonRobot.js";
 import { creerMessages } from "./messages.js";
+import { texteSansReferences, traduireReferences } from "./referencesSites.js";
 import { creerSaisie } from "./saisie.js";
 
 /** The streamed answer is rendered again at most this often (V4.12). */
@@ -25,6 +26,8 @@ export const INTERVALLE_RENDU_MS = 50;
  *   confirmer?: (infos: { titre: string, message: string, valider: string }) => Promise<boolean>,
  *   copier?: (texte: string) => Promise<void>,
  *   notifier?: (message: string) => void,
+ *   trouverSite?: (id: string) => object|null,
+ *   afficherSite?: (id: string) => void,
  * }} options
  */
 export function creerChat({
@@ -39,6 +42,8 @@ export function creerChat({
   confirmer = async () => true,
   copier = (texte) => navigator.clipboard.writeText(texte),
   notifier = (message) => toast(message),
+  trouverSite = () => null,
+  afficherSite,
 }) {
   let messages = []; // { id, role, texte, date, etat: "envoi" | "ok" | "erreur", erreur? }
   let enAttente = false;
@@ -79,6 +84,8 @@ export function creerChat({
     fermerBouton,
   );
   const liste = creerMessages({
+    trouverSite,
+    afficherSite,
     surReessayer: (m) => demanderReponse(m),
     surReessayerReponse: (m) => {
       const i = messages.indexOf(m);
@@ -246,7 +253,12 @@ export function creerChat({
     let echec = null; // an error code (sent by the server) or an Error (network)
     rendre();
     try {
-      const { messages: envoyes } = preparerEnvoi(messages);
+      // V4.14: a past answer goes back with the titles of the sites it cited, not their ids.
+      const { messages: envoyes } = preparerEnvoi(
+        messages.map((m) =>
+          m.role === "assistant" ? { ...m, texte: texteSansReferences(m.texte, trouverSite) } : m,
+        ),
+      );
       for await (const e of flux(envoyes, { signal: mien.signal })) {
         if (numero !== sequence) return;
         if (e.type === "texte" && e.delta) {
@@ -267,6 +279,11 @@ export function creerChat({
           }
         } else if (e.type === "fin") {
           if (e.modele) modele = e.modele;
+          // The table "s12 → real id" arrives with the end: the text keeps the real ids.
+          if (reponse) {
+            reponse.texte = traduireReferences(reponse.texte, e.sites);
+            if (e.consulte) reponse.consulte = true;
+          }
         } else if (e.type === "erreur") echec = e.code;
       }
     } catch (e) {

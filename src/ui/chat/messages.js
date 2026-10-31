@@ -1,5 +1,5 @@
 import { el } from "../dom.js";
-import { rendreMarkdown } from "./markdown.js";
+import { referencesDe, rendreAvecSites } from "./referencesSites.js";
 
 /**
  * The messages of the conversation (V4.11): bubbles of the user (right) and of the assistant
@@ -12,7 +12,13 @@ import { rendreMarkdown } from "./markdown.js";
  * streams the list is not a live region (a screen reader would read every chunk): a status
  * line announces the end once.
  */
-export function creerMessages({ surReessayer, surCopier, surReessayerReponse = () => {} }) {
+export function creerMessages({
+  surReessayer,
+  surCopier,
+  surReessayerReponse = () => {},
+  trouverSite = () => null,
+  afficherSite,
+}) {
   const liste = el("div", {
     class: "chat-liste",
     role: "log",
@@ -64,15 +70,30 @@ export function creerMessages({ surReessayer, surCopier, surReessayerReponse = (
       e = { bulle, contenu, pied, copier, rendu: null };
       reponses.set(m.id, e);
     }
-    if (e.rendu !== m.texte) {
-      e.contenu.replaceChildren(rendreMarkdown(m.texte));
-      e.rendu = m.texte;
-    }
     const enFlux = m.etat === "flux";
+    // V4.14: the cards follow the grid (a site deleted since becomes "introuvable").
+    const sites = referencesDe(m.texte)
+      .map((id) => {
+        const s = trouverSite(id);
+        return s ? `${s.titre}${s.url}` : "-";
+      })
+      .join("|");
+    const cle = `${enFlux}
+${sites}
+${m.texte}`;
+    if (e.rendu !== cle) {
+      e.contenu.replaceChildren(
+        rendreAvecSites(m.texte, { trouver: trouverSite, afficher: afficherSite, fluxEnCours: enFlux }),
+      );
+      e.rendu = cle;
+    }
     e.bulle.classList.toggle("chat-bulle--flux", enFlux);
     e.bulle.setAttribute("aria-busy", String(enFlux));
     e.copier.hidden = enFlux;
     e.pied.replaceChildren(
+      ...(m.consulte && !enFlux
+        ? [el("p", { class: "chat-consulte", texte: "L'assistant a consulté vos sites pour cette réponse" })]
+        : []),
       ...(m.echec
         ? [
             el(

@@ -2,6 +2,31 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.14.0] - 2026-10-31
+
+### Ajouté
+
+- **Le chat connaît vos sites** : l'assistant peut citer les sites enregistrés, qui apparaissent
+  comme des **cartes cliquables** (icône, titre, domaine, dossier).
+  - **Prompt du chat v3** : une section « Collection de l'utilisateur » (`<sites>…</sites>`,
+    présentée comme une donnée) est ajoutée côté serveur ; le modèle cite `[[site:sN]]` sans
+    recopier titre ni adresse. Même liste compacte et même pré-filtre que la recherche
+    intelligente (basé sur le dernier message au-delà de 400 sites).
+  - **Liste jointe seulement quand c'est utile** (`besoinContexteSites`, heuristique pure) :
+    « mes sites », « j'ai », « mon dossier », mot d'un titre, d'un domaine ou d'un tag, ou
+    suite d'une réponse qui citait déjà des sites. Sinon le prompt ne contient aucune liste
+    (levier principal du coût du chat).
+  - **Références sûres** : le serveur ne renvoie que les identifiants effectivement cités
+    (`sites: { s12: id réel }`, `consulte: true`) ; le navigateur écrit les identifiants réels
+    dans la conversation et construit les cartes en DOM, jamais en HTML. Pas de conversion dans
+    les blocs de code ; référence incomplète pendant le flux affichée en texte ; identifiant
+    inconnu ou site supprimé : « (site introuvable) ».
+  - **« Afficher dans la grille »** : ouvre le dossier au bon niveau et met la tuile en évidence 2 s.
+  - **Transparence** : « L'assistant a consulté vos sites pour cette réponse » sous la réponse.
+  - **Réglage** Assistant IA → « Le chat peut consulter mes sites » : Quand c'est utile
+    (défaut), Toujours, Jamais (synchronisé).
+  - L'historique renvoyé au serveur remplace chaque référence passée par le titre du site.
+
 ## [4.13.0] - 2026-10-31
 
 ### Ajouté

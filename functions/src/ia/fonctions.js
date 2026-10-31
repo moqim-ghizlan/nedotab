@@ -19,7 +19,8 @@ import {
 } from "./prompts/recherche.js";
 import { lireSortieRecherche } from "./rechercheSortie.js";
 import { diffuser } from "./chatFlux.js";
-import { SYSTEME_CHAT } from "./prompts/chat.js";
+import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
+import { besoinContexteSites, validerModeSitesChat } from "../partage/besoinContexteSites.js";
 import { CHAMPS_LISTE, construireListe, sitesDe } from "../partage/listeCompacte.js";
 import { preFiltrer } from "../partage/preFiltre.js";
 import { lireSortieTags } from "./tagsSortie.js";
@@ -67,6 +68,28 @@ function verifierMessagesChat(v) {
   if (v.at(-1).role !== "user")
     throw new EntreeInvalide("messages : le dernier message doit être de l'utilisateur.");
 }
+
+const REFERENCE_SITE = /\[\[site:(s\d+)\]\]/g;
+
+/**
+ * V4.14: the sites the answer cites, as { "s12": real id }, only the ones that exist in the
+ * table of this request (an invented id is left out: the browser shows "site introuvable").
+ */
+export function referencesCitees(texte, table) {
+  const citees = {};
+  for (const [, court] of String(texte ?? "").matchAll(REFERENCE_SITE)) {
+    if (Object.hasOwn(table, court)) citees[court] = table[court];
+  }
+  return citees;
+}
+
+/** The history sent back by the browser holds no reference of a past answer: ids change. */
+const sansReferences = (messages) =>
+  messages.map((m) =>
+    m.role === "assistant"
+      ? { ...m, texte: m.texte.replace(/\[\[site:[^\]]*\]\]/g, "(site de la collection)") }
+      : m,
+  );
 
 /** Extract of a page (V4.3): same limits as extraitPage.js; a bad shape is refused. */
 function verifierExtrait(v) {
@@ -387,6 +410,29 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
+   * V4.14: the collection of the user for the chat, or null when it is not needed (setting
+   * "jamais", empty grid, or "auto" and the conversation does not concern the sites). Same
+   * pre-filter as the smart search, based on the last message.
+   */
+  async function contexteSites(uid, messages) {
+    const snap = await db.doc(`users/${uid}`).get();
+    const donnees = snap.exists ? snap.data() : null;
+    const mode = validerModeSitesChat(donnees?.reglages?.ia?.sitesChat);
+    if (mode === "jamais") return null;
+    const sites = sitesDe(donnees?.grille);
+    if (!besoinContexteSites({ mode, sites, messages })) return null;
+    const question = messages.findLast((m) => m.role === "user").texte;
+    const { sites: retenus } = preFiltrer(sites, question);
+    let { lignes, table } = construireListe(retenus);
+    if (lignes.join("\n").length > LISTE_MAX) {
+      ({ lignes, table } = construireListe(retenus, {
+        champs: CHAMPS_LISTE.filter((c) => c !== "description"),
+      }));
+    }
+    return { lignes, table };
+  }
+
+  /**
    * V4.11: one answer of the chat (not streamed yet). The browser sends the history of the
    * current conversation; each message sent counts for 1 in the quota. Nothing is kept on the
    * server.
@@ -395,10 +441,11 @@ export function creerFonctionsIa(deps) {
     const { messages } = valider(donnees, {
       messages: { type: "libre", requis: true, verifier: verifierMessagesChat },
     });
+    const contexte = await contexteSites(uid, messages);
     const r = await executerUsage(uid, {
       usage: "chat",
-      systeme: SYSTEME_CHAT,
-      messages,
+      systeme: contexte ? systemeChatAvecSites(contexte.lignes) : SYSTEME_CHAT,
+      messages: sansReferences(messages),
       maxJetons: 1000,
       temperature: 0.5,
     });
@@ -407,6 +454,7 @@ export function creerFonctionsIa(deps) {
       modele: r.modele,
       jetonsEntree: r.jetonsEntree,
       jetonsSortie: r.jetonsSortie,
+      ...(contexte ? { consulte: true, sites: referencesCitees(r.texte, contexte.table) } : {}),
     };
   }
 
@@ -416,7 +464,7 @@ export function creerFonctionsIa(deps) {
    * `signal` is aborted when it leaves or presses "Arrêter": the request to the provider is then
    * cancelled. An error before the first byte is thrown (a normal call error); an error in the
    * middle is sent as a chunk, the text already sent stays valid.
-   * @returns {Promise<{ ok: boolean, modele?: string, jetonsEntree?: number, jetonsSortie?: number, raisonArret?: string|null }>}
+   * @returns {Promise<{ ok: boolean, modele?: string, jetonsEntree?: number, jetonsSortie?: number, raisonArret?: string|null, consulte?: boolean, sites?: Record<string, string> }>}
    */
   async function chatFlux(uid, donnees, { envoyerMorceau = async () => false, signal } = {}) {
     const { messages } = valider(donnees, {
@@ -425,17 +473,26 @@ export function creerFonctionsIa(deps) {
     const { fournisseur, modele, cle } = await preparerAppel(uid);
     const adaptateurFlux = fournisseurs[fournisseur].envoyerFlux;
     if (!adaptateurFlux) throw new ErreurFournisseur("fournisseur-indisponible");
+    const contexte = await contexteSites(uid, messages);
     const debut = horloge();
     try {
-      const flux = adaptateurFlux({
+      const source = adaptateurFlux({
         cle,
         modele,
-        systeme: SYSTEME_CHAT,
-        messages,
+        systeme: contexte ? systemeChatAvecSites(contexte.lignes) : SYSTEME_CHAT,
+        messages: sansReferences(messages),
         maxJetons: 1000,
         temperature: 0.5,
         signal,
       });
+      // The whole text is kept to know which sites of the list the answer cites.
+      let texte = "";
+      const flux = (async function* () {
+        for await (const e of source) {
+          if (e.type === "texte") texte += e.delta;
+          yield e;
+        }
+      })();
       const fin = await diffuser(flux, envoyerMorceau);
       const jetons = (fin?.jetonsEntree ?? 0) + (fin?.jetonsSortie ?? 0);
       journal({
@@ -454,6 +511,7 @@ export function creerFonctionsIa(deps) {
         jetonsEntree: fin.jetonsEntree,
         jetonsSortie: fin.jetonsSortie,
         raisonArret: fin.raisonArret ?? null,
+        ...(contexte ? { consulte: true, sites: referencesCitees(texte, contexte.table) } : {}),
       };
     } catch (e) {
       journal({

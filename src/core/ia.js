@@ -2,13 +2,15 @@
  * AI settings (V4.1): pure rules, shared by the reducer, the loader and the settings screen.
  *
  * reglages.ia = { actif: boolean, questionBarre?: "sites"|"chat" }   (off by default; V4.13:
- * where a question asked in the search bar goes, absent = automatic)
+ * where a question asked in the search bar goes, absent = automatic; V4.14: sitesChat
+ * "toujours"|"jamais", whether the chat may read the user's sites, absent = when useful)
  * The provider (Gemini) and the model are imposed by the server (config/ia): the user only
  * switches the assistant on and gives their key. Fields left by older versions (usages,
  * modelesPerso) are ignored and dropped on the next save. Stored only when it differs from
  * the default. The keys are never here: they live on the server, encrypted (V4.0); only
  * their state (provider, last 4 characters) is read from it.
  */
+import { validerModeSitesChat } from "./besoinContexteSites.js";
 import { validerPreference } from "./routageQuestion.js";
 
 export const USAGES = ["tags", "recherche", "chat"];
@@ -23,6 +25,8 @@ export function validerIa(ia) {
   const resultat = { actif: ia?.actif === true };
   const question = validerPreference(ia?.questionBarre);
   if (question !== "auto") resultat.questionBarre = question;
+  const sitesChat = validerModeSitesChat(ia?.sitesChat);
+  if (sitesChat !== "auto") resultat.sitesChat = sitesChat;
   // V4.6: light lock of the catch-up between devices (who, last progress).
   const r = ia?.rattrapage;
   if (typeof r?.appareil === "string" && r.appareil.length <= 64 && Number.isFinite(r.maj))
@@ -33,7 +37,7 @@ export function validerIa(ia) {
 /** True when the settings are the default: nothing needs to be stored. */
 export const estIaParDefaut = (ia) => {
   const v = validerIa(ia);
-  return !v.actif && !v.rattrapage && !v.questionBarre;
+  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat;
 };
 
 /** What is stored: nothing for the default settings. */
@@ -48,6 +52,14 @@ export const avecQuestionBarre = (ia, valeur) => {
   delete reste.questionBarre;
   const p = validerPreference(valeur);
   return p === "auto" ? reste : { ...reste, questionBarre: p };
+};
+
+/** V4.14: whether the chat may read the sites ("auto" removes the field). */
+export const avecSitesChat = (ia, valeur) => {
+  const reste = { ...ia };
+  delete reste.sitesChat;
+  const m = validerModeSitesChat(valeur);
+  return m === "auto" ? reste : { ...reste, sitesChat: m };
 };
 
 export const avecActif = (ia, actif) => ({ ...ia, actif: actif === true });

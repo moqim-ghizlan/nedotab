@@ -1,5 +1,5 @@
 import { A, reduire } from "../core/actions.js";
-import { listerDossiers } from "../core/arbre.js";
+import { listerDossiers, trouver as trouverElement } from "../core/arbre.js";
 import { NOM_APP, URL_SITE } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
 import { creerDossier } from "../core/modele.js";
@@ -460,6 +460,27 @@ export async function demarrerApp(racine) {
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
   });
+  // V4.14: the sites cited by the chat are looked up in the grid as it is now.
+  const trouverSite = (id) => {
+    const r = trouverElement(store.lire().grille, id);
+    if (r?.element.type !== "site") return null;
+    const { element: site } = r;
+    return { id, site, titre: site.titre, url: site.url, chemin: r.chemin.map((d) => d.titre) };
+  };
+  const afficherSite = (id) => {
+    const r = trouverElement(store.lire().grille, id);
+    if (r?.element.type !== "site") return;
+    // On a phone the chat covers the grid; on a wide screen it stays beside it.
+    if (matchMedia("(max-width: 899px)").matches) chat.fermer({ rendreLeFocus: false });
+    if (r.parent) ouvrirDossier(r.parent.id);
+    setTimeout(() => {
+      const tuile = document.querySelector(`.tuile[data-id="${CSS.escape(id)}"]`);
+      if (!tuile) return;
+      tuile.scrollIntoView({ block: "center", behavior: "smooth" });
+      tuile.classList.add("tuile--reperee");
+      setTimeout(() => tuile.classList.remove("tuile--reperee"), 2000);
+    }, 150);
+  };
   // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
   const chat = creerChat({
     contexteIa,
@@ -475,6 +496,8 @@ export async function demarrerApp(racine) {
     },
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
+    trouverSite,
+    afficherSite,
     confirmer: async ({ titre, message, valider }) =>
       (await demander({
         titre,

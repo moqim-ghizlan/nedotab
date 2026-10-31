@@ -301,10 +301,10 @@ describe("rechercher (fonction serveur)", () => {
 });
 
 describe("prompt du chat (V4.13, correctif)", () => {
-  it("version 2 : ne jamais inventer le créateur ou les détails de NedoTab", async () => {
+  it("version 3 : ne jamais inventer le créateur ou les détails de NedoTab", async () => {
     const { PROMPT_CHAT_VERSION, SYSTEME_CHAT } =
       await import("../../functions/src/ia/prompts/chat.js");
-    expect(PROMPT_CHAT_VERSION).toBe(2);
+    expect(PROMPT_CHAT_VERSION).toBe(3);
     expect(SYSTEME_CHAT).toMatch(/ne sais pas qui l'a créé/);
     expect(SYSTEME_CHAT).toMatch(/N'invente jamais de nom/);
   });
