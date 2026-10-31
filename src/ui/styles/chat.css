@@ -603,3 +603,108 @@ body.avec-robot .toasts {
   outline-offset: 3px;
   transition: outline-color 0.3s;
 }
+
+/* V4.15: history of the conversations (list in place of the messages) */
+.chat-historique {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  flex: 1;
+  min-height: 0;
+  padding: var(--espace-3);
+  overflow-y: auto;
+}
+
+.chat-historique[hidden] {
+  display: none;
+}
+
+.chat-historique-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-historique-ligne {
+  display: flex;
+  align-items: stretch;
+  gap: var(--espace-1);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+}
+
+.chat-historique-ouvrir {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--espace-2) var(--espace-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-historique-ouvrir[aria-current="true"] {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.chat-historique-titre,
+.chat-historique-apercu {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-historique-apercu,
+.chat-historique-meta,
+.chat-historique-note,
+.chat-historique-etat {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.chat-historique-action {
+  flex: none;
+  min-width: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--texte-secondaire);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chat-historique-action:hover,
+.chat-historique-action:focus-visible {
+  color: var(--texte);
+}
+
+.chat-historique-champ {
+  flex: 1;
+  margin: var(--espace-1);
+  padding: var(--espace-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+
+.chat-precedents {
+  align-self: center;
+  margin: var(--espace-1) 0;
+  padding: var(--espace-1) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-size: var(--taille-xs);
+  cursor: pointer;
+}

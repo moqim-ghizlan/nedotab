@@ -6,17 +6,28 @@ import { obtenirFonctions } from "./fonctions.js";
  * Yields { type: "texte", delta }, then { type: "fin", modele } — or { type: "erreur", code }
  * when the provider fails in the middle. `signal` closes the stream: the server then cancels
  * the request to the provider. An error before the first byte is thrown, like `appelerIa`.
- * @param {{ role: string, texte: string }[]} messages
+ * V4.15: the history is read by the server in the conversation (the browser sends only its id);
+ * the end carries `messageId`, the id of the answer the server wrote in the conversation.
+ * @param {string} convId
  * @param {{ signal?: AbortSignal }} [options]
  */
-export async function* lireFluxChat(messages, { signal } = {}) {
+export async function* lireFluxChat(convId, { signal } = {}) {
   const { stream, data } = await httpsCallable(obtenirFonctions(), "iaChatFlux").stream(
-    { messages },
+    { convId },
     { signal },
   );
   for await (const morceau of stream) yield morceau;
   const fin = await data;
-  if (fin?.ok) yield { type: "fin", modele: fin.modele, sites: fin.sites, consulte: fin.consulte };
+  if (fin?.ok)
+    yield {
+      type: "fin",
+      modele: fin.modele,
+      sites: fin.sites,
+      consulte: fin.consulte,
+      messageId: fin.messageId,
+    };
+  // Stopped halfway: the text received is kept by the server, the panel learns its id.
+  else if (fin?.messageId) yield { type: "enregistre", messageId: fin.messageId };
 }
 
 /** Errors that mean "the stream could not be opened here" (network, proxy), not "refused". */
@@ -53,5 +64,11 @@ export async function* fluxAvecRepli({ ouvrir, complet }, messages, { signal } =
   }
   const r = await complet(messages);
   yield { type: "texte", delta: String(r?.texte ?? "") };
-  yield { type: "fin", modele: r?.modele, sites: r?.sites, consulte: r?.consulte };
+  yield {
+    type: "fin",
+    modele: r?.modele,
+    sites: r?.sites,
+    consulte: r?.consulte,
+    messageId: r?.messageId,
+  };
 }

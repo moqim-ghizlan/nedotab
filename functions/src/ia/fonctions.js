@@ -20,6 +20,7 @@ import {
 import { lireSortieRecherche } from "./rechercheSortie.js";
 import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
+import { creerConversations, MOTIF_ID_CONVERSATION, referencesReelles } from "./conversations.js";
 import { besoinContexteSites, validerModeSitesChat } from "../partage/besoinContexteSites.js";
 import { CHAMPS_LISTE, construireListe, sitesDe } from "../partage/listeCompacte.js";
 import { preFiltrer } from "../partage/preFiltre.js";
@@ -437,7 +438,7 @@ export function creerFonctionsIa(deps) {
    * current conversation; each message sent counts for 1 in the quota. Nothing is kept on the
    * server.
    */
-  async function chat(uid, donnees) {
+  async function chat(uid, donnees, { enregistrer } = {}) {
     const { messages } = valider(donnees, {
       messages: { type: "libre", requis: true, verifier: verifierMessagesChat },
     });
@@ -449,12 +450,21 @@ export function creerFonctionsIa(deps) {
       maxJetons: 1000,
       temperature: 0.5,
     });
+    const sites = contexte ? referencesCitees(r.texte, contexte.table) : {};
+    const messageId = await enregistrer?.({
+      texte: referencesReelles(r.texte, contexte?.table),
+      etat: "ok",
+      modele: r.modele,
+      jetons: { entree: r.jetonsEntree ?? 0, sortie: r.jetonsSortie ?? 0 },
+      sitesCites: Object.values(sites),
+    });
     return {
       texte: r.texte,
       modele: r.modele,
       jetonsEntree: r.jetonsEntree,
       jetonsSortie: r.jetonsSortie,
-      ...(contexte ? { consulte: true, sites: referencesCitees(r.texte, contexte.table) } : {}),
+      ...(contexte ? { consulte: true, sites } : {}),
+      ...(messageId ? { messageId } : {}),
     };
   }
 
@@ -466,7 +476,11 @@ export function creerFonctionsIa(deps) {
    * middle is sent as a chunk, the text already sent stays valid.
    * @returns {Promise<{ ok: boolean, modele?: string, jetonsEntree?: number, jetonsSortie?: number, raisonArret?: string|null, consulte?: boolean, sites?: Record<string, string> }>}
    */
-  async function chatFlux(uid, donnees, { envoyerMorceau = async () => false, signal } = {}) {
+  async function chatFlux(
+    uid,
+    donnees,
+    { envoyerMorceau = async () => false, signal, enregistrer } = {},
+  ) {
     const { messages } = valider(donnees, {
       messages: { type: "libre", requis: true, verifier: verifierMessagesChat },
     });
@@ -475,6 +489,7 @@ export function creerFonctionsIa(deps) {
     if (!adaptateurFlux) throw new ErreurFournisseur("fournisseur-indisponible");
     const contexte = await contexteSites(uid, messages);
     const debut = horloge();
+    let texte = ""; // the whole answer, to know which sites it cites and to keep it
     try {
       const source = adaptateurFlux({
         cle,
@@ -485,8 +500,6 @@ export function creerFonctionsIa(deps) {
         temperature: 0.5,
         signal,
       });
-      // The whole text is kept to know which sites of the list the answer cites.
-      let texte = "";
       const flux = (async function* () {
         for await (const e of source) {
           if (e.type === "texte") texte += e.delta;
@@ -504,9 +517,28 @@ export function creerFonctionsIa(deps) {
         ...(fin?.type === "erreur" ? { code: fin.code } : {}),
         ...(signal?.aborted ? { annule: true } : {}),
       });
-      if (fin?.type !== "fin") return { ok: false };
+      const sites = contexte ? referencesCitees(texte, contexte.table) : {};
+      // The text is kept even when it stopped halfway (error, "Arrêter"): marked "interrompu".
+      const enregistrerTexte = async (etat) =>
+        texte.trim()
+          ? enregistrer?.({
+              texte: referencesReelles(texte, contexte?.table),
+              etat,
+              modele: fin?.modele ?? modele,
+              jetons: fin?.jetonsEntree != null
+                ? { entree: fin.jetonsEntree ?? 0, sortie: fin.jetonsSortie ?? 0 }
+                : undefined,
+              sitesCites: Object.values(sites),
+            })
+          : undefined;
+      if (fin?.type !== "fin") {
+        const messageId = await enregistrerTexte("interrompu");
+        return { ok: false, ...(messageId ? { messageId } : {}) };
+      }
+      const messageId = await enregistrerTexte("ok");
       return {
         ok: true,
+        ...(messageId ? { messageId } : {}),
         modele: fin.modele,
         jetonsEntree: fin.jetonsEntree,
         jetonsSortie: fin.jetonsSortie,
@@ -521,8 +553,73 @@ export function creerFonctionsIa(deps) {
         dureeMs: horloge() - debut,
         code: e?.code,
       });
+      // A break in the middle (network, provider): what was written is kept as "interrompu".
+      if (texte.trim()) {
+        const sites = contexte ? referencesCitees(texte, contexte.table) : {};
+        await enregistrer?.({
+          texte: referencesReelles(texte, contexte?.table),
+          etat: "interrompu",
+          modele,
+          sitesCites: Object.values(sites),
+        })?.catch?.(() => {});
+      }
       throw e;
     }
+  }
+
+  // --- V4.15: conversations (the history comes from Firestore, never from the browser) ---------
+  const conversations = creerConversations({ db, horloge });
+  const schemaConversation = { convId: { type: "chaine", requis: true, motif: MOTIF_ID_CONVERSATION } };
+
+  /** Titles of the sites of the grid by real id (only read when a past answer cites a site). */
+  async function titresDeSites(uid) {
+    const snap = await db.doc(`users/${uid}`).get();
+    return new Map(sitesDe(snap.exists ? snap.data()?.grille : []).map((s) => [s.id, s.titre]));
+  }
+
+  /** The history of a conversation, references of past answers replaced by the site titles. */
+  async function historiqueDe(uid, convId) {
+    let titres = null;
+    const brut = await conversations.historique(uid, convId);
+    if (!brut.some((m) => m.role === "assistant" && m.texte.includes("[[site:"))) return brut;
+    titres = await titresDeSites(uid);
+    return brut.map((m) =>
+      m.role === "assistant"
+        ? {
+            ...m,
+            texte: m.texte.replace(/\[\[site:([^\]]*)\]\]/g, (_, id) =>
+              titres.has(id) ? `« ${titres.get(id)} »` : "(site de la collection)",
+            ),
+          }
+        : m,
+    );
+  }
+
+  /** V4.15: answer of the chat for a conversation; the answer is written in its messages. */
+  async function chatConversation(uid, donnees) {
+    const { convId } = valider(donnees, schemaConversation);
+    const messages = await historiqueDe(uid, convId);
+    return chat(
+      uid,
+      { messages },
+      { enregistrer: (m) => conversations.enregistrerReponse(uid, convId, m) },
+    );
+  }
+
+  /** V4.15: the same, streamed. */
+  async function chatFluxConversation(uid, donnees, options = {}) {
+    const { convId } = valider(donnees, schemaConversation);
+    const messages = await historiqueDe(uid, convId);
+    return chatFlux(uid, { messages }, {
+      ...options,
+      enregistrer: (m) => conversations.enregistrerReponse(uid, convId, m),
+    });
+  }
+
+  /** V4.15: deletes a conversation with all its messages. */
+  async function supprimerConversation(uid, donnees) {
+    const { convId } = valider(donnees, schemaConversation);
+    return conversations.supprimer(uid, convId);
   }
 
   /**
@@ -571,6 +668,9 @@ export function creerFonctionsIa(deps) {
     rechercher,
     chat,
     chatFlux,
+    chatConversation,
+    chatFluxConversation,
+    supprimerConversation,
     enregistrerCle,
     supprimerCle,
     etatCles,

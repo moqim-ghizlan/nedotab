@@ -19,6 +19,16 @@ export function sectionDonnees({ donnees, restauration, store }) {
       )
     : null;
 
+  const conversations = el("input", { type: "checkbox", id: "export-conversations", checked: true });
+  const choixConversations = donnees.enCompte()
+    ? el(
+        "label",
+        { class: "reglages-case", for: "export-conversations" },
+        conversations,
+        el("span", { texte: "Inclure mes conversations avec l'assistant" }),
+      )
+    : null;
+
   // The share sheet needs a tap of its own: when the system refused because the file took
   // too long to prepare, a second button shares the file, already prepared.
   const repartager = el("button", { type: "button", class: "bouton", hidden: true });
@@ -44,7 +54,10 @@ export function sectionDonnees({ donnees, restauration, store }) {
     onclick: async () => {
       exporter.disabled = true;
       etat.textContent = "Préparation du fichier…";
-      const r = await donnees.exporter({ inclureSauvegardes: sauvegardes.checked });
+      const r = await donnees.exporter({
+        inclureSauvegardes: sauvegardes.checked,
+        inclureConversations: conversations.checked,
+      });
       exporter.disabled = false;
       etat.textContent = r.ok ? messageDonne(r, `Fichier « ${r.nom} »`) : r.erreur;
     },
@@ -87,6 +100,9 @@ export function sectionDonnees({ donnees, restauration, store }) {
       notes.push(
         "Les sauvegardes contenues dans le fichier ne sont pas importées : seule la grille l'est.",
       );
+    }
+    if (lu.conversations) {
+      notes.push("Les conversations du fichier ne sont pas importées : seule la grille l'est.");
     }
     if (lu.aplati) {
       notes.push(
@@ -144,6 +160,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
         "Téléchargez tous vos sites, dossiers et réglages dans un fichier, ou reprenez-les depuis un export.",
     }),
     choixSauvegardes,
+    choixConversations,
     el("div", { class: "reglages-boutons" }, exporter, importer),
     fonds,
     repartager,

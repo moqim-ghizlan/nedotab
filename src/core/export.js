@@ -14,9 +14,12 @@ export function nomFichierExport(date = new Date()) {
 /**
  * @param {object} etat current state (only the synced part is exported)
  * @param {{ version: string, plateforme: "extension"|"pwa", maintenant?: number,
- *           sauvegardes?: object[] }} options
+ *           sauvegardes?: object[], conversations?: object[] }} options
  */
-export function creerExport(etat, { version, plateforme, maintenant = Date.now(), sauvegardes }) {
+export function creerExport(
+  etat,
+  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations },
+) {
   const resultat = {
     format: FORMAT_EXPORT,
     versionFormat: VERSION_FORMAT,
@@ -36,6 +39,22 @@ export function creerExport(etat, { version, plateforme, maintenant = Date.now()
       nbDossiers: s.nbDossiers ?? 0,
       grille: s.grille,
       reglages: s.reglages,
+    }));
+  }
+  // V4.15: conversations with the assistant (account only). The import does not read them back.
+  if (conversations) {
+    resultat.conversations = conversations.map((c) => ({
+      id: c.id,
+      titre: c.titre,
+      creeLe: c.creeLe ?? null,
+      majLe: c.majLe ?? null,
+      messages: (c.messages ?? []).map((m) => ({
+        role: m.role,
+        texte: m.texte,
+        creeLe: m.creeLe ?? null,
+        etat: m.etat ?? "ok",
+        ...(m.origine ? { origine: m.origine } : {}),
+      })),
     }));
   }
   return resultat;

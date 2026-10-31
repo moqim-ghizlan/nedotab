@@ -48,6 +48,47 @@ service cloud.firestore {
       allow update: if false; // a backup is never modified
     }
 
+    // V4.15: conversations of the chat. The browser creates the conversation and its own
+    // messages and renames; the answers of the assistant and the counters are written by the
+    // functions (Admin SDK, rules do not apply to them).
+    match /users/{uid}/conversations/{convId} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['titre', 'creeLe', 'majLe', 'nbMessages', 'modele', 'apercu'])
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() >= 1
+        && request.resource.data.titre.size() <= 80
+        && request.resource.data.creeLe == request.time
+        && request.resource.data.majLe == request.time
+        && request.resource.data.nbMessages == 0
+        && request.resource.data.modele is string
+        && request.resource.data.modele.size() <= 80
+        && request.resource.data.apercu is string
+        && request.resource.data.apercu.size() <= 100;
+      // Renaming only: the counters belong to the functions.
+      allow update: if proprietaire(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['titre'])
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() >= 1
+        && request.resource.data.titre.size() <= 80;
+
+      match /messages/{msgId} {
+        allow read, delete: if proprietaire(uid);
+        // Only the user's own messages; a message of the assistant is written by the server.
+        allow create: if proprietaire(uid)
+          && exists(/databases/$(db)/documents/users/$(uid)/conversations/$(convId))
+          && request.resource.data.keys().hasOnly(['role', 'texte', 'creeLe', 'etat', 'origine'])
+          && request.resource.data.role == 'user'
+          && request.resource.data.texte is string
+          && request.resource.data.texte.size() >= 1
+          && request.resource.data.texte.size() <= 4000
+          && request.resource.data.creeLe == request.time
+          && request.resource.data.etat == 'ok'
+          && (!('origine' in request.resource.data) || request.resource.data.origine in ['barre', 'chat']);
+        allow update: if false; // messages are never modified
+      }
+    }
+
     match /config/{doc} {
       allow read: if connecte();
       allow write: if false;

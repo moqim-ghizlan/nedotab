@@ -2,6 +2,39 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.15.0] - 2026-10-31
+
+### Ajouté
+
+- **Historique des conversations synchronisé** : les conversations avec l'assistant sont
+  enregistrées dans le compte (`users/{uid}/conversations/{id}` et `.../messages/{id}`) et
+  retrouvées sur tous les appareils, en temps réel.
+  - **Qui écrit quoi** : le navigateur écrit ses propres messages et renomme ; la fonction
+    écrit les réponses (état `ok` ou `interrompu` avec le texte partiel), les compteurs
+    (`nbMessages`, `apercu`, `majLe`) et applique les limites. Le texte des réponses est gardé
+    avec les identifiants réels des sites (`[[site:<id>]]`, V4.14).
+  - **L'historique envoyé au modèle vient du serveur** : `iaChat` et `iaChatFlux` reçoivent
+    `{ convId }` et lisent la conversation dans Firestore (messages en erreur ignorés, rôles
+    identiques fusionnés, 40 messages / 30 000 caractères au plus). Un faux historique du
+    navigateur est refusé.
+  - **Règles Firestore** : lecture et suppression par le propriétaire ; création d'une
+    conversation et de messages `user` seulement (≤ 4 000 caractères, heure du serveur) ;
+    renommage seul ; un message n'est jamais modifié. Tests d'émulateur ajoutés.
+  - **Limites** : 100 conversations (les plus anciennes par `majLe` sont supprimées avec leurs
+    messages), 200 messages par conversation.
+  - **Interface** : bouton « Historique » dans le chat (titre, aperçu, date relative, nombre de
+    messages, 20 par page), reprise d'une conversation (50 derniers messages puis « Charger les
+    messages précédents »), renommage (crayon), suppression différée de 5 s avec « Annuler »
+    (fonction `iaSupprimerConversation`, sans message orphelin). Titre automatique : les 6
+    premiers mots de la première question.
+  - **Export** : option « Inclure mes conversations avec l'assistant » ; l'import ne les relit
+    pas. La suppression du compte les supprime (testé). Politique de confidentialité mise à jour.
+
+### Modifié
+
+- Le chat sans compte ne change pas (l'assistant demande un compte) ; en mémoire seule, le
+  panneau garde l'ancien comportement (tests).
+
 ## [4.14.0] - 2026-10-31
 
 ### Ajouté

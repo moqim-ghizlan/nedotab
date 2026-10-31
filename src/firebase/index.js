@@ -38,5 +38,16 @@ export {
   supprimerSauvegarde,
 } from "./sauvegardes.js";
 export { appelerIa, lireConfigIa } from "./ia.js";
+export {
+  chargerMessagesAvant,
+  creerConversation,
+  ecouterMessages,
+  ecrireMessageUtilisateur,
+  lireToutesConversations,
+  listerConversations,
+  renommerConversation,
+  supprimerConversation,
+  supprimerMessage,
+} from "./conversations.js";
 export { fluxAvecRepli, lireFluxChat } from "./iaFlux.js";
 export { supprimerMonCompte } from "./suppression.js";

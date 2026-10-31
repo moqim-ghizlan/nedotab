@@ -18,6 +18,7 @@ export function creerMessages({
   surReessayerReponse = () => {},
   trouverSite = () => null,
   afficherSite,
+  surChargerPrecedents = () => {},
 }) {
   const liste = el("div", {
     class: "chat-liste",
@@ -154,7 +155,7 @@ ${m.texte}`;
    * @param {{ id: number, role: string, texte: string, etat: string, erreur?: string }[]} messages
    * @param {{ enAttente: boolean }} options
    */
-  function rendre(messages, { enAttente }) {
+  function rendre(messages, { enAttente, peutCharger = false }) {
     const suivre = enBas();
     const dernier = messages.at(-1);
     dernierId = dernier?.id ?? null;
@@ -206,6 +207,15 @@ ${m.texte}`;
           el("span", { class: "chat-point", "aria-hidden": "true" }),
           el("span", { class: "chat-point", "aria-hidden": "true" }),
         ),
+      );
+    if (peutCharger)
+      enfants.unshift(
+        el("button", {
+          type: "button",
+          class: "chat-precedents",
+          texte: "Charger les messages précédents",
+          onclick: () => surChargerPrecedents(),
+        }),
       );
     liste.replaceChildren(
       ...(enfants.length

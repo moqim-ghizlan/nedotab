@@ -110,7 +110,8 @@ export const iaSupprimerCle = appelIa(fonctionsIa.supprimerCle);
 export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
 export const iaGenererTags = appelIa(fonctionsIa.genererTags);
-export const iaChat = appelIa(fonctionsIa.chat);
+export const iaChat = appelIa(fonctionsIa.chatConversation);
+export const iaSupprimerConversation = appelIa(fonctionsIa.supprimerConversation);
 /**
  * V4.12: the chat answer streamed to the browser (callable streaming, docs/decisions.md). A
  * request that does not accept a stream is refused: the browser then uses iaChat.
@@ -123,7 +124,7 @@ export const iaChatFlux = onCall(
     if (!requete.acceptsStreaming)
       throw new HttpsError("failed-precondition", "Flux non pris en charge.");
     try {
-      return await fonctionsIa.chatFlux(requete.auth.uid, requete.data, {
+      return await fonctionsIa.chatFluxConversation(requete.auth.uid, requete.data, {
         envoyerMorceau: (morceau) => reponse.sendChunk(morceau),
         signal: reponse.signal,
       });

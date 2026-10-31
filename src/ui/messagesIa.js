@@ -13,6 +13,9 @@ const PAR_RAISON = {
   "ia-desactivee": "L'assistant IA est désactivé : activez-le dans les réglages.",
   "reponse-invalide": "La réponse de l'IA était inutilisable : réessayez.",
   "fournisseur-indisponible": "Le fournisseur ne répond pas : réessayez plus tard.",
+  "conversation-introuvable": "Cette conversation n'existe plus : commencez-en une nouvelle.",
+  "conversation-pleine": "Cette conversation est pleine (200 messages) : commencez-en une nouvelle.",
+  "conversation-sans-question": "Aucune question à envoyer dans cette conversation.",
   "entree-invalide": "Données refusées : vérifiez ce que vous avez saisi.",
 };
 

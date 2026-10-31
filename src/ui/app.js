@@ -481,19 +481,51 @@ export async function demarrerApp(racine) {
       setTimeout(() => tuile.classList.remove("tuile--reperee"), 2000);
     }, 150);
   };
+  // V4.15: the conversations are stored in the account (Firebase is loaded on first use).
+  const uidCompte = () => session.compte.lire().profil?.uid;
+  const avecFb = async (f) => {
+    const uid = uidCompte();
+    if (!uid) throw new Error("non connecté");
+    return f(await chargerFirebase(), uid);
+  };
+  const conversations = {
+    creer: (c) => avecFb((fb, uid) => fb.creerConversation(uid, c)),
+    ecrireMessage: (convId, m) => avecFb((fb, uid) => fb.ecrireMessageUtilisateur(uid, convId, m)),
+    // Live view: the listener is started once Firebase is loaded; it returns its stop function.
+    ecouter: (convId, rappel) => {
+      let arret = null;
+      let arrete = false;
+      avecFb((fb, uid) => fb.ecouterMessages(uid, convId, rappel, () => {})).then((stop) => {
+        if (arrete) stop();
+        else arret = stop;
+      }, () => {});
+      return () => {
+        arrete = true;
+        arret?.();
+      };
+    },
+    chargerAvant: (convId, avantMs) =>
+      avecFb((fb, uid) => fb.chargerMessagesAvant(uid, convId, avantMs)),
+    supprimerMessage: (convId, msgId) => avecFb((fb, uid) => fb.supprimerMessage(uid, convId, msgId)),
+    lister: (options) => avecFb((fb, uid) => fb.listerConversations(uid, options)),
+    renommer: (id, titre) => avecFb((fb, uid) => fb.renommerConversation(uid, id, titre)),
+    supprimer: (id) => avecFb((fb) => fb.supprimerConversation(id)),
+  };
   // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
   const chat = creerChat({
     contexteIa,
-    appeler: async (messages) => (await chargerFirebase()).appelerIa("iaChat", { messages }),
+    appeler: async (convId) => (await chargerFirebase()).appelerIa("iaChat", { convId }),
     // V4.12: streamed answer; iaChat is the fallback when the stream cannot be opened.
-    flux: async function* (messages, options) {
+    // V4.15: the browser gives only the id of the conversation, the server reads the history.
+    flux: async function* (convId, options) {
       const fb = await chargerFirebase();
       yield* fb.fluxAvecRepli(
-        { ouvrir: fb.lireFluxChat, complet: (m) => fb.appelerIa("iaChat", { messages: m }) },
-        messages,
+        { ouvrir: fb.lireFluxChat, complet: (id) => fb.appelerIa("iaChat", { convId: id }) },
+        convId,
         options,
       );
     },
+    conversations,
     ouvrirReglagesIa: () =>
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
     trouverSite,

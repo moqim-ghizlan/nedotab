@@ -37,6 +37,40 @@ const options = {
 const fichier = (surcharge = {}) =>
   JSON.stringify({ ...creerExport(etat, options), ...surcharge }, null, 2);
 
+describe("export des conversations (V4.15)", () => {
+  it("conversations incluses sans champ inattendu ; absentes par défaut", () => {
+    expect(creerExport(etat, options)).not.toHaveProperty("conversations");
+    const e = creerExport(etat, {
+      ...options,
+      conversations: [
+        {
+          id: "c1",
+          titre: "Mon DNS",
+          creeLe: 1,
+          majLe: 2,
+          apercu: "ne doit pas sortir",
+          messages: [
+            { id: "m1", role: "user", texte: "Q", creeLe: 1, etat: "ok", origine: "barre" },
+            { id: "m2", role: "assistant", texte: "R [[site:abc]]", creeLe: 2, etat: "interrompu" },
+          ],
+        },
+      ],
+    });
+    expect(e.conversations).toEqual([
+      {
+        id: "c1",
+        titre: "Mon DNS",
+        creeLe: 1,
+        majLe: 2,
+        messages: [
+          { role: "user", texte: "Q", creeLe: 1, etat: "ok", origine: "barre" },
+          { role: "assistant", texte: "R [[site:abc]]", creeLe: 2, etat: "interrompu" },
+        ],
+      },
+    ]);
+  });
+});
+
 describe("export", () => {
   it("format, versions, date, application ; seulement la partie synchronisée", () => {
     const e = creerExport({ ...etat, reglagesAppareil: { colonnes: 5 } }, options);
@@ -79,6 +113,11 @@ describe("import : Remplacer", () => {
     expect(r.ok).toBe(true);
     expect(r.etat.grille).toEqual(etat.grille);
     expect(r.etat.reglages).toEqual(etat.reglages);
+  });
+  it("conversations du fichier comptées mais jamais importées (V4.15)", () => {
+    const r = validerImport(fichier({ conversations: [{ titre: "a", messages: [] }] }));
+    expect(r).toMatchObject({ ok: true, conversations: 1 });
+    expect(r.etat).not.toHaveProperty("conversations");
   });
   it("BOM retiré, sauvegardes comptées mais jamais importées", () => {
     const texte = String.fromCharCode(0xfeff) + fichier({ sauvegardes: [{}, {}] });

@@ -49,8 +49,23 @@ export function creerDonnees({
    *                  | { ok: false, erreur: string }>}
    *   mode: "partage" | "telecharge" | "annule" | "bloque" (see platform/partage.js)
    */
-  async function exporter({ inclureSauvegardes = true, maintenant = new Date() } = {}) {
+  async function exporter({
+    inclureSauvegardes = true,
+    inclureConversations = true,
+    maintenant = new Date(),
+  } = {}) {
     let sauvegardes;
+    let conversations;
+    if (enCompte() && inclureConversations) {
+      try {
+        conversations = await (await charger()).lireToutesConversations(uid());
+      } catch {
+        return {
+          ok: false,
+          erreur: "Conversations indisponibles hors ligne : exportez sans elles ou réessayez.",
+        };
+      }
+    }
     if (enCompte() && inclureSauvegardes) {
       try {
         sauvegardes = await toutesLesSauvegardes();
@@ -66,6 +81,7 @@ export function creerDonnees({
       plateforme: plat.capacites?.nom ?? "extension",
       maintenant: maintenant.getTime(),
       sauvegardes,
+      conversations,
     });
     const nom = nomFichierExport(maintenant);
     const fichier = new File([JSON.stringify(contenu, null, 2)], nom, { type: "application/json" });

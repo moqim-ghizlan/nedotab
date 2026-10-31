@@ -1,10 +1,18 @@
 import { CONFIRMER_AU_DELA, MESSAGE_MAX, preparerEnvoi } from "../../core/chat.js";
+import {
+  fusionner,
+  idConversation,
+  idMessage,
+  MESSAGES_CHARGES,
+  titreDepuis,
+} from "../../core/conversations.js";
 import { iaPrete } from "../../core/ia.js";
 import { etatModes } from "../../core/modeRecherche.js";
 import { el } from "../dom.js";
 import { messageErreurIa } from "../messagesIa.js";
 import { toast } from "../toast.js";
 import { creerBoutonRobot } from "./boutonRobot.js";
+import { creerHistorique } from "./historique.js";
 import { creerMessages } from "./messages.js";
 import { texteSansReferences, traduireReferences } from "./referencesSites.js";
 import { creerSaisie } from "./saisie.js";
@@ -28,6 +36,14 @@ export const INTERVALLE_RENDU_MS = 50;
  *   notifier?: (message: string) => void,
  *   trouverSite?: (id: string) => object|null,
  *   afficherSite?: (id: string) => void,
+ *   conversations?: {
+ *     creer: (c: { id: string, titre: string }) => Promise<unknown>,
+ *     ecrireMessage: (convId: string, m: { id: string, texte: string, origine: string|null }) => Promise<unknown>,
+ *     ecouter: (convId: string, rappel: (docs: object[]) => void) => () => void,
+ *     chargerAvant: (convId: string, avantMs: number) => Promise<{ messages: object[], suite: boolean }>,
+ *     supprimerMessage: (convId: string, msgId: string) => Promise<unknown>,
+ *     lister: Function, renommer: Function, supprimer: Function,
+ *   }|null,
  * }} options
  */
 export function creerChat({
@@ -44,6 +60,7 @@ export function creerChat({
   notifier = (message) => toast(message),
   trouverSite = () => null,
   afficherSite,
+  conversations = null,
 }) {
   let messages = []; // { id, role, texte, date, etat: "envoi" | "ok" | "erreur", erreur? }
   let enAttente = false;
@@ -54,9 +71,24 @@ export function creerChat({
   let compteurId = 0;
   let controleur = null; // closes the stream being read (the server then cancels the provider)
   let minuteurRendu = null; // the streamed answer is rendered at most every INTERVALLE_RENDU_MS
+  // V4.15 (with `conversations`): the conversation is stored, the panel follows it live.
+  let convId = null;
+  let arretEcoute = null;
+  let derniersDocs = [];
+  let peutCharger = false;
+  let precedentsCharges = false; // older messages were loaded: the live window no longer decides
+  let vueHistorique = false;
 
   const bouton = creerBoutonRobot({ surClic: () => ouvrir() });
   const titreModele = el("span", { class: "chat-modele" });
+  const boutonHistorique = el("button", {
+    type: "button",
+    class: "chat-entete-bouton chat-historique-bouton",
+    texte: "Historique",
+    "aria-pressed": "false",
+    hidden: !conversations,
+    onclick: () => basculerHistorique(),
+  });
   const nouvelle = el("button", {
     type: "button",
     class: "chat-entete-bouton",
@@ -81,17 +113,22 @@ export function creerChat({
       titreModele,
     ),
     nouvelle,
+    boutonHistorique,
     fermerBouton,
   );
   const liste = creerMessages({
     trouverSite,
     afficherSite,
+    surChargerPrecedents: () => chargerPrecedents(),
     surReessayer: (m) => demanderReponse(m),
     surReessayerReponse: (m) => {
       const i = messages.indexOf(m);
       const question = messages.slice(0, i).findLast((x) => x.role === "user");
       if (i < 0 || !question) return;
       messages.splice(i, 1);
+      // The stopped answer is deleted from the conversation: the history must end with the question.
+      if (conversations && convId && m.fsId)
+        conversations.supprimerMessage(convId, m.fsId).catch(() => {});
       demanderReponse(question);
     },
     surCopier: (m) =>
@@ -104,6 +141,20 @@ export function creerChat({
     surEnvoyer: (texte) => envoyer(texte),
     surArreter: () => arreter(),
   });
+  const historique = conversations
+    ? creerHistorique({
+        lister: conversations.lister,
+        renommer: conversations.renommer,
+        supprimer: conversations.supprimer,
+        surOuvrir: (c) => ouvrirConversation(c),
+        surSupprimee: (id) => {
+          if (id === convId) nouvelleConversation({ sansConfirmer: true });
+        },
+        surNouvelle: () => nouvelleConversation({ sansConfirmer: true }),
+        idOuverte: () => convId,
+        notifier: (m) => notifier(m),
+      })
+    : null;
   const avis = el("div", { class: "chat-avis", hidden: true });
   const panneau = el(
     "section",
@@ -116,12 +167,19 @@ export function creerChat({
     },
     entete,
     liste.racine,
+    ...(historique ? [historique.racine] : []),
     avis,
     saisie.racine,
   );
 
   function rendre() {
-    liste.rendre(messages, { enAttente: enAttente && messages.at(-1)?.etat !== "flux" });
+    liste.rendre(messages, {
+      enAttente: enAttente && messages.at(-1)?.etat !== "flux",
+      peutCharger,
+    });
+    liste.racine.hidden = vueHistorique;
+    saisie.racine.hidden = vueHistorique;
+    boutonHistorique.setAttribute("aria-pressed", String(vueHistorique));
     titreModele.textContent = modele;
     titreModele.hidden = !modele;
     nouvelle.disabled = messages.length === 0 && !enAttente;
@@ -253,13 +311,43 @@ export function creerChat({
     let echec = null; // an error code (sent by the server) or an Error (network)
     rendre();
     try {
-      // V4.14: a past answer goes back with the titles of the sites it cited, not their ids.
-      const { messages: envoyes } = preparerEnvoi(
-        messages.map((m) =>
-          m.role === "assistant" ? { ...m, texte: texteSansReferences(m.texte, trouverSite) } : m,
-        ),
-      );
-      for await (const e of flux(envoyes, { signal: mien.signal })) {
+      if (conversations) {
+        // V4.15: the user's message is stored first (the server reads the history there).
+        if (!message.ecrit) {
+          try {
+            await assurerConversation(message.texte);
+            message.fsId ??= idMessage();
+            await conversations.ecrireMessage(convId, {
+              id: message.fsId,
+              texte: message.texte,
+              origine: message.origine ?? null,
+            });
+            message.ecrit = true;
+          } catch (e) {
+            if (numero !== sequence) return;
+            delete message.fsId; // not written: it must not be taken for a stored one
+            enAttente = false;
+            controleur = null;
+            message.etat = "erreur";
+            message.erreur = messageErreurIa(e);
+            rendre();
+            return;
+          }
+        }
+        if (numero !== sequence) return;
+      }
+      // Memory mode: a past answer goes back with the titles of the sites it cited. With a
+      // stored conversation the server builds the history itself.
+      const entree = conversations
+        ? convId
+        : preparerEnvoi(
+            messages.map((m) =>
+              m.role === "assistant"
+                ? { ...m, texte: texteSansReferences(m.texte, trouverSite) }
+                : m,
+            ),
+          ).messages;
+      for await (const e of flux(entree, { signal: mien.signal })) {
         if (numero !== sequence) return;
         if (e.type === "texte" && e.delta) {
           if (reponse) {
@@ -277,8 +365,11 @@ export function creerChat({
             messages.push(reponse);
             rendre();
           }
+        } else if (e.type === "enregistre") {
+          if (reponse && e.messageId) reponse.fsId = e.messageId;
         } else if (e.type === "fin") {
           if (e.modele) modele = e.modele;
+          if (reponse && e.messageId) reponse.fsId = e.messageId;
           // The table "s12 → real id" arrives with the end: the text keeps the real ids.
           if (reponse) {
             reponse.texte = traduireReferences(reponse.texte, e.sites);
@@ -296,6 +387,8 @@ export function creerChat({
     enAttente = false;
     if (reponse) {
       reponse.etat = "ok";
+      // Not stored by the server (as far as we know): replaced by the stored one if it comes.
+      if (conversations && !reponse.fsId) reponse.provisoire = true;
       if (echec) {
         reponse.interrompu = true;
         reponse.echec = true;
@@ -307,7 +400,84 @@ export function creerChat({
       );
     }
     rendre();
+    appliquerDocs(); // what another device wrote while the answer was received
     if (ouvert) saisie.focus();
+  }
+
+  // --- V4.15: stored conversations ----------------------------------------------------------
+
+  /** The conversation is created with the first message (title: its first words). */
+  async function assurerConversation(texte) {
+    if (convId) return;
+    const id = idConversation();
+    await conversations.creer({ id, titre: titreDepuis(texte) });
+    convId = id;
+    ecouter();
+  }
+
+  function arreterEcoute() {
+    arretEcoute?.();
+    arretEcoute = null;
+    derniersDocs = [];
+  }
+
+  function ecouter() {
+    arreterEcoute();
+    const id = convId;
+    arretEcoute = conversations.ecouter(id, (docs) => {
+      if (id !== convId) return;
+      derniersDocs = docs;
+      if (!precedentsCharges) peutCharger = docs.length >= MESSAGES_CHARGES;
+      appliquerDocs();
+    });
+  }
+
+  /** Merges what is stored with what the panel shows (another device, opening). */
+  function appliquerDocs() {
+    if (!conversations || !derniersDocs.length) return;
+    const avant = messages;
+    messages = fusionner(messages, derniersDocs, {
+      nouvelId: () => ++compteurId,
+      accepterAssistant: !enAttente, // while receiving, the answer is adopted by its id
+    });
+    if (messages !== avant) rendre();
+  }
+
+  async function chargerPrecedents() {
+    const plusAncien = messages.find((m) => m.fsId)?.date;
+    if (!convId || !plusAncien) return;
+    try {
+      const r = await conversations.chargerAvant(convId, plusAncien);
+      messages = fusionner(messages, r.messages, { nouvelId: () => ++compteurId });
+      peutCharger = r.suite;
+      precedentsCharges = true;
+    } catch {
+      notifier("Messages précédents indisponibles");
+    }
+    rendre();
+  }
+
+  function basculerHistorique() {
+    vueHistorique = !vueHistorique;
+    if (vueHistorique) historique.ouvrir();
+    else historique.fermer();
+    rendre();
+  }
+
+  /** Opens a conversation of the list: its last 50 messages, then the live view. */
+  function ouvrirConversation(c) {
+    if (enAttente) return notifier("Attendez la fin de la réponse en cours.");
+    sequence++;
+    annulerRendu();
+    messages = [];
+    peutCharger = false;
+    precedentsCharges = false;
+    convId = c.id;
+    vueHistorique = false;
+    historique.fermer();
+    ecouter();
+    rendre();
+    saisie.focus();
   }
 
   /**
@@ -326,6 +496,8 @@ export function creerChat({
     if (dernier?.etat === "flux") {
       dernier.etat = "ok";
       dernier.interrompu = true;
+      // The server keeps the text it had: the stored message will replace this one.
+      if (conversations && !dernier.fsId) dernier.provisoire = true;
     } else if (dernier?.etat === "envoi") {
       dernier.etat = "erreur";
       dernier.erreur = "arrêté.";
@@ -334,8 +506,8 @@ export function creerChat({
     saisie.focus();
   }
 
-  async function nouvelleConversation() {
-    if (messages.length > CONFIRMER_AU_DELA) {
+  async function nouvelleConversation({ sansConfirmer = false } = {}) {
+    if (!sansConfirmer && !conversations && messages.length > CONFIRMER_AU_DELA) {
       const ok = await confirmer({
         titre: "Nouvelle conversation ?",
         message: "La conversation en cours sera effacée.",
@@ -349,6 +521,13 @@ export function creerChat({
     annulerRendu();
     messages = [];
     enAttente = false;
+    // Stored conversations are kept (the history has them): a new one only starts empty.
+    convId = null;
+    peutCharger = false;
+    precedentsCharges = false;
+    vueHistorique = false;
+    historique?.fermer();
+    arreterEcoute();
     rendre();
     saisie.focus();
   }
@@ -397,5 +576,6 @@ export function creerChat({
     actualiser,
     poserQuestion,
     estOuvert: () => ouvert,
+    idConversation: () => convId,
   };
 }

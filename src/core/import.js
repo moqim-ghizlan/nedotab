@@ -147,6 +147,7 @@ export function validerImport(texte) {
     ok: true,
     etat: { versionSchema: objet.versionSchema, grille: etat.grille, reglages: etat.reglages },
     sauvegardes: Array.isArray(objet.sauvegardes) ? objet.sauvegardes.length : 0,
+    conversations: Array.isArray(objet.conversations) ? objet.conversations.length : 0,
     aplati,
     exporteLe: typeof objet.exporteLe === "string" ? objet.exporteLe : null,
   };
