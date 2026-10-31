@@ -123,7 +123,7 @@ export function sectionCompte(session) {
           lireMiseAJour().disponible
             ? action(
                 "synchroniser",
-                "Mettre à jour l'application",
+                "Mettre à jour",
                 () => lireMiseAJour().appliquer?.(),
                 {
                   classe: "carte-action--principale",

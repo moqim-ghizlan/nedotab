@@ -38,7 +38,7 @@ describe("carte du compte : mise à jour de l'application", () => {
     const appliquer = vi.fn(async () => {});
     definirMiseAJour({ disponible: true, appliquer });
     expect(m.boutons()).toEqual([
-      "Mettre à jour l'application",
+      "Mettre à jour",
       "Restaurer la copie",
       "Se déconnecter",
     ]);
@@ -48,13 +48,13 @@ describe("carte du compte : mise à jour de l'application", () => {
 
   it("déjà disponible à l'ouverture (bandeau fermé avant) : le bouton est là", () => {
     definirMiseAJour({ disponible: true, appliquer: async () => {} });
-    expect(monter().boutons()[0]).toBe("Mettre à jour l'application");
+    expect(monter().boutons()[0]).toBe("Mettre à jour");
   });
 
   it("la fermeture du panneau arrête d'écouter", () => {
     const m = monter();
     m.carte.arreter();
     definirMiseAJour({ disponible: true, appliquer: async () => {} });
-    expect(m.boutons()).not.toContain("Mettre à jour l'application");
+    expect(m.boutons()).not.toContain("Mettre à jour");
   });
 });
