@@ -25,6 +25,8 @@ Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), ver
 
 - Le bouton robot du chat suit maintenant les réglages de l’IA (il restait caché quand les
   réglages arrivaient après l’ouverture de la page).
+- Une mise à jour de l’application web est aussi proposée dans la carte du compte des réglages
+  (« Mettre à jour l’application »), pour la retrouver après avoir fermé le bandeau.
 
 ## [4.12.0] - 2026-10-31
 

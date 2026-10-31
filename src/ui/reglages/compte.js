@@ -2,6 +2,7 @@ import { el } from "../dom.js";
 import { creerAvatar } from "../avatar.js";
 import { icone } from "../icones.js";
 import { URL_SITE } from "../../core/constantes.js";
+import { abonnerMiseAJour, lireMiseAJour } from "../etatMiseAJour.js";
 
 /** What happens to the account's data: the privacy page of the site (V2.10). */
 const lienConfidentialite = () =>
@@ -119,6 +120,17 @@ export function sectionCompte(session) {
                 titre: "Synchroniser maintenant",
               })
             : null,
+          lireMiseAJour().disponible
+            ? action(
+                "synchroniser",
+                "Mettre à jour l'application",
+                () => lireMiseAJour().appliquer?.(),
+                {
+                  classe: "carte-action--principale",
+                  titre: "Une nouvelle version est disponible : recharger l'application",
+                },
+              )
+            : null,
           action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
             titre: "Restaurer la copie de cet appareil",
           }),
@@ -174,7 +186,11 @@ export function sectionCompte(session) {
     );
   };
   rendre();
-  const arrets = [compte.abonner(rendre), synchro?.abonner(rendre)].filter(Boolean);
+  const arrets = [
+    compte.abonner(rendre),
+    synchro?.abonner(rendre),
+    abonnerMiseAJour(rendre),
+  ].filter(Boolean);
   return {
     section,
     danger,

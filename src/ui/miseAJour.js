@@ -3,6 +3,7 @@ import { URL_SITE } from "../core/constantes.js";
 import { doitVerifier, raisonOccupe } from "../core/miseAJour.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
+import { definirMiseAJour } from "./etatMiseAJour.js";
 import { toast } from "./toast.js";
 
 const CLE_VERSION = "versionVue";
@@ -61,7 +62,7 @@ export function brancherMiseAJour({ avantRechargement = async () => {} } = {}) {
   let minuteurMessage = null;
 
   const recharger = async (bouton) => {
-    bouton.disabled = true;
+    if (bouton) bouton.disabled = true;
     await Promise.race([
       avantRechargement().catch(() => {}),
       new Promise((r) => setTimeout(r, ATTENTE_ENVOI_MAX_MS)),
@@ -105,7 +106,12 @@ export function brancherMiseAJour({ avantRechargement = async () => {} } = {}) {
   };
 
   const mettreAJour = registerSW({
-    onNeedRefresh: afficherBandeau,
+    onNeedRefresh: () => {
+      // The settings offer it too (the banner may be closed). A click there is a clear request:
+      // no check for an open window (the settings are one).
+      definirMiseAJour({ disponible: true, appliquer: () => recharger(null) });
+      afficherBandeau();
+    },
     onOfflineReady: () => toast("L'app fonctionne maintenant hors ligne", { duree: 4000 }),
     onRegisteredSW: (_url, registration) => {
       if (!registration) return;
