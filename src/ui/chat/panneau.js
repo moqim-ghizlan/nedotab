@@ -211,6 +211,7 @@ export function creerChat({
       .trim()
       .slice(0, MESSAGE_MAX);
     if (!question) return false;
+    if (!modes.afficher) return null; // not ready, offline, or the assistant is off
     ouvrir();
     if (!modes.envoi || enAttente) {
       saisie.remplir(question);

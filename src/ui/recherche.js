@@ -134,7 +134,6 @@ export function creerRecherche(
 
   let options = []; // { type: "site" | "dossier" | "adresse" | "web", ... }
   let actif = 0;
-  let composition = false;
 
   const choisirActif = (i) => {
     if (options.length === 0) return;
@@ -430,7 +429,13 @@ export function creerRecherche(
     fermerListe();
     changerMode("rechercher", { annoncer: false });
     mettreAJourCompteur();
-    poserAuChat(question, { origine: "barre", sites });
+    // null: the chat cannot open (assistant not ready): the question goes back in the bar.
+    if (poserAuChat(question, { origine: "barre", sites }) === null) {
+      champ.value = question;
+      precedent = question;
+      changerMode("demander", { annoncer: false });
+      toast("L'assistant n'est pas disponible pour l'instant.");
+    }
   }
 
   /**
@@ -540,10 +545,10 @@ export function creerRecherche(
     actualiserIa();
     if (mode === "demander" || champ.value.trim()) rendre();
   });
-  champ.addEventListener("compositionstart", () => (composition = true));
-  champ.addEventListener("compositionend", () => (composition = false));
   champ.addEventListener("keydown", (e) => {
-    if (composition || e.isComposing) return;
+    // Only the browser knows if a key belongs to a composition (accent dead key, IME). A flag
+    // kept by hand could stay set when a composition is cut short, and Enter did nothing.
+    if (e.isComposing || e.keyCode === 229) return;
     const nouveau = modeApresTouche({
       mode,
       touche: e.key,

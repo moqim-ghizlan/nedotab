@@ -244,3 +244,57 @@ describe("chat.poserQuestion : une seule conversation", () => {
     await vider();
   });
 });
+
+describe("Entrée dans la barre (V4.13, correctif)", () => {
+  it("une composition d'accent restée ouverte ne bloque pas Entrée", async () => {
+    const m = await monter();
+    m.champ.dispatchEvent(new CompositionEvent("compositionstart"));
+    await m.poser("comment faire une pâte brisée");
+    expect(m.chat.estOuvert()).toBe(true);
+  });
+
+  it("Entrée pendant une vraie composition (isComposing) est ignorée", async () => {
+    const m = await monter();
+    m.champ.value = "comment faire";
+    m.champ.dispatchEvent(new Event("input"));
+    m.champ.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        isComposing: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    await vider();
+    expect(m.chat.estOuvert()).toBe(false);
+  });
+
+  it("assistant indisponible : la question revient dans la barre avec un message, rien n'est perdu", async () => {
+    document.body.replaceChildren();
+    const store = { lire: () => ({ grille: GRILLE, reglages: {} }), abonner: () => {} };
+    const chat = creerChat({
+      contexteIa: async () => ({ ...PRETE, ia: { actif: false } }),
+      appeler: async () => ({ texte: "r" }),
+    });
+    const { racine, champ } = creerRecherche(store, {
+      ouvrirDossier: () => {},
+      contexteIa: async () => PRETE,
+      demanderIa: async () => ({ intention: "site", resultats: [] }),
+      poserAuChat: (q, o) => chat.poserQuestion(q, o),
+    });
+    document.body.append(racine, chat.bouton, chat.panneau);
+    await vider();
+    champ.dispatchEvent(new Event("focus"));
+    await vider();
+    champ.value = "?";
+    champ.dispatchEvent(new Event("input"));
+    champ.value = "comment faire une pâte brisée";
+    champ.dispatchEvent(new Event("input"));
+    champ.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+    );
+    await vider();
+    expect(champ.value).toBe("comment faire une pâte brisée");
+    expect(chat.estOuvert()).toBe(false);
+  });
+});
