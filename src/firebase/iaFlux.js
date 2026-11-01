@@ -8,12 +8,13 @@ import { obtenirFonctions } from "./fonctions.js";
  * the request to the provider. An error before the first byte is thrown, like `appelerIa`.
  * V4.15: the history is read by the server in the conversation (the browser sends only its id);
  * the end carries `messageId`, the id of the answer the server wrote in the conversation.
- * @param {string} convId
+ * V4.20: with the history switched off, the browser sends the messages (memory mode).
+ * @param {string|{ role: string, texte: string }[]} conversation the id, or the messages
  * @param {{ signal?: AbortSignal }} [options]
  */
-export async function* lireFluxChat(convId, { signal } = {}) {
+export async function* lireFluxChat(conversation, { signal } = {}) {
   const { stream, data } = await httpsCallable(obtenirFonctions(), "iaChatFlux").stream(
-    { convId },
+    donneesChat(conversation),
     { signal },
   );
   for await (const morceau of stream) yield morceau;
@@ -29,6 +30,10 @@ export async function* lireFluxChat(convId, { signal } = {}) {
   // Stopped halfway: the text received is kept by the server, the panel learns its id.
   else if (fin?.messageId) yield { type: "enregistre", messageId: fin.messageId };
 }
+
+/** What the chat functions receive: the conversation id, or (history off) the messages. */
+export const donneesChat = (conversation) =>
+  typeof conversation === "string" ? { convId: conversation } : { messages: conversation };
 
 /** Errors that mean "the stream could not be opened here" (network, proxy), not "refused". */
 const CODES_OUVERTURE = new Set([

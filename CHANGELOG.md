@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.20.0] - 2026-11-02
+
+### Ajouté
+
+- **Confidentialité de l'IA** (Réglages → Assistant IA → Confidentialité), appliquée **côté serveur** : les fonctions lisent `reglages.ia.confidentialite` dans le document de l'utilisateur, le navigateur ne peut pas envoyer plus.
+  - Titres et adresses (sans eux, recherche intelligente, chat avec sites et rangement sont désactivés et expliqués), tags et descriptions, noms de dossiers, lecture du contenu des pages pour les tags, lecture des pages par le serveur (iPhone/iPad), conservation de l'historique (sinon retour à la conversation en mémoire du navigateur, rien n'est écrit).
+  - Le cache des tags tient compte du réglage « lire les pages ».
+- **« Ne pas montrer à l'IA »** (menu d'un site ou d'un dossier) : `iaExclu: true` sur l'élément ; l'élément et tout le contenu d'un dossier exclu ne figurent dans aucune liste envoyée (recherche, chat, rangement, vérification), n'ont pas de tags générés et sont ignorés par le rattrapage. Validation idempotente (seul `true` est gardé), pas de changement de version de schéma.
+- **Effacements** (confirmation, définitifs, export conseillé avant) : historique des conversations, cache IA, statistiques d'usage, tags et descriptions générés (annulable ; ceux écrits à la main sont gardés), clés, ou tout à la fois en désactivant l'IA. Fonction `iaEffacer` ; chaque effacement supprime exactement ce qu'il annonce.
+- **Mode sans IA** : plus d'onglet Suggestions dans « Ranger mes sites » (les doublons et la vérification restent), aucun appel.
+- **Documents** : section « L'assistant IA » de la politique de confidentialité (**brouillon à relire avant publication du site**), trois entrées de FAQ, modèle de checklist V1–V4 (`docs/tests/checklist-v4.md`, **non exécutée**), `docs/tests/bugs-v4.md`, revue de sécurité (`docs/securite.md`), idées de la V4 dans `docs/brainstorm.md`.
+- **Non fait** : la checklist sur PC, iPhone et iPad réels, la relecture de la politique par le propriétaire, la décision sur App Check bloquant, la liste personnalisable des domaines sensibles, le suivi des coûts Firebase sur une semaine.
+
 ## [4.19.0] - 2026-11-02
 
 ### Ajouté

@@ -140,6 +140,7 @@ export const iaChatFlux = onCall(
 export const iaRechercher = appelIa(fonctionsIa.rechercher);
 export const iaSuggererRangement = appelIa(fonctionsIa.suggererRangement);
 export const iaConsommation = appelIa(fonctionsIa.consommation);
+export const iaEffacer = appelIa(fonctionsIa.effacer);
 export const iaQuotaRestant = appelIa(fonctionsIa.quotaRestant);
 export const iaDefinirQuota = appelIa(fonctionsIa.definirQuota);
 

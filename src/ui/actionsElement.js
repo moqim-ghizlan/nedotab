@@ -235,7 +235,13 @@ export function brancherActionsElements(
       }
     }
     if (modifiable) {
+      // V4.20: hidden from the AI (the site, or the folder with everything inside).
+      const exclu = e.iaExclu === true;
       entrees.push("-", {
+        libelle: exclu ? "Montrer à l'IA" : "Ne pas montrer à l'IA",
+        onChoix: () => store.envoyer({ type: A.ELEMENT_IA_EXCLURE, id, exclu: !exclu }),
+      });
+      entrees.push({
         libelle: "Supprimer",
         raccourci: "Suppr",
         danger: true,

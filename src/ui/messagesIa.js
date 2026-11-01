@@ -14,6 +14,8 @@ const PAR_RAISON = {
   "reponse-invalide": "La réponse de l'IA était inutilisable : réessayez.",
   "fournisseur-indisponible": "Le fournisseur ne répond pas : réessayez plus tard.",
   "limite-personnelle": "Votre limite personnelle est atteinte : ajustez-la dans Réglages → Assistant IA → Consommation.",
+  "confidentialite-sites": "L'envoi des titres et adresses de vos sites est désactivé : réactivez-le dans Réglages → Assistant IA → Confidentialité.",
+  "lecture-serveur-desactivee": "La lecture des pages par le serveur est désactivée dans vos réglages de confidentialité.",
   "conversation-introuvable": "Cette conversation n'existe plus : commencez-en une nouvelle.",
   "conversation-pleine": "Cette conversation est pleine (200 messages) : commencez-en une nouvelle.",
   "conversation-sans-question": "Aucune question à envoyer dans cette conversation.",

@@ -4,7 +4,7 @@ import { obtenirApp } from "./app.js";
 import { obtenirFonctions } from "./fonctions.js";
 
 /** The AI functions the browser may call (V4.0). Keys never come back from them. */
-export const FONCTIONS_IA = ["iaEnregistrerCle", "iaSupprimerCle", "iaEtatCles", "iaTester", "iaGenererTags", "iaRechercher", "iaChat", "iaSupprimerConversation", "iaVerifierSites", "iaSuggererRangement", "iaConsommation", "iaQuotaRestant", "iaDefinirQuota"];
+export const FONCTIONS_IA = ["iaEnregistrerCle", "iaSupprimerCle", "iaEtatCles", "iaTester", "iaGenererTags", "iaRechercher", "iaChat", "iaSupprimerConversation", "iaVerifierSites", "iaSuggererRangement", "iaConsommation", "iaEffacer", "iaQuotaRestant", "iaDefinirQuota"];
 
 /**
  * Calls an AI function of the server and returns its answer. Errors keep their callable

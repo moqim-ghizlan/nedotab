@@ -19,6 +19,8 @@ export function sitesDe(grille) {
     if (!Array.isArray(liste)) return;
     for (const e of liste) {
       if (!e || typeof e !== "object") continue;
+      // V4.20: "Ne pas montrer à l'IA" — the element and, for a folder, all its content stay out.
+      if (e.iaExclu === true) continue;
       if (e.type === "dossier") visiter(e.items, [...chemin, String(e.titre ?? "")]);
       else if (e.type === "site" && typeof e.id === "string" && e.id) {
         sites.push({
@@ -90,13 +92,21 @@ export function dossiersDe(grille) {
   const dossiers = [];
   const compter = (items) =>
     items.reduce(
-      (n, e) => n + (e?.type === "site" ? 1 : e?.type === "dossier" ? compter(e.items ?? []) : 0),
+      (n, e) =>
+        n +
+        (e?.iaExclu === true
+          ? 0
+          : e?.type === "site"
+            ? 1
+            : e?.type === "dossier"
+              ? compter(e.items ?? [])
+              : 0),
       0,
     );
   const visiter = (liste, chemin) => {
     if (!Array.isArray(liste)) return;
     for (const e of liste) {
-      if (e?.type !== "dossier" || typeof e.id !== "string" || !e.id) continue;
+      if (e?.type !== "dossier" || typeof e.id !== "string" || !e.id || e.iaExclu === true) continue;
       const ici = [...chemin, String(e.titre ?? "")];
       dossiers.push({ id: e.id, chemin: ici, nbSites: compter(e.items ?? []) });
       visiter(e.items, ici);

@@ -47,7 +47,7 @@ const sitesDe = (grille) =>
  * V4.16 (deletions listed and unticked, "Annuler" toast): nothing is applied by itself, and
  * there is deliberately no "Tout appliquer".
  */
-export function creerEcranRangement({ store, enCompte = () => false }) {
+export function creerEcranRangement({ store, enCompte = () => false, iaActive = () => true }) {
   let onglet = "doublons";
   let verifications = lireStockage();
   let enCours = false;
@@ -93,7 +93,7 @@ export function creerEcranRangement({ store, enCompte = () => false }) {
       { class: "rangement-onglets", role: "tablist" },
       bouton("doublons", `Doublons (${nbDoublons})`),
       bouton("verifier", `Sites à vérifier${nbVerif ? ` (${nbVerif})` : ""}`),
-      bouton("suggestions", "Suggestions"),
+      iaActive() ? bouton("suggestions", "Suggestions") : null,
     );
   }
 
@@ -353,6 +353,7 @@ export function creerEcranRangement({ store, enCompte = () => false }) {
   }
 
   function rendre() {
+    if (onglet === "suggestions" && !iaActive()) onglet = "doublons"; // AI switched off
     const grille = store.lire().grille;
     const sites = sitesDe(grille);
     const doublons = groupesDoublons(grille);
@@ -375,8 +376,8 @@ export function creerEcranRangement({ store, enCompte = () => false }) {
 }
 
 /** Opens the screen in a dialog. */
-export async function ouvrirRangement({ store, enCompte, retourFocus }) {
-  const ecran = creerEcranRangement({ store, enCompte });
+export async function ouvrirRangement({ store, enCompte, iaActive, retourFocus }) {
+  const ecran = creerEcranRangement({ store, enCompte, iaActive });
   await demander({
     titre: "Ranger mes sites",
     contenu: [ecran.racine],

@@ -40,6 +40,7 @@ export const A = {
   DOSSIER_RENOMMER: "DOSSIER_RENOMMER",
   DOSSIER_SUPPRIMER: "DOSSIER_SUPPRIMER",
   GRILLE_REMPLACER: "GRILLE_REMPLACER",
+  ELEMENT_IA_EXCLURE: "ELEMENT_IA_EXCLURE",
   FUSIONNER: "FUSIONNER",
   REGLAGES_MODIFIER: "REGLAGES_MODIFIER",
   SYNCHRO_APPLIQUER: "SYNCHRO_APPLIQUER",
@@ -339,6 +340,21 @@ function reduireBase(etat, action) {
       return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:
       return Array.isArray(action.grille) ? avecGrille(etat, action.grille) : etat;
+    case A.ELEMENT_IA_EXCLURE: {
+      // V4.20: hide a site or a folder (and its content) from the AI. Absent = shown.
+      const exclu = action.exclu === true;
+      const r = trouver(etat.grille, action.id);
+      if (!r || (r.element.iaExclu === true) === exclu) return etat;
+      return avecGrille(
+        etat,
+        remplacer(etat.grille, action.id, (e) => {
+          if (exclu) return { ...e, iaExclu: true };
+          const copie = { ...e };
+          delete copie.iaExclu;
+          return copie;
+        }),
+      );
+    }
     default:
       return etat;
   }

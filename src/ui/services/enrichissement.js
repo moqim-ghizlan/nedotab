@@ -1,3 +1,4 @@
+import { estExclu } from "../../core/exclusion.js";
 import { A } from "../../core/actions.js";
 import { iaPrete } from "../../core/ia.js";
 
@@ -64,6 +65,7 @@ export function creerEnrichissement({
   return {
     /** Asks for a proposal for one site; false when nothing is started (AI not ready…). */
     async demander(site) {
+      if (estExclu(store.lire().grille, site.id)) return false; // hidden from the AI (V4.20)
       const { lirePagesWeb, extraitServeur } = plateforme.capacites ?? {};
       if (!lirePagesWeb && !extraitServeur) return false;
       const pret = iaPrete(await contexte());
@@ -78,6 +80,7 @@ export function creerEnrichissement({
      * resolves { ok } or { ok: false, code }. The site is marked "en_attente" first.
      */
     async executer(site) {
+      if (estExclu(store.lire().grille, site.id)) return { ok: false, code: "exclu" };
       definir(site.id, { etat: "en_attente" });
       return generer({ id: site.id, url: site.url, titre: site.titre });
     },

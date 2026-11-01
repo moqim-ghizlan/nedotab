@@ -30,6 +30,7 @@ import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerHorloge } from "./horloge.js";
 import { creerRecherche } from "./recherche.js";
+import { permis } from "../core/confidentialiteIa.js";
 import { creerGestionPropositions } from "./chat/carteProposition.js";
 import { creerChat } from "./chat/panneau.js";
 import { ouvrirReglages } from "./reglages.js";
@@ -522,13 +523,16 @@ export async function demarrerApp(racine) {
   // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
   const chat = creerChat({
     contexteIa,
-    appeler: async (convId) => (await chargerFirebase()).appelerIa("iaChat", { convId }),
+    appeler: async (conversation) => {
+      const fb = await chargerFirebase();
+      return fb.appelerIa("iaChat", fb.donneesChat(conversation));
+    },
     // V4.12: streamed answer; iaChat is the fallback when the stream cannot be opened.
     // V4.15: the browser gives only the id of the conversation, the server reads the history.
     flux: async function* (convId, options) {
       const fb = await chargerFirebase();
       yield* fb.fluxAvecRepli(
-        { ouvrir: fb.lireFluxChat, complet: (id) => fb.appelerIa("iaChat", { convId: id }) },
+        { ouvrir: fb.lireFluxChat, complet: (c) => fb.appelerIa("iaChat", fb.donneesChat(c)) },
         convId,
         options,
       );
@@ -539,6 +543,7 @@ export async function demarrerApp(racine) {
     trouverSite,
     afficherSite,
     proposer,
+    historiqueActif: () => permis(iaDe(store.lire().reglages).confidentialite, "historique"),
     confirmer: async ({ titre, message, valider }) =>
       (await demander({
         titre,

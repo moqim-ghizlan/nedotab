@@ -3,7 +3,7 @@ import { etatInitial } from "../../src/core/modele.js";
 import * as fb from "../../src/firebase/index.js";
 
 // V2.10: the supprimerMonCompte Cloud Function on the emulators (Auth, Functions, Firestore,
-// Storage). AGE_CONNEXION_MAX_S is 10 s here (functions/.env.demo-nedotab): long enough
+// Storage). AGE_CONNEXION_MAX_S is 30 s here (functions/.env.demo-nedotab): long enough
 // for a cold start of the function emulator, short enough to wait past it.
 const FIRESTORE = "http://127.0.0.1:8080/v1/projects/demo-nedotab/databases/(default)/documents";
 const STOCKAGE = "http://127.0.0.1:9199/v0/b/demo-nedotab.appspot.com/o";
@@ -90,11 +90,11 @@ describe("supprimerMonCompte (émulateurs)", () => {
 
   it("connexion trop ancienne : « Reconnectez-vous pour confirmer », rien supprimé", async () => {
     const uid = await remplir("connexion-ancienne");
-    await attendre(11000); // > AGE_CONNEXION_MAX_S of the emulators (10 s)
+    await attendre(31000); // > AGE_CONNEXION_MAX_S of the emulators (30 s)
     await expect(fb.supprimerMonCompte()).rejects.toMatchObject({
       code: "functions/failed-precondition",
       message: expect.stringMatching(/^Reconnectez-vous pour confirmer/),
     });
     expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2 });
-  }, 40000);
+  }, 70000);
 });

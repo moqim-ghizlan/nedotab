@@ -26,6 +26,8 @@ import {
 import { lireSortieRangement } from "./rangementSortie.js";
 import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
+import { champsAutorises, permis, validerConfidentialite } from "../partage/confidentialiteIa.js";
+import { creerEffacements, EFFACEMENTS } from "./effacements.js";
 import { creerCache, cleCache, DUREE_RECHERCHE_MS, DUREE_TAGS_MS } from "../cacheIa.js";
 import { creerUsage } from "../usage.js";
 import { PROMPT_RECHERCHE_VERSION } from "./prompts/recherche.js";
@@ -33,7 +35,6 @@ import { PROMPT_TAGS_VERSION } from "./prompts/tags.js";
 import { creerConversations, MOTIF_ID_CONVERSATION, referencesReelles } from "./conversations.js";
 import { besoinContexteSites, validerModeSitesChat } from "../partage/besoinContexteSites.js";
 import {
-  CHAMPS_LISTE,
   construireListe,
   construireListeDossiers,
   dossiersDe,
@@ -373,6 +374,12 @@ export function creerFonctionsIa(deps) {
       url: { type: "chaine", requis: true, max: 2048, motif: /^https?:\/\/\S+$/i },
       titre: { type: "chaine", max: 300 },
     });
+    // V4.20: the user's choices about page content, applied here whatever the browser sent.
+    const conf = await confidentialiteDe(uid);
+    const lirePagesPermis = permis(conf, "lirePages");
+    if (lirePagesPermis && !extrait && !permis(conf, "lectureServeur"))
+      throw new ErreurFournisseur("lecture-serveur-desactivee");
+    const extraitUtile = lirePagesPermis ? extrait : undefined;
     // V4.19: the same page, extract, model and prompt give the same tags: no new paid call.
     const modeleTags = (await config()).modele;
     const cleTags = cleCache([
@@ -381,7 +388,8 @@ export function creerFonctionsIa(deps) {
       modeleTags,
       url,
       titre ?? null,
-      extrait ?? null,
+      extraitUtile ?? null,
+      lirePagesPermis,
     ]);
     await choixDeLUsage(uid); // AI switched off: not even the cache answers
     const connu = await cache.lire(uid, cleTags);
@@ -391,7 +399,8 @@ export function creerFonctionsIa(deps) {
     }
     // No extract (web app): the server reads the page itself, safely (recupererPage). A page
     // that cannot be read gives a reduced extract: the tags then come from title and domain.
-    let page = extrait;
+    let page = extraitUtile;
+    if (!lirePagesPermis) page = extraitReduit(url, titre); // title and address only
     if (!page) {
       // Page downloads per user and per day (config/ia.quotaPages): the function must not
       // become a crawler.
@@ -446,16 +455,19 @@ export function creerFonctionsIa(deps) {
     });
     if (!question.trim()) throw new EntreeInvalide("question : texte attendu.");
     const snap = await db.doc(`users/${uid}`).get();
+    const conf = validerConfidentialite(snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null);
+    if (!permis(conf, "titresAdresses")) throw new ErreurFournisseur("confidentialite-sites");
     const sites = sitesDe(snap.exists ? snap.data()?.grille : []);
     // Nothing to search: no call, nothing paid.
     if (sites.length === 0)
       return { intention: "question", resultats: [], aucunResultat: true, preFiltre: false };
     const { sites: retenus, preFiltre } = preFiltrer(sites, question);
-    let { lignes, table } = construireListe(retenus);
+    const autorises = champsAutorises(conf);
+    let { lignes, table } = construireListe(retenus, { champs: autorises });
     // A very long list (long descriptions): the descriptions are left out rather than refused.
     if (lignes.join("\n").length > LISTE_MAX) {
       ({ lignes, table } = construireListe(retenus, {
-        champs: CHAMPS_LISTE.filter((c) => c !== "description"),
+        champs: autorises.filter((c) => c !== "description"),
       }));
     }
     // V4.19: same question, same grid, model and prompt: answered from the cache (24 h).
@@ -500,6 +512,12 @@ export function creerFonctionsIa(deps) {
     throw new ErreurFournisseur("reponse-invalide");
   }
 
+  /** V4.20: what the user lets the AI see (reglages.ia.confidentialite), read on the server. */
+  async function confidentialiteDe(uid) {
+    const snap = await db.doc(`users/${uid}`).get();
+    return validerConfidentialite(snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null);
+  }
+
   /**
    * V4.14: the collection of the user for the chat, or null when it is not needed (setting
    * "jamais", empty grid, or "auto" and the conversation does not concern the sites). Same
@@ -510,6 +528,9 @@ export function creerFonctionsIa(deps) {
     const donnees = snap.exists ? snap.data() : null;
     const mode = validerModeSitesChat(donnees?.reglages?.ia?.sitesChat);
     if (mode === "jamais") return null;
+    // V4.20: no title and address, no list: the chat answers without knowing the collection.
+    const conf = validerConfidentialite(donnees?.reglages?.ia?.confidentialite);
+    if (!permis(conf, "titresAdresses")) return null;
     const sites = sitesDe(donnees?.grille);
     if (!besoinContexteSites({ mode, sites, messages })) return null;
     const { lignes: lignesDossiers, table: tableDossiers } = construireListeDossiers(
@@ -517,13 +538,16 @@ export function creerFonctionsIa(deps) {
     );
     const question = messages.findLast((m) => m.role === "user").texte;
     const { sites: retenus } = preFiltrer(sites, question);
-    let { lignes, table } = construireListe(retenus);
+    const autorises = champsAutorises(conf);
+    let { lignes, table } = construireListe(retenus, { champs: autorises });
     if (lignes.join("\n").length > LISTE_MAX) {
       ({ lignes, table } = construireListe(retenus, {
-        champs: CHAMPS_LISTE.filter((c) => c !== "description"),
+        champs: autorises.filter((c) => c !== "description"),
       }));
     }
-    return { lignes, table, lignesDossiers, tableDossiers };
+    // Folder names are folder paths too: left out when the user does not share them.
+    const dossiersEnvoyes = permis(conf, "chemins") ? lignesDossiers : [];
+    return { lignes, table, lignesDossiers: dossiersEnvoyes, tableDossiers: permis(conf, "chemins") ? tableDossiers : {} };
   }
 
   /**
@@ -692,13 +716,15 @@ export function creerFonctionsIa(deps) {
       portee: { type: "chaine", requis: true, valeurs: () => ["accueil", "tout"] },
     });
     const snap = await db.doc(`users/${uid}`).get();
+    const conf = validerConfidentialite(snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null);
+    if (!permis(conf, "titresAdresses")) throw new ErreurFournisseur("confidentialite-sites");
     const grille = snap.exists ? snap.data()?.grille : [];
     let sites = sitesDe(grille);
     if (portee === "accueil") sites = sites.filter((s) => s.chemin.length === 0);
     // Nothing to tidy: no call, nothing paid.
     if (sites.length < 2) return { groupes: [] };
     const { lignes, table } = construireListe(sites.slice(0, 200), {
-      champs: CHAMPS_LISTE.filter((c) => c !== "ajoute"),
+      champs: champsAutorises(conf).filter((c) => c !== "ajoute"),
     });
     const { lignes: lignesDossiers, table: tableDossiers } = construireListeDossiers(
       dossiersDe(grille),
@@ -726,6 +752,16 @@ export function creerFonctionsIa(deps) {
       if (sortie) return { ...sortie, modele: r.modele };
     }
     throw new ErreurFournisseur("reponse-invalide");
+  }
+
+  /** V4.20: erases what the user asks (conversations, cache, statistics, or the three). */
+  async function effacer(uid, donnees) {
+    const { quoi } = valider(donnees, {
+      quoi: { type: "chaine", requis: true, valeurs: () => EFFACEMENTS },
+    });
+    const sortie = await creerEffacements({ db }).effacer(uid, quoi);
+    journal({ action: "effacer", quoi }); // never what was erased
+    return sortie;
   }
 
   /** V4.19: usage of today, of the month and of the 11 months before, with the limits. */
@@ -765,6 +801,8 @@ export function creerFonctionsIa(deps) {
 
   /** V4.15: answer of the chat for a conversation; the answer is written in its messages. */
   async function chatConversation(uid, donnees) {
+    // V4.20: history not kept: the conversation stays in the browser, which sends it (as in V4.11).
+    if (!permis(await confidentialiteDe(uid), "historique")) return chat(uid, donnees);
     const { convId } = valider(donnees, schemaConversation);
     const messages = await historiqueDe(uid, convId);
     return chat(
@@ -776,6 +814,7 @@ export function creerFonctionsIa(deps) {
 
   /** V4.15: the same, streamed. */
   async function chatFluxConversation(uid, donnees, options = {}) {
+    if (!permis(await confidentialiteDe(uid), "historique")) return chatFlux(uid, donnees, options);
     const { convId } = valider(donnees, schemaConversation);
     const messages = await historiqueDe(uid, convId);
     return chatFlux(uid, { messages }, {
@@ -838,6 +877,7 @@ export function creerFonctionsIa(deps) {
     chatFlux,
     suggererRangement,
     consommation,
+    effacer,
     chatConversation,
     chatFluxConversation,
     supprimerConversation,

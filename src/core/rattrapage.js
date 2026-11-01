@@ -4,6 +4,8 @@
  */
 
 /** A lock with no progress for this long is dead (device closed, app suspended…). */
+import { idsExclus } from "./exclusion.js";
+
 export const DUREE_VERROU_MS = 10 * 60 * 1000;
 
 export const PORTEES = ["sansTags", "dossier", "tout"];
@@ -38,8 +40,9 @@ export function sitesARattraper(grille, { portee, dossierId } = {}) {
     };
     racine = trouver(racine)?.items ?? [];
   }
+  const exclus = idsExclus(grille ?? []);
   return sitesEnOrdre(racine)
-    .filter((s) => !s.tagsManuels && (portee === "tout" || sansTags(s)))
+    .filter((s) => !exclus.has(s.id) && !s.tagsManuels && (portee === "tout" || sansTags(s)))
     .map((s) => s.id);
 }
 

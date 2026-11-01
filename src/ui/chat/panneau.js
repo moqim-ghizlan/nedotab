@@ -66,7 +66,10 @@ export function creerChat({
   afficherSite,
   conversations = null,
   proposer = null,
+  historiqueActif = () => true,
 }) {
+  /** Stored conversations: the service exists AND the user keeps their history (V4.20). */
+  const stocke = () => !!conversations && historiqueActif();
   let messages = []; // { id, role, texte, date, etat: "envoi" | "ok" | "erreur", erreur? }
   let enAttente = false;
   let modes = etatModes(null);
@@ -133,7 +136,7 @@ export function creerChat({
       if (i < 0 || !question) return;
       messages.splice(i, 1);
       // The stopped answer is deleted from the conversation: the history must end with the question.
-      if (conversations && convId && m.fsId)
+      if (stocke() && convId && m.fsId)
         conversations.supprimerMessage(convId, m.fsId).catch(() => {});
       demanderReponse(question);
     },
@@ -183,6 +186,7 @@ export function creerChat({
       enAttente: enAttente && messages.at(-1)?.etat !== "flux",
       peutCharger,
     });
+    boutonHistorique.hidden = !stocke();
     liste.racine.hidden = vueHistorique;
     saisie.racine.hidden = vueHistorique;
     boutonHistorique.setAttribute("aria-pressed", String(vueHistorique));
@@ -317,7 +321,7 @@ export function creerChat({
     let echec = null; // an error code (sent by the server) or an Error (network)
     rendre();
     try {
-      if (conversations) {
+      if (stocke()) {
         // V4.15: the user's message is stored first (the server reads the history there).
         if (!message.ecrit) {
           try {
@@ -344,7 +348,7 @@ export function creerChat({
       }
       // Memory mode: a past answer goes back with the titles of the sites it cited. With a
       // stored conversation the server builds the history itself.
-      const entree = conversations
+      const entree = stocke()
         ? convId
         : preparerEnvoi(
             messages.map((m) =>
@@ -400,7 +404,7 @@ export function creerChat({
     if (reponse) {
       reponse.etat = "ok";
       // Not stored by the server (as far as we know): replaced by the stored one if it comes.
-      if (conversations && !reponse.fsId) reponse.provisoire = true;
+      if (stocke() && !reponse.fsId) reponse.provisoire = true;
       if (echec) {
         reponse.interrompu = true;
         reponse.echec = true;
@@ -446,7 +450,7 @@ export function creerChat({
 
   /** Merges what is stored with what the panel shows (another device, opening). */
   function appliquerDocs() {
-    if (!conversations || !derniersDocs.length) return;
+    if (!stocke() || !derniersDocs.length) return;
     const avant = messages;
     messages = fusionner(messages, derniersDocs, {
       nouvelId: () => ++compteurId,
@@ -472,7 +476,7 @@ export function creerChat({
   /** The status of a proposal (applied, ignored): kept in the conversation, shown everywhere. */
   function majStatutProposition(message, statut) {
     message.statutProposition = statut;
-    if (conversations && convId && message.fsId)
+    if (stocke() && convId && message.fsId)
       conversations
         .majStatut(convId, message.fsId, statut)
         .catch(() => notifier("Statut de la proposition non enregistré"));
@@ -519,7 +523,7 @@ export function creerChat({
       dernier.etat = "ok";
       dernier.interrompu = true;
       // The server keeps the text it had: the stored message will replace this one.
-      if (conversations && !dernier.fsId) dernier.provisoire = true;
+      if (stocke() && !dernier.fsId) dernier.provisoire = true;
     } else if (dernier?.etat === "envoi") {
       dernier.etat = "erreur";
       dernier.erreur = "arrêté.";
@@ -529,7 +533,7 @@ export function creerChat({
   }
 
   async function nouvelleConversation({ sansConfirmer = false } = {}) {
-    if (!sansConfirmer && !conversations && messages.length > CONFIRMER_AU_DELA) {
+    if (!sansConfirmer && !stocke() && messages.length > CONFIRMER_AU_DELA) {
       const ok = await confirmer({
         titre: "Nouvelle conversation ?",
         message: "La conversation en cours sera effacée.",

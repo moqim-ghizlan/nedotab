@@ -14,6 +14,7 @@ import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { creerServiceIa } from "../services/ia.js";
+import { creerSectionConfidentialite } from "./confidentialiteIa.js";
 import { ouvrirConsommation } from "./consommation.js";
 import { ouvrirRattrapage } from "./rattrapage.js";
 import { toast } from "../toast.js";
@@ -439,6 +440,7 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
         questionBarre,
         sitesChat,
         consommation,
+        reglages.actif ? creerSectionConfidentialite({ store }).section : null,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,

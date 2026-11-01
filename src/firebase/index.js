@@ -50,5 +50,5 @@ export {
   supprimerConversation,
   supprimerMessage,
 } from "./conversations.js";
-export { fluxAvecRepli, lireFluxChat } from "./iaFlux.js";
+export { donneesChat, fluxAvecRepli, lireFluxChat } from "./iaFlux.js";
 export { supprimerMonCompte } from "./suppression.js";

@@ -30,6 +30,7 @@ import { sectionSauvegardes } from "./reglages/sauvegardes.js";
 import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
+import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
 import { sectionIa } from "./reglages/ia.js";
@@ -805,6 +806,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 ouvrirRangement({
                   store,
                   enCompte: () => session.synchro.lire().mode === "compte",
+                  iaActive: () => iaDe(store.lire().reglages).actif,
                   retourFocus: e.currentTarget,
                 }),
             }),

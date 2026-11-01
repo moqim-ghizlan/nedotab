@@ -11,6 +11,7 @@
  * their state (provider, last 4 characters) is read from it.
  */
 import { validerModeSitesChat } from "./besoinContexteSites.js";
+import { validerConfidentialite } from "./confidentialiteIa.js";
 import { validerLimites } from "./estimation.js";
 import { validerPreference } from "./routageQuestion.js";
 
@@ -26,6 +27,8 @@ export function validerIa(ia) {
   const resultat = { actif: ia?.actif === true };
   const question = validerPreference(ia?.questionBarre);
   if (question !== "auto") resultat.questionBarre = question;
+  const confidentialite = validerConfidentialite(ia?.confidentialite); // V4.20
+  if (confidentialite) resultat.confidentialite = confidentialite;
   const limites = validerLimites(ia?.limites); // V4.19: personal limits (day / month)
   if (limites) resultat.limites = limites;
   const sitesChat = validerModeSitesChat(ia?.sitesChat);
@@ -40,7 +43,7 @@ export function validerIa(ia) {
 /** True when the settings are the default: nothing needs to be stored. */
 export const estIaParDefaut = (ia) => {
   const v = validerIa(ia);
-  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat && !v.limites;
+  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat && !v.limites && !v.confidentialite;
 };
 
 /** What is stored: nothing for the default settings. */
@@ -71,6 +74,17 @@ export const avecLimites = (ia, limites) => {
   delete reste.limites;
   const l = validerLimites(limites);
   return l ? { ...reste, limites: l } : reste;
+};
+
+/** V4.20: one privacy choice (true = allowed, the default, removes the field). */
+export const avecConfidentialite = (ia, cle, autorise) => {
+  const reste = { ...ia };
+  const actuel = { ...(reste.confidentialite ?? {}) };
+  if (autorise) delete actuel[cle];
+  else actuel[cle] = false;
+  delete reste.confidentialite;
+  const c = validerConfidentialite(actuel);
+  return c ? { ...reste, confidentialite: c } : reste;
 };
 
 export const avecActif = (ia, actif) => ({ ...ia, actif: actif === true });
