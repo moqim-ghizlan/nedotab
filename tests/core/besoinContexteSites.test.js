@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { besoinContexteSites } from "../../src/core/besoinContexteSites.js";
+import { besoinContexteSites, demandeActions } from "../../src/core/besoinContexteSites.js";
 
 const sites = [
   { titre: "Marmiton", url: "https://www.marmiton.org", tags: ["cuisine", "recettes"] },
@@ -50,4 +50,25 @@ describe("besoinContexteSites (V4.14)", () => {
     expect(besoinContexteSites(q("Mes sites ?", { sites: [] }))).toBe(false);
     expect(besoinContexteSites(q("Mes sites ?", { mode: "autre" }))).toBe(true);
   });
+
+  it("demande de modification (V4.16) : le contexte est joint, même avec une grille vide", () => {
+    expect(besoinContexteSites(q("Crée un dossier Voyage"))).toBe(true);
+    expect(besoinContexteSites(q("Ajoute github.com", { sites: [] }))).toBe(true);
+    expect(besoinContexteSites(q("Ajoute github.com", { sites: [], mode: "jamais" }))).toBe(false);
+    expect(besoinContexteSites(q("Bonjour", { sites: [] }))).toBe(false);
+  });
+
+  it.each([
+    "ajoute github.com dans Travail",
+    "Crée un dossier Voyage",
+    "renomme le dossier Dev",
+    "déplace Marmiton",
+    "supprime les doublons",
+    "range mes sites",
+  ])("demandeActions : oui pour « %s »", (t) => expect(demandeActions(t)).toBe(true));
+
+  it.each(["Explique le DNS", "Quel est mon site préféré ?", "Merci beaucoup"])(
+    "demandeActions : non pour « %s »",
+    (t) => expect(demandeActions(t)).toBe(false),
+  );
 });

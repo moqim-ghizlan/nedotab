@@ -85,7 +85,14 @@ service cloud.firestore {
           && request.resource.data.creeLe == request.time
           && request.resource.data.etat == 'ok'
           && (!('origine' in request.resource.data) || request.resource.data.origine in ['barre', 'chat']);
-        allow update: if false; // messages are never modified
+        // Never modified, except (V4.16) the status of the proposal of an answer: once, from
+        // "en_attente" to "appliquee", "ignoree" or "partielle".
+        allow update: if proprietaire(uid)
+          && resource.data.role == 'assistant'
+          && 'proposition' in resource.data
+          && resource.data.statutProposition == 'en_attente'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['statutProposition'])
+          && request.resource.data.statutProposition in ['appliquee', 'ignoree', 'partielle'];
       }
     }
 

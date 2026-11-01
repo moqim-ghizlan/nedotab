@@ -30,6 +30,12 @@ const MARQUEURS = new RegExp(
   String.raw`\b(?:(?:mes|mon|ma|ton|tes|ta) (?:sites?|dossiers?|favoris|liens?|outils?|collection|grille|liste|signets)|j ai|j avais|ai je|dans mon|dans mes|enregistr|sauvegard|rang(?:e|er|ement)\b|organis|doublons?|(?:sites?|outils?|liens?) (?:que j|qui sont|deja))`,
 );
 
+/** The user asks to change the collection (V4.16): the assistant may then propose actions. */
+const VERBES_ACTION = new RegExp(
+  String.raw`\b(?:ajout|cree|creer|creation|deplac|renomm|supprim|retir|mets|mettre|met moi|range|ranger|rangement|organis|classe|trie|fusionn|efface|enlev|nouveau dossier)`,
+);
+export const demandeActions = (texte) => VERBES_ACTION.test(norm(texte));
+
 /**
  * @param {{ mode?: string, sites: Array<{ titre: string, url: string, tags: string[] }>,
  *   messages: Array<{ role: string, texte: string }> }} entree the conversation, last message
@@ -37,9 +43,12 @@ const MARQUEURS = new RegExp(
  */
 export function besoinContexteSites({ mode = MODE_SITES_CHAT_PAR_DEFAUT, sites, messages }) {
   const m = validerModeSitesChat(mode);
-  if (m === "jamais" || !sites?.length) return false;
-  if (m === "toujours") return true;
   const dernier = messages.findLast((x) => x.role === "user")?.texte ?? "";
+  const actions = demandeActions(dernier);
+  if (m === "jamais") return false;
+  // An empty collection still needs the context to add a first site or create a folder.
+  if (!sites?.length && !actions) return false;
+  if (m === "toujours" || actions) return true;
   const precedente = messages.slice(0, -1).findLast((x) => x.role === "assistant")?.texte ?? "";
   // The assistant was just talking about the collection: a short follow-up still concerns it.
   if (precedente.includes("[[site:")) return true;

@@ -708,3 +708,87 @@ body.avec-robot .toasts {
   font-size: var(--taille-xs);
   cursor: pointer;
 }
+
+/* V4.16: card of the actions proposed by the assistant (confirmation before any change) */
+.chat-proposition {
+  margin: var(--espace-2) 0;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-2);
+}
+
+.chat-proposition-titre {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.chat-proposition-resume,
+.chat-proposition-statut {
+  color: var(--texte-secondaire);
+}
+
+.chat-proposition-liste,
+.chat-proposition-apercu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chat-proposition-ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.chat-proposition-ligne input {
+  margin-top: 3px;
+}
+
+.chat-proposition-icone {
+  display: inline-block;
+  width: 1.4em;
+  color: var(--texte-secondaire);
+  text-align: center;
+}
+
+/* Deletions stand out and are never ticked by default. */
+.chat-proposition-ligne--danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.chat-proposition-ligne--danger .chat-proposition-icone {
+  color: var(--danger);
+}
+
+.chat-proposition-ligne--refusee {
+  color: var(--texte-secondaire);
+  text-decoration: line-through;
+}
+
+.chat-proposition-raison {
+  text-decoration: none;
+  display: inline-block;
+  font-style: italic;
+}
+
+.chat-proposition-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  margin-top: var(--espace-2);
+}
+
+.chat-proposition-apercu {
+  margin-top: var(--espace-2);
+  padding-top: var(--espace-2);
+  border-top: 1px dashed var(--bordure);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}

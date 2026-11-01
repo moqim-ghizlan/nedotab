@@ -45,6 +45,7 @@ export {
   ecrireMessageUtilisateur,
   lireToutesConversations,
   listerConversations,
+  majStatutProposition,
   renommerConversation,
   supprimerConversation,
   supprimerMessage,

@@ -44,7 +44,7 @@ export function sitesDe(grille) {
  */
 const champ = (texte) =>
   String(texte ?? "")
-    .replace(/<\/?sites>/gi, " ")
+    .replace(/<\/?(?:sites|dossiers)>/gi, " ")
     .replace(/[|\r\n\t]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -80,6 +80,43 @@ export function construireListe(sites, { champs = CHAMPS_LISTE } = {}) {
       avec.has("chemin") ? s.chemin.map(champ).join(">") : "",
       avec.has("ajoute") ? moisAjout(s.creeLe) : "",
     ].join("|");
+  });
+  return { lignes, table };
+}
+
+export const DOSSIERS_LISTE_MAX = 200;
+
+/** Every folder of a grid (all levels): id, titles from home down to it, sites inside. */
+export function dossiersDe(grille) {
+  const dossiers = [];
+  const compter = (items) =>
+    items.reduce(
+      (n, e) => n + (e?.type === "site" ? 1 : e?.type === "dossier" ? compter(e.items ?? []) : 0),
+      0,
+    );
+  const visiter = (liste, chemin) => {
+    if (!Array.isArray(liste)) return;
+    for (const e of liste) {
+      if (e?.type !== "dossier" || typeof e.id !== "string" || !e.id) continue;
+      const ici = [...chemin, String(e.titre ?? "")];
+      dossiers.push({ id: e.id, chemin: ici, nbSites: compter(e.items ?? []) });
+      visiter(e.items, ici);
+    }
+  };
+  visiter(grille, []);
+  return dossiers;
+}
+
+/**
+ * One line per folder: d3|Travail>Clients|12 (short id, titles from home, sites inside). The
+ * short ids "dN" are the model's way to name a folder (V4.16); the real ids stay in `table`.
+ */
+export function construireListeDossiers(dossiers) {
+  const table = {};
+  const lignes = dossiers.slice(0, DOSSIERS_LISTE_MAX).map((d, i) => {
+    const court = `d${i + 1}`;
+    table[court] = d.id;
+    return [court, d.chemin.map(champ).join(">"), d.nbSites].join("|");
   });
   return { lignes, table };
 }

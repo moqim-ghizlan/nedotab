@@ -68,6 +68,11 @@ export function messageDepuisDoc(doc, id) {
   const base = { id, fsId: doc.id, role: doc.role, texte: doc.texte, date: doc.creeLe, etat: "ok" };
   if (doc.origine) base.origine = doc.origine;
   if (doc.role === "assistant" && doc.etat === "interrompu") base.interrompu = true;
+  // V4.16: actions proposed by the assistant, with their status (kept in the conversation).
+  if (doc.proposition) {
+    base.proposition = doc.proposition;
+    base.statutProposition = doc.statutProposition ?? "en_attente";
+  }
   return base;
 }
 
@@ -117,6 +122,17 @@ export function fusionner(locaux, docs, { nouvelId, accepterAssistant = true }) 
     const m = connus.get(d.id);
     if (m && d.creeLe != null && m.date !== d.creeLe) {
       m.date = d.creeLe; // the time of the server, for a consistent order
+      change = true;
+    }
+    // The status of a proposal changed elsewhere (applied on another device).
+    if (m?.proposition && d.statutProposition && m.statutProposition !== d.statutProposition) {
+      m.statutProposition = d.statutProposition;
+      change = true;
+    }
+    // The proposal of an answer adopted by its id (the stream did not carry it).
+    if (m && !m.proposition && d.proposition) {
+      m.proposition = d.proposition;
+      m.statutProposition = d.statutProposition ?? "en_attente";
       change = true;
     }
   }

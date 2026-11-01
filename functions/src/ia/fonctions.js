@@ -22,7 +22,18 @@ import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
 import { creerConversations, MOTIF_ID_CONVERSATION, referencesReelles } from "./conversations.js";
 import { besoinContexteSites, validerModeSitesChat } from "../partage/besoinContexteSites.js";
-import { CHAMPS_LISTE, construireListe, sitesDe } from "../partage/listeCompacte.js";
+import {
+  CHAMPS_LISTE,
+  construireListe,
+  construireListeDossiers,
+  dossiersDe,
+  sitesDe,
+} from "../partage/listeCompacte.js";
+import {
+  extraireBlocActions,
+  TEXTE_PROPOSITION_PAR_DEFAUT,
+  validerActions,
+} from "../partage/outils.js";
 import { preFiltrer } from "../partage/preFiltre.js";
 import { lireSortieTags } from "./tagsSortie.js";
 import { extraitReduit } from "../partage/extraitPage.js";
@@ -91,6 +102,23 @@ const sansReferences = (messages) =>
       ? { ...m, texte: m.texte.replace(/\[\[site:[^\]]*\]\]/g, "(site de la collection)") }
       : m,
   );
+
+/**
+ * V4.16: the answer without its ```actions block, and the proposal the block holds once
+ * validated against the tables of THIS request (null when there is nothing valid, or no
+ * collection was joined: a short id could not mean anything).
+ */
+function separerProposition(texteBrut, contexte) {
+  const { texte, brut } = extraireBlocActions(texteBrut);
+  if (!contexte || !brut) return { texte, proposition: null };
+  const { actions } = validerActions(brut, {
+    sites: contexte.table,
+    dossiers: contexte.tableDossiers,
+  });
+  if (!actions.length) return { texte, proposition: null };
+  const id = Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0");
+  return { texte: texte.trim() ? texte : TEXTE_PROPOSITION_PAR_DEFAUT, proposition: { id, actions } };
+}
 
 /** Extract of a page (V4.3): same limits as extraitPage.js; a bad shape is refused. */
 function verifierExtrait(v) {
@@ -422,6 +450,9 @@ export function creerFonctionsIa(deps) {
     if (mode === "jamais") return null;
     const sites = sitesDe(donnees?.grille);
     if (!besoinContexteSites({ mode, sites, messages })) return null;
+    const { lignes: lignesDossiers, table: tableDossiers } = construireListeDossiers(
+      dossiersDe(donnees?.grille),
+    );
     const question = messages.findLast((m) => m.role === "user").texte;
     const { sites: retenus } = preFiltrer(sites, question);
     let { lignes, table } = construireListe(retenus);
@@ -430,7 +461,7 @@ export function creerFonctionsIa(deps) {
         champs: CHAMPS_LISTE.filter((c) => c !== "description"),
       }));
     }
-    return { lignes, table };
+    return { lignes, table, lignesDossiers, tableDossiers };
   }
 
   /**
@@ -445,25 +476,30 @@ export function creerFonctionsIa(deps) {
     const contexte = await contexteSites(uid, messages);
     const r = await executerUsage(uid, {
       usage: "chat",
-      systeme: contexte ? systemeChatAvecSites(contexte.lignes) : SYSTEME_CHAT,
+      systeme: contexte
+        ? systemeChatAvecSites(contexte.lignes, contexte.lignesDossiers)
+        : SYSTEME_CHAT,
       messages: sansReferences(messages),
       maxJetons: 1000,
       temperature: 0.5,
     });
-    const sites = contexte ? referencesCitees(r.texte, contexte.table) : {};
+    const { texte: reponse, proposition } = separerProposition(r.texte, contexte);
+    const sites = contexte ? referencesCitees(reponse, contexte.table) : {};
     const messageId = await enregistrer?.({
-      texte: referencesReelles(r.texte, contexte?.table),
+      texte: referencesReelles(reponse, contexte?.table),
       etat: "ok",
+      proposition,
       modele: r.modele,
       jetons: { entree: r.jetonsEntree ?? 0, sortie: r.jetonsSortie ?? 0 },
       sitesCites: Object.values(sites),
     });
     return {
-      texte: r.texte,
+      texte: reponse,
       modele: r.modele,
       jetonsEntree: r.jetonsEntree,
       jetonsSortie: r.jetonsSortie,
       ...(contexte ? { consulte: true, sites } : {}),
+      ...(proposition ? { proposition } : {}),
       ...(messageId ? { messageId } : {}),
     };
   }
@@ -494,7 +530,9 @@ export function creerFonctionsIa(deps) {
       const source = adaptateurFlux({
         cle,
         modele,
-        systeme: contexte ? systemeChatAvecSites(contexte.lignes) : SYSTEME_CHAT,
+        systeme: contexte
+          ? systemeChatAvecSites(contexte.lignes, contexte.lignesDossiers)
+          : SYSTEME_CHAT,
         messages: sansReferences(messages),
         maxJetons: 1000,
         temperature: 0.5,
@@ -517,13 +555,18 @@ export function creerFonctionsIa(deps) {
         ...(fin?.type === "erreur" ? { code: fin.code } : {}),
         ...(signal?.aborted ? { annule: true } : {}),
       });
-      const sites = contexte ? referencesCitees(texte, contexte.table) : {};
+      // A proposal is only taken from a complete answer; a cut one keeps its text, no actions.
+      const complete = fin?.type === "fin";
+      const separe = separerProposition(texte, contexte);
+      const proposition = complete ? separe.proposition : null;
+      const sites = contexte ? referencesCitees(separe.texte, contexte.table) : {};
       // The text is kept even when it stopped halfway (error, "Arrêter"): marked "interrompu".
       const enregistrerTexte = async (etat) =>
-        texte.trim()
+        separe.texte.trim()
           ? enregistrer?.({
-              texte: referencesReelles(texte, contexte?.table),
+              texte: referencesReelles(separe.texte, contexte?.table),
               etat,
+              proposition,
               modele: fin?.modele ?? modele,
               jetons: fin?.jetonsEntree != null
                 ? { entree: fin.jetonsEntree ?? 0, sortie: fin.jetonsSortie ?? 0 }
@@ -543,7 +586,8 @@ export function creerFonctionsIa(deps) {
         jetonsEntree: fin.jetonsEntree,
         jetonsSortie: fin.jetonsSortie,
         raisonArret: fin.raisonArret ?? null,
-        ...(contexte ? { consulte: true, sites: referencesCitees(texte, contexte.table) } : {}),
+        ...(contexte ? { consulte: true, sites } : {}),
+        ...(proposition ? { proposition } : {}),
       };
     } catch (e) {
       journal({
@@ -555,9 +599,10 @@ export function creerFonctionsIa(deps) {
       });
       // A break in the middle (network, provider): what was written is kept as "interrompu".
       if (texte.trim()) {
-        const sites = contexte ? referencesCitees(texte, contexte.table) : {};
+        const { texte: partiel } = separerProposition(texte, contexte);
+        const sites = contexte ? referencesCitees(partiel, contexte.table) : {};
         await enregistrer?.({
-          texte: referencesReelles(texte, contexte?.table),
+          texte: referencesReelles(partiel, contexte?.table),
           etat: "interrompu",
           modele,
           sitesCites: Object.values(sites),

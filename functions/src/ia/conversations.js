@@ -63,7 +63,11 @@ export function creerConversations({ db, horloge = () => Date.now(), aleatoire }
   }
 
   /** The answer of the assistant, written by the server, and the counters of the conversation. */
-  async function enregistrerReponse(uid, convId, { texte, etat, modele, jetons, sitesCites }) {
+  async function enregistrerReponse(
+    uid,
+    convId,
+    { texte, etat, modele, jetons, sitesCites, proposition },
+  ) {
     const id = idMessage();
     const maintenant = new Date(horloge());
     await messages(uid, convId)
@@ -75,6 +79,8 @@ export function creerConversations({ db, horloge = () => Date.now(), aleatoire }
         etat,
         ...(sitesCites?.length ? { sitesCites } : {}),
         ...(jetons ? { jetons } : {}),
+        // V4.16: actions proposed by the assistant; the browser only changes the status.
+        ...(proposition ? { proposition, statutProposition: "en_attente" } : {}),
       });
     const total = (await messages(uid, convId).count().get()).data().count;
     await refConversation(uid, convId).update({

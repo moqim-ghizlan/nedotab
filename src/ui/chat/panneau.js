@@ -14,6 +14,7 @@ import { toast } from "../toast.js";
 import { creerBoutonRobot } from "./boutonRobot.js";
 import { creerHistorique } from "./historique.js";
 import { creerMessages } from "./messages.js";
+import { masquerBlocActions, TEXTE_PROPOSITION_PAR_DEFAUT } from "../../core/outils.js";
 import { texteSansReferences, traduireReferences } from "./referencesSites.js";
 import { creerSaisie } from "./saisie.js";
 
@@ -36,12 +37,14 @@ export const INTERVALLE_RENDU_MS = 50;
  *   notifier?: (message: string) => void,
  *   trouverSite?: (id: string) => object|null,
  *   afficherSite?: (id: string) => void,
+ *   proposer?: { carte: (message: object) => HTMLElement|null },
  *   conversations?: {
  *     creer: (c: { id: string, titre: string }) => Promise<unknown>,
  *     ecrireMessage: (convId: string, m: { id: string, texte: string, origine: string|null }) => Promise<unknown>,
  *     ecouter: (convId: string, rappel: (docs: object[]) => void) => () => void,
  *     chargerAvant: (convId: string, avantMs: number) => Promise<{ messages: object[], suite: boolean }>,
  *     supprimerMessage: (convId: string, msgId: string) => Promise<unknown>,
+ *     majStatut: (convId: string, msgId: string, statut: string) => Promise<unknown>,
  *     lister: Function, renommer: Function, supprimer: Function,
  *   }|null,
  * }} options
@@ -61,6 +64,7 @@ export function creerChat({
   trouverSite = () => null,
   afficherSite,
   conversations = null,
+  proposer = null,
 }) {
   let messages = []; // { id, role, texte, date, etat: "envoi" | "ok" | "erreur", erreur? }
   let enAttente = false;
@@ -120,6 +124,7 @@ export function creerChat({
     trouverSite,
     afficherSite,
     surChargerPrecedents: () => chargerPrecedents(),
+    carteProposition: (m) => proposer?.carte(m) ?? null,
     surReessayer: (m) => demanderReponse(m),
     surReessayerReponse: (m) => {
       const i = messages.indexOf(m);
@@ -132,7 +137,7 @@ export function creerChat({
       demanderReponse(question);
     },
     surCopier: (m) =>
-      copier(m.texte).then(
+      copier(masquerBlocActions(m.texte)).then(
         () => notifier("Réponse copiée"),
         () => notifier("Copie impossible"),
       ),
@@ -371,8 +376,14 @@ export function creerChat({
           if (e.modele) modele = e.modele;
           if (reponse && e.messageId) reponse.fsId = e.messageId;
           // The table "s12 → real id" arrives with the end: the text keeps the real ids.
+          // V4.16: the ```actions block leaves the text, the validated proposal replaces it.
           if (reponse) {
-            reponse.texte = traduireReferences(reponse.texte, e.sites);
+            reponse.texte = traduireReferences(masquerBlocActions(reponse.texte), e.sites);
+            if (e.proposition) {
+              if (!reponse.texte.trim()) reponse.texte = TEXTE_PROPOSITION_PAR_DEFAUT;
+              reponse.proposition = e.proposition;
+              reponse.statutProposition = "en_attente";
+            }
             if (e.consulte) reponse.consulte = true;
           }
         } else if (e.type === "erreur") echec = e.code;
@@ -454,6 +465,16 @@ export function creerChat({
     } catch {
       notifier("Messages précédents indisponibles");
     }
+    rendre();
+  }
+
+  /** The status of a proposal (applied, ignored): kept in the conversation, shown everywhere. */
+  function majStatutProposition(message, statut) {
+    message.statutProposition = statut;
+    if (conversations && convId && message.fsId)
+      conversations
+        .majStatut(convId, message.fsId, statut)
+        .catch(() => notifier("Statut de la proposition non enregistré"));
     rendre();
   }
 
@@ -577,5 +598,6 @@ export function creerChat({
     poserQuestion,
     estOuvert: () => ouvert,
     idConversation: () => convId,
+    majStatutProposition,
   };
 }

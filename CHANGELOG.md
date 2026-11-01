@@ -2,6 +2,17 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.16.0] - 2026-11-01
+
+### Ajouté
+
+- **Actions proposées par l'assistant, avec confirmation** : « crée un dossier Voyage avec mes sites de réservation », « renomme le dossier Dev »… L'assistant propose, rien ne change sans clic.
+  - Le modèle termine sa réponse par un bloc JSON (`actions`), jamais affiché. Le serveur le valide strictement (`src/core/outils.js`, 6 outils, 20 actions au plus, références `sN`/`dN`/`nouveau:i` traduites en identifiants réels) et l'enregistre avec un statut (`en_attente`, `appliquee`, `partielle`, `ignoree`).
+  - Le navigateur convertit la proposition en actions du store et la simule avec le même réducteur et les mêmes garde-fous que l'interface (`src/core/propositions.js`). Une action impossible est grisée avec sa raison.
+  - **Carte** : cases à cocher, suppressions en rouge et décochées par défaut, « Voir le résultat », Appliquer la sélection, Ignorer, toast « Annuler ». Resimulation juste avant l'application ; une proposition ne s'applique qu'une fois, statut synchronisé entre appareils.
+  - Règle Firestore : le navigateur ne peut changer que `statutProposition`, une seule fois.
+  - Prompt du chat v4. Écart avec le plan : bloc JSON de repli plutôt que l'appel d'outils natif du fournisseur.
+
 ## [4.15.0] - 2026-10-31
 
 ### Ajouté

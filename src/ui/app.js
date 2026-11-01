@@ -30,6 +30,7 @@ import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerHorloge } from "./horloge.js";
 import { creerRecherche } from "./recherche.js";
+import { creerGestionPropositions } from "./chat/carteProposition.js";
 import { creerChat } from "./chat/panneau.js";
 import { ouvrirReglages } from "./reglages.js";
 import { creerAvatar } from "./avatar.js";
@@ -507,10 +508,17 @@ export async function demarrerApp(racine) {
     chargerAvant: (convId, avantMs) =>
       avecFb((fb, uid) => fb.chargerMessagesAvant(uid, convId, avantMs)),
     supprimerMessage: (convId, msgId) => avecFb((fb, uid) => fb.supprimerMessage(uid, convId, msgId)),
+    majStatut: (convId, msgId, statut) =>
+      avecFb((fb, uid) => fb.majStatutProposition(uid, convId, msgId, statut)),
     lister: (options) => avecFb((fb, uid) => fb.listerConversations(uid, options)),
     renommer: (id, titre) => avecFb((fb, uid) => fb.renommerConversation(uid, id, titre)),
     supprimer: (id) => avecFb((fb) => fb.supprimerConversation(id)),
   };
+  // V4.16: cards of the actions proposed by the assistant (nothing changes without a click).
+  const proposer = creerGestionPropositions({
+    store,
+    majStatut: (m, statut) => chat.majStatutProposition(m, statut),
+  });
   // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
   const chat = creerChat({
     contexteIa,
@@ -530,6 +538,7 @@ export async function demarrerApp(racine) {
       ouvrirReglages(store, { retourFocus: boutonReglages, session, onglet: "ia" }),
     trouverSite,
     afficherSite,
+    proposer,
     confirmer: async ({ titre, message, valider }) =>
       (await demander({
         titre,

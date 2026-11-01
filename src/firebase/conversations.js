@@ -51,8 +51,13 @@ export const versMessage = (d) => {
     etat: v.etat ?? "ok",
     ...(v.origine ? { origine: v.origine } : {}),
     ...(v.sitesCites ? { sitesCites: v.sitesCites } : {}),
+    ...(v.proposition ? { proposition: v.proposition, statutProposition: v.statutProposition } : {}),
   };
 };
+
+/** V4.16: the only change the browser may make to an answer (the rules allow it once). */
+export const majStatutProposition = (uid, convId, msgId, statut) =>
+  updateDoc(doc(messages(uid, convId), msgId), { statutProposition: statut });
 
 export async function creerConversation(uid, { id, titre }) {
   await setDoc(refConversation(uid, id), {

@@ -1,4 +1,5 @@
 import { el } from "../dom.js";
+import { masquerBlocActions } from "../../core/outils.js";
 import { referencesDe, rendreAvecSites } from "./referencesSites.js";
 
 /**
@@ -19,6 +20,7 @@ export function creerMessages({
   trouverSite = () => null,
   afficherSite,
   surChargerPrecedents = () => {},
+  carteProposition = () => null,
 }) {
   const liste = el("div", {
     class: "chat-liste",
@@ -67,8 +69,16 @@ export function creerMessages({
         "aria-label": "Copier la réponse",
         onclick: () => surCopier(m),
       });
-      const bulle = el("div", { class: "chat-bulle chat-bulle--assistant" }, contenu, pied, copier);
-      e = { bulle, contenu, pied, copier, rendu: null };
+      const actions = el("div", { class: "chat-actions-zone" });
+      const bulle = el(
+        "div",
+        { class: "chat-bulle chat-bulle--assistant" },
+        contenu,
+        actions,
+        pied,
+        copier,
+      );
+      e = { bulle, contenu, actions, pied, copier, rendu: null };
       reponses.set(m.id, e);
     }
     const enFlux = m.etat === "flux";
@@ -79,15 +89,18 @@ export function creerMessages({
         return s ? `${s.titre}${s.url}` : "-";
       })
       .join("|");
+    // V4.16: the ```actions block is never shown, even while it is being written.
+    const texte = masquerBlocActions(m.texte);
     const cle = `${enFlux}
 ${sites}
-${m.texte}`;
+${texte}`;
     if (e.rendu !== cle) {
       e.contenu.replaceChildren(
-        rendreAvecSites(m.texte, { trouver: trouverSite, afficher: afficherSite, fluxEnCours: enFlux }),
+        rendreAvecSites(texte, { trouver: trouverSite, afficher: afficherSite, fluxEnCours: enFlux }),
       );
       e.rendu = cle;
     }
+    e.actions.replaceChildren(...[enFlux ? null : carteProposition(m)].filter(Boolean));
     e.bulle.classList.toggle("chat-bulle--flux", enFlux);
     e.bulle.setAttribute("aria-busy", String(enFlux));
     e.copier.hidden = enFlux;

@@ -56,6 +56,14 @@ async function preparer() {
       creeLe: new Date(),
       etat: "ok",
     });
+    await setDoc(doc(d, `${chemin()}/messages/p1`), {
+      role: "assistant",
+      texte: "Je propose",
+      creeLe: new Date(),
+      etat: "ok",
+      proposition: { id: "x", actions: [{ outil: "creer_dossier", titre: "A", parent: null, sites: [] }] },
+      statutProposition: "en_attente",
+    });
   });
 }
 
@@ -140,10 +148,29 @@ describe("conversations : messages", () => {
     await assertFails(setDoc(doc(db("alice"), "users/alice/conversations/absente/messages/z"), message()));
   });
 
-  it("un message n'est jamais modifié", async () => {
+  it("un message n'est jamais modifié (hors statut de proposition)", async () => {
     await preparer();
     await assertSucceeds(setDoc(doc(db("alice"), `${chemin()}/messages/u1`), message()));
     await assertFails(updateDoc(doc(db("alice"), `${chemin()}/messages/u1`), { texte: "autre" }));
     await assertFails(updateDoc(doc(db("alice"), `${chemin()}/messages/m1`), { texte: "faux" }));
+  });
+
+  it("proposition : le navigateur change seulement le statut, une seule fois", async () => {
+    await preparer();
+    const p1 = () => doc(db("alice"), `${chemin()}/messages/p1`);
+    // not the text, not the actions, not a status that does not exist, not by someone else
+    await assertFails(updateDoc(p1(), { texte: "autre" }));
+    await assertFails(updateDoc(p1(), { proposition: { id: "x", actions: [] } }));
+    await assertFails(updateDoc(p1(), { statutProposition: "n-importe-quoi" }));
+    await assertFails(updateDoc(p1(), { statutProposition: "appliquee", texte: "autre" }));
+    await assertFails(updateDoc(doc(db("bob"), `${chemin("alice")}/messages/p1`), { statutProposition: "appliquee" }));
+    // a message without proposal has no status to change
+    await assertFails(
+      updateDoc(doc(db("alice"), `${chemin()}/messages/m1`), { statutProposition: "appliquee" }),
+    );
+    await assertSucceeds(updateDoc(p1(), { statutProposition: "appliquee" }));
+    // applied once: neither back to "en_attente" nor to another status
+    await assertFails(updateDoc(p1(), { statutProposition: "en_attente" }));
+    await assertFails(updateDoc(p1(), { statutProposition: "ignoree" }));
   });
 });
