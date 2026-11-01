@@ -2,6 +2,18 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.19.0] - 2026-11-02
+
+### Ajouté
+
+- **Suivi de la consommation** (Réglages → Assistant IA → « Consommation et limites… ») : appels et jetons d'aujourd'hui, du mois (graphique en barres par jour en SVG, avec valeurs lisibles et tableau par usage), des 11 mois précédents, appels évités par le cache. C'est une **estimation** fondée sur les tarifs publics (date affichée) ; le montant réel est celui du fournisseur.
+  - Chaque appel payant (tags, recherche, chat, rangement ; une réponse interrompue est marquée « incomplète ») incrémente `users/{uid}/usage/{AAAA-MM}` avec des compteurs seulement : jamais de question, de message, de titre ni d'adresse. Écriture réservée aux fonctions (règles + tests d'émulateur).
+  - **Prix dans `config/ia`** (`prix` par `fournisseur:modele`, `tauxChange`, `majPrix`), saisis par le propriétaire, jamais dans le code. Modèle sans prix : jetons comptés, « coût inconnu ».
+  - **Limites personnelles** (jour et mois, en appels ou en euros estimés, synchronisées dans `reglages.ia.limites`) : appliquées côté serveur avant chaque appel payant (`limite-personnelle`), en plus du quota du service. Alerte à 80 % dans l'écran, suspension à 100 %.
+  - **Cache des réponses** par utilisateur pour les tags (30 jours) et la recherche intelligente (24 h) : même demande, même grille, même modèle et même prompt = aucun nouvel appel ni quota consommé, comptée dans « appels évités ». Jamais pour le chat. Stocké sous `prive/` (fermé au navigateur), TTL Firestore sur `expireLe`, expiration vérifiée aussi à la lecture. L'IA désactivée ne sert plus le cache.
+- Correctif : une limite personnelle en euros très petite n'était pas arrondie à zéro (elle devenait « aucune limite »).
+- **Non fait** (écarts avec le plan) : bandeau d'alerte dans le chat et la barre (l'alerte est dans l'écran Consommation), prix personnalisés pour les modèles personnalisés, estimation de coût avant le rattrapage et la vérification.
+
 ## [4.18.0] - 2026-11-02
 
 ### Modifié

@@ -11,6 +11,7 @@
  * their state (provider, last 4 characters) is read from it.
  */
 import { validerModeSitesChat } from "./besoinContexteSites.js";
+import { validerLimites } from "./estimation.js";
 import { validerPreference } from "./routageQuestion.js";
 
 export const USAGES = ["tags", "recherche", "chat"];
@@ -25,6 +26,8 @@ export function validerIa(ia) {
   const resultat = { actif: ia?.actif === true };
   const question = validerPreference(ia?.questionBarre);
   if (question !== "auto") resultat.questionBarre = question;
+  const limites = validerLimites(ia?.limites); // V4.19: personal limits (day / month)
+  if (limites) resultat.limites = limites;
   const sitesChat = validerModeSitesChat(ia?.sitesChat);
   if (sitesChat !== "auto") resultat.sitesChat = sitesChat;
   // V4.6: light lock of the catch-up between devices (who, last progress).
@@ -37,7 +40,7 @@ export function validerIa(ia) {
 /** True when the settings are the default: nothing needs to be stored. */
 export const estIaParDefaut = (ia) => {
   const v = validerIa(ia);
-  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat;
+  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat && !v.limites;
 };
 
 /** What is stored: nothing for the default settings. */
@@ -60,6 +63,14 @@ export const avecSitesChat = (ia, valeur) => {
   delete reste.sitesChat;
   const m = validerModeSitesChat(valeur);
   return m === "auto" ? reste : { ...reste, sitesChat: m };
+};
+
+/** V4.19: the personal limits (null or empty removes them). */
+export const avecLimites = (ia, limites) => {
+  const reste = { ...ia };
+  delete reste.limites;
+  const l = validerLimites(limites);
+  return l ? { ...reste, limites: l } : reste;
 };
 
 export const avecActif = (ia, actif) => ({ ...ia, actif: actif === true });

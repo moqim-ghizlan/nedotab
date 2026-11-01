@@ -46,6 +46,13 @@ export function normaliserConfig(brute) {
         ? c.modele
         : CONFIG_PAR_DEFAUT.modele,
     fournisseurs: Array.isArray(c.fournisseurs) ? c.fournisseurs : CONFIG_PAR_DEFAUT.fournisseurs,
+    // V4.19: prices written by the owner from the official pages (never in the code).
+    prix: c.prix && typeof c.prix === "object" && !Array.isArray(c.prix) ? c.prix : {},
+    tauxChange:
+      c.tauxChange && typeof c.tauxChange === "object" && !Array.isArray(c.tauxChange)
+        ? c.tauxChange
+        : {},
+    majPrix: c.majPrix?.toMillis?.() ?? (Number.isFinite(c.majPrix) ? c.majPrix : null),
   };
 }
 

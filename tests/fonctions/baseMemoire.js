@@ -4,6 +4,9 @@
  * count(), batch(), recursiveDelete(). Transactions run one after the other, as Firestore
  * guarantees for conflicting writes on one document.
  */
+/** Stand-in for FieldValue.increment. */
+export const inc = (n) => ({ __inc: n });
+
 export function baseMemoire(initial = {}) {
   const docs = new Map(Object.entries(initial).map(([k, v]) => [k, structuredClone(v)]));
   let file = Promise.resolve();
@@ -15,6 +18,16 @@ export function baseMemoire(initial = {}) {
     data: () => structuredClone(docs.get(chemin)),
   });
   const ecrire = (chemin, v) => void docs.set(chemin, structuredClone(v));
+  // set(…, { merge: true }) with increments: nested objects merge, { __inc: n } adds.
+  const fusionProfonde = (cible, delta) => {
+    for (const [k, v] of Object.entries(delta)) {
+      if (v && typeof v === "object" && "__inc" in v) cible[k] = (cible[k] ?? 0) + v.__inc;
+      else if (v && typeof v === "object" && !(v instanceof Date) && !Array.isArray(v))
+        cible[k] = fusionProfonde(cible[k] ?? {}, v);
+      else cible[k] = v;
+    }
+    return cible;
+  };
   const fusionner = (chemin, v) => {
     if (!docs.has(chemin)) throw new Error(`update d'un document absent : ${chemin}`);
     docs.set(chemin, { ...docs.get(chemin), ...structuredClone(v) });
@@ -26,7 +39,10 @@ export function baseMemoire(initial = {}) {
       chemin,
       id: chemin.split("/").at(-1),
       get: async () => instantane(chemin),
-      set: async (v) => ecrire(chemin, v),
+      set: async (v, options) =>
+        options?.merge
+          ? void docs.set(chemin, fusionProfonde(structuredClone(docs.get(chemin) ?? {}), v))
+          : ecrire(chemin, v),
       update: async (v) => fusionner(chemin, v),
       delete: async () => void docs.delete(chemin),
     };

@@ -5,7 +5,7 @@
  */
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineInt, defineSecret } from "firebase-functions/params";
@@ -73,6 +73,7 @@ const fonctionsIa = creerFonctionsIa({
   fournisseurs: FOURNISSEURS,
   config: lireConfigIa,
   consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  increment: (n) => FieldValue.increment(n),
   // Provider, model, duration, tokens, error code: never the key nor the messages.
   // V4.5: the page is read by the server through recupererPage (anti-SSRF), then summarised.
   lirePage: async (url) => {
@@ -138,6 +139,7 @@ export const iaChatFlux = onCall(
 );
 export const iaRechercher = appelIa(fonctionsIa.rechercher);
 export const iaSuggererRangement = appelIa(fonctionsIa.suggererRangement);
+export const iaConsommation = appelIa(fonctionsIa.consommation);
 export const iaQuotaRestant = appelIa(fonctionsIa.quotaRestant);
 export const iaDefinirQuota = appelIa(fonctionsIa.definirQuota);
 

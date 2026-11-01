@@ -14,6 +14,7 @@ import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { creerServiceIa } from "../services/ia.js";
+import { ouvrirConsommation } from "./consommation.js";
 import { ouvrirRattrapage } from "./rattrapage.js";
 import { toast } from "../toast.js";
 
@@ -423,11 +424,21 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     const carteCle = fournisseursOffertes().length
       ? el("div", { class: "ia-carte" }, el("ul", { class: "ia-liste" }, lignesCles), testeur)
       : null;
+    // V4.19: what the AI costs, the cache savings and the personal limits.
+    const consommation = reglages.actif
+      ? el("button", {
+          type: "button",
+          class: "bouton",
+          texte: "Consommation et limites…",
+          onclick: (e) => ouvrirConsommation({ store, retourFocus: e.currentTarget }),
+        })
+      : null;
     racine.replaceChildren(
       ...[
         activation,
         questionBarre,
         sitesChat,
+        consommation,
         erreurCles ? el("p", { class: "compte-erreur", role: "alert", texte: erreurCles }) : null,
         !prete && !erreurCles ? note("Chargement…") : null,
         guide,

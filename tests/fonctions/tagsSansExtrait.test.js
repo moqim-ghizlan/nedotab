@@ -58,7 +58,8 @@ describe("genererTags sans extrait (V4.5)", () => {
     const quota = db.lire("users/u1/prive/quotaPages");
     expect(quota.appels).toBe(1);
     await db.doc("users/u1/prive/quotaPages").set({ jour: quota.jour, appels: 300 });
-    await expect(ia.genererTags("u1", { url: "https://a.fr", titre: "A" })).rejects.toMatchObject({
+    // another page (the same one would be answered by the cache, V4.19)
+    await expect(ia.genererTags("u1", { url: "https://b.fr", titre: "B" })).rejects.toMatchObject({
       pages: true,
       message: expect.stringMatching(/lecture de pages/),
     });
@@ -98,8 +99,9 @@ describe("limite quotidienne choisie par l'utilisateur (V4.7)", () => {
   it("la limite choisie est appliquée aux appels", async () => {
     const { db, ia } = await monter(async () => null);
     await ia.definirQuota("u1", { limite: 2 });
+    let n = 0; // a different page each time: the same one would come from the cache (V4.19)
     const appel = () =>
-      ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait: { titre: "A" } });
+      ia.genererTags("u1", { url: `https://a${++n}.fr`, titre: "A", extrait: { titre: "A" } });
     await appel();
     await appel();
     await expect(appel()).rejects.toThrow(/Limite/);

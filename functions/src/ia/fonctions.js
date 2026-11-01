@@ -26,6 +26,10 @@ import {
 import { lireSortieRangement } from "./rangementSortie.js";
 import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
+import { creerCache, cleCache, DUREE_RECHERCHE_MS, DUREE_TAGS_MS } from "../cacheIa.js";
+import { creerUsage } from "../usage.js";
+import { PROMPT_RECHERCHE_VERSION } from "./prompts/recherche.js";
+import { PROMPT_TAGS_VERSION } from "./prompts/tags.js";
 import { creerConversations, MOTIF_ID_CONVERSATION, referencesReelles } from "./conversations.js";
 import { besoinContexteSites, validerModeSitesChat } from "../partage/besoinContexteSites.js";
 import {
@@ -49,7 +53,7 @@ import { ErreurPage } from "../reseau/recupererPage.js";
 export const MESSAGE_TEST = "Réponds uniquement par OK";
 export const JETONS_TEST = 256; // small, but room for a little reasoning before "OK"
 
-const USAGES = ["tags", "recherche", "chat"];
+const USAGES = ["tags", "recherche", "chat", "rangement"];
 
 /** One message of a call: the list of the sites of the smart search can be long (V4.9). */
 export const MESSAGE_TEXTE_MAX = 150000;
@@ -156,6 +160,11 @@ export function creerFonctionsIa(deps) {
   const { db, secret, fournisseurs, config, consommer, journal = () => {} } = deps;
   const lirePage = deps.lirePage ?? (async () => null); // (url) => extrait | null, V4.5
   const horloge = deps.horloge ?? (() => Date.now());
+  // V4.19: usage statistics and personal limits (when an `increment` is given), answer cache.
+  const usageSvc = deps.increment
+    ? creerUsage({ db, config, increment: deps.increment, horloge })
+    : null;
+  const cache = creerCache({ db, horloge });
   const refCles = (uid) => db.doc(`users/${uid}/prive/ia`);
   const lireCles = async (uid) => {
     const snap = await refCles(uid).get();
@@ -289,6 +298,8 @@ export function creerFonctionsIa(deps) {
     const entree = (await lireCles(uid))[fournisseur];
     if (!entree?.chiffre) throw new ErreurFournisseur("cle-absente");
     const c = await config();
+    // V4.19: the user's own limit, apart from the quota of the service.
+    if (await usageSvc?.verifierLimite(uid)) throw new ErreurFournisseur("limite-personnelle");
     await consommer(uid, { n: 1, limite: await limiteDe(uid, c) });
     const cle = dechiffrer(entree.chiffre, secret(), donneesAssociees(uid, fournisseur));
     return { fournisseur, modele, cle };
@@ -333,6 +344,13 @@ export function creerFonctionsIa(deps) {
         dureeMs: horloge() - debut,
         jetons: r.jetonsEntree + r.jetonsSortie,
       });
+      await usageSvc?.enregistrer(uid, {
+        usage,
+        fournisseur,
+        modele,
+        jetonsEntree: r.jetonsEntree,
+        jetonsSortie: r.jetonsSortie,
+      });
       return {
         texte: r.texte,
         modele: r.modele,
@@ -355,6 +373,22 @@ export function creerFonctionsIa(deps) {
       url: { type: "chaine", requis: true, max: 2048, motif: /^https?:\/\/\S+$/i },
       titre: { type: "chaine", max: 300 },
     });
+    // V4.19: the same page, extract, model and prompt give the same tags: no new paid call.
+    const modeleTags = (await config()).modele;
+    const cleTags = cleCache([
+      "tags",
+      PROMPT_TAGS_VERSION,
+      modeleTags,
+      url,
+      titre ?? null,
+      extrait ?? null,
+    ]);
+    await choixDeLUsage(uid); // AI switched off: not even the cache answers
+    const connu = await cache.lire(uid, cleTags);
+    if (connu) {
+      await usageSvc?.evite(uid);
+      return connu;
+    }
     // No extract (web app): the server reads the page itself, safely (recupererPage). A page
     // that cannot be read gives a reduced extract: the tags then come from title and domain.
     let page = extrait;
@@ -391,7 +425,11 @@ export function creerFonctionsIa(deps) {
         formatJson: true,
       });
       const sortie = lireSortieTags(r.texte);
-      if (sortie) return { ...sortie, modele: r.modele };
+      if (sortie) {
+        const reponse = { ...sortie, modele: r.modele };
+        await cache.ecrire(uid, cleTags, reponse, DUREE_TAGS_MS);
+        return reponse;
+      }
     }
     throw new ErreurFournisseur("reponse-invalide");
   }
@@ -420,6 +458,20 @@ export function creerFonctionsIa(deps) {
         champs: CHAMPS_LISTE.filter((c) => c !== "description"),
       }));
     }
+    // V4.19: same question, same grid, model and prompt: answered from the cache (24 h).
+    const cleRecherche = cleCache([
+      "recherche",
+      PROMPT_RECHERCHE_VERSION,
+      (await config()).modele,
+      question.toLowerCase().replace(/\s+/g, " ").trim(),
+      cleCache(lignes),
+    ]);
+    await choixDeLUsage(uid);
+    const connuRecherche = await cache.lire(uid, cleRecherche);
+    if (connuRecherche) {
+      await usageSvc?.evite(uid);
+      return connuRecherche;
+    }
     const date = new Date(horloge()).toISOString().slice(0, 10);
     const messages = [{ role: "user", texte: messageRecherche({ date, question, lignes }) }];
     for (let essai = 0; essai < 2; essai++) {
@@ -439,7 +491,11 @@ export function creerFonctionsIa(deps) {
         formatJson: true,
       });
       const sortie = lireSortieRecherche(r.texte, table);
-      if (sortie) return { ...sortie, modele: r.modele, preFiltre };
+      if (sortie) {
+        const reponse = { ...sortie, modele: r.modele, preFiltre };
+        await cache.ecrire(uid, cleRecherche, reponse, DUREE_RECHERCHE_MS);
+        return reponse;
+      }
     }
     throw new ErreurFournisseur("reponse-invalide");
   }
@@ -561,6 +617,14 @@ export function creerFonctionsIa(deps) {
         ...(fin?.type === "erreur" ? { code: fin.code } : {}),
         ...(signal?.aborted ? { annule: true } : {}),
       });
+      await usageSvc?.enregistrer(uid, {
+        usage: "chat",
+        fournisseur,
+        modele,
+        jetonsEntree: fin?.jetonsEntree ?? 0,
+        jetonsSortie: fin?.jetonsSortie ?? 0,
+        incomplet: fin?.type !== "fin",
+      });
       // A proposal is only taken from a complete answer; a cut one keeps its text, no actions.
       const complete = fin?.type === "fin";
       const separe = separerProposition(texte, contexte);
@@ -644,7 +708,7 @@ export function creerFonctionsIa(deps) {
     ];
     for (let essai = 0; essai < 2; essai++) {
       const r = await executerUsage(uid, {
-        usage: "chat",
+        usage: "rangement",
         systeme: SYSTEME_RANGEMENT,
         messages:
           essai === 0
@@ -662,6 +726,13 @@ export function creerFonctionsIa(deps) {
       if (sortie) return { ...sortie, modele: r.modele };
     }
     throw new ErreurFournisseur("reponse-invalide");
+  }
+
+  /** V4.19: usage of today, of the month and of the 11 months before, with the limits. */
+  async function consommation(uid, donnees) {
+    valider(donnees, {});
+    if (!usageSvc) throw new EntreeInvalide("Statistiques indisponibles.");
+    return usageSvc.consommation(uid);
   }
 
   // --- V4.15: conversations (the history comes from Firestore, never from the browser) ---------
@@ -766,6 +837,7 @@ export function creerFonctionsIa(deps) {
     chat,
     chatFlux,
     suggererRangement,
+    consommation,
     chatConversation,
     chatFluxConversation,
     supprimerConversation,

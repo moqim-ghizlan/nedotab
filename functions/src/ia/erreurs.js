@@ -18,6 +18,7 @@ const PAR_CODE = {
   "ia-desactivee": ["failed-precondition", "L'assistant IA est désactivé."],
   "reponse-invalide": ["internal", "Réponse de l'IA inutilisable."],
   "fournisseur-indisponible": ["unavailable", "Fournisseur indisponible pour l'instant."],
+  "limite-personnelle": ["resource-exhausted", "Votre limite personnelle est atteinte."],
   "conversation-introuvable": ["not-found", "Conversation introuvable."],
   "conversation-pleine": ["failed-precondition", "Cette conversation est pleine (200 messages)."],
   "conversation-sans-question": ["failed-precondition", "Aucune question à laquelle répondre."],

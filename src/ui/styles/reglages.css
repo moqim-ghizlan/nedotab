@@ -2071,3 +2071,74 @@ body.fond-clair .carte-action--principale {
     align-items: stretch;
   }
 }
+
+/* V4.19: consumption screen */
+.conso {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-height: 65vh;
+  overflow-y: auto;
+}
+
+.conso-bloc h3 {
+  margin: 0 0 var(--espace-1);
+  font-size: var(--taille-m);
+}
+
+.conso-graphique {
+  width: 100%;
+  height: 80px;
+}
+
+.conso-barre {
+  fill: var(--accent);
+}
+
+.conso-choix {
+  display: flex;
+  gap: var(--espace-2);
+  margin: var(--espace-2) 0;
+}
+
+.conso-choix [aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.conso-tableau {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--taille-s);
+}
+
+.conso-tableau th,
+.conso-tableau td {
+  padding: 2px var(--espace-2);
+  text-align: right;
+}
+
+.conso-tableau th[scope="row"],
+.conso-tableau caption {
+  text-align: left;
+}
+
+.conso-champ {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-2);
+  margin-top: var(--espace-1);
+  font-size: var(--taille-s);
+}
+
+.conso-limite {
+  width: 6rem;
+  padding: var(--espace-1) var(--espace-2);
+}
+
+.conso-mois {
+  margin: 0;
+  padding-left: var(--espace-4);
+  font-size: var(--taille-s);
+}

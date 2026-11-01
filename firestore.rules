@@ -96,6 +96,13 @@ service cloud.firestore {
       }
     }
 
+    // V4.19: statistics of use (counters only), written by the functions; the user reads them.
+    // The cache of the answers lives under prive/ and stays closed to the browser.
+    match /users/{uid}/usage/{mois} {
+      allow read: if proprietaire(uid);
+      allow write: if false;
+    }
+
     match /config/{doc} {
       allow read: if connecte();
       allow write: if false;
