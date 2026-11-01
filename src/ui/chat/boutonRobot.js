@@ -1,4 +1,5 @@
 import { el } from "../dom.js";
+import { visibiliteRobot } from "./geometrie.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -37,7 +38,7 @@ export function iconeRobot() {
 
 /** Floating button at the bottom right (V4.11): opens the assistant. */
 export function creerBoutonRobot({ surClic }) {
-  return el(
+  const bouton = el(
     "button",
     {
       type: "button",
@@ -49,4 +50,15 @@ export function creerBoutonRobot({ surClic }) {
     },
     iconeRobot(),
   );
+  // V4.18: hidden while scrolling down, back when scrolling up (as usual on iOS).
+  let etat = { cache: false, repere: 0 };
+  globalThis.addEventListener?.(
+    "scroll",
+    () => {
+      etat = visibiliteRobot({ ...etat, y: globalThis.scrollY ?? 0 });
+      bouton.classList.toggle("robot-bouton--cache", etat.cache);
+    },
+    { passive: true },
+  );
+  return bouton;
 }

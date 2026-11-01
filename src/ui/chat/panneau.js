@@ -12,6 +12,7 @@ import { el } from "../dom.js";
 import { messageErreurIa } from "../messagesIa.js";
 import { toast } from "../toast.js";
 import { creerBoutonRobot } from "./boutonRobot.js";
+import { geometrieFeuille } from "./geometrie.js";
 import { creerHistorique } from "./historique.js";
 import { creerMessages } from "./messages.js";
 import { masquerBlocActions, TEXTE_PROPOSITION_PAR_DEFAUT } from "../../core/outils.js";
@@ -573,9 +574,21 @@ export function creerChat({
   );
 
   // The keyboard of a phone must not hide the input: follow the visible height.
-  globalThis.visualViewport?.addEventListener("resize", () => {
-    panneau.style.setProperty("--chat-hauteur", `${globalThis.visualViewport.height}px`);
-  });
+  // V4.18: the sheet follows the visible area (height and scroll offset of the visual viewport),
+  // also when the keyboard bar of an iPad changes the height.
+  const suivreClavier = () => {
+    const v = globalThis.visualViewport;
+    if (!v) return;
+    const g = geometrieFeuille({
+      hauteurVisible: v.height,
+      decalageHaut: v.offsetTop,
+      hauteurFenetre: globalThis.innerHeight,
+    });
+    panneau.style.setProperty("--chat-hauteur", `${g.hauteur}px`);
+    panneau.style.setProperty("--chat-decalage", `${g.decalage}px`);
+  };
+  globalThis.visualViewport?.addEventListener("resize", suivreClavier);
+  globalThis.visualViewport?.addEventListener("scroll", suivreClavier);
 
   // Ctrl/Cmd+I opens or closes the assistant (when it is available).
   document.addEventListener("keydown", (e) => {

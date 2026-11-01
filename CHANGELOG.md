@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.18.0] - 2026-11-02
+
+### Modifié
+
+- **IA plus confortable sur iPhone et iPad** (présentation seulement, aucune logique métier).
+  - La feuille du chat suit la zone visible du clavier iOS (`visualViewport` : hauteur et décalage, `geometrieFeuille`, fonction pure testée) ; le défilement de la page derrière est bloqué tant que la feuille est ouverte.
+  - Le bouton robot se masque en descendant dans la page et réapparaît en remontant (`visibiliteRobot`), sans animation si `prefers-reduced-motion` ; la grille garde une marge basse pour qu'il ne cache pas le dernier rang.
+  - Cibles tactiles de 44 px : Envoyer, cases et actions des cartes de proposition, cartes de sites, historique, onglets de « Ranger mes sites ».
+- **Non fait dans cette version** (à voir sur appareil réel) : appui long sur une bulle (Partager), balayage pour supprimer dans l'historique, « Voir le résultat » en feuille plein écran, groupes repliables du rangement, rendu incrémental du streaming (aucune lenteur mesurée, donc laissé tel quel pour ne pas risquer le nettoyage DOMPurify). Aucune vérification n'a été faite sur iPhone ou iPad réels.
+
 ## [4.17.0] - 2026-11-01
 
 ### Ajouté

@@ -792,3 +792,72 @@ body.avec-robot .toasts {
   color: var(--texte-secondaire);
   font-size: var(--taille-xs);
 }
+
+/* V4.18: iPhone and iPad */
+.robot-bouton {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.robot-bouton.robot-bouton--cache {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(80px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .robot-bouton {
+    transition: none;
+  }
+}
+
+/* The bottom row of the grid never hides under the robot. */
+body.avec-robot #app {
+  padding-bottom: calc(52px + var(--espace-5) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 899px) {
+  /* The sheet follows the visible area; the page behind it does not scroll (iOS scrolls the
+     whole page when a field takes the focus). */
+  .chat {
+    transform: translateY(var(--chat-decalage, 0px));
+  }
+
+  html.chat-ouvert,
+  html.chat-ouvert body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .chat-envoyer {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .chat-proposition-ligne input {
+    width: 28px;
+    height: 28px;
+    margin: 0;
+  }
+
+  .chat-proposition-ligne label {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    flex: 1;
+  }
+
+  .chat-proposition .bouton,
+  .chat-site-grille,
+  .chat-historique-action,
+  .rangement-onglet {
+    min-height: 44px;
+  }
+
+  .chat-site-lien {
+    min-height: 44px;
+  }
+}
