@@ -166,3 +166,74 @@ export async function recupererPage(
     clearTimeout(minuteur);
   }
 }
+
+export const DELAI_SONDE_MS = 5000;
+
+/** One light request (HEAD, or GET of which only the headers are read) to a verified address. */
+function demanderLeger({ url, adresse, famille }, methode, ouvrir, signal) {
+  return new Promise((resolve, reject) => {
+    const req = ouvrir(url.protocol, {
+      protocol: url.protocol,
+      hostname: url.hostname.replace(/^\[|\]$/g, ""),
+      port: url.port || undefined,
+      path: `${url.pathname}${url.search}`,
+      method: methode,
+      headers: { "user-agent": USER_AGENT, accept: "*/*", "accept-encoding": "identity" },
+      agent: false,
+      servername: estAdresseIp(url.hostname) ? undefined : url.hostname,
+      lookup: (_h, options, cb) =>
+        options?.all
+          ? cb(null, [{ address: adresse, family: famille }])
+          : cb(null, adresse, famille),
+    });
+    const fin = (e) => {
+      req.destroy();
+      reject(e);
+    };
+    signal.addEventListener("abort", () => fin(new ErreurPage("delai-depasse")), { once: true });
+    req.on("error", () => fin(new ErreurPage("inaccessible")));
+    req.on("response", (rep) => {
+      // Only the status and the headers matter: the body is never read.
+      rep.destroy();
+      req.destroy();
+      resolve({ statut: rep.statusCode, location: rep.headers.location });
+    });
+    req.end();
+  });
+}
+
+/**
+ * V4.17: does a site still answer? Same protections as recupererPage (http/https, ports 80 and
+ * 443, DNS verified before connecting, 3 redirections by hand, privacy exclusions), but a light
+ * request: HEAD, then GET (headers only) when HEAD is refused.
+ * @returns {Promise<{ statut: number, urlFinale: string }>} final status after the redirections
+ * @throws {ErreurPage} adresse-interdite | confidentialite | introuvable (DNS) | inaccessible |
+ *   delai-depasse | trop-de-redirections
+ */
+export async function sonderSite(
+  adresse,
+  { resoudre = resoudreDns, ouvrir = ouvrirReel, delaiMs = DELAI_SONDE_MS } = {},
+) {
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), delaiMs);
+  try {
+    let courante = adresse;
+    for (let saut = 0; saut <= REDIRECTIONS_MAX; saut++) {
+      const regle = analyserConfidentialite(courante);
+      if (regle.raison === "invalide") throw new ErreurPage("adresse-interdite");
+      if (!regle.contenu) throw new ErreurPage("confidentialite");
+      const cible = await verifier(courante, resoudre);
+      let r = await demanderLeger(cible, "HEAD", ouvrir, controleur.signal);
+      if (r.statut === 405 || r.statut === 501)
+        r = await demanderLeger(cible, "GET", ouvrir, controleur.signal);
+      if (r.statut >= 300 && r.statut < 400 && r.location) {
+        courante = new URL(r.location, cible.url).href;
+        continue;
+      }
+      return { statut: r.statut, urlFinale: courante };
+    }
+    throw new ErreurPage("trop-de-redirections");
+  } finally {
+    clearTimeout(minuteur);
+  }
+}

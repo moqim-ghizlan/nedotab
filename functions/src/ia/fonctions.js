@@ -18,6 +18,12 @@ import {
   SYSTEME_RECHERCHE,
 } from "./prompts/recherche.js";
 import { lireSortieRecherche } from "./rechercheSortie.js";
+import {
+  messageRangement,
+  RAPPEL_FORMAT as RAPPEL_RANGEMENT,
+  SYSTEME_RANGEMENT,
+} from "./prompts/rangement.js";
+import { lireSortieRangement } from "./rangementSortie.js";
 import { diffuser } from "./chatFlux.js";
 import { SYSTEME_CHAT, systemeChatAvecSites } from "./prompts/chat.js";
 import { creerConversations, MOTIF_ID_CONVERSATION, referencesReelles } from "./conversations.js";
@@ -612,6 +618,52 @@ export function creerFonctionsIa(deps) {
     }
   }
 
+  /**
+   * V4.17: tidying suggestions. The model answers with independent groups of actions
+   * (creer_dossier, deplacer, renommer: never a deletion), validated like the proposals of the
+   * chat; the browser shows each group with the same confirmation card. One retry on a bad format.
+   */
+  async function suggererRangement(uid, donnees) {
+    const { portee } = valider(donnees, {
+      portee: { type: "chaine", requis: true, valeurs: () => ["accueil", "tout"] },
+    });
+    const snap = await db.doc(`users/${uid}`).get();
+    const grille = snap.exists ? snap.data()?.grille : [];
+    let sites = sitesDe(grille);
+    if (portee === "accueil") sites = sites.filter((s) => s.chemin.length === 0);
+    // Nothing to tidy: no call, nothing paid.
+    if (sites.length < 2) return { groupes: [] };
+    const { lignes, table } = construireListe(sites.slice(0, 200), {
+      champs: CHAMPS_LISTE.filter((c) => c !== "ajoute"),
+    });
+    const { lignes: lignesDossiers, table: tableDossiers } = construireListeDossiers(
+      dossiersDe(grille),
+    );
+    const messages = [
+      { role: "user", texte: messageRangement({ portee, lignes, lignesDossiers }) },
+    ];
+    for (let essai = 0; essai < 2; essai++) {
+      const r = await executerUsage(uid, {
+        usage: "chat",
+        systeme: SYSTEME_RANGEMENT,
+        messages:
+          essai === 0
+            ? messages
+            : [
+                ...messages,
+                { role: "assistant", texte: "..." },
+                { role: "user", texte: RAPPEL_RANGEMENT },
+              ],
+        maxJetons: 3000,
+        temperature: 0.3,
+        formatJson: true,
+      });
+      const sortie = lireSortieRangement(r.texte, { sites: table, dossiers: tableDossiers });
+      if (sortie) return { ...sortie, modele: r.modele };
+    }
+    throw new ErreurFournisseur("reponse-invalide");
+  }
+
   // --- V4.15: conversations (the history comes from Firestore, never from the browser) ---------
   const conversations = creerConversations({ db, horloge });
   const schemaConversation = { convId: { type: "chaine", requis: true, motif: MOTIF_ID_CONVERSATION } };
@@ -713,6 +765,7 @@ export function creerFonctionsIa(deps) {
     rechercher,
     chat,
     chatFlux,
+    suggererRangement,
     chatConversation,
     chatFluxConversation,
     supprimerConversation,

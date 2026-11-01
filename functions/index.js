@@ -18,7 +18,8 @@ import { FOURNISSEURS } from "./src/ia/fournisseurs/index.js";
 import { parseHTML } from "linkedom";
 import { extraireContenu } from "./src/partage/extraitPage.js";
 import { consommer } from "./src/quota.js";
-import { recupererPage } from "./src/reseau/recupererPage.js";
+import { recupererPage, sonderSite } from "./src/reseau/recupererPage.js";
+import { creerVerificationSites } from "./src/sites/verifier.js";
 
 initializeApp();
 
@@ -136,5 +137,27 @@ export const iaChatFlux = onCall(
   },
 );
 export const iaRechercher = appelIa(fonctionsIa.rechercher);
+export const iaSuggererRangement = appelIa(fonctionsIa.suggererRangement);
 export const iaQuotaRestant = appelIa(fonctionsIa.quotaRestant);
 export const iaDefinirQuota = appelIa(fonctionsIa.definirQuota);
+
+// --- V4.17: do the sites of the user still answer? (no AI call, own daily quota) -------------
+const verifierSites = creerVerificationSites({
+  db: getFirestore(),
+  consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  sonder: sonderSite,
+});
+export const iaVerifierSites = onCall(
+  { region: "europe-west1", maxInstances: 5, timeoutSeconds: 60, memory: "256MiB", enforceAppCheck: false },
+  async (requete) => {
+    if (!requete.auth)
+      throw new HttpsError("unauthenticated", "Connectez-vous pour vérifier vos sites.");
+    try {
+      return await verifierSites(requete.auth.uid, requete.data);
+    } catch (e) {
+      const { code, message, details } = versErreurAppel(e);
+      if (code === "internal") logger.error("verification : erreur interne", { nom: e?.name });
+      throw new HttpsError(code, message, details);
+    }
+  },
+);

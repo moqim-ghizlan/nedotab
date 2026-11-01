@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.17.0] - 2026-11-01
+
+### Ajouté
+
+- **« Ranger mes sites »** (Réglages → Mes données) : doublons, sites qui ne répondent plus et suggestions de rangement. Tout passe par la carte de confirmation de la V4.16 (suppressions listées et décochées, toast « Annuler »). Pas de « Tout appliquer ».
+  - **Doublons** (locaux, sans IA, même sans compte) : exacts (même adresse au `www`, schéma, casse et `/` final près) et probables (paramètres de suivi `utm_*`, `fbclid`, `gclid`, `ref`… ignorés). « Garder celle-ci » propose la suppression des autres copies.
+  - **Sites qui ne répondent plus** : fonction `iaVerifierSites` (50 sites au plus par appel, adresses lues dans la grille de l'utilisateur côté serveur). Mode léger de `recupererPage` (`sonderSite` : HEAD, repli GET sur l'en-tête seul, mêmes protections anti-SSRF, 5 s, 3 redirections). Statuts : ok, redirigé, introuvable, erreur serveur, injoignable, bloqué (403/429 : rien à conclure), non vérifiable. Quota séparé de 300 vérifications par jour. Un site n'est proposé à la suppression qu'après **deux** constats identiques espacés d'au moins 10 minutes ; une adresse déplacée se met à jour d'un clic. Résultats gardés 7 jours sur l'appareil.
+  - **Suggestions** : fonction `iaSuggererRangement` (prompt de rangement v1), réponse en groupes indépendants validés comme les propositions du chat ; jamais de suppression ni d'ajout, 8 groupes et 8 nouveaux dossiers au plus.
+  - Écarts avec le plan : portée « accueil » ou « toute la collection » (pas un dossier précis) ; l'aperçu d'un groupe tient compte des groupes déjà appliqués (état courant) mais pas des suivants non appliqués.
+
 ## [4.16.0] - 2026-11-01
 
 ### Ajouté

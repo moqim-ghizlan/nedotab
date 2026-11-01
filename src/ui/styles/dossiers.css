@@ -532,3 +532,70 @@
     animation: none;
   }
 }
+
+/* V4.17: "Ranger mes sites" */
+.rangement-onglets {
+  display: flex;
+  gap: var(--espace-1);
+  margin-bottom: var(--espace-3);
+  flex-wrap: wrap;
+}
+
+.rangement-onglet {
+  padding: var(--espace-1) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rangement-onglet[aria-selected="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rangement-corps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.rangement-groupe {
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+}
+
+.rangement-groupe-titre {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-m);
+  overflow-wrap: anywhere;
+}
+
+.rangement-copies {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rangement-copies li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.rangement-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}

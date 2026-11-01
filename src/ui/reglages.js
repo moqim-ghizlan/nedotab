@@ -31,6 +31,7 @@ import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
 import { sectionDonnees } from "./reglages/donnees.js";
+import { ouvrirRangement } from "./rangement/ecran.js";
 import { sectionIa } from "./reglages/ia.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
@@ -789,6 +790,25 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       ? [
           sectionDonnees({ donnees: session.donnees, restauration: session.restauration, store })
             .section,
+          section(
+            "Ranger mes sites",
+            el("p", {
+              class: "reglages-note",
+              texte:
+                "Doublons, sites qui ne répondent plus et suggestions de rangement. Chaque changement demande votre confirmation et peut être annulé.",
+            }),
+            el("button", {
+              type: "button",
+              class: "bouton",
+              texte: "Ranger mes sites…",
+              onclick: (e) =>
+                ouvrirRangement({
+                  store,
+                  enCompte: () => session.synchro.lire().mode === "compte",
+                  retourFocus: e.currentTarget,
+                }),
+            }),
+          ),
           compteUi?.confidentialite,
           compteUi?.danger,
         ]
