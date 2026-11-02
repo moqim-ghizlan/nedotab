@@ -112,7 +112,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
     notes.push(
       "Fusionner : les sites absents de votre grille sont ajoutés dans un dossier « Importé le … ».",
     );
-    await ouvrirApercu(restauration, {
+    const resultat = await ouvrirApercu(restauration, {
       titre: "Importer un fichier",
       sous: `Export${lu.exporteLe ? ` du ${dateHeure(Date.parse(lu.exporteLe))}` : ""}`,
       source: lu.etat,
@@ -124,6 +124,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
         libelle: "Fusionner",
         onChoix: () => {
           const r = donnees.fusionner(lu);
+          donnees.importerStats(lu, "fusionner").catch(() => {});
           if (!r.action) {
             toast("Tous les sites de ce fichier sont déjà dans votre grille.");
             return;
@@ -142,6 +143,7 @@ export function sectionDonnees({ donnees, restauration, store }) {
         },
       },
     });
+    if (resultat?.ok) donnees.importerStats(lu, "remplacer").catch(() => {});
   });
   const importer = el("button", {
     type: "button",

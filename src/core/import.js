@@ -3,6 +3,7 @@
  * An invalid file changes nothing and gives the first understandable error, with the line
  * of the file when it can be found ("Ligne 45 : adresse refusée (javascript:)").
  */
+import { normaliserStats } from "./usage.js";
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { FORMAT_EXPORT } from "./export.js";
 import { dateCourte, dossierImporte } from "./fusion.js";
@@ -148,6 +149,8 @@ export function validerImport(texte) {
     etat: { versionSchema: objet.versionSchema, grille: etat.grille, reglages: etat.reglages },
     sauvegardes: Array.isArray(objet.sauvegardes) ? objet.sauvegardes.length : 0,
     conversations: Array.isArray(objet.conversations) ? objet.conversations.length : 0,
+    // V4.21: usage statistics of the file, aberrant values dropped.
+    stats: normaliserStats(objet.stats),
     aplati,
     exporteLe: typeof objet.exporteLe === "string" ? objet.exporteLe : null,
   };

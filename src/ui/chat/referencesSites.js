@@ -75,7 +75,7 @@ function carteSite(site, { afficher }) {
           // Plain click: current tab (or the new tab of the settings); Ctrl/Cmd/Shift: the browser's own.
           if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
           e.preventDefault();
-          ouvrirSite(site.url, { nouvelOnglet: sitesDansNouvelOnglet() });
+          ouvrirSite(site.url, { nouvelOnglet: sitesDansNouvelOnglet(), id: site.id });
         },
       }, ...contenu)
     : el("span", { class: "chat-site-lien" }, ...contenu);

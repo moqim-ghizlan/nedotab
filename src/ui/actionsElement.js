@@ -219,19 +219,31 @@ export function brancherActionsElements(
       entrees.push(
         {
           libelle: "Ouvrir dans un nouvel onglet",
-          onChoix: () => ouvrirSite(e.url, { nouvelOnglet: true }),
+          onChoix: () => ouvrirSite(e.url, { nouvelOnglet: true, id }),
         },
         { libelle: "Copier le lien", onChoix: () => copierLien(e.url) },
       );
       if (typeof navigator.share === "function")
         entrees.push({ libelle: "Partager…", onChoix: () => partager(e) });
       if (modifiable) {
-        entrees.push(deplacerVers, {
+        entrees.push(
+          {
+            libelle: e.epingle === true ? "Désépingler de la recherche" : "Épingler dans la recherche",
+            onChoix: () =>
+              store.envoyer({
+                type: A.SITE_MODIFIER,
+                id,
+                changements: { epingle: e.epingle !== true },
+              }),
+          },
+          deplacerVers,
+          {
           libelle: "Créer un dossier avec ce site",
           desactive: !peutCreerDossierDans(store.lire().grille, r.parent?.id ?? null),
           info: PROFONDEUR_ATTEINTE,
           onChoix: () => creerDossierAvec(r),
-        });
+          },
+        );
       }
     }
     if (modifiable) {

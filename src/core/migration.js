@@ -63,6 +63,15 @@ function avecExclusion(e) {
   return copie;
 }
 
+/** V4.21: epingle is kept only when true (absent = not pinned), on sites only. Idempotent. */
+function avecEpingle(e) {
+  if (e.type === "site" && e.epingle === true) return e;
+  if (!("epingle" in e)) return e;
+  const copie = { ...e };
+  delete copie.epingle;
+  return copie;
+}
+
 function elementValide(e) {
   if (!e || typeof e !== "object" || typeof e.id !== "string" || !e.id) return false;
   if (e.type === "site") return typeof e.titre === "string" && typeof e.url === "string";
@@ -103,14 +112,14 @@ function filtrer(elements, niveau, ctx) {
     if (!elementValide(e)) {
       ctx.ignores.push(e);
     } else if (e.type === "site") {
-      resultat.push(idUnique(avecExclusion({ ...e, ...champsEnrichissement(e) }), ctx));
+      resultat.push(idUnique(avecEpingle(avecExclusion({ ...e, ...champsEnrichissement(e) })), ctx));
     } else if (niveau >= PROFONDEUR_MAX) {
       // No folder at level 3: its sites take its place, nothing is deleted.
       ctx.corrections.push(`dossier trop profond « ${e.titre} » aplati`);
       for (const site of sitesDe(e.items, ctx))
-        resultat.push(idUnique({ ...site, ...champsEnrichissement(site) }, ctx));
+        resultat.push(idUnique(avecEpingle({ ...site, ...champsEnrichissement(site) }), ctx));
     } else {
-      const dossier = idUnique(avecExclusion(e), ctx);
+      const dossier = idUnique(avecEpingle(avecExclusion(e)), ctx);
       resultat.push({ ...dossier, items: filtrer(e.items, niveau + 1, ctx) });
     }
   }

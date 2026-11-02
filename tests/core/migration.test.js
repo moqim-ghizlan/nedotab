@@ -115,3 +115,19 @@ describe("migration 2 → 3 (V4.2) : tags et description", () => {
     expect(r.lectureSeule).toBe(true);
   });
 });
+
+describe("epingle (V4.21)", () => {
+  it("gardé seulement quand true, idempotent", async () => {
+    const { migrer } = await import("../../src/core/migration.js");
+    const site = (id, extra) => ({ id, type: "site", titre: id, url: `https://${id}.fr`, creeLe: 0, ...extra });
+    const brut = {
+      versionSchema: 3,
+      grille: [site("a", { epingle: true }), site("b", { epingle: "oui" }), site("c", { epingle: false })],
+      reglages: {},
+    };
+    const un = migrer(brut).etat;
+    expect(un.grille.map((s) => s.epingle)).toEqual([true, undefined, undefined]);
+    expect("epingle" in un.grille[1]).toBe(false);
+    expect(migrer(un).etat.grille).toEqual(un.grille);
+  });
+});

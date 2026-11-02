@@ -107,7 +107,7 @@ function supprimerDossier(grille, { id, mode }) {
  * the user changes them, mark the site as written by hand (tagsManuels): the AI never
  * overwrites them (V4.2). tagsManuels: false gives the site back to the AI.
  */
-const CHAMPS_SITE = ["titre", "url", "icone", "tags", "description", "tagsManuels"];
+const CHAMPS_SITE = ["titre", "url", "icone", "tags", "description", "tagsManuels", "epingle"];
 
 /** SITE_MODIFIER's changes with tags and description cleaned and tagsManuels set. */
 function changementsSite(changements) {
@@ -115,6 +115,8 @@ function changementsSite(changements) {
   if ("tags" in c) c.tags = normaliserTags(c.tags);
   if ("description" in c) c.description = normaliserDescription(c.description);
   if ("tagsManuels" in c && typeof c.tagsManuels !== "boolean") delete c.tagsManuels;
+  // V4.21: pinned in the search. Stored only when true (absent = not pinned).
+  if ("epingle" in c && typeof c.epingle !== "boolean") delete c.epingle;
   if (("tags" in c || "description" in c) && !("tagsManuels" in c)) c.tagsManuels = true;
   return c;
 }
@@ -255,9 +257,12 @@ function reduireBase(etat, action) {
       if (Object.keys(changements).length === 0) return etat;
       return avecGrille(
         etat,
-        remplacer(etat.grille, action.id, (e) =>
-          e.type === "site" ? { ...e, ...changements } : e,
-        ),
+        remplacer(etat.grille, action.id, (e) => {
+          if (e.type !== "site") return e;
+          const suivant = { ...e, ...changements };
+          if (suivant.epingle !== true) delete suivant.epingle;
+          return suivant;
+        }),
       );
     }
     case A.SITE_DEFINIR_IA: {

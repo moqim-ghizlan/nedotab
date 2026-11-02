@@ -46,6 +46,8 @@ import {
   validerActions,
 } from "../partage/outils.js";
 import { preFiltrer } from "../partage/preFiltre.js";
+import { CHAMP_USAGE } from "../partage/listeCompacte.js";
+import { niveauUsage, normaliserStats, scoreActuel } from "../partage/usage.js";
 import { lireSortieTags } from "./tagsSortie.js";
 import { extraitReduit } from "../partage/extraitPage.js";
 import { jourParis } from "../quota.js";
@@ -463,6 +465,14 @@ export function creerFonctionsIa(deps) {
       return { intention: "question", resultats: [], aucunResultat: true, preFiltre: false };
     const { sites: retenus, preFiltre } = preFiltrer(sites, question);
     const autorises = champsAutorises(conf);
+    // V4.21: usage level of each site, unless the user switched tracking or sharing off.
+    const reglages = snap.exists ? snap.data()?.reglages : null;
+    if (reglages?.sansSuiviUsage !== true && reglages?.sansUsagePourIa !== true) {
+      const stats = normaliserStats((await db.doc(`users/${uid}/stats/visites`).get()).data());
+      const maintenant = horloge();
+      for (const s of retenus) s.usage = niveauUsage(scoreActuel(stats.poids[s.id], maintenant));
+      autorises.push(CHAMP_USAGE);
+    }
     let { lignes, table } = construireListe(retenus, { champs: autorises });
     // A very long list (long descriptions): the descriptions are left out rather than refused.
     if (lignes.join("\n").length > LISTE_MAX) {

@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.21.0] - 2026-11-02
+
+### Ajouté
+
+- **Recherche triée par usage** : la pertinence du texte reste prioritaire, un bonus d'usage plafonné (`min(60, 20 × log2(1 + score))`) départage les correspondances proches, les sites **épinglés** passent devant (+1 000). Barre vide au focus : les 8 sites les plus utilisés (épinglés d'abord), rien tant qu'aucune visite n'est enregistrée.
+- **Score « fréquence + récence »** (`src/core/usage.js`, pur) : chaque visite ajoute `2^(jours depuis 2026-01-01 / 30)` à une somme stockée par site ; le score actuel est calculé (demi-vie de 30 jours), jamais stocké. Les écritures sont des **incréments atomiques** : aucun conflit entre appareils. `EPOQUE_USAGE` et `DEMI_VIE_JOURS` (`constantes.js`) **ne doivent plus être modifiées**.
+- **Base** : document `users/{uid}/stats/visites` (`poids`, `compte`, `derniere`, `majLe`), séparé de la grille ; règle explicite (3 000 entrées max, champs limités, `majLe` = heure serveur) et tests d'émulateur ; couvert par la suppression de compte (test ajouté).
+- **Comptage fiable** (`src/ui/services/visites.js`) : tuile (clic, Ctrl/Cmd + clic, clic molette, Entrée), résultat de recherche, carte du chat, « Ouvrir dans un nouvel onglet ». La visite est écrite dans une **file locale durable avant la navigation** (150 ms au plus), puis envoyée en **une seule écriture** au démarrage de la page, toutes les 2 minutes et quand la page est masquée. File vidée seulement après confirmation ; lot « envoyé » vérifié au démarrage suivant (`majLe`) pour ne rien compter deux fois. Anti-doublon de 10 secondes. Hors connexion : stockage local (`visitesLocales`), ajouté à la base à la première synchronisation.
+- **Épingler dans la recherche** (menu et feuille d'un site) : champ `epingle` (gardé seulement s'il vaut `true`, comme `iaExclu` en V4.20 — **pas de changement de version de schéma**, écart volontaire avec le plan : une version antérieure ignore simplement le champ).
+- **Recherche intelligente** : colonne facultative `usage` (fort / moyen / faible / jamais, précédée de `epingle`) et consigne « à pertinence égale, privilégie… » ; **prompt de recherche version 4**.
+- **Réglages → Mes données → Utilisation** : « Mémoriser les sites que j'ouvre depuis NedoTab » (`sansSuiviUsage`), « Partager ma fréquence d'utilisation avec l'assistant IA » (`sansUsagePourIa`), « Effacer l'historique d'utilisation ». Export (`stats`) et import (Remplacer / Fusionner pour les sites déjà présents).
+- **Non fait** : nettoyage quotidien des entrées de sites supprimés (elles sont ignorées à la lecture), `onSnapshot` en continu (une lecture à chaque chargement suffit), compte du clic Ctrl/Cmd dans le chat, section de la politique de confidentialité sur l'usage (à ajouter avec la relecture du propriétaire). La vérification manuelle du plan n'a pas été faite sur appareil.
+
 ## [4.20.0] - 2026-11-02
 
 ### Ajouté

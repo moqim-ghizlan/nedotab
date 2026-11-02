@@ -30,6 +30,7 @@ import { sectionSauvegardes } from "./reglages/sauvegardes.js";
 import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
+import { demander } from "./dialogues/commun.js";
 import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
@@ -307,6 +308,18 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       "confirmerSuppression",
       "Confirmer avant de supprimer",
       "Demande une confirmation avant de supprimer un site ou un dossier vide. Un dossier rempli la demande toujours ; l'annulation reste possible juste après.",
+    ],
+    [
+      "sansSuiviUsage",
+      "Mémoriser les sites que j'ouvre depuis NedoTab",
+      "NedoTab compte combien de fois vous ouvrez chaque site depuis NedoTab pour trier vos résultats. Les sites que vous visitez ailleurs ne sont pas enregistrés. Désactivé, plus rien n'est enregistré et la recherche trie par pertinence seule.",
+      true,
+    ],
+    [
+      "sansUsagePourIa",
+      "Partager ma fréquence d'utilisation avec l'assistant IA",
+      "L'assistant reçoit, pour chaque site, « fort / moyen / faible / jamais » (jamais le nombre de visites). N'a d'effet que si l'IA est active.",
+      true,
     ],
   ].map(([cle, libelle, note, inverse = false]) => {
     const bouton = el("input", {
@@ -809,6 +822,29 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                   iaActive: () => iaDe(store.lire().reglages).actif,
                   retourFocus: e.currentTarget,
                 }),
+            }),
+          ),
+          section(
+            "Utilisation",
+            ...ligneDes(["sansSuiviUsage", "sansUsagePourIa"]),
+            el("button", {
+              type: "button",
+              class: "bouton",
+              texte: "Effacer l'historique d'utilisation",
+              onclick: async () => {
+                const ok = await demander({
+                  titre: "Effacer l'historique d'utilisation",
+                  message:
+                    "Le classement par usage repart de zéro, sur tous vos appareils. Vos sites ne sont pas touchés.",
+                  boutons: [
+                    { libelle: "Annuler", valeur: false },
+                    { libelle: "Effacer", valeur: true, principal: true, danger: true },
+                  ],
+                });
+                if (!ok) return;
+                await session.effacerUsage();
+                toast("Historique d'utilisation effacé");
+              },
             }),
           ),
           compteUi?.confidentialite,

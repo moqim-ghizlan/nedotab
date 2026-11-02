@@ -103,6 +103,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // V4.21: usage statistics of the sites (weights, counts, last visits). Explicit path, no
+    // wildcard. The values themselves are validated by the app on every read.
+    match /users/{uid}/stats/visites {
+      allow read, delete: if proprietaire(uid);
+      allow create, update: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['poids', 'compte', 'derniere', 'majLe'])
+        && request.resource.data.poids is map && request.resource.data.poids.size() <= 3000
+        && request.resource.data.compte is map && request.resource.data.compte.size() <= 3000
+        && request.resource.data.derniere is map && request.resource.data.derniere.size() <= 3000
+        && request.resource.data.majLe == request.time;
+    }
+
     match /config/{doc} {
       allow read: if connecte();
       allow write: if false;

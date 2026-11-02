@@ -111,11 +111,60 @@ export function ouvrirSitesAvec(choix) {
 /** Address that opens a site in the chosen browser. */
 export const urlOuverture = (url) => urlPourNavigateur(url, navigateur);
 
-/** Opens a site: another browser is another app, so no new tab is needed there. */
-export function ouvrirSite(url, { nouvelOnglet: onglet = false } = {}) {
-  if (navigateur !== "safari") location.assign(urlOuverture(url));
-  else if (onglet) window.open(url, "_blank", "noopener");
-  else location.assign(url);
+/**
+ * V4.21: records a visit (id of the site). Returns a promise that settles once the visit is
+ * durable locally (at most 150 ms), or nothing. Set by the app; absent in tests.
+ */
+let surVisite = null;
+export function definirSurVisite(fn) {
+  surVisite = typeof fn === "function" ? fn : null;
+}
+
+/**
+ * Opens a site: another browser is another app, so no new tab is needed there. With the `id`
+ * of the site, the visit is recorded first (V4.21): the current tab is left only afterwards.
+ */
+export function ouvrirSite(url, { nouvelOnglet: onglet = false, id = null } = {}) {
+  const visite = id && surVisite ? surVisite(id) : null;
+  const aller = () => {
+    if (navigateur !== "safari") location.assign(urlOuverture(url));
+    else if (onglet) window.open(url, "_blank", "noopener");
+    else location.assign(url);
+  };
+  // A new tab leaves the page open: no need to wait. The current tab is closed by the visit.
+  if (visite && !onglet && navigateur === "safari") visite.then(aller, aller);
+  else aller();
+}
+
+/**
+ * V4.21: counts the sites opened by a tile (grid, folder window): left click (current tab
+ * or new tab of the settings), Ctrl/Cmd + click, middle click, Enter on a focused tile. The
+ * current tab is left after the visit is saved (150 ms at most). A click already cancelled
+ * (drag, long press) is not a visit.
+ */
+export function suivreOuverturesTuiles(racine = document) {
+  const trouver = (e) => e.target?.closest?.("a.tuile--site[data-id]");
+  const surClic = (e) => {
+    const lien = trouver(e);
+    if (!lien || e.defaultPrevented || !surVisite) return;
+    const visite = surVisite(lien.dataset.id);
+    const simple =
+      e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && !lien.target;
+    if (!simple || !visite) return;
+    e.preventDefault();
+    const aller = () => location.assign(lien.href);
+    visite.then(aller, aller);
+  };
+  const surAuxClic = (e) => {
+    const lien = trouver(e);
+    if (lien && e.button === 1 && surVisite) surVisite(lien.dataset.id);
+  };
+  racine.addEventListener("click", surClic);
+  racine.addEventListener("auxclick", surAuxClic);
+  return () => {
+    racine.removeEventListener("click", surClic);
+    racine.removeEventListener("auxclick", surAuxClic);
+  };
 }
 
 function cibler(lien) {

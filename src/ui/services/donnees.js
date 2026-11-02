@@ -2,6 +2,8 @@ import { creerExport, nomFichierExport } from "../../core/export.js";
 import { actionFusion, validerImport, verifierTailleFichier } from "../../core/import.js";
 import { genererIdParDefaut } from "../../core/modele.js";
 import { creerZip } from "../../core/zip.js";
+import { fusionnerVisites, normaliserStats } from "../../core/usage.js";
+import { trouver as trouverElement } from "../../core/arbre.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
 import { telecharger } from "../../platform/partage.js";
@@ -52,8 +54,14 @@ export function creerDonnees({
   async function exporter({
     inclureSauvegardes = true,
     inclureConversations = true,
+    inclureStats = true,
     maintenant = new Date(),
   } = {}) {
+    let stats;
+    if (inclureStats && session?.usage) {
+      await session.usage.actualiser().catch(() => {});
+      stats = session.usage.stats();
+    }
     let sauvegardes;
     let conversations;
     if (enCompte() && inclureConversations) {
@@ -82,6 +90,7 @@ export function creerDonnees({
       maintenant: maintenant.getTime(),
       sauvegardes,
       conversations,
+      stats,
     });
     const nom = nomFichierExport(maintenant);
     const fichier = new File([JSON.stringify(contenu, null, 2)], nom, { type: "application/json" });
@@ -140,7 +149,37 @@ export function creerDonnees({
     return r;
   }
 
+  /**
+   * V4.21: usage statistics of an imported file. "remplacer" = the file's statistics replace
+   * the current ones; "fusionner" = added, for the sites that still exist (a merge gives new
+   * ids to the imported sites, so only the ones already in the grid can receive them).
+   */
+  async function importerStats(lu, mode) {
+    const fichier = normaliserStats(lu?.stats);
+    if (Object.keys(fichier.poids).length === 0 || !session?.visites) return false;
+    let aAjouter = fichier;
+    if (mode === "fusionner") {
+      aAjouter = normaliserStats(null);
+      for (const id of Object.keys(fichier.poids)) {
+        if (!trouverElement(store.lire().grille, id)) continue;
+        aAjouter.poids[id] = fichier.poids[id];
+        aAjouter.compte[id] = fichier.compte[id];
+        if (fichier.derniere[id]) aAjouter.derniere[id] = fichier.derniere[id];
+      }
+    } else await session.effacerUsage?.();
+    if (Object.keys(aAjouter.poids).length === 0) return false;
+    const u = uid();
+    if (u && enCompte()) await (await charger()).ajouterStats(u, aAjouter);
+    else {
+      const actuelles = await session.visites.lireLocales();
+      await plat.preferences.ecrire("visitesLocales", fusionnerVisites(actuelles, aAjouter));
+    }
+    await session.usage.actualiser();
+    return true;
+  }
+
   return {
+    importerStats,
     exporter,
     redonner,
     telechargerFonds,

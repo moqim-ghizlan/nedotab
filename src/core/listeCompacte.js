@@ -11,6 +11,8 @@ import { domaine } from "./url.js";
 
 export const DESCRIPTION_LISTE_MAX = 120;
 export const CHAMPS_LISTE = ["titre", "domaine", "tags", "description", "chemin", "ajoute"];
+/** V4.21: optional last column "usage" (fort / moyen / faible / jamais, "epingle " before). */
+export const CHAMP_USAGE = "usage";
 
 /** Every site of a grid (all levels), with the titles of the folders that contain it. */
 export function sitesDe(grille) {
@@ -31,6 +33,7 @@ export function sitesDe(grille) {
           description: typeof e.description === "string" ? e.description : "",
           chemin,
           creeLe: Number.isFinite(e.creeLe) ? e.creeLe : 0,
+          epingle: e.epingle === true,
         });
       }
     }
@@ -80,6 +83,7 @@ export function construireListe(sites, { champs = CHAMPS_LISTE } = {}) {
       avec.has("description") ? tronquer(champ(s.description), DESCRIPTION_LISTE_MAX) : "",
       avec.has("chemin") ? s.chemin.map(champ).join(">") : "",
       avec.has("ajoute") ? moisAjout(s.creeLe) : "",
+      ...(avec.has(CHAMP_USAGE) ? [`${s.epingle ? "epingle " : ""}${s.usage ?? "jamais"}`.trim()] : []),
     ].join("|");
   });
   return { lignes, table };

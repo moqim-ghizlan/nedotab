@@ -46,7 +46,14 @@ import { brancherPersistance } from "./persistance.js";
 import { monterBadgeDebug, modeDebug } from "./debug.js";
 import { activerJournal, capturerErreurs } from "./journal.js";
 import { toast } from "./toast.js";
-import { ouvrirSitesAvec, ouvrirSitesDansNouvelOnglet } from "./tuile.js";
+import {
+  definirSurVisite,
+  ouvrirSitesAvec,
+  ouvrirSitesDansNouvelOnglet,
+  suivreOuverturesTuiles,
+} from "./tuile.js";
+import { creerServiceVisites } from "./services/visites.js";
+import { creerServiceUsage } from "./services/usage.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -451,8 +458,66 @@ export async function demarrerApp(racine) {
       versAccueil: (x, y) => accueil?.positionDepot(x, y) ?? null,
     });
 
+  // V4.21: visits of the sites opened from NedoTab, and the usage ranking of the search.
+  const suiviActif = () => !store.lire().reglages.sansSuiviUsage;
+  const uidConnecte = () =>
+    session.synchro.lire().mode === "compte" ? (compte.lire().profil?.uid ?? null) : null;
+  const visites = creerServiceVisites({
+    prefs: plateforme.preferences,
+    actif: suiviActif,
+    uid: uidConnecte,
+    base: async () => {
+      const fb = await chargerFirebase();
+      return { envoyer: fb.envoyerVisites, majServeur: fb.majServeur };
+    },
+  });
+  const usage = creerServiceUsage({
+    store,
+    uid: uidConnecte,
+    charger: chargerFirebase,
+    visites,
+    actif: suiviActif,
+  });
+  session.visites = visites;
+  session.usage = usage;
+  /** "Effacer l'historique d'utilisation": the document of the database and the local ones. */
+  session.effacerUsage = async () => {
+    await visites.vider();
+    const u = uidConnecte();
+    if (u) await (await chargerFirebase()).effacerVisites(u);
+    await usage.actualiser();
+  };
+  definirSurVisite((id) => visites.enregistrerAvantNavigation(id));
+  suivreOuverturesTuiles(document);
+  visites.demarrer();
+  usage.actualiser();
+  // A change of the account (sign-in) or of the tracking setting reloads the ranking.
+  let suiviAvant = suiviActif();
+  let grilleAvant = store.lire().grille;
+  store.abonner(() => {
+    if (suiviActif() !== suiviAvant) {
+      suiviAvant = suiviActif();
+      if (!suiviAvant) visites.vider();
+      usage.actualiser();
+    } else if (store.lire().grille !== grilleAvant) usage.recalculer();
+    grilleAvant = store.lire().grille;
+  });
+  // First synchronisation: the visits made while signed out join the database.
+  let etaitEnCompte = false;
+  synchro.abonner((e) => {
+    const enCompte = e.mode === "compte";
+    if (enCompte && !etaitEnCompte) {
+      visites
+        .fusionnerLocalesDansBase()
+        .catch(() => {})
+        .then(() => usage.actualiser());
+    }
+    etaitEnCompte = enCompte;
+  });
+
   // Search bar above the grid; a folder found opens directly at its level.
   const recherche = creerRecherche(store, {
+    lireClassementUsage: () => usage.classement(),
     ouvrirDossier: (id) => ouvrirDossier(id),
     contexteIa,
     demanderIa: async (question) =>
@@ -573,6 +638,7 @@ export async function demarrerApp(racine) {
     modeSynchroVu = e.mode;
     chat.actualiser();
   });
+  usage.abonner(() => recherche.usageChange());
   page.insertBefore(recherche.racine, vide);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.

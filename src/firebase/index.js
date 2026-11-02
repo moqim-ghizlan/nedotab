@@ -52,3 +52,12 @@ export {
 } from "./conversations.js";
 export { donneesChat, fluxAvecRepli, lireFluxChat } from "./iaFlux.js";
 export { supprimerMonCompte } from "./suppression.js";
+export {
+  ajouterStats,
+  ecouterVisites,
+  effacerVisites,
+  envoyerVisites,
+  lireVisites,
+  majServeur,
+  retirerEntrees,
+} from "./visites.js";

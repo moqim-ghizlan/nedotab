@@ -18,7 +18,7 @@ export function nomFichierExport(date = new Date()) {
  */
 export function creerExport(
   etat,
-  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations },
+  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats },
 ) {
   const resultat = {
     format: FORMAT_EXPORT,
@@ -29,6 +29,8 @@ export function creerExport(
     grille: etat.grille,
     reglages: etat.reglages,
   };
+  // V4.21: usage statistics (weights, counts, last visit in ms), counters only.
+  if (stats) resultat.stats = stats;
   if (sauvegardes) {
     resultat.sauvegardes = sauvegardes.map((s) => ({
       id: s.id,

@@ -35,6 +35,9 @@ async function contenu(uid) {
   const messagesConv = await (
     await fetch(`${FIRESTORE}/users/${uid}/conversations/c1/messages`, { headers: proprietaire })
   ).json();
+  const stats = await (
+    await fetch(`${FIRESTORE}/users/${uid}/stats`, { headers: proprietaire })
+  ).json();
   const fichiers = await (
     await fetch(`${STOCKAGE}?prefix=${encodeURIComponent(`users/${uid}/`)}`, {
       headers: proprietaire,
@@ -46,6 +49,7 @@ async function contenu(uid) {
     conversations: (conversations.documents ?? []).length,
     messagesConversations: (messagesConv.documents ?? []).length,
     fichiers: (fichiers.items ?? []).length,
+    stats: (stats.documents ?? []).length,
   };
 }
 
@@ -60,6 +64,8 @@ async function remplir(nom) {
   await fb.creerConversation(uid, { id: "c1", titre: "Test" });
   await fb.ecrireMessageUtilisateur(uid, "c1", { id: "0000000000001-aaaaaaaa", texte: "Q" });
   await fb.ecrireMessageUtilisateur(uid, "c1", { id: "0000000000002-bbbbbbbb", texte: "Q2" });
+  // V4.21: statistics of visits (users/{uid}/stats/visites) are deleted with the account.
+  await fb.envoyerVisites(uid, { poids: { a: 1 }, compte: { a: 1 }, derniere: { a: Date.now() } });
   for (const id of ["f1", "f2"]) await fb.envoyerFond(fb.cheminFond(uid, id), image()).promesse;
   return uid;
 }
@@ -70,16 +76,16 @@ describe("supprimerMonCompte (émulateurs)", () => {
   it("grille, 3 sauvegardes, 2 fonds et compte : tout supprimé ; un autre utilisateur intact", async () => {
     const autre = await remplir("autre-utilisateur");
     const uid = await remplir("a-supprimer");
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1 });
 
     await connecter("a-supprimer"); // recent sign-in, as the interface asks for
     await fb.supprimerMonCompte();
-    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0 });
+    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0, stats: 0 });
     // The Auth account is gone: signing in again creates a new account.
     const nouveau = await connecter("a-supprimer");
     expect(nouveau.uid).not.toBe(uid);
-    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2 });
-  });
+    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1 });
+  }, 60000);
 
   it("sans être connecté : refusé", async () => {
     await fb.deconnecter({ obtenirJeton: async () => null, oublierJeton: async () => {} });
@@ -95,6 +101,6 @@ describe("supprimerMonCompte (émulateurs)", () => {
       code: "functions/failed-precondition",
       message: expect.stringMatching(/^Reconnectez-vous pour confirmer/),
     });
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1 });
   }, 70000);
 });

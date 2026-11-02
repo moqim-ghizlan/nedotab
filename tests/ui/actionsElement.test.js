@@ -35,6 +35,7 @@ describe("menu contextuel", () => {
       "ModifierF2",
       "Ouvrir dans un nouvel onglet",
       "Copier le lien",
+      "Épingler dans la recherche",
       "Déplacer vers…",
       "Créer un dossier avec ce site",
       "Ne pas montrer à l'IA",

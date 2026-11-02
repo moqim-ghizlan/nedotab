@@ -1,4 +1,11 @@
-import { decouperRequete, indexer, rechercher, suggererTags } from "../core/recherche.js";
+import {
+  decouperRequete,
+  indexer,
+  plusUtilises,
+  preparerUsage,
+  rechercher,
+  suggererTags,
+} from "../core/recherche.js";
 import { normaliserUrl } from "../core/url.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
@@ -81,6 +88,7 @@ export function creerRecherche(
     ouvrirReglagesIa = () => {},
     demanderIa = null, // async (question) => { intention, resultats: [{ id, score }] } (V4.9)
     poserAuChat = null, // (question, { origine, sites }) => void: the assistant's chat (V4.13)
+    lireClassementUsage = () => [], // V4.21: classementUsage() of the statistics (computed once per load)
   },
 ) {
   const champ = el("input", {
@@ -323,16 +331,37 @@ export function creerRecherche(
     if (voir) compteur.textContent = `${n}/${QUESTION_MAX}`;
   };
 
+  // V4.21: the ranking is read once per change of the statistics, not on each key.
+  let classementMemo = null;
+  let usageMemo = null;
+  const classement = () => (classementMemo ??= lireClassementUsage());
+  const usageCourant = () => (usageMemo ??= preparerUsage(classement()));
+  const usageChange = () => {
+    classementMemo = null;
+    usageMemo = null;
+  };
+
   const rendreRecherche = () => {
     const texte = champ.value;
+    const grille = store.lire().grille;
     if (!texte.trim()) {
-      options = [];
-      liste.replaceChildren();
-      fermerListe();
+      // V4.21: empty bar on focus → the 8 most used sites (pinned first); nothing if no visit.
+      const frequents = document.activeElement === champ ? plusUtilises(grille, classement(), 8) : [];
+      options = frequents.map((site) => ({
+        type: "site",
+        resultat: { entree: indexer(grille).find((e) => e.id === site.id), plages: [], raison: null },
+      }));
+      options = options.filter((o) => o.resultat.entree);
+      if (options.length === 0) {
+        liste.replaceChildren();
+        fermerListe();
+        return;
+      }
+      monterListe("Les plus utilisés");
+      etat.textContent = `${options.length} site${options.length > 1 ? "s" : ""} les plus utilisés`;
       return;
     }
-    const grille = store.lire().grille;
-    const resultats = rechercher(indexer(grille), texte);
+    const resultats = rechercher(indexer(grille), texte, 8, usageCourant());
     options = [];
     const adresse = adresseTapee(texte);
     if (adresse) options.push({ type: "adresse", url: adresse });
@@ -356,7 +385,7 @@ export function creerRecherche(
     else etat.textContent = "Aucun site trouvé, Entrée pour chercher sur le web";
   };
 
-  const ouvrirUrl = (url, nouvelOnglet) => ouvrirSite(url, { nouvelOnglet });
+  const ouvrirUrl = (url, nouvelOnglet, id = null) => ouvrirSite(url, { nouvelOnglet, id });
 
   /** Web search: a new tab when asked (Ctrl, middle click) or chosen in the settings. */
   const chercherSurLeWeb = (texte, nouvelOnglet) =>
@@ -383,7 +412,7 @@ export function creerRecherche(
     } else if (o.type === "adresse") ouvrirUrl(o.url, nouvelOnglet);
     else if (o.type === "web") chercherSurLeWeb(o.texte, nouvelOnglet);
     else if (o.type === "site")
-      ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet || sitesDansNouvelOnglet());
+      ouvrirUrl(o.resultat.entree.element.url, nouvelOnglet || sitesDansNouvelOnglet(), o.resultat.entree.id);
     else if (o.type === "dossier") {
       fermerListe();
       ouvrirDossier(o.resultat.entree.id);
@@ -544,7 +573,7 @@ export function creerRecherche(
   });
   champ.addEventListener("focus", () => {
     actualiserIa();
-    if (mode === "demander" || champ.value.trim()) rendre();
+    rendre();
   });
   champ.addEventListener("keydown", (e) => {
     // Only the browser knows if a key belongs to a composition (accent dead key, IME). A flag
@@ -625,5 +654,5 @@ export function creerRecherche(
     changerMode(autreMode(mode));
   });
 
-  return { racine, champ };
+  return { racine, champ, usageChange };
 }

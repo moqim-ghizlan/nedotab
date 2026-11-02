@@ -197,3 +197,40 @@ describe("tags et description (V4.7)", () => {
     expect(parFrappe).toBeLessThan(5);
   });
 });
+
+describe("tri par usage et épingles (V4.21)", () => {
+  const grille = [
+    site("gh", "GitHub", "https://github.com"),
+    site("gl", "GitLab", "https://gitlab.com"),
+    { ...site("dg", "Bureau", "https://bureau.fr"), description: "outil git de bureau" },
+    { ...site("ep", "Git Épinglé", "https://epingle.fr"), epingle: true },
+  ];
+  const index = indexer(grille);
+  const usage = (o) =>
+    new Map(Object.entries(o).map(([id, [score, derniere = 0]]) => [id, { score, derniere }]));
+
+  it("la pertinence du texte reste prioritaire sur l'usage", () => {
+    const r = ids(rechercher(index, "git", 8, usage({ dg: [1000] })));
+    expect(r.indexOf("dg")).toBeGreaterThan(r.indexOf("gh"));
+    expect(r.indexOf("dg")).toBeGreaterThan(r.indexOf("gl"));
+  });
+  it("à pertinence égale, le plus utilisé passe devant", () => {
+    expect(ids(rechercher(index, "git", 8, usage({ gl: [8] })))[1]).toBe("gl");
+    expect(ids(rechercher(index, "git", 8, usage({ gh: [8] })))[1]).toBe("gh");
+  });
+  it("un épinglé qui correspond passe premier", () => {
+    expect(ids(rechercher(index, "git", 8, usage({ gh: [50] })))[0]).toBe("ep");
+  });
+  it("bonus plafonné", async () => {
+    const { bonusUsage } = await import("../../src/core/recherche.js");
+    expect(bonusUsage(1e12)).toBe(60);
+    expect(bonusUsage(0)).toBe(0);
+  });
+  it("barre vide : 8 plus utilisés, épinglés d'abord, rien sans visite", async () => {
+    const { plusUtilises } = await import("../../src/core/recherche.js");
+    const classement = [{ site: grille[0] }, { site: grille[1] }, { site: grille[2] }];
+    expect(plusUtilises(grille, classement).map((s) => s.id)).toEqual(["ep", "gh", "gl", "dg"]);
+    expect(plusUtilises(grille, [])).toEqual([]);
+    expect(plusUtilises(grille, classement, 2)).toHaveLength(2);
+  });
+});

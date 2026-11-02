@@ -203,7 +203,7 @@ describe("raison de chaque résultat (V4.10)", () => {
   it("le prompt demande 12 mots au plus, fondés sur la liste, et une intention (version 3)", async () => {
     const { PROMPT_RECHERCHE_VERSION, SYSTEME_RECHERCHE } =
       await import("../../functions/src/ia/prompts/recherche.js");
-    expect(PROMPT_RECHERCHE_VERSION).toBe(3);
+    expect(PROMPT_RECHERCHE_VERSION).toBe(4);
     expect(SYSTEME_RECHERCHE).toMatch(/"intention"/);
     expect(SYSTEME_RECHERCHE).toMatch(/"les_deux"/);
     expect(SYSTEME_RECHERCHE).toMatch(/12 mots au maximum/);

@@ -111,6 +111,38 @@ export const CRITERES = [
   },
 ];
 export const BONUS_ACCUEIL = 15;
+/** V4.21: capped usage bonus, and the bonus that puts a pinned site first. */
+export const BONUS_USAGE_MAX = 60;
+export const BONUS_EPINGLE = 1000;
+
+/** Bonus of a current usage score: min(60, 20 × log2(1 + score)). */
+export const bonusUsage = (score) =>
+  score > 0 ? Math.min(BONUS_USAGE_MAX, 20 * Math.log2(1 + score)) : 0;
+
+/**
+ * Usage data for the search, computed once per load of the statistics (not on each key):
+ * `classement` comes from classementUsage(). @returns {Map<string, { score, derniere, compte }>}
+ */
+export function preparerUsage(classement) {
+  const usage = new Map();
+  for (const { site, score, derniere, compte } of classement ?? [])
+    usage.set(site.id, { score, derniere, compte });
+  return usage;
+}
+
+/**
+ * Sites shown when the bar is empty: pinned ones first, then the most used (at most `max`).
+ * Nothing when no visit was ever recorded.
+ */
+export function plusUtilises(grille, classement, max = 8) {
+  if (!classement?.length) return [];
+  const epingles = aplatir(grille)
+    .map(({ element }) => element)
+    .filter((e) => e.type === "site" && e.epingle === true);
+  const ids = new Set(epingles.map((e) => e.id));
+  const utilises = classement.map((r) => r.site).filter((s) => !ids.has(s.id));
+  return [...epingles, ...utilises].slice(0, max);
+}
 
 const caches = new WeakMap();
 
@@ -229,11 +261,15 @@ export function decouperRequete(requete) {
  *   match somewhere (title, domain, path, initials, tags, description) and every `#tag`
  *   filter must match the start of a tag of the site. `raison` is the best matching field.
  */
-export function rechercher(index, requete, max = 8) {
+export function rechercher(index, requete, max = 8, usage = null) {
   const { mots, filtres } = decouperRequete(requete);
   if (mots.length === 0 && filtres.length === 0) return [];
   const collator = new Intl.Collator("fr");
-  const avant = (a, b) => b.score - a.score || collator.compare(a.entree.titre, b.entree.titre);
+  const derniere = (c) => usage?.get(c.entree.id)?.derniere ?? 0;
+  const avant = (a, b) =>
+    b.score - a.score ||
+    derniere(b) - derniere(a) ||
+    collator.compare(a.entree.titre, b.entree.titre);
   // Only the best `max` are kept (sorted insertion): no full sort of every match.
   const resultats = [];
   for (const entree of index) {
@@ -252,6 +288,11 @@ export function rechercher(index, requete, max = 8) {
     }
     if (!toutTrouve) continue;
     if (entree.type === "site" && entree.chemin.length === 0) score += BONUS_ACCUEIL;
+    if (entree.type === "site") {
+      // V4.21: text relevance decides first; usage (capped) and pins come on top.
+      score += bonusUsage(usage?.get(entree.id)?.score ?? 0);
+      if (entree.element.epingle === true) score += BONUS_EPINGLE;
+    }
     const candidat = { entree, score, meilleur };
     if (resultats.length === max && avant(candidat, resultats[max - 1]) >= 0) continue;
     let i = resultats.length;

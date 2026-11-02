@@ -153,6 +153,9 @@ export const INTERRUPTEURS = [
   "masquerRecherche",
   "masquerTitres",
   "confirmerSuppression",
+  // V4.21: tracking of the opened sites is ON by default; these store the opt-out.
+  "sansSuiviUsage",
+  "sansUsagePourIa",
 ];
 
 /**
