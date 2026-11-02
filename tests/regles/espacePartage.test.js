@@ -78,7 +78,7 @@ describe("espacePartage", () => {
   });
   it("champ inconnu, type inconnu, contenu vide ou trop long : refusé", async () => {
     await assertFails(ajouter(db("alice"), "a", { autre: 1 }));
-    await assertFails(ajouter(db("alice"), "b", { type: "fichier" }));
+    await assertFails(ajouter(db("alice"), "b", { type: "autre" }));
     await assertFails(ajouter(db("alice"), "c", { contenu: "" }));
     await assertFails(ajouter(db("alice"), "d", { contenu: "x".repeat(20001) }));
     await assertSucceeds(ajouter(db("alice"), "e", { contenu: "x".repeat(20000) }));

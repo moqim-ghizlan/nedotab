@@ -112,10 +112,20 @@ export function trier(elements) {
 /** Elements from a Firestore document, aberrant ones dropped. */
 export function lireElement(id, brut, enAttente = false) {
   if (!brut || typeof brut !== "object") return null;
-  if (brut.type !== "texte" && brut.type !== "lien") return null;
+  if (brut.type !== "texte" && brut.type !== "lien" && brut.type !== "fichier") return null;
   if (typeof brut.contenu !== "string") return null;
   const creeLe = brut.creeLe?.toMillis?.() ?? (Number.isFinite(brut.creeLe) ? brut.creeLe : null);
+  // V4.25: a file holds its real name in `contenu`; the Storage path is `chemin` (never a URL).
+  const fichier =
+    brut.type === "fichier"
+      ? {
+          taille: Number.isFinite(brut.taille) && brut.taille > 0 ? brut.taille : 0,
+          typeMime: typeof brut.typeMime === "string" ? brut.typeMime : "",
+          chemin: typeof brut.chemin === "string" ? brut.chemin : "",
+        }
+      : {};
   return {
+    ...fichier,
     id,
     type: brut.type,
     contenu: brut.contenu,
@@ -154,5 +164,7 @@ export function exporterElements(elements) {
     appareil: e.appareil,
     epingle: !!e.epingle,
     creeLe: e.creeLe ?? null,
+    // A file is listed (name and size), never embedded: it is downloaded from the app.
+    ...(e.type === "fichier" ? { taille: e.taille ?? 0, typeMime: e.typeMime ?? "" } : {}),
   }));
 }

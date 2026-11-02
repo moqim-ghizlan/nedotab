@@ -17,6 +17,7 @@ import {
 import { domaine } from "../core/url.js";
 import { el } from "./dom.js";
 import { vibrer } from "./haptique.js";
+import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
 
 const CLE_VU = "nedotab:partageVu";
@@ -38,6 +39,7 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   let ouvert = false;
   let elements = [];
   let compteur = 0;
+  let octets = 0;
   let statut = "chargement"; // chargement | ok | erreur
   let depuisCache = false;
   let limite = PAGE_ELEMENTS;
@@ -46,6 +48,8 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   let retourFocus = null;
   let envoiEnCours = false;
   const erreurs = new Map(); // contenu → message, for "Réessayer"
+
+  const fichiers = creerFichiers({ charger, uid, store, rendre: () => rendre(), octets: () => octets });
 
   // --- Elements of the DOM --------------------------------------------------------------------
   const pastille = el("span", { class: "partage-pastille", hidden: true, "aria-hidden": "true" });
@@ -91,11 +95,15 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     el("div", { class: "partage-poignee", "aria-hidden": "true" }),
     el("header", { class: "partage-entete" }, el("h2", { texte: "Espace de partage" }), fermerBouton),
     bandeau,
+    fichiers.quota,
+    fichiers.cadreDepot,
     el(
       "div",
       { class: "partage-ajout" },
       champ,
-      el("div", { class: "partage-ajout-actions" }, compteurCaracteres, coller, envoyer),
+      el("div", { class: "partage-ajout-actions" }, compteurCaracteres, fichiers.boutonAjout, coller, envoyer),
+      fichiers.entree,
+      fichiers.message,
       proposerLien,
       messageAjout,
     ),
@@ -178,7 +186,7 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
           el("button", { type: "button", class: "partage-action", texte: "Réessayer", onclick: () => demarrerEcoute() }),
         ),
       );
-    } else if (elements.length === 0) {
+    } else if (elements.length === 0 && fichiers.nbEnvois() === 0) {
       liste.append(
         el(
           "li",
@@ -189,8 +197,12 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
         ),
       );
     } else {
-      liste.append(...trier(elements).map(carte));
+      liste.append(
+        ...fichiers.cartesEnvoi(),
+        ...trier(elements).map((e) => (e.type === "fichier" ? fichiers.carte(e) : carte(e))),
+      );
     }
+    fichiers.elementsVus(elements);
     plus.hidden = !peutPlus;
     compteurCaracteres.textContent = longueur(champ.value) > LIMITE_CARACTERES * 0.8 ? `${longueur(champ.value).toLocaleString("fr-FR")} / ${LIMITE_CARACTERES.toLocaleString("fr-FR")}` : "";
     const plein = estPlein(compteur);
@@ -310,8 +322,9 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
           },
           limite,
         ),
-        fb.ecouterCompteurPartage(uid(), (nb) => {
+        fb.ecouterCompteurPartage(uid(), (nb, o) => {
           compteur = nb;
+          octets = o;
           rendre();
         }),
       ];
@@ -367,6 +380,7 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     if (!ouvert) return;
     ouvert = false;
     panneau.hidden = true;
+    fichiers.liberer();
     bouton.setAttribute("aria-expanded", "false");
     document.removeEventListener("keydown", surTouche);
     document.removeEventListener("pointerdown", surExterieur);
@@ -397,6 +411,8 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     if (!panneau.contains(e.target) && !bouton.contains(e.target) && !e.target.closest?.(".toast, .menu, dialog")) fermer();
   };
 
+  fichiers.brancherZone(panneau);
+
   champ.addEventListener("input", () => {
     montrerErreur(null);
     rendre();
@@ -426,6 +442,7 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
       if (ouvert) fermer();
       elements = [];
       compteur = 0;
+      octets = 0;
       return;
     }
     if (!arret.length && !document.hidden) demarrerEcoute();

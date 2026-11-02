@@ -84,3 +84,9 @@ export {
   supprimer as supprimerDuPartage,
   viderTout as viderLePartage,
 } from "./espacePartage.js";
+export {
+  envoyerFichier as envoyerFichierPartage,
+  lireFichier as lireFichierPartage,
+  reconcilier as reconcilierPartage,
+  supprimerFichier as supprimerFichierPartage,
+} from "./espacePartageFichiers.js";

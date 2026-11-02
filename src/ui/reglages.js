@@ -869,8 +869,10 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 onclick: async () => {
                   try {
                     const fb = await chargerFirebase();
-                    const n = await fb.recalculerCompteurPartage(session.compte.lire().profil.uid);
-                    toast(`${n} élément${n > 1 ? "s" : ""} dans l'espace de partage`);
+                    const r = await fb.reconcilierPartage(session.compte.lire().profil.uid);
+                    toast(
+                      `${r.nb} élément${r.nb > 1 ? "s" : ""}, compteur corrigé${r.orphelins ? `, ${r.orphelins} fichier${r.orphelins > 1 ? "s" : ""} orphelin${r.orphelins > 1 ? "s" : ""} supprimé${r.orphelins > 1 ? "s" : ""}` : ""}`,
+                    );
                   } catch {
                     toast("Impossible pour l'instant (hors ligne ?).", { type: "erreur" });
                   }

@@ -48,12 +48,13 @@ export const supprimerMonCompte = onCall(
     // Data first, the Auth account last: if anything fails, the user can try again.
     const db = getFirestore();
     await db.recursiveDelete(db.doc(`users/${uid}`));
-    try {
-      await getStorage()
-        .bucket()
-        .deleteFiles({ prefix: `users/${uid}/` });
-    } catch (e) {
-      if (!stockageAbsent(e)) throw e;
+    // Backgrounds (users/{uid}/) and files of the sharing space (partages/{uid}/, V4.25).
+    for (const prefix of [`users/${uid}/`, `partages/${uid}/`]) {
+      try {
+        await getStorage().bucket().deleteFiles({ prefix });
+      } catch (e) {
+        if (!stockageAbsent(e)) throw e;
+      }
     }
     await getAuth().deleteUser(uid);
     // Never the uid, the e-mail or any data of the user in the logs.

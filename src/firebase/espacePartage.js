@@ -16,6 +16,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { PAGE_ELEMENTS, lireElement } from "../core/espacePartage.js";
+import { deleteObject, listAll, ref } from "firebase/storage";
 import { obtenirApp } from "./app.js";
 import { appareilCourant } from "./sauvegardes.js";
 
@@ -52,7 +53,11 @@ export function ecouterEspacePartage(uid, rappel, surErreur, limite = PAGE_ELEME
 
 /** Counter { nb } listened to, to refuse a 201st element before sending it. */
 export function ecouterCompteur(uid, rappel, surErreur) {
-  return onSnapshot(meta(uid), (s) => rappel(s.exists() ? (s.data().nb ?? 0) : 0), surErreur);
+  return onSnapshot(
+    meta(uid),
+    (s) => rappel(s.exists() ? (s.data().nb ?? 0) : 0, s.exists() ? (s.data().octets ?? 0) : 0),
+    surErreur,
+  );
 }
 
 /**
@@ -99,7 +104,13 @@ export async function viderTout(uid) {
     s.docs.forEach((d) => lot.delete(d.ref));
     await lot.commit();
   }
-  await setDoc(meta(uid), { nb: 0 });
+  // The files of the space go too (V4.25), then both counters are zero.
+  const racine = await listAll(ref(obtenirApp().stockage, `partages/${uid}`)).catch(() => null);
+  for (const dossier of racine?.prefixes ?? []) {
+    const contenu = await listAll(dossier).catch(() => ({ items: [] }));
+    for (const item of contenu.items) await deleteObject(item).catch(() => {});
+  }
+  await setDoc(meta(uid), { nb: 0, octets: 0 });
 }
 
 /** Recounts the documents and corrects the counter (after a network error). @returns {number} */

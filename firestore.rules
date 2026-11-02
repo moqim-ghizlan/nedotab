@@ -124,8 +124,11 @@ service cloud.firestore {
     match /users/{uid}/espacePartage/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle'])
-        && request.resource.data.type in ['texte', 'lien']
+        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin'])
+        && request.resource.data.type in ['texte', 'lien', 'fichier']
+        && (request.resource.data.type == 'fichier'
+            ? fichierValide(uid, request.resource.data)
+            : !request.resource.data.keys().hasAny(['taille', 'typeMime', 'chemin']))
         && request.resource.data.contenu is string
         && request.resource.data.contenu.size() >= 1
         && request.resource.data.contenu.size() <= 20000
@@ -147,13 +150,29 @@ service cloud.firestore {
             || request.resource.data.creeLe == request.time);
     }
 
+    // V4.25: a file element points to partages/{uid}/{id}/{name} in Storage (never a URL) and
+    // carries its size; the counter "octets" goes up by exactly that size in the same batch.
+    function fichierValide(uid, d) {
+      return d.taille is int && d.taille > 0 && d.taille <= 26214400
+        && d.typeMime is string && d.typeMime.size() <= 100
+        && d.chemin is string && d.chemin.matches('partages/' + uid + '/[^/]+/[^/]+')
+        && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.get('octets', 0) <= 209715200
+        && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.get('octets', 0)
+          == (exists(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage)
+              ? get(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.get('octets', 0) : 0) + d.taille;
+    }
+
     match /users/{uid}/espacePartageMeta/usage {
       allow read, delete: if proprietaire(uid);
       allow create, update: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['nb'])
+        && request.resource.data.keys().hasOnly(['nb', 'octets'])
         && request.resource.data.nb is int
         && request.resource.data.nb >= 0
-        && request.resource.data.nb <= 200;
+        && request.resource.data.nb <= 200
+        && (!('octets' in request.resource.data)
+            || (request.resource.data.octets is int
+                && request.resource.data.octets >= 0
+                && request.resource.data.octets <= 209715200));
     }
 
     match /config/{doc} {

@@ -1,6 +1,13 @@
 rules_version = '2';
-// Backgrounds only, in the owner's folder, 5 MB max, raster images only.
-// The number of backgrounds (10 max) is enforced by the app: rules cannot count files.
+// Two places, both in the owner's folder:
+// - users/{uid}/fonds/ : backgrounds, 5 MB max, raster images only.
+// - partages/{uid}/{id}/{name} (V4.25): files of the sharing space, 25 MB max each, no
+//   executable or script. A folder at the ROOT (not under users/) so that a lifecycle rule can
+//   target "partages/" alone (V4.27).
+// Rules cannot count files: the number of backgrounds (10) and the total of the sharing space
+// (200 MB) are enforced by the app and by the counters of Firestore (espacePartageMeta/usage);
+// a daily reconciliation (V4.27) removes the files without an element. No public link exists:
+// the app never uses getDownloadURL, it reads with getBlob (checked by these rules).
 service firebase.storage {
   match /b/{bucket}/o {
     // V4.23: only a verified e-mail address gives access (Google accounts always are).
@@ -11,6 +18,25 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/(webp|jpeg|png)');
       allow delete: if verifie() && request.auth.uid == uid;
+    }
+
+    match /partages/{uid}/{id}/{nom} {
+      allow read, delete: if verifie() && request.auth.uid == uid;
+      // The declared type comes from the client: a safeguard, not a proof (the extension list
+      // is checked too). SVG and HTML are accepted as plain files: the app never shows them.
+      allow create: if verifie() && request.auth.uid == uid
+        && request.resource.size > 0
+        && request.resource.size <= 25 * 1024 * 1024
+        && request.resource.contentType != null
+        && !request.resource.contentType.matches('(?i)(application/(x-msdownload|x-dosexec|x-msdos-program|x-sh|x-shellscript|x-msi|java-archive|vnd[.]android[.]package-archive|x-apple-diskimage|javascript|x-javascript|x-powershell)|text/(javascript|x-shellscript))')
+        && !nom.matches('(?i).*[.](exe|msi|bat|cmd|sh|js|jar|apk|dmg|scr|ps1|com|vbs|hta|lnk|reg)')
+        && nom.size() <= 200;
+      // A file is never modified: a new send is a new folder {id}.
+      allow update: if false;
+    }
+    // Listing the folders is allowed to their owner only (reconciliation of the orphans).
+    match /partages/{uid}/{tout=**} {
+      allow list: if verifie() && request.auth.uid == uid;
     }
   }
 }

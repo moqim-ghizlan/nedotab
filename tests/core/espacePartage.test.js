@@ -82,7 +82,7 @@ describe("éléments", () => {
     expect(trier(l).map((e) => e.id)).toEqual(["c", "d", "b", "a"]);
   });
   it("lecture d'un document : valeurs aberrantes écartées", () => {
-    expect(lireElement("x", { type: "fichier", contenu: "a" })).toBeNull();
+    expect(lireElement("x", { type: "autre", contenu: "a" })).toBeNull();
     expect(lireElement("x", { type: "texte", contenu: 3 })).toBeNull();
     expect(lireElement("x", { type: "texte", contenu: "a", creeLe: { toMillis: () => 42 } }).creeLe).toBe(42);
   });

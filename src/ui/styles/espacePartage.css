@@ -276,3 +276,116 @@
 :root[data-animations-reduites] .partage-carte {
   animation: none;
 }
+
+/* --- Files and images (V4.25) ------------------------------------------------------------ */
+.partage-quota {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.partage-quota[hidden] {
+  display: none;
+}
+.partage-quota-piste {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.partage-quota-barre {
+  height: 100%;
+  width: 0;
+  background: var(--accent, #3b82f6);
+  transition: width 200ms;
+}
+.partage-quota[data-niveau="avertissement"] .partage-quota-barre {
+  background: #e08a00;
+}
+.partage-quota[data-niveau="plein"] .partage-quota-barre {
+  background: var(--danger, #d64545);
+}
+.partage-carte--fichier {
+  grid-template-columns: 56px 1fr;
+  align-items: center;
+}
+.partage-vignette {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  font-size: 28px;
+}
+.partage-miniature {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.partage-nom {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.partage-progres {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.partage-progres-piste {
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.partage-progres-barre {
+  height: 100%;
+  background: var(--accent, #3b82f6);
+}
+.partage-pourcent {
+  font-size: 12px;
+  min-width: 36px;
+  text-align: right;
+}
+.partage-depot {
+  position: absolute;
+  inset: 8px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent, #3b82f6);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface, #fff) 85%, transparent);
+  font-weight: 600;
+  pointer-events: none;
+}
+.partage-depot[hidden] {
+  display: none;
+}
+.partage-visionneuse {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  background: rgba(0, 0, 0, 0.88);
+  color: #fff;
+  touch-action: pinch-zoom;
+}
+.partage-visionneuse .partage-fermer {
+  justify-self: end;
+  color: #fff;
+}
+.partage-visionneuse-image {
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+.partage-visionneuse-legende {
+  margin: 0;
+  padding: 12px;
+  font-size: 13px;
+}

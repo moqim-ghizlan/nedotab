@@ -49,7 +49,13 @@ async function contenu(uid) {
       headers: proprietaire,
     })
   ).json();
+  const partages = await (
+    await fetch(`${STOCKAGE}?prefix=${encodeURIComponent(`partages/${uid}/`)}`, {
+      headers: proprietaire,
+    })
+  ).json();
   return {
+    fichiersPartages: (partages.items ?? []).length,
     document: doc.status === 200,
     sauvegardes: (sauvegardes.documents ?? []).length,
     conversations: (conversations.documents ?? []).length,
@@ -77,6 +83,8 @@ async function remplir(nom) {
   // V4.24: two items of the sharing space and its counter, deleted with the account.
   await fb.ajouterAuPartage(uid, { type: "texte", contenu: "un", titre: "un" });
   await fb.ajouterAuPartage(uid, { type: "lien", contenu: "https://exemple.fr", titre: "exemple.fr" });
+  // V4.25: a file of the sharing space (partages/{uid}/…) goes with the account too.
+  await fb.envoyerFichierPartage(uid, new File([new Uint8Array(20)], "a.pdf", { type: "application/pdf" })).promesse;
   for (const id of ["f1", "f2"]) await fb.envoyerFond(fb.cheminFond(uid, id), image()).promesse;
   return uid;
 }
@@ -87,15 +95,15 @@ describe("supprimerMonCompte (émulateurs)", () => {
   it("grille, 3 sauvegardes, 2 fonds et compte : tout supprimé ; un autre utilisateur intact", async () => {
     const autre = await remplir("autre-utilisateur");
     const uid = await remplir("a-supprimer");
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 2, meta: 1 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
 
     await connecter("a-supprimer"); // recent sign-in, as the interface asks for
     await fb.supprimerMonCompte();
-    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0, stats: 0, partage: 0, meta: 0 });
+    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0, stats: 0, partage: 0, meta: 0, fichiersPartages: 0 });
     // The Auth account is gone: signing in again creates a new account.
     const nouveau = await connecter("a-supprimer");
     expect(nouveau.uid).not.toBe(uid);
-    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 2, meta: 1 });
+    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
   }, 60000);
 
   it("sans être connecté : refusé", async () => {
@@ -112,6 +120,6 @@ describe("supprimerMonCompte (émulateurs)", () => {
       code: "functions/failed-precondition",
       message: expect.stringMatching(/^Reconnectez-vous pour confirmer/),
     });
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 2, meta: 1 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
   }, 70000);
 });
