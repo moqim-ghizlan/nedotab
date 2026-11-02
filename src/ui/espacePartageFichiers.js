@@ -392,8 +392,13 @@ export function creerFichiers({
   async function miniature(e, cadre) {
     if (!apercuPossible(e.contenu, e.typeMime) || e.taille > MINIATURE_MAX) return;
     try {
-      if (!miniatures.has(e.id)) miniatures.set(e.id, URL.createObjectURL(await obtenirBlob(e)));
-      if (!cadre.isConnected) return;
+      // Already known: shown at once. The card is not in the page yet (it is being built), so
+      // no `isConnected` test here, or every redraw (each 30 s) would lose the thumbnail.
+      if (!miniatures.has(e.id)) {
+        const blob = await obtenirBlob(e);
+        // Two redraws may wait for the same download: one URL only.
+        if (!miniatures.has(e.id)) miniatures.set(e.id, URL.createObjectURL(blob));
+      }
       const img = el("img", {
         class: "partage-miniature",
         alt: nomAffiche(e.contenu),

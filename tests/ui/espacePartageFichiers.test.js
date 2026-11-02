@@ -137,6 +137,19 @@ describe("fichiers du partage (V4.25)", () => {
     const png = f.carte({ id: "2", type: "fichier", contenu: "photo.png", typeMime: "image/png", taille: 10, chemin: "partages/u1/2/photo.png" });
     expect([...png.querySelectorAll("button")].map((b) => b.textContent)).toContain("Voir");
   });
+  it("miniature : toujours là après un nouveau rendu (carte construite hors de la page)", async () => {
+    const { f, fb } = monter();
+    if (!URL.createObjectURL) URL.createObjectURL = () => "blob:x";
+    const brut = { id: "4", type: "fichier", contenu: "photo.png", typeMime: "image/png", taille: 10, chemin: "partages/u1/4/photo.png" };
+    for (let n = 0; n < 3; n++) {
+      const c = f.carte(brut); // built detached, like rendre() does
+      await attendre();
+      document.body.append(c);
+      expect(c.querySelector("img.partage-miniature")).not.toBeNull();
+      c.remove();
+    }
+    expect(fb.lireFichierPartage).toHaveBeenCalledTimes(1);
+  });
   it("nom affiché en texte : un nom piégé ne crée aucun élément", () => {
     const { f } = monter();
     const c = f.carte({ id: "3", type: "fichier", contenu: '<img src=x onerror=alert(1)>.pdf', typeMime: "application/pdf", taille: 10, chemin: "partages/u1/3/x.pdf" });
