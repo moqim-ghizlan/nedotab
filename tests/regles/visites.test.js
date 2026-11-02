@@ -27,7 +27,7 @@ beforeEach(() => env.clearFirestore());
 afterAll(() => env?.cleanup());
 
 const db = (uid) =>
-  uid ? env.authenticatedContext(uid).firestore() : env.unauthenticatedContext().firestore();
+  uid ? env.authenticatedContext(uid, { email_verified: true }).firestore() : env.unauthenticatedContext().firestore();
 const CHEMIN = "users/alice/stats/visites";
 const valide = () => ({
   poids: { a: increment(1.5) },

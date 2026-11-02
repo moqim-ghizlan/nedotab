@@ -20,3 +20,10 @@ export function stockageAbsent(erreur) {
   const code = erreur?.code ?? erreur?.response?.status;
   return code === 404 || /not ?found|does not exist|no such bucket/i.test(String(erreur?.message));
 }
+
+/**
+ * V4.23: an account whose e-mail address is not verified has no access to the AI functions
+ * (the Firestore and Storage rules say the same for the data). Google tokens always carry
+ * `email_verified: true`. The deletion of the account stays possible without it.
+ */
+export const emailVerifie = (auth) => auth?.token?.email_verified === true;

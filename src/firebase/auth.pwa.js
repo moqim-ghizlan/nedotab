@@ -2,14 +2,22 @@ import {
   browserLocalPersistence,
   browserPopupRedirectResolver,
   connectAuthEmulator,
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
   getRedirectResult,
   GoogleAuthProvider,
   indexedDBLocalPersistence,
   initializeAuth,
+  linkWithCredential,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   reauthenticateWithRedirect,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signInWithRedirect,
   signOut,
+  updatePassword,
 } from "firebase/auth";
 import { obtenirApp } from "./app.js";
 
@@ -43,6 +51,9 @@ export function profil(utilisateur) {
     nom: utilisateur.displayName ?? "",
     email: utilisateur.email ?? "",
     photo: utilisateur.photoURL ?? "",
+    // V4.23: an unverified e-mail account has no access to the data (rules).
+    emailVerifie: utilisateur.emailVerified === true,
+    fournisseurs: (utilisateur.providerData ?? []).map((f) => f.providerId),
   };
 }
 
@@ -88,3 +99,16 @@ export async function deconnecter() {
 export function ecouterUtilisateur(callback) {
   return onAuthStateChanged(obtenirAuth(), (u) => callback(profil(u)));
 }
+
+/** Functions of the SDK entry of this target, for the shared e-mail module (auth.email.js). */
+export const outilsEmail = {
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  linkWithCredential,
+  reauthenticateWithCredential,
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  updatePassword,
+};

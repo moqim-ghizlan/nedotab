@@ -3,12 +3,14 @@ rules_version = '2';
 // The number of backgrounds (10 max) is enforced by the app: rules cannot count files.
 service firebase.storage {
   match /b/{bucket}/o {
+    // V4.23: only a verified e-mail address gives access (Google accounts always are).
+    function verifie() { return request.auth != null && request.auth.token.email_verified == true; }
     match /users/{uid}/fonds/{fichier} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow read: if verifie() && request.auth.uid == uid;
+      allow create, update: if verifie() && request.auth.uid == uid
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/(webp|jpeg|png)');
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow delete: if verifie() && request.auth.uid == uid;
     }
   }
 }

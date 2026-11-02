@@ -6,7 +6,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{db}/documents {
 
-    function connecte() { return request.auth != null; }
+    // V4.23: a signed-in user whose e-mail is not verified has NO access to anything. Google
+    // accounts always carry email_verified = true; an e-mail account gets it by clicking the
+    // link of the verification e-mail (the token is refreshed afterwards).
+    function connecte() { return request.auth != null && request.auth.token.email_verified == true; }
     function proprietaire(uid) { return connecte() && request.auth.uid == uid; }
 
     function grilleValide(d) {

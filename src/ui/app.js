@@ -46,6 +46,8 @@ import { brancherPersistance } from "./persistance.js";
 import { monterBadgeDebug, modeDebug } from "./debug.js";
 import { activerJournal, capturerErreurs } from "./journal.js";
 import { toast } from "./toast.js";
+import { methodesDeConnexion } from "../core/authEmail.js";
+import { demanderMotsDePasse } from "./connexion.js";
 import {
   definirSurVisite,
   ouvrirSitesAvec,
@@ -199,6 +201,18 @@ export async function demarrerApp(racine) {
       if (await compte.connecter()) await synchro.lancerPremiereSynchro();
     },
     synchroniser: () => synchro.lancerPremiereSynchro(),
+    /** V4.23: e-mail + password (sign-up or sign-in); the sync starts once the address is verified. */
+    async connecterEmail(email, mdp, { creer = false } = {}) {
+      const r = creer ? await compte.inscrire(email, mdp) : await compte.connecterEmail(email, mdp);
+      if (r.ok && r.verifie) await synchro.lancerPremiereSynchro();
+      return r;
+    },
+    /** "J'ai vérifié" of the screen "Vérifiez votre boîte mail". */
+    async verifierEmail() {
+      if (!(await compte.actualiserVerification())) return false;
+      await synchro.lancerPremiereSynchro();
+      return true;
+    },
     async deconnecter() {
       if (synchro.modificationsNonEnvoyees() > 0) {
         const quand = await demander({
@@ -282,8 +296,20 @@ export async function demarrerApp(racine) {
       });
       if (!(await promesse) || champ.value.trim() !== "SUPPRIMER") return false;
 
-      // A recent sign-in is required by the server.
-      if (!(await compte.reconnecter())) {
+      // A recent sign-in is required by the server: the password for an e-mail account
+      // (V4.23, the password is asked, used once and forgotten), Google otherwise.
+      let reconnecte;
+      if (methodesDeConnexion(compte.lire().profil?.fournisseurs).motDePasse) {
+        const v = await demanderMotsDePasse({
+          titre: "Confirmez votre identité",
+          message: "Saisissez votre mot de passe pour supprimer le compte.",
+          champs: [{ id: "mdp-suppression", libelle: "Mot de passe", autocomplete: "current-password" }],
+        });
+        const r = v ? await compte.reconnecterMotDePasse(v[0]) : { ok: false };
+        if (r.erreur) toast(r.erreur, { type: "erreur", duree: 7000 });
+        reconnecte = r.ok;
+      } else reconnecte = await compte.reconnecter();
+      if (!reconnecte) {
         toast("Reconnectez-vous pour confirmer : rien n'a été supprimé.", {
           type: "erreur",
           duree: 7000,

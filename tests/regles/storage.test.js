@@ -17,7 +17,7 @@ beforeAll(async () => {
 afterAll(() => env?.cleanup());
 
 const stockage = (uid) =>
-  uid ? env.authenticatedContext(uid).storage() : env.unauthenticatedContext().storage();
+  uid ? env.authenticatedContext(uid, { email_verified: true }).storage() : env.unauthenticatedContext().storage();
 const octets = (n) => new Uint8Array(n);
 const MO = 1024 * 1024;
 
@@ -89,5 +89,18 @@ describe("users/{uid}/fonds", () => {
     await assertFails(
       uploadBytes(ref(stockage("A"), "public/f.webp"), octets(10), { contentType: "image/webp" }),
     );
+  });
+});
+
+describe("compte e-mail non vérifié (V4.23)", () => {
+  it("aucun accès aux fonds, même les siens", async () => {
+    const nonVerifie = env.authenticatedContext("A", { email_verified: false }).storage();
+    await assertFails(
+      uploadBytes(ref(nonVerifie, "users/A/fonds/x.webp"), octets(10), { contentType: "image/webp" }),
+    );
+    await assertSucceeds(
+      uploadBytes(ref(stockage("A"), "users/A/fonds/x.webp"), octets(10), { contentType: "image/webp" }),
+    );
+    await assertFails(getBytes(ref(nonVerifie, "users/A/fonds/x.webp")));
   });
 });

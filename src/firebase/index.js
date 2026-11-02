@@ -14,6 +14,16 @@ export {
   terminerConnexion,
 } from "#auth";
 export {
+  actualiserVerification,
+  ajouterMotDePasse,
+  changerMotDePasse,
+  connecterEmail,
+  inscrireEmail,
+  reauthentifierMotDePasse,
+  reinitialiserMotDePasse,
+  renvoyerVerification,
+} from "./auth.email.js";
+export {
   ecouterDocument,
   ecrireDocument,
   ecrireParTransaction,

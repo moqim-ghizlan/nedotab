@@ -2590,3 +2590,72 @@ body.fond-clair .carte-action--principale {
     transition: none;
   }
 }
+
+/* --- Connexion par e-mail et mot de passe (V4.23) -------------------------------------------- */
+.connexion-separateur {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  margin: var(--espace-3) 0;
+  color: var(--texte-discret, #8a8a8a);
+  font-size: 12px;
+}
+.connexion-separateur::before,
+.connexion-separateur::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+.connexion-formulaire {
+  display: grid;
+  gap: var(--espace-3);
+  text-align: left;
+}
+.connexion-champ {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.connexion-mdp {
+  position: relative;
+}
+.connexion-mdp .connexion-champ {
+  padding-right: 48px;
+}
+.connexion-oeil {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.connexion-erreur {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--danger, #d64545);
+}
+.connexion-statut {
+  margin: 0;
+  font-size: 13px;
+}
+.connexion-liens {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  flex-wrap: wrap;
+}
+.connexion-verification h4 {
+  margin: 0 0 var(--espace-2);
+}
+.compte-methode {
+  font-size: 12px;
+  opacity: 0.8;
+}

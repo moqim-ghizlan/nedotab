@@ -17,6 +17,7 @@ const TRACES = {
   ],
   avance: ["M4 7h10M18 7h2M4 17h4M12 17h8", "M16 5v4M10 15v4"],
   fermer: ["M6 6l12 12M18 6 6 18"],
+  oeil: ["M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"],
   deconnexion: ["M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3", "M10 17l-5-5 5-5", "M5 12h11"],
   restaurer: ["M4 4v5h5", "M4.6 15a8 8 0 1 0 1.9-8.3L4 9"],
   synchroniser: [

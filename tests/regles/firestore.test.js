@@ -18,7 +18,7 @@ beforeEach(() => env.clearFirestore());
 afterAll(() => env?.cleanup());
 
 const db = (uid) =>
-  uid ? env.authenticatedContext(uid).firestore() : env.unauthenticatedContext().firestore();
+  uid ? env.authenticatedContext(uid, { email_verified: true }).firestore() : env.unauthenticatedContext().firestore();
 const etat = (extra = {}) => ({
   versionSchema: 1,
   grille: [{ id: "a", type: "site", titre: "A", url: "https://a.fr" }],
@@ -219,5 +219,30 @@ describe("chemins fermés", () => {
   });
   it("collection racine inconnue : refusée", async () => {
     await assertFails(setDoc(doc(db("A"), "public/x"), { a: 1 }));
+  });
+});
+
+describe("compte e-mail non vérifié (V4.23)", () => {
+  const nonVerifie = () =>
+    env.authenticatedContext("alice", { email_verified: false, email: "alice@exemple.fr" }).firestore();
+  it("aucun accès, ni lecture ni écriture, même à ses propres chemins", async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), "users/alice/stats/visites"), { poids: {}, compte: {}, derniere: {} }),
+    );
+    await assertFails(getDoc(doc(nonVerifie(), "users/alice")));
+    await assertFails(getDoc(doc(nonVerifie(), "users/alice/stats/visites")));
+    await assertFails(getDoc(doc(nonVerifie(), "config/ia")));
+    await assertFails(
+      setDoc(doc(nonVerifie(), "users/alice"), { versionSchema: 3, grille: [], reglages: {} }),
+    );
+  });
+  it("sans la revendication email_verified : refusé aussi", async () => {
+    const sans = env.authenticatedContext("alice", { email: "alice@exemple.fr" }).firestore();
+    await assertFails(getDoc(doc(sans, "users/alice")));
+  });
+  it("le même compte, une fois vérifié, accède à ses données ; pas à celles des autres", async () => {
+    const verifie = env.authenticatedContext("alice", { email_verified: true }).firestore();
+    await assertSucceeds(getDoc(doc(verifie, "users/alice")));
+    await assertFails(getDoc(doc(verifie, "users/bob")));
   });
 });

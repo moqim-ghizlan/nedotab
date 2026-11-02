@@ -3,6 +3,13 @@ import { creerAvatar } from "../avatar.js";
 import { icone } from "../icones.js";
 import { URL_SITE } from "../../core/constantes.js";
 import { abonnerMiseAJour, lireMiseAJour } from "../etatMiseAJour.js";
+import { libelleMethodes, methodesDeConnexion, validerMotDePasse } from "../../core/authEmail.js";
+import {
+  creerAttenteVerification,
+  creerFormulaireConnexion,
+  demanderMotsDePasse,
+} from "../connexion.js";
+import { toast } from "../toast.js";
 
 /** What happens to the account's data: the privacy page of the site (V2.10). */
 const lienConfidentialite = () =>
@@ -82,8 +89,65 @@ export function sectionCompte(session) {
       bouton("Réessayer", reessayer, "lien-discret"),
     );
 
+  /** "Ajouter un mot de passe" (Google account) / "Changer le mot de passe" (e-mail account). */
+  function boutonsMotDePasse(profil) {
+    const { google, motDePasse } = methodesDeConnexion(profil.fournisseurs);
+    if (motDePasse) {
+      return [
+        action("restaurer", "Changer le mot de passe", async () => {
+          const v = await demanderMotsDePasse({
+            titre: "Changer le mot de passe",
+            message: "Confirmez votre identité avec votre mot de passe actuel.",
+            champs: [
+              { id: "mdp-actuel", libelle: "Mot de passe actuel", autocomplete: "current-password" },
+              { id: "mdp-nouveau", libelle: "Nouveau mot de passe", autocomplete: "new-password" },
+            ],
+          });
+          if (!v) return;
+          const erreur = validerMotDePasse(v[1]);
+          if (erreur) return toast(erreur, { type: "erreur", duree: 6000 });
+          const r = await compte.changerMotDePasse(v[0], v[1]);
+          toast(r.ok ? "Mot de passe modifié" : r.erreur, { type: r.ok ? "info" : "erreur", duree: 6000 });
+        }),
+      ];
+    }
+    if (google) {
+      return [
+        action("restaurer", "Ajouter un mot de passe", async () => {
+          // Re-authenticating with Google first (same uid afterwards: no data moves).
+          if (!(await compte.reconnecter())) {
+            return toast("Reconnectez-vous avec Google pour continuer.", { type: "erreur", duree: 6000 });
+          }
+          const v = await demanderMotsDePasse({
+            titre: "Ajouter un mot de passe",
+            message: "Vous pourrez ensuite vous connecter avec Google ou avec votre e-mail et ce mot de passe. Vos données restent les mêmes.",
+            champs: [{ id: "mdp-ajout", libelle: "Mot de passe (10 caractères au moins)", autocomplete: "new-password" }],
+          });
+          if (!v) return;
+          const erreur = validerMotDePasse(v[0]);
+          if (erreur) return toast(erreur, { type: "erreur", duree: 6000 });
+          const r = await compte.ajouterMotDePasse(v[0]);
+          toast(r.ok ? "Mot de passe ajouté" : r.erreur, { type: r.ok ? "info" : "erreur", duree: 6000 });
+        }),
+      ];
+    }
+    return [];
+  }
+
   const rendre = () => {
     const etat = compte.lire();
+    if (etat.statut === "verification" && etat.profil) {
+      danger.replaceChildren();
+      contenu.replaceChildren(
+        creerAttenteVerification({
+          email: etat.profil.email,
+          jaiVerifie: () => session.verifierEmail(),
+          renvoyer: () => compte.renvoyerVerification(),
+          deconnecter: () => session.deconnecter(),
+        }),
+      );
+      return;
+    }
     const sync = synchro?.lire() ?? { mode: "local" };
     if (etat.statut === "connecte" && etat.profil) {
       const [statut, court, detail] = sync.enCours
@@ -101,6 +165,10 @@ export function sectionCompte(session) {
             { class: "compte-identite" },
             el("strong", { texte: etat.profil.nom || etat.profil.email }),
             etat.profil.nom ? el("span", { texte: etat.profil.email }) : null,
+            el("span", {
+              class: "compte-methode",
+              texte: `Connexion : ${libelleMethodes(methodesDeConnexion(etat.profil.fournisseurs)) || "Google"}`,
+            }),
             el(
               "p",
               { class: "compte-statut", dataset: { statut }, title: detail, "aria-live": "polite" },
@@ -134,6 +202,7 @@ export function sectionCompte(session) {
           action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
             titre: "Restaurer la copie de cet appareil",
           }),
+          ...boutonsMotDePasse(etat.profil),
           action("deconnexion", "Se déconnecter", () => session.deconnecter()),
         ),
       );
@@ -183,6 +252,12 @@ export function sectionCompte(session) {
         el("span", { texte: enCours ? "Connexion…" : "Se connecter avec Google" }),
       ),
       ...(etat.erreur ? [erreurAvecReessai(etat.erreur, () => session.connecter())] : []),
+      el("p", { class: "connexion-separateur", texte: "ou" }),
+      creerFormulaireConnexion({
+        connecterEmail: (email, mdp, options) => session.connecterEmail(email, mdp, options),
+        reinitialiser: (email) => compte.reinitialiser(email),
+        horsLigne: () => navigator.onLine === false,
+      }),
     );
   };
   rendre();

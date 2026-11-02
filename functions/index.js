@@ -10,7 +10,9 @@ import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineInt, defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { AGE_CONNEXION_MAX_S, connexionRecente, stockageAbsent } from "./regles.js";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { AGE_CONNEXION_MAX_S, connexionRecente, emailVerifie, stockageAbsent } from "./regles.js";
+import { nettoyerComptes } from "./src/nettoyageComptes.js";
 import { creerLecteurConfig } from "./src/ia/config.js";
 import { versErreurAppel } from "./src/ia/erreurs.js";
 import { creerFonctionsIa } from "./src/ia/fonctions.js";
@@ -98,6 +100,8 @@ const appelIa = (fonction) =>
   onCall(OPTIONS_IA, async (requete) => {
     if (!requete.auth)
       throw new HttpsError("unauthenticated", "Connectez-vous pour utiliser l'IA.");
+    if (!emailVerifie(requete.auth))
+      throw new HttpsError("permission-denied", "Vérifiez votre adresse e-mail pour utiliser l'IA.");
     try {
       return await fonction(requete.auth.uid, requete.data);
     } catch (e) {
@@ -123,6 +127,8 @@ export const iaChatFlux = onCall(
   async (requete, reponse) => {
     if (!requete.auth)
       throw new HttpsError("unauthenticated", "Connectez-vous pour utiliser l'IA.");
+    if (!emailVerifie(requete.auth))
+      throw new HttpsError("permission-denied", "Vérifiez votre adresse e-mail pour utiliser l'IA.");
     if (!requete.acceptsStreaming)
       throw new HttpsError("failed-precondition", "Flux non pris en charge.");
     try {
@@ -155,6 +161,8 @@ export const iaVerifierSites = onCall(
   async (requete) => {
     if (!requete.auth)
       throw new HttpsError("unauthenticated", "Connectez-vous pour vérifier vos sites.");
+    if (!emailVerifie(requete.auth))
+      throw new HttpsError("permission-denied", "Vérifiez votre adresse e-mail pour continuer.");
     try {
       return await verifierSites(requete.auth.uid, requete.data);
     } catch (e) {
@@ -162,5 +170,14 @@ export const iaVerifierSites = onCall(
       if (code === "internal") logger.error("verification : erreur interne", { nom: e?.name });
       throw new HttpsError(code, message, details);
     }
+  },
+);
+
+// --- V4.23: cleanup of the e-mail accounts never verified ---------------------------------------
+export const nettoyageComptesNonVerifies = onSchedule(
+  { schedule: "every day 04:00", timeZone: "Europe/Paris", region: "europe-west1", maxInstances: 1 },
+  async () => {
+    const n = await nettoyerComptes(getAuth());
+    logger.info("comptes non vérifiés supprimés", { nombre: n });
   },
 );

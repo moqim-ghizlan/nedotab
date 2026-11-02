@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.23.0] - 2026-11-02
+
+### Ajouté
+
+- **Connexion par e-mail et mot de passe**, en plus de Google, sur l'extension et la PWA (Réglages → Compte) : inscription, connexion, mot de passe oublié, bouton œil, `autocomplete` correct pour les gestionnaires de mots de passe (y compris iPhone), erreurs annoncées (`role="alert"`), « Connexion internet nécessaire » hors ligne. Une seule implémentation partagée (`src/firebase/auth.email.js`, SDK de chaque cible fourni par `#auth`) ; logique pure dans `src/core/authEmail.js`.
+- **Décisions du plan prises par défaut** (recommandations) : un seul compte par adresse, mot de passe de **10 caractères** minimum sans règle de complexité, inscription **ouverte à tous**, expéditeur d'e-mails par défaut de Firebase.
+- **Vérification obligatoire de l'e-mail** : écran « Vérifiez votre boîte mail » (« J'ai vérifié » recharge l'utilisateur **et** le jeton ; « Renvoyer l'e-mail » limité à 1 par minute). Les règles **Firestore et Storage** exigent `email_verified == true` ; les fonctions d'IA et de vérification des sites aussi (tests d'émulateur : un compte non vérifié n'a aucun accès, même à ses propres chemins).
+- **Comptes Google et mot de passe liés** : « Ajouter un mot de passe » (après ré-authentification Google) et « Changer le mot de passe » (après ré-authentification), même `uid` donc aucune donnée ne bouge (testé sur l'émulateur Auth). Le message « Cet email est déjà utilisé avec Google… » guide l'utilisateur.
+- **Suppression du compte** : ré-authentification par mot de passe pour un compte e-mail (le mot de passe est demandé, utilisé une fois, oublié) ; Google comme avant sinon.
+- **Nettoyage** : fonction planifiée quotidienne `nettoyageComptesNonVerifies` (comptes e-mail jamais vérifiés après 7 jours ; jamais un compte Google ni vérifié).
+- Documents : étapes de la console Firebase (`docs/firebase.md`), `docs/securite.md`, contrainte de la V5.2 (invitation VPN : e-mail **vérifié** seulement, comparaison normalisée).
+- **À faire par le propriétaire avant le déploiement** : les 4 réglages de la console (voir `docs/firebase.md`) ; sans eux l'inscription par e-mail est refusée (`auth/operation-not-allowed`) et le message l'explique. Déploiement des règles et des fonctions nécessaire.
+- **Non fait / à vérifier** : la page de destination du lien de vérification (page Firebase par défaut), les vérifications manuelles du plan (iPhone, extension, e-mails réels), le test de règles VPN (les règles `vpn/*` n'existent pas encore), le plafond Firebase d'envoi d'e-mails.
+
 ## [4.22.0] - 2026-11-02
 
 ### Ajouté

@@ -1,5 +1,6 @@
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
+import { traduireErreurAuth } from "../../core/authEmail.js";
 
 /**
  * Account state for the interface. A small indicator kept in local storage tells, at
@@ -10,7 +11,9 @@ import { plateforme } from "../../platform/index.js";
  * Web app (V3.2): signing in leaves the page for Google. A marker written just before
  * ("connexionEnAttente") tells the next startup to load Firebase and read the result.
  *
- * etat: { statut: "deconnecte" | "connexion" | "connecte", profil, erreur }
+ * etat: { statut: "deconnecte" | "connexion" | "verification" | "connecte", profil, erreur }
+ * "verification" (V4.23): signed in with an e-mail address not verified yet — no access to
+ * the data, only the screen "Vérifiez votre boîte mail".
  */
 
 /** A redirect older than this was abandoned (the user never came back from Google). */
@@ -82,7 +85,10 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
     if (ecoute) return;
     const fb = await charger();
     ecoute = fb.ecouterUtilisateur((profil) => {
-      if (profil) {
+      if (profil && profil.emailVerifie === false) {
+        ecrireIndicateur(null);
+        changer({ statut: "verification", profil, erreur: null });
+      } else if (profil) {
         ecrireIndicateur(profil);
         changer({ statut: "connecte", profil, erreur: null });
       } else if (etat.statut !== "connexion") {
@@ -90,6 +96,27 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
         changer({ statut: "deconnecte", profil: null });
       }
     });
+  }
+
+  /** Sign-up / sign-in by e-mail: the state follows the profile (verified or not). */
+  async function avecEmail(nom, args) {
+    changer({ statut: "connexion", erreur: null });
+    try {
+      const fb = await charger();
+      const profil = await fb[nom](...args);
+      if (profil.emailVerifie) {
+        await ecrireIndicateur(profil);
+        changer({ statut: "connecte", profil, erreur: null });
+      } else {
+        changer({ statut: "verification", profil, erreur: null });
+      }
+      suivreSession().catch(() => {});
+      return { ok: true, verifie: !!profil.emailVerifie };
+    } catch (e) {
+      const erreur = traduireErreurAuth(e);
+      changer({ statut: "deconnecte", profil: null, erreur: null });
+      return { ok: false, erreur };
+    }
   }
 
   return {
@@ -167,6 +194,72 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
         await effacerAttente();
         if (!(e instanceof plat.ConnexionAnnulee)) console.error(e);
         return false;
+      }
+    },
+    /**
+     * E-mail and password (V4.23). Each returns { ok, erreur?, verifie? }: the message is
+     * already readable, and no password is kept anywhere.
+     */
+    async inscrire(email, mdp) {
+      return avecEmail("inscrireEmail", [email, mdp]);
+    },
+    async connecterEmail(email, mdp) {
+      return avecEmail("connecterEmail", [email, mdp]);
+    },
+    /** With e-mail enumeration protection, an unknown address looks like a known one. */
+    async reinitialiser(email) {
+      try {
+        await (await charger()).reinitialiserMotDePasse(email);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, erreur: traduireErreurAuth(e) };
+      }
+    },
+    async renvoyerVerification() {
+      try {
+        await (await charger()).renvoyerVerification();
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, erreur: traduireErreurAuth(e) };
+      }
+    },
+    /** "J'ai vérifié": reloads the user and the token. @returns {Promise<boolean>} verified */
+    async actualiserVerification() {
+      try {
+        const profil = await (await charger()).actualiserVerification();
+        if (profil?.emailVerifie) {
+          await ecrireIndicateur(profil);
+          changer({ statut: "connecte", profil, erreur: null });
+          return true;
+        }
+      } catch (e) {
+        changer({ erreur: traduireErreurAuth(e) });
+      }
+      return false;
+    },
+    async reconnecterMotDePasse(mdp) {
+      try {
+        await (await charger()).reauthentifierMotDePasse(mdp);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, erreur: traduireErreurAuth(e) };
+      }
+    },
+    async ajouterMotDePasse(mdp) {
+      try {
+        const profil = await (await charger()).ajouterMotDePasse(mdp);
+        changer({ profil });
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, erreur: traduireErreurAuth(e) };
+      }
+    },
+    async changerMotDePasse(ancien, nouveau) {
+      try {
+        await (await charger()).changerMotDePasse(ancien, nouveau);
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, erreur: traduireErreurAuth(e) };
       }
     },
     /** After the account was deleted on the server: forget the session on this device. */

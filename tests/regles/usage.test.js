@@ -19,7 +19,7 @@ beforeEach(() => env.clearFirestore());
 afterAll(() => env?.cleanup());
 
 const db = (uid) =>
-  uid ? env.authenticatedContext(uid).firestore() : env.unauthenticatedContext().firestore();
+  uid ? env.authenticatedContext(uid, { email_verified: true }).firestore() : env.unauthenticatedContext().firestore();
 
 describe("usage et cache IA", () => {
   it("l'utilisateur lit son usage ; personne d'autre ; aucune écriture depuis le navigateur", async () => {
