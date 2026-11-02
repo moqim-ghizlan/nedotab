@@ -124,6 +124,7 @@ export const iaSupprimerCle = appelIa(fonctionsIa.supprimerCle);
 export const iaEtatCles = appelIa(fonctionsIa.etatCles);
 export const iaTester = appelIa(fonctionsIa.tester);
 export const iaGenererTags = appelIa(fonctionsIa.genererTags);
+export const iaProposerSite = appelIa(fonctionsIa.proposerSite);
 export const iaChat = appelIa(fonctionsIa.chatConversation);
 export const iaSupprimerConversation = appelIa(fonctionsIa.supprimerConversation);
 /**

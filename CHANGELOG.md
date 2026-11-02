@@ -2,6 +2,32 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.29.0] - 2026-11-02
+
+### Ajouté
+
+- **Bouton de l'extension** : un clic sur l'icône NedoTab ouvre une fenêtre de 360 px avec deux choix, **Ajouter ce site** et **Ouvrir le chat** (flèches / Entrée, onglet affiché en haut, lien « Ouvrir NedoTab »). L'onglet actif est lu **une seule fois** à l'ouverture.
+- **Formulaire d'ajout** pré-rempli (nom, adresse, emplacement avec chemin « Travail › Clients » et recherche dès 8 dossiers, tags, description). Icône et titre trouvés en arrière-plan (jamais bloquant). Dernier dossier utilisé mémorisé sur l'appareil. Bandeau « Déjà dans … » (Modifier / Ajouter quand même). Pages refusées avec explication : `chrome://`, `file://`, Web Store, nouvel onglet. Enregistrement **immédiat** dans le stockage (la fenêtre se ferme dès qu'elle perd le focus) ; un onglet NedoTab ouvert recharge le changement et fusionne ses propres modifications en attente (mécanisme existant).
+- **Remplir avec l'IA** (seulement au clic) : nouvelle fonction `iaProposerSite` — titre (60 caractères, sans HTML ni adresse), 3 à 8 tags, description et **dossier existant**. La grille est lue côté serveur ; dossiers et sites exclus de l'IA (V4.20) absents du prompt ; page sensible = aucun extrait ; sortie validée (dossier inconnu → accueil), une relance puis « réponse invalide » ; mêmes quota, consommation, modèle (« tags ») et cache que les tags. Seuls les champs non touchés sont remplis ; **Annuler**, **Régénérer**, rien n'est enregistré sans « Ajouter » ; les propositions gardées telles quelles sont marquées « ia ok » (pas de second appel).
+- **Chat sur place** : panneau latéral Chrome (`sidePanel.open` appelé directement dans le clic) affichant la page NedoTab avec l'assistant ouvert (`newtab.html?panneau=chat`) : même compte, même historique. Sans `sidePanel` : le chat s'ouvre dans un onglet NedoTab.
+- **Permissions ajoutées (visibles à la mise à jour de l'extension)** : `activeTab` (adresse et titre de l'onglet cliqué) et `sidePanel` (panneau du chat). Ni `tabs` ni `<all_urls>`.
+- **Tests** : onglets acceptés / refusés, liste des emplacements (limite de 3 niveaux), dossier disparu, doublon en profondeur, fusion IA sans écraser un champ touché ; sortie IA (JSON, balises de code, invalide, dossier inconnu ou piégé, titre long ou avec HTML / adresse) ; fonction (prompt sans dossier exclu ni identifiant réel, consigne cachée sans effet, page sensible sans extrait, relance, cache, entrée invalide) ; fenêtre (pré-remplissage, page refusée, ajout dans un sous-dossier écrit aussitôt, doublon, annulation, `sidePanel` présent / absent) ; manifeste (permissions minimales, `popup.html` côté extension seulement).
+
+### Décisions du plan prises par défaut
+
+Panneau latéral pour le chat ; le chat ne lit pas la page ouverte ; dossier par défaut = dernier utilisé ; l'IA ne remplit qu'au clic ; dossiers existants seulement.
+
+### À faire par le propriétaire (déploiement, avec accord)
+
+Déployer les fonctions (`npm run deployer:fonctions`), puis publier la nouvelle `.zip` de l'extension (`npm run package`) et mettre à jour le guide d'installation : Chrome affichera la demande des nouvelles permissions.
+
+### Non fait / limites connues
+
+- **Écart au plan** : la page `chat.html` n'existe pas — le panneau latéral réutilise `newtab.html?panneau=chat` ; pas d'extraction de `formulaireSite.js` (le formulaire de la fenêtre est écrit à part, les dialogues existants sont inchangés) ; la fonction est dans `fonctions.js` (pas de fichier `proposerSite.js` séparé).
+- **Pas d'éditeur d'icône** dans la fenêtre (icône automatique du site) ; pas de bouton « Remplir avec l'IA » masqué quand l'IA n'est pas configurée : l'erreur du serveur est affichée ; la connexion Google n'est jamais lancée depuis la fenêtre (non connecté : message d'erreur de l'IA, l'ajout local fonctionne).
+- **Synchronisation Firebase** : la fenêtre écrit le stockage local ; l'envoi vers le compte est fait par une page NedoTab (ouverte maintenant, ou au prochain nouvel onglet). Sans page ouverte, l'ajout n'atteint pas l'iPhone avant cela. Non vérifié en conditions réelles.
+- **Panneau latéral** : mise en page du chat dans un panneau étroit non vérifiée visuellement (le panneau du chat garde ses dimensions actuelles) ; navigation privée, Brave et Edge non testés ; aucun test manuel du plan n'a été fait. Documents (guide d'installation, `docs/plateformes.md`, politique de confidentialité) à mettre à jour pour `activeTab` / `iaProposerSite`.
+
 ## [4.28.0] - 2026-11-02
 
 ### Ajouté

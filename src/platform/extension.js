@@ -84,7 +84,7 @@ const CLE_BARRE_CHROME = "nedotab:barre-chrome";
  */
 export function prendreLeCurseur() {
   const url = new URL(location.href);
-  if (url.searchParams.has("focus") || !globalThis.chrome?.tabs?.getCurrent)
+  if (url.searchParams.has("focus") || url.searchParams.has("panneau") || !globalThis.chrome?.tabs?.getCurrent)
     return Promise.resolve(false);
   try {
     if (localStorage.getItem(CLE_BARRE_CHROME) === "1") return Promise.resolve(false);

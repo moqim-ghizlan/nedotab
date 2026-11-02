@@ -99,7 +99,7 @@ export default defineConfig(({ mode }) => {
     build: {
       ...build,
       outDir: "dist/extension",
-      rollupOptions: { input: { newtab: "newtab.html" } },
+      rollupOptions: { input: { newtab: "newtab.html", popup: "popup.html" } },
     },
     plugins: [manifestExtension(env)],
   };

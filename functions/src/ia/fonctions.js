@@ -49,6 +49,14 @@ import { preFiltrer } from "../partage/preFiltre.js";
 import { CHAMP_USAGE } from "../partage/listeCompacte.js";
 import { niveauUsage, normaliserStats, scoreActuel } from "../partage/usage.js";
 import { lireSortieTags } from "./tagsSortie.js";
+import {
+  messageProposition,
+  PROMPT_PROPOSER_VERSION,
+  RAPPEL_FORMAT as RAPPEL_PROPOSER,
+  SYSTEME_PROPOSER,
+} from "./prompts/proposerSite.js";
+import { lireSortieProposition } from "./proposerSiteSortie.js";
+import { analyserConfidentialite } from "../partage/confidentialiteUrl.js";
 import { extraitReduit } from "../partage/extraitPage.js";
 import { jourParis } from "../quota.js";
 import { ErreurPage } from "../reseau/recupererPage.js";
@@ -129,8 +137,13 @@ function separerProposition(texteBrut, contexte) {
     dossiers: contexte.tableDossiers,
   });
   if (!actions.length) return { texte, proposition: null };
-  const id = Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0");
-  return { texte: texte.trim() ? texte : TEXTE_PROPOSITION_PAR_DEFAUT, proposition: { id, actions } };
+  const id = Math.floor(Math.random() * 0xffffffff)
+    .toString(16)
+    .padStart(8, "0");
+  return {
+    texte: texte.trim() ? texte : TEXTE_PROPOSITION_PAR_DEFAUT,
+    proposition: { id, actions },
+  };
 }
 
 /** Extract of a page (V4.3): same limits as extraitPage.js; a bad shape is refused. */
@@ -446,6 +459,77 @@ export function creerFonctionsIa(deps) {
   }
 
   /**
+   * V4.29: proposal for the "add this site" form of the extension button: title, tags,
+   * description AND an existing folder. The grid is read here (Admin SDK), never sent by the
+   * browser; folders and sites excluded from the AI (V4.20) are not in the prompt. Nothing is
+   * saved: the user reads the proposal and presses "Ajouter". Same rules as genererTags
+   * (sign-in, quota, model of the "tags" use, consumption, cache).
+   */
+  async function proposerSite(uid, donnees) {
+    const { extrait, url, titre } = valider(donnees, {
+      extrait: { type: "libre", verifier: verifierExtrait },
+      url: { type: "chaine", requis: true, max: 2048, motif: /^https?:\/\/\S+$/i },
+      titre: { type: "chaine", max: 300 },
+    });
+    const snap = await db.doc(`users/${uid}`).get();
+    const conf = validerConfidentialite(
+      snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null,
+    );
+    // A sensitive page (bank, mail, private address, token in the address) never sends an extract.
+    const sensible = !analyserConfidentialite(url).contenu;
+    const lirePagesPermis = permis(conf, "lirePages") && !sensible;
+    const extraitUtile = lirePagesPermis ? extrait : undefined;
+    // Existing folders only (decision 5), as short ids dN; none when titles may not be shown.
+    const { lignes: lignesDossiers, table: tableDossiers } = permis(conf, "titresAdresses")
+      ? construireListeDossiers(dossiersDe(snap.exists ? snap.data()?.grille : []))
+      : { lignes: [], table: {} };
+    const modele = (await config()).modele;
+    const cle = cleCache([
+      "proposition",
+      PROMPT_PROPOSER_VERSION,
+      modele,
+      url,
+      titre ?? null,
+      extraitUtile ?? null,
+      lirePagesPermis,
+      lignesDossiers.join("|"),
+    ]);
+    await choixDeLUsage(uid); // AI switched off: not even the cache answers
+    const connu = await cache.lire(uid, cle);
+    if (connu) {
+      await usageSvc?.evite(uid);
+      return connu;
+    }
+    const page = extraitUtile ?? extraitReduit(url, titre); // title and address only otherwise
+    const messages = [
+      { role: "user", texte: messageProposition({ extrait: page, url, titre, lignesDossiers }) },
+    ];
+    for (let essai = 0; essai < 2; essai++) {
+      const r = await executerUsage(uid, {
+        usage: "tags",
+        systeme: SYSTEME_PROPOSER,
+        messages:
+          essai === 0
+            ? messages
+            : [
+                ...messages,
+                { role: "assistant", texte: "..." },
+                { role: "user", texte: RAPPEL_PROPOSER },
+              ],
+        maxJetons: 1024,
+        formatJson: true,
+      });
+      const sortie = lireSortieProposition(r.texte, { dossiers: tableDossiers });
+      if (sortie) {
+        const reponse = { ...sortie, modele: r.modele };
+        await cache.ecrire(uid, cle, reponse, DUREE_TAGS_MS);
+        return reponse;
+      }
+    }
+    throw new ErreurFournisseur("reponse-invalide");
+  }
+
+  /**
    * V4.9: smart search among the user's own sites. The browser sends only the question: the
    * server reads the grid itself, builds the compact list (pre-filtered when it is large),
    * and the model answers with short ids only, validated and turned back into real ids.
@@ -457,7 +541,9 @@ export function creerFonctionsIa(deps) {
     });
     if (!question.trim()) throw new EntreeInvalide("question : texte attendu.");
     const snap = await db.doc(`users/${uid}`).get();
-    const conf = validerConfidentialite(snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null);
+    const conf = validerConfidentialite(
+      snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null,
+    );
     if (!permis(conf, "titresAdresses")) throw new ErreurFournisseur("confidentialite-sites");
     const sites = sitesDe(snap.exists ? snap.data()?.grille : []);
     // Nothing to search: no call, nothing paid.
@@ -557,7 +643,12 @@ export function creerFonctionsIa(deps) {
     }
     // Folder names are folder paths too: left out when the user does not share them.
     const dossiersEnvoyes = permis(conf, "chemins") ? lignesDossiers : [];
-    return { lignes, table, lignesDossiers: dossiersEnvoyes, tableDossiers: permis(conf, "chemins") ? tableDossiers : {} };
+    return {
+      lignes,
+      table,
+      lignesDossiers: dossiersEnvoyes,
+      tableDossiers: permis(conf, "chemins") ? tableDossiers : {},
+    };
   }
 
   /**
@@ -672,9 +763,10 @@ export function creerFonctionsIa(deps) {
               etat,
               proposition,
               modele: fin?.modele ?? modele,
-              jetons: fin?.jetonsEntree != null
-                ? { entree: fin.jetonsEntree ?? 0, sortie: fin.jetonsSortie ?? 0 }
-                : undefined,
+              jetons:
+                fin?.jetonsEntree != null
+                  ? { entree: fin.jetonsEntree ?? 0, sortie: fin.jetonsSortie ?? 0 }
+                  : undefined,
               sitesCites: Object.values(sites),
             })
           : undefined;
@@ -726,7 +818,9 @@ export function creerFonctionsIa(deps) {
       portee: { type: "chaine", requis: true, valeurs: () => ["accueil", "tout"] },
     });
     const snap = await db.doc(`users/${uid}`).get();
-    const conf = validerConfidentialite(snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null);
+    const conf = validerConfidentialite(
+      snap.exists ? snap.data()?.reglages?.ia?.confidentialite : null,
+    );
     if (!permis(conf, "titresAdresses")) throw new ErreurFournisseur("confidentialite-sites");
     const grille = snap.exists ? snap.data()?.grille : [];
     let sites = sitesDe(grille);
@@ -783,7 +877,9 @@ export function creerFonctionsIa(deps) {
 
   // --- V4.15: conversations (the history comes from Firestore, never from the browser) ---------
   const conversations = creerConversations({ db, horloge });
-  const schemaConversation = { convId: { type: "chaine", requis: true, motif: MOTIF_ID_CONVERSATION } };
+  const schemaConversation = {
+    convId: { type: "chaine", requis: true, motif: MOTIF_ID_CONVERSATION },
+  };
 
   /** Titles of the sites of the grid by real id (only read when a past answer cites a site). */
   async function titresDeSites(uid) {
@@ -827,10 +923,14 @@ export function creerFonctionsIa(deps) {
     if (!permis(await confidentialiteDe(uid), "historique")) return chatFlux(uid, donnees, options);
     const { convId } = valider(donnees, schemaConversation);
     const messages = await historiqueDe(uid, convId);
-    return chatFlux(uid, { messages }, {
-      ...options,
-      enregistrer: (m) => conversations.enregistrerReponse(uid, convId, m),
-    });
+    return chatFlux(
+      uid,
+      { messages },
+      {
+        ...options,
+        enregistrer: (m) => conversations.enregistrerReponse(uid, convId, m),
+      },
+    );
   }
 
   /** V4.15: deletes a conversation with all its messages. */
@@ -882,6 +982,7 @@ export function creerFonctionsIa(deps) {
     quotaRestant,
     definirQuota,
     genererTags,
+    proposerSite,
     rechercher,
     chat,
     chatFlux,

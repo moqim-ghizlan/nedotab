@@ -23,13 +23,20 @@ export const referencesReelles = (texte, table) =>
   );
 
 const apercu = (texte) => {
-  const plat = String(texte).replace(/\[\[site:[^\]]*\]\]/g, "").replace(/\s+/g, " ").trim();
+  const plat = String(texte)
+    .replace(/\[\[site:[^\]]*\]\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return plat.length <= APERCU_MAX ? plat : `${plat.slice(0, APERCU_MAX - 1).trimEnd()}…`;
 };
 
 export function creerConversations({ db, horloge = () => Date.now(), aleatoire }) {
   const hasard =
-    aleatoire ?? (() => Math.floor(Math.random() * 0xffffffff).toString(16).padStart(8, "0"));
+    aleatoire ??
+    (() =>
+      Math.floor(Math.random() * 0xffffffff)
+        .toString(16)
+        .padStart(8, "0"));
   const racine = (uid) => `users/${uid}/conversations`;
   const refConversation = (uid, convId) => db.doc(`${racine(uid)}/${convId}`);
   const messages = (uid, convId) => db.collection(`${racine(uid)}/${convId}/messages`);
@@ -54,7 +61,8 @@ export function creerConversations({ db, horloge = () => Date.now(), aleatoire }
       if (m.etat === "erreur" || typeof m.texte !== "string" || !m.texte.trim()) continue;
       const role = m.role === "assistant" ? "assistant" : "user";
       const texte = (role === "assistant" ? remplacer(m.texte) : m.texte).slice(0, 4000);
-      if (liste.at(-1)?.role === role) liste.at(-1).texte = `${liste.at(-1).texte}\n\n${texte}`.slice(0, 4000);
+      if (liste.at(-1)?.role === role)
+        liste.at(-1).texte = `${liste.at(-1).texte}\n\n${texte}`.slice(0, 4000);
       else liste.push({ role, texte });
     }
     while (liste[0]?.role === "assistant") liste.shift();

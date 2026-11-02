@@ -19,8 +19,14 @@ const PAR_CODE = {
   "reponse-invalide": ["internal", "Réponse de l'IA inutilisable."],
   "fournisseur-indisponible": ["unavailable", "Fournisseur indisponible pour l'instant."],
   "limite-personnelle": ["resource-exhausted", "Votre limite personnelle est atteinte."],
-  "confidentialite-sites": ["failed-precondition", "L'envoi des titres et adresses de vos sites est désactivé dans vos réglages."],
-  "lecture-serveur-desactivee": ["failed-precondition", "La lecture des pages par le serveur est désactivée dans vos réglages."],
+  "confidentialite-sites": [
+    "failed-precondition",
+    "L'envoi des titres et adresses de vos sites est désactivé dans vos réglages.",
+  ],
+  "lecture-serveur-desactivee": [
+    "failed-precondition",
+    "La lecture des pages par le serveur est désactivée dans vos réglages.",
+  ],
   "conversation-introuvable": ["not-found", "Conversation introuvable."],
   "conversation-pleine": ["failed-precondition", "Cette conversation est pleine (200 messages)."],
   "conversation-sans-question": ["failed-precondition", "Aucune question à laquelle répondre."],
@@ -31,7 +37,11 @@ export function versErreurAppel(e) {
   if (e instanceof EntreeInvalide)
     return { code: "invalid-argument", message: e.message, details: { code: "entree-invalide" } };
   if (e instanceof QuotaDepasse)
-    return { code: "resource-exhausted", message: e.message, details: { code: e.pages ? "quota-pages-depasse" : "quota-depasse" } };
+    return {
+      code: "resource-exhausted",
+      message: e.message,
+      details: { code: e.pages ? "quota-pages-depasse" : "quota-depasse" },
+    };
   if (e instanceof ErreurFournisseur && PAR_CODE[e.code]) {
     const [code, message] = PAR_CODE[e.code];
     return { code, message, details: { code: e.code } };

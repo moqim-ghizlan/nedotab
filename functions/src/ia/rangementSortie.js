@@ -25,7 +25,11 @@ const phrase = (v, max) => {
  * @returns {{ groupes: { titre: string, explication: string, proposition: { id: string, actions: object[] } }[] } | null}
  *   null when the answer cannot be read (then one retry, then "reponse-invalide")
  */
-export function lireSortieRangement(texte, tables, genererId = () => Math.random().toString(16).slice(2, 10)) {
+export function lireSortieRangement(
+  texte,
+  tables,
+  genererId = () => Math.random().toString(16).slice(2, 10),
+) {
   if (typeof texte !== "string") return null;
   let brut = texte.trim();
   const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(brut);

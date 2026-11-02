@@ -662,6 +662,11 @@ export async function demarrerApp(racine) {
       })) === true,
   });
   document.body.append(chat.bouton, chat.panneau);
+  // V4.29: the side panel of the toolbar button shows this page with the assistant open.
+  if (new URL(location.href).searchParams.get("panneau") === "chat") {
+    document.documentElement.dataset.panneau = "chat";
+    setTimeout(() => chat.ouvrir(), 0);
+  }
   // V4.24: sharing space (texts and links between the devices of the account).
   const partage = creerEspacePartage({
     store,

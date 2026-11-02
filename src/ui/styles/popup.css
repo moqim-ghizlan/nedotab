@@ -1,0 +1,102 @@
+/* V4.29 — toolbar window: 360 px wide, 600 px high at most (Chrome's limit). */
+body.popup {
+  width: 360px;
+  max-height: 600px;
+  margin: 0;
+  overflow: hidden;
+}
+.popup-ecran {
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+}
+.popup-entete {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #8884;
+}
+.popup-entete img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+}
+.popup-titre {
+  font-weight: 600;
+  max-width: 270px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.popup-domaine {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+.popup-choix {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+.popup-choix .bouton {
+  min-height: 52px;
+  font-size: 1rem;
+}
+.popup-pied {
+  padding: 0 1rem 0.75rem;
+  margin: 0;
+  font-size: 0.85rem;
+}
+/* Only the form scrolls, never the action bar. */
+.popup-corps {
+  overflow-y: auto;
+  padding: 0.75rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.popup-barre {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #8884;
+}
+.popup-barre .droite {
+  display: flex;
+  gap: 0.5rem;
+}
+.popup-ligne {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.popup-bandeau {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, #c0620f 15%, transparent);
+  font-size: 0.9rem;
+  margin: 0;
+}
+.popup-ia-propose {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+.popup-corps textarea,
+.popup-corps select,
+.popup-corps input {
+  width: 100%;
+}
+.popup [hidden] {
+  display: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .popup * {
+    transition: none !important;
+  }
+}
+
+/* Side panel (newtab.html?panneau=chat): only the assistant is shown. */
+html[data-panneau="chat"] #app {
+  display: none;
+}
