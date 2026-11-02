@@ -51,7 +51,15 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
       texte: "Ajouter ce site",
       disabled: !onglet.ok,
       onclick: () =>
-        ecranAjout({ racine, store, stockage, onglet, retour: accueil, peutEcrire, ouvrirNedoTab }).catch((e) => console.error("ECRAN", e)),
+        ecranAjout({
+          racine,
+          store,
+          stockage,
+          onglet,
+          retour: accueil,
+          peutEcrire,
+          ouvrirNedoTab,
+        }).catch((e) => console.error("ECRAN", e)),
     });
     const chat = el("button", {
       type: "button",

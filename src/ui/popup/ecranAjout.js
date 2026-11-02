@@ -6,6 +6,7 @@ import { DESCRIPTION_MAX, tagsUtilises } from "../../core/tags.js";
 import { domaine } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
 import { creerChampTags } from "../champTags.js";
+import { creerEditeurIcone } from "../dialogues/editerIcone.js";
 import { el } from "../dom.js";
 import { trouverIconeEtTitre } from "../services/icones.js";
 import { creerRemplissageIa } from "./remplirIa.js";
@@ -29,7 +30,6 @@ export async function ecranAjout({
   const existant = siteExistant(grille(), onglet.url);
   const touches = new Set();
   let propositionIa = null; // { tags, description } while the user has not changed them
-  let icone = { type: "lettre", couleur: couleurDepuisTexte(onglet.url) };
 
   const dernier = await plateforme.preferences.lire("dernierDossierAjout").catch(() => null);
   const cibles = dossiersCibles(grille());
@@ -94,11 +94,17 @@ export async function ecranAjout({
   // Icon and title found in the background: they never block the display.
   const recherchee = trouverIconeEtTitre(onglet.url)
     .then((r) => {
-      icone = r.icone;
       if (!touches.has("titre") && !onglet.titre && r.titre) champNom.value = r.titre;
     })
     .catch(() => {});
 
+  // Icon (collapsed): automatic by default; importing an image opens a system dialog that may
+  // close this window, so the other modes are the ones to prefer here.
+  const editeurIcone = creerEditeurIcone({
+    iconeInitiale: { type: "lettre", couleur: couleurDepuisTexte(onglet.url) },
+    lireSite: () => ({ titre: champNom.value, url: onglet.url }),
+    onChange: () => {},
+  });
   const hors = typeof navigator !== "undefined" && navigator.onLine === false;
   const boutonIa = el("button", {
     type: "button",
@@ -165,7 +171,7 @@ export async function ecranAjout({
     const site = creerSite({
       titre: champNom.value.trim() || domaine(onglet.url),
       url: onglet.url,
-      icone,
+      icone: editeurIcone.lire(),
     });
     store.envoyer({ type: A.SITE_AJOUTER, site, parentId });
     const tags = champTags.lire();
@@ -253,6 +259,12 @@ export async function ecranAjout({
           el("label", { for: "p-lieu", texte: "Emplacement" }),
           recherche,
           lieu,
+        ),
+        el(
+          "details",
+          { class: "popup-icone" },
+          el("summary", { texte: "Icône" }),
+          editeurIcone.racine,
         ),
         champTags.racine,
         el(

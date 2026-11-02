@@ -4,6 +4,8 @@ import {
   chiffrerElement,
   creerCoffre,
   dechiffrerElement,
+  chiffrerFichier,
+  dechiffrerFichier,
   deverrouiller,
   deverrouillerParSecours,
   groupesAVerifier,
@@ -514,6 +516,9 @@ export function creerCoffreUI({ charger, uid, session = creerSessionCoffre() }) 
     },
     /** @returns {(id: string, e: {contenu: string, titre: string}) => Promise<string>} */
     chiffrer: async (id, e) => chiffrerElement(session.cle(), uid(), id, e),
+    /** Encrypts the bytes of a file (id = the id of its element: authenticated data). */
+    chiffrerOctets: async (id, octets) => chiffrerFichier(session.cle(), uid(), id, octets),
+    dechiffrerOctets: async (id, octets) => dechiffrerFichier(session.cle(), uid(), id, octets),
     /** @returns {Promise<{contenu: string, titre: string}>} (throws ErreurCoffre "corrompu") */
     dechiffrer: async (e) => dechiffrerElement(session.cle(), uid(), e.id, e.contenu),
   };

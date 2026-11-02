@@ -35,11 +35,22 @@ const CACHE_MAX = 60 * 1024 * 1024;
  * @param {() => void} d.rendre asks the panel to draw again
  * @param {() => number} d.octets bytes used by the account (counter)
  */
-export function creerFichiers({ charger, uid, store, rendre, octets, expiration }) {
+export function creerFichiers({
+  charger,
+  uid,
+  store,
+  rendre,
+  octets,
+  expiration,
+  coffre = null,
+  creerLien = null,
+}) {
   const envois = []; // { cle, fichier, part, etat: "envoi"|"echec"|"interrompu", erreur, annuler }
   const cache = new Map(); // id → Blob
   const miniatures = new Map(); // id → blob: URL
   const enCours = new Set();
+  // V4.26: name and type of the encrypted files, in memory only while the vault is open.
+  const metas = new Map(); // id → { contenu: name, typeMime } | { corrompu: true }
   let elementsVus = [];
 
   const entree = el("input", {
@@ -129,7 +140,11 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
         if (!ok) continue;
       }
       dire(null);
+      // V4.26: encrypted on the device before the send, the vault must be open first.
+      const chiffre = !!coffre?.veutChiffrer();
+      if (chiffre && !(await coffre.assurerDeverrouille())) return;
       demarrer({
+        chiffre,
         cle: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         fichier: f,
         part: 0,
@@ -154,6 +169,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
           majProgres(envoi);
         },
         expiration?.(),
+        envoi.chiffre && coffre
+          ? {
+              chiffrerOctets: (id, o) => coffre.chiffrerOctets(id, o),
+              chiffrerNom: (id, e) => coffre.chiffrer(id, e),
+            }
+          : null,
       );
       envoi.annuler = annuler;
       await promesse;
@@ -271,7 +292,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
   // --- Reading ---------------------------------------------------------------------------------
   async function obtenirBlob(e) {
     if (cache.has(e.id)) return cache.get(e.id);
-    const blob = await (await charger()).lireFichierPartage(e.chemin);
+    let blob = await (await charger()).lireFichierPartage(e.chemin);
+    if (e.chiffre) {
+      // Decrypted in memory; the type is the one stored in the encrypted block.
+      const clair = await coffre.dechiffrerOctets(e.id, new Uint8Array(await blob.arrayBuffer()));
+      blob = new Blob([clair], { type: e.typeMime || "application/octet-stream" });
+    }
     cache.set(e.id, blob);
     // Memory only: the oldest ones go when the session holds too much.
     let total = [...cache.values()].reduce((n, b) => n + b.size, 0);
@@ -431,7 +457,14 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
   }
 
   // --- Cards ---------------------------------------------------------------------------------------
-  function carte(e) {
+  function carte(brut) {
+    // V4.26: a locked encrypted file shows a padlock, no name, no preview.
+    let e = brut;
+    if (brut.chiffre) {
+      const m = metas.get(brut.id);
+      if (!m?.contenu) return carteVerrouillee(brut, m?.corrompu);
+      e = { ...brut, contenu: m.contenu, typeMime: m.typeMime };
+    }
     const famille = familleDe(e.contenu, e.typeMime);
     const cadre = el("span", {
       class: "partage-vignette",
@@ -478,6 +511,22 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
           texte: "Télécharger",
           onclick: () => telecharger(e),
         }),
+        // V4.28: a public link to a COPY of the file (5 MB at most), decrypted if it was in the vault.
+        creerLien && e.taille <= 5 * 1024 * 1024
+          ? el("button", {
+              type: "button",
+              class: "partage-action",
+              texte: "Créer un lien",
+              onclick: async () => {
+                try {
+                  const blob = await obtenirBlob(e);
+                  creerLien(e, new Uint8Array(await blob.arrayBuffer()));
+                } catch {
+                  toast("Lien impossible pour l'instant.", { type: "erreur" });
+                }
+              },
+            })
+          : null,
         typeof navigator.share === "function" && estTactile()
           ? el("button", {
               type: "button",
@@ -495,6 +544,56 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
       ),
     );
   }
+
+  function carteVerrouillee(e, corrompu) {
+    return el(
+      "li",
+      { class: "partage-carte partage-carte--fichier", dataset: { id: e.id, type: "fichier" } },
+      el("span", { class: "partage-vignette", "aria-hidden": "true", texte: "🔒" }),
+      el(
+        "div",
+        { class: "partage-texte" },
+        el("span", {
+          class: "partage-nom partage-chiffre",
+          texte: corrompu ? "Élément corrompu" : "Fichier chiffré",
+        }),
+        el("span", { class: "partage-detail", texte: formaterTaille(e.taille) }),
+      ),
+      el(
+        "div",
+        { class: "partage-actions" },
+        el("button", {
+          type: "button",
+          class: "partage-action partage-action--danger",
+          texte: "Supprimer",
+          onclick: () => supprimer(e),
+        }),
+      ),
+    );
+  }
+
+  /** Reads (in memory) the name and type of the encrypted files while the vault is open. */
+  async function dechiffrerNoms(liste) {
+    if (!coffre?.session.estDeverrouille()) return;
+    const aFaire = liste.filter((e) => e.type === "fichier" && e.chiffre && !metas.has(e.id));
+    if (!aFaire.length) return;
+    for (const e of aFaire) {
+      try {
+        const r = await coffre.dechiffrer(e);
+        metas.set(e.id, { contenu: r.contenu, typeMime: r.titre });
+      } catch {
+        metas.set(e.id, { corrompu: true });
+      }
+    }
+    rendre();
+  }
+  coffre?.session.surVerrouille(() => {
+    metas.clear();
+    cache.clear();
+    for (const u of miniatures.values()) URL.revokeObjectURL(u);
+    miniatures.clear();
+    rendre();
+  });
 
   // --- Drag and drop (computer) and paste ----------------------------------------------------------
   const cadreDepot = el("div", {
@@ -546,6 +645,7 @@ export function creerFichiers({ charger, uid, store, rendre, octets, expiration 
     /** The panel tells which elements it shows (viewer, quota visibility). */
     elementsVus: (liste) => {
       elementsVus = liste;
+      dechiffrerNoms(liste);
       majQuota();
     },
     majQuota,

@@ -133,9 +133,9 @@ export async function creerLienPourElement({ charger, copier, element, dureeId =
     message.hidden = true;
     try {
       const fb = await charger();
-      const octets = new TextEncoder().encode(element.contenu);
+      const octets = element.octets ?? new TextEncoder().encode(element.contenu);
       const res = await fb.creerLienPartage(
-        { type: element.type, octets },
+        { type: element.type, octets, nom: element.nom, typeMime: element.typeMime },
         { dureeId: duree, ouverturesMax: ouvertures, motDePasse: protege ? mdp.value : null },
       );
       await afficherLien(res.lien, copier);

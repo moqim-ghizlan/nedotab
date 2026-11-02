@@ -31,6 +31,8 @@ import {
   dureesProlongeables,
   ecartDepuisConfirmation,
   estExpire,
+  formaterTempsRestant,
+  tempsRestantMs,
   libelleExpiration,
   prolonger,
   sansExpiration,
@@ -89,9 +91,19 @@ export function creerEspacePartage({
   let dureeId = lireDuree();
   let ecart = 0;
   const enAttenteVus = new Set();
+  const prevenus = new Set(); // items already warned about
+  let visiblesAvant = [];
   const expiration = () => calculerExpiration(dureeId, ecart);
 
   const fichiers = creerFichiers({
+    coffre,
+    creerLien: (e, octets) =>
+      creerLienPourElement({
+        charger,
+        copier,
+        dureeId,
+        element: { type: "fichier", octets, nom: e.contenu, typeMime: e.typeMime },
+      }),
     expiration,
     charger,
     uid,
@@ -402,6 +414,21 @@ export function creerEspacePartage({
   function rendre() {
     // An expired item disappears at once (the server deletes it a little later).
     const visibles = elements.filter((e) => !estExpire(e, ecart));
+    // V4.27: a warning five minutes before, and a polite announcement when an item has just gone.
+    if (ouvert) {
+      const proches = visibles.filter((e) => {
+        const ms = tempsRestantMs(e, ecart);
+        return ms !== null && ms > 0 && ms <= 5 * 60_000 && !prevenus.has(e.id);
+      });
+      proches.forEach((e) => prevenus.add(e.id));
+      if (proches.length)
+        toast(
+          `Expire dans ${formaterTempsRestant(Math.min(...proches.map((e) => tempsRestantMs(e, ecart))))}`,
+        );
+      if (visiblesAvant.some((id) => elements.some((e) => e.id === id && estExpire(e, ecart))))
+        toast("Cet élément a expiré");
+    }
+    visiblesAvant = visibles.map((e) => e.id);
     const sans = sansExpiration(visibles);
     migration.hidden = sans.length === 0;
     migration.replaceChildren();

@@ -49,16 +49,33 @@ export function envoyerFichier(
   fichier,
   surProgres,
   expireLe = calculerExpiration(DUREE_DEFAUT),
+  chiffrement = null,
 ) {
   const reference = doc(elements(uid)); // automatic id
-  const chemin = cheminStockage(uid, reference.id, fichier.name);
+  // V4.26: an encrypted file keeps a neutral name in Storage; its real name and type live in the
+  // encrypted block of the element.
+  const chemin = cheminStockage(uid, reference.id, chiffrement ? "fichier.bin" : fichier.name);
   const objet = ref(obtenirApp().stockage, chemin);
   let tache = null;
+  let envoye = fichier;
   let annule = false;
   const promesse = file.ajouter(async () => {
     if (annule) throw Object.assign(new Error("annulé"), { code: "annule" });
-    tache = uploadBytesResumable(objet, fichier, {
-      contentType: typeDeclare(fichier),
+    if (chiffrement) {
+      envoye = new Blob(
+        [
+          await chiffrement.chiffrerOctets(
+            reference.id,
+            new Uint8Array(await fichier.arrayBuffer()),
+          ),
+        ],
+        {
+          type: "application/octet-stream",
+        },
+      );
+    }
+    tache = uploadBytesResumable(objet, envoye, {
+      contentType: chiffrement ? "application/octet-stream" : typeDeclare(fichier),
       cacheControl: "private, max-age=0",
     });
     await new Promise((ok, ko) =>
@@ -74,19 +91,28 @@ export function envoyerFichier(
     });
     try {
       const lot = writeBatch(db());
+      const bloc = chiffrement
+        ? {
+            contenu: await chiffrement.chiffrerNom(reference.id, {
+              contenu: nomAffiche(fichier.name),
+              titre: typeDeclare(fichier),
+            }),
+            titre: "",
+            chiffre: true,
+          }
+        : { contenu: nomAffiche(fichier.name), titre: nomAffiche(fichier.name) };
       lot.set(reference, {
         type: "fichier",
-        contenu: nomAffiche(fichier.name),
-        titre: nomAffiche(fichier.name),
+        ...bloc,
         appareil: appareilCourant(),
         epingle: false,
         creeLe: serverTimestamp(),
         expireLe: Timestamp.fromMillis(expireLe),
-        taille: fichier.size,
-        typeMime: typeDeclare(fichier),
+        taille: envoye.size,
+        typeMime: chiffrement ? "application/octet-stream" : typeDeclare(fichier),
         chemin,
       });
-      lot.set(meta(uid), { nb: increment(1), octets: increment(fichier.size) }, { merge: true });
+      lot.set(meta(uid), { nb: increment(1), octets: increment(envoye.size) }, { merge: true });
       await lot.commit();
     } catch (e) {
       // The element was refused (full space, rules): the file must not stay.
