@@ -2,6 +2,8 @@
  * Export file (V2.10): the user's data in one JSON file, readable by any version that knows
  * its schema. Pure: the download is done by the interface.
  */
+import { exporterElements } from "./espacePartage.js";
+
 export const FORMAT_EXPORT = "nedotab-export";
 export const VERSION_FORMAT = 1;
 
@@ -18,7 +20,7 @@ export function nomFichierExport(date = new Date()) {
  */
 export function creerExport(
   etat,
-  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats },
+  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats, espacePartage },
 ) {
   const resultat = {
     format: FORMAT_EXPORT,
@@ -31,6 +33,8 @@ export function creerExport(
   };
   // V4.21: usage statistics (weights, counts, last visit in ms), counters only.
   if (stats) resultat.stats = stats;
+  // V4.24: texts and links of the sharing space (account only). Backups never include it.
+  if (espacePartage) resultat.espacePartage = exporterElements(espacePartage);
   if (sauvegardes) {
     resultat.sauvegardes = sauvegardes.map((s) => ({
       id: s.id,

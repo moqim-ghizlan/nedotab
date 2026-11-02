@@ -30,6 +30,7 @@ import { sectionSauvegardes } from "./reglages/sauvegardes.js";
 import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
+import { chargerFirebase } from "../firebase/charger.js";
 import { demander } from "./dialogues/commun.js";
 import { creerSectionFrequents } from "./reglages/frequents.js";
 import { iaDe } from "../core/ia.js";
@@ -850,6 +851,54 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 toast("Historique d'utilisation effacé");
               },
             }),
+          ),
+          section(
+            "Espace de partage",
+            el("p", {
+              class: "reglages-note",
+              texte:
+                "Textes et liens envoyés d'un appareil à l'autre (bouton ⇄ en bas à gauche). Non inclus dans les sauvegardes ; inclus dans l'export de vos données ; jamais envoyés à l'assistant IA.",
+            }),
+            el(
+              "div",
+              { class: "reglages-boutons" },
+              el("button", {
+                type: "button",
+                class: "bouton",
+                texte: "Recalculer le compteur",
+                onclick: async () => {
+                  try {
+                    const fb = await chargerFirebase();
+                    const n = await fb.recalculerCompteurPartage(session.compte.lire().profil.uid);
+                    toast(`${n} élément${n > 1 ? "s" : ""} dans l'espace de partage`);
+                  } catch {
+                    toast("Impossible pour l'instant (hors ligne ?).", { type: "erreur" });
+                  }
+                },
+              }),
+              el("button", {
+                type: "button",
+                class: "bouton bouton--danger",
+                texte: "Vider l'espace de partage",
+                onclick: async () => {
+                  const ok = await demander({
+                    titre: "Vider l'espace de partage",
+                    message: "Tous les textes et liens partagés seront supprimés, sur tous vos appareils. Cette action est définitive.",
+                    boutons: [
+                      { libelle: "Annuler", valeur: false },
+                      { libelle: "Tout supprimer", valeur: true, principal: true, danger: true },
+                    ],
+                  });
+                  if (!ok) return;
+                  try {
+                    await (await chargerFirebase()).viderLePartage(session.compte.lire().profil.uid);
+                    toast("Espace de partage vidé");
+                  } catch {
+                    toast("Impossible pour l'instant (hors ligne ?).", { type: "erreur" });
+                  }
+                },
+              }),
+            ),
           ),
           compteUi?.confidentialite,
           compteUi?.danger,

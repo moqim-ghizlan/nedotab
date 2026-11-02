@@ -57,6 +57,7 @@ import {
 import { creerServiceVisites } from "./services/visites.js";
 import { creerServiceUsage } from "./services/usage.js";
 import { creerFrequents } from "./frequents.js";
+import { creerEspacePartage } from "./espacePartage.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -661,6 +662,18 @@ export async function demarrerApp(racine) {
       })) === true,
   });
   document.body.append(chat.bouton, chat.panneau);
+  // V4.24: sharing space (texts and links between the devices of the account).
+  const partage = creerEspacePartage({
+    store,
+    disponible: () => uidConnecte() !== null,
+    charger: chargerFirebase,
+    uid: uidConnecte,
+  });
+  session.partage = partage;
+  document.body.append(partage.bouton, partage.panneau);
+  synchro.abonner(() => partage.actualiser());
+  compte.abonner(() => partage.actualiser());
+  partage.actualiser();
   // The settings arrive after the first render and change in the settings panel: the robot
   // follows them (the search bar does the same on focus).
   let reglagesIaVus = JSON.stringify(store.lire().reglages?.ia ?? null);

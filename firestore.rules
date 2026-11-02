@@ -118,6 +118,44 @@ service cloud.firestore {
         && request.resource.data.majLe == request.time;
     }
 
+    // V4.24: sharing space (texts and links). The rules cannot count a collection: the counter
+    // espacePartageMeta/usage is changed in the same batch as each element (getAfter), so a 201st
+    // element, or an add that does not increment the counter by exactly 1, is refused.
+    match /users/{uid}/espacePartage/{id} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle'])
+        && request.resource.data.type in ['texte', 'lien']
+        && request.resource.data.contenu is string
+        && request.resource.data.contenu.size() >= 1
+        && request.resource.data.contenu.size() <= 20000
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() <= 200
+        && request.resource.data.creeLe == request.time
+        && request.resource.data.appareil is string
+        && request.resource.data.appareil.size() <= 64
+        && request.resource.data.epingle is bool
+        && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb <= 200
+        && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb
+          == (exists(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage)
+              ? get(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb : 0) + 1;
+      // Pin / unpin, or bring an element back to the top (same content sent again).
+      allow update: if proprietaire(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe'])
+        && request.resource.data.epingle is bool
+        && (request.resource.data.creeLe == resource.data.creeLe
+            || request.resource.data.creeLe == request.time);
+    }
+
+    match /users/{uid}/espacePartageMeta/usage {
+      allow read, delete: if proprietaire(uid);
+      allow create, update: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['nb'])
+        && request.resource.data.nb is int
+        && request.resource.data.nb >= 0
+        && request.resource.data.nb <= 200;
+    }
+
     match /config/{doc} {
       allow read: if connecte();
       allow write: if false;

@@ -71,3 +71,16 @@ export {
   majServeur,
   retirerEntrees,
 } from "./visites.js";
+export {
+  ajouter as ajouterAuPartage,
+  ecouterCompteur as ecouterCompteurPartage,
+  ecouterEspacePartage,
+  epingler as epinglerPartage,
+  lirePage as lirePagePartage,
+  lireTout as lireToutLePartage,
+  recalculerCompteur as recalculerCompteurPartage,
+  remonter as remonterPartage,
+  restaurer as restaurerPartage,
+  supprimer as supprimerDuPartage,
+  viderTout as viderLePartage,
+} from "./espacePartage.js";

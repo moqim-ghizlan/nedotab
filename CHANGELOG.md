@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.24.0] - 2026-11-02
+
+### Ajouté
+
+- **Espace de partage : texte et liens** entre les appareils d'un même compte (extension et PWA). Bouton ⇄ en bas à gauche (visible seulement avec un compte synchronisé), pastille quand un élément arrive d'un autre appareil depuis la dernière ouverture. Panneau latéral de 380 px sur grand écran (Échap ou clic extérieur ferment, focus gardé dans le panneau), feuille plein écran sur téléphone (zones de sécurité, pas de focus automatique du clavier).
+- Chaque élément : aperçu de 2 lignes, domaine pour un lien, « il y a 3 min · depuis iPhone », **Copier** (« Copié ✓ » 1,5 s + retour haptique), **Ouvrir** (liens), **Épingler**, **Supprimer** avec « Annuler » 5 s. « Coller » (lecture du presse-papiers sur geste, repli par collage manuel), « Enregistrer comme lien » proposé mais jamais appliqué seul, **doublon : l'élément existant remonte** en tête. États : vide, chargement (3 squelettes), hors ligne, erreur de lecture (« Réessayer »), limite atteinte, « Voir plus » par 50.
+- **Sécurité** : tout est affiché en `textContent` (du HTML collé reste du texte) ; seuls les liens `http:` et `https:` sont cliquables (`javascript:`, `data:`, `file:`… restent du texte), `rel="noopener noreferrer"`. Le contenu n'est jamais envoyé à l'IA (test sur les modules de liste, de chat et les fonctions), ni écrit dans les journaux.
+- **Base** : `users/{uid}/espacePartage/{id}` (`type`, `contenu` ≤ 20 000 caractères, `titre`, `appareil`, `epingle`, `creeLe` = heure serveur) et compteur `users/{uid}/espacePartageMeta/usage` (`nb`). Les règles ne savent pas compter : chaque ajout et chaque suppression est **un seul lot** (élément + compteur `increment`), et la règle de création vérifie `nb ≤ 200` et `nb = avant + 1` avec `getAfter`. Tests d'émulateur : autre utilisateur, champ inconnu, `creeLe` falsifié, 201ᵉ élément, compteur incohérent, **deux ajouts simultanés au 200ᵉ (un seul passe)**.
+- **Lectures limitées** : un écouteur sur les 50 plus récents, arrêté quand le panneau est fermé **et** l'onglet masqué, relancé au retour.
+- **Réglages → Mes données → Espace de partage** : « Vider l'espace de partage » (lots de 400), « Recalculer le compteur ». **Export RGPD** : section `espacePartage` (sans l'id), absente sans réseau ; **sauvegardes : non**. Suppression de compte : la suppression récursive couvre les deux collections (test d'émulateur ajouté).
+- **Décisions du plan prises par défaut** : bouton dédié, 20 000 caractères / 200 éléments, doublon remonté, nom d'appareil automatique (type d'appareil), export oui / sauvegardes non.
+- **Non fait** : le **menu clic droit « Envoyer vers NedoTab »** (permission `contextMenus`) : elle s'affiche à l'installation et désactive l'extension chez ceux qui l'ont déjà jusqu'à son acceptation ; la décision 4 du plan demande l'accord du propriétaire, elle est donc repoussée (la page NedoTab doit de toute façon faire l'écriture, le service worker n'ayant pas la session). Aussi : nom d'appareil modifiable, vérifications manuelles du plan sur appareils réels.
+
 ## [4.23.0] - 2026-11-02
 
 ### Ajouté

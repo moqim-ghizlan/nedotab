@@ -84,7 +84,17 @@ export function creerDonnees({
         };
       }
     }
+    // V4.24: the sharing space is part of the user's data (RGPD); offline, the export goes on without it.
+    let espacePartage;
+    if (enCompte()) {
+      try {
+        espacePartage = await (await charger()).lireToutLePartage(uid());
+      } catch {
+        espacePartage = undefined;
+      }
+    }
     const contenu = creerExport(store.lire(), {
+      espacePartage,
       version: plat.getVersion(),
       plateforme: plat.capacites?.nom ?? "extension",
       maintenant: maintenant.getTime(),
