@@ -443,3 +443,9 @@
 .partage-expire--urgent { color: #c0620f; opacity: 1; font-weight: 600; }
 .partage-migration { margin: 0.5rem 0; font-size: 0.9rem; }
 @media (prefers-reduced-motion: no-preference) { .partage-carte { transition: opacity 200ms; } }
+
+/* A hidden action stays hidden (the class sets display and would override the attribute). */
+.partage-action[hidden],
+.partage-actions [hidden] {
+  display: none !important;
+}
