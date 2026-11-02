@@ -19,7 +19,7 @@ import { vibrer } from "./haptique.js";
 import { toast } from "./toast.js";
 
 /** Thumbnails: only small images, downloaded once and kept in memory for the session. */
-const MINIATURE_MAX = 2 * 1024 * 1024;
+const MINIATURE_MAX = 8 * 1024 * 1024;
 /** Opened files kept in memory (the session only, never stored: the content may be private). */
 const CACHE_MAX = 60 * 1024 * 1024;
 
@@ -341,7 +341,8 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
       img,
       legende,
     );
-    fond.addEventListener("click", (ev) => ev.target === fond && fermer());
+    // A tap on the picture or the background closes too (no key on a phone).
+    fond.addEventListener("click", (ev) => (ev.target === fond || ev.target === img) && fermer());
     document.addEventListener("keydown", touche, true);
     document.body.append(fond);
     fond.querySelector("button").focus();

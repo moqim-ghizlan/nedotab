@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.25.1] - 2026-11-02
+
+### Corrigé
+
+- Visionneuse d'images : bouton de fermeture bien visible (rond de 48 px, sous la barre d'état de l'iPhone), un tap sur l'image ou le fond ferme aussi.
+- Miniatures : limite portée de 2 à 8 Mo (les photos d'iPhone font 3 à 6 Mo).
+- Ajout de `cors-storage.json` : règle CORS à appliquer au bucket Storage (nécessaire pour l'aperçu et le téléchargement dans le navigateur).
+
 ## [4.25.0] - 2026-11-02
 
 ### Ajouté

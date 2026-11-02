@@ -374,9 +374,20 @@
   color: #fff;
   touch-action: pinch-zoom;
 }
+.partage-visionneuse {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
 .partage-visionneuse .partage-fermer {
   justify-self: end;
+  margin: 8px max(8px, env(safe-area-inset-right, 0px)) 0 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
+  font-size: 30px;
+  line-height: 1;
 }
 .partage-visionneuse-image {
   max-width: 100%;
