@@ -35,7 +35,7 @@ const CACHE_MAX = 60 * 1024 * 1024;
  * @param {() => void} d.rendre asks the panel to draw again
  * @param {() => number} d.octets bytes used by the account (counter)
  */
-export function creerFichiers({ charger, uid, store, rendre, octets }) {
+export function creerFichiers({ charger, uid, store, rendre, octets, expiration }) {
   const envois = []; // { cle, fichier, part, etat: "envoi"|"echec"|"interrompu", erreur, annuler }
   const cache = new Map(); // id → Blob
   const miniatures = new Map(); // id → blob: URL
@@ -55,7 +55,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
       e.currentTarget.value = "";
     },
   });
-  const message = el("p", { class: "partage-message", role: "status", "aria-live": "polite", hidden: true });
+  const message = el("p", {
+    class: "partage-message",
+    role: "status",
+    "aria-live": "polite",
+    hidden: true,
+  });
   const dire = (texte) => {
     message.textContent = texte ?? "";
     message.hidden = !texte;
@@ -75,7 +80,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
   const texteBarre = el("span", { class: "partage-quota-texte" });
   const quota = el(
     "div",
-    { class: "partage-quota", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(QUOTA_MAX) },
+    {
+      class: "partage-quota",
+      role: "progressbar",
+      "aria-valuemin": "0",
+      "aria-valuemax": String(QUOTA_MAX),
+    },
     el("div", { class: "partage-quota-piste" }, barre),
     texteBarre,
   );
@@ -92,7 +102,8 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
   }
 
   // --- Sending ---------------------------------------------------------------------------------
-  const utilisesParLesEnvois = () => envois.filter((e) => e.etat === "envoi").reduce((n, e) => n + e.fichier.size, 0);
+  const utilisesParLesEnvois = () =>
+    envois.filter((e) => e.etat === "envoi").reduce((n, e) => n + e.fichier.size, 0);
 
   async function ajouter(fichiers) {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
@@ -118,7 +129,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
         if (!ok) continue;
       }
       dire(null);
-      demarrer({ cle: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, fichier: f, part: 0, etat: "envoi" });
+      demarrer({
+        cle: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        fichier: f,
+        part: 0,
+        etat: "envoi",
+      });
     }
   }
 
@@ -130,10 +146,15 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
     rendre();
     try {
       const fb = await charger();
-      const { promesse, annuler } = fb.envoyerFichierPartage(uid(), envoi.fichier, (p) => {
-        envoi.part = p;
-        majProgres(envoi);
-      });
+      const { promesse, annuler } = fb.envoyerFichierPartage(
+        uid(),
+        envoi.fichier,
+        (p) => {
+          envoi.part = p;
+          majProgres(envoi);
+        },
+        expiration?.(),
+      );
       envoi.annuler = annuler;
       await promesse;
       envois.splice(envois.indexOf(envoi), 1);
@@ -145,7 +166,13 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
         envois.splice(envois.indexOf(envoi), 1);
       } else {
         // Offline, locked phone, refused by the rules: never a silence.
-        envoi.etat = ["storage/retry-limit-exceeded", "storage/unknown", "storage/canceled"].includes(e?.code) ? "interrompu" : "echec";
+        envoi.etat = [
+          "storage/retry-limit-exceeded",
+          "storage/unknown",
+          "storage/canceled",
+        ].includes(e?.code)
+          ? "interrompu"
+          : "echec";
         envoi.erreur =
           e?.code === "permission-denied"
             ? "Refusé : espace plein ou fichier non accepté."
@@ -172,20 +199,42 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
     const echec = envoi.etat !== "envoi";
     return el(
       "li",
-      { class: `partage-carte partage-carte--fichier${echec ? " partage-carte--erreur" : ""}`, dataset: { envoi: envoi.cle } },
-      el("span", { class: "partage-type", "aria-hidden": "true", texte: ICONES_FAMILLE[familleDe(fichier.name, fichier.type)] }),
+      {
+        class: `partage-carte partage-carte--fichier${echec ? " partage-carte--erreur" : ""}`,
+        dataset: { envoi: envoi.cle },
+      },
+      el("span", {
+        class: "partage-type",
+        "aria-hidden": "true",
+        texte: ICONES_FAMILLE[familleDe(fichier.name, fichier.type)],
+      }),
       el(
         "div",
         { class: "partage-texte" },
-        el("span", { class: "partage-nom", title: nomAffiche(fichier.name), texte: tronquerMilieu(fichier.name) }),
+        el("span", {
+          class: "partage-nom",
+          title: nomAffiche(fichier.name),
+          texte: tronquerMilieu(fichier.name),
+        }),
         echec
-          ? el("span", { class: "partage-detail", role: "alert", texte: `${envoi.erreur} — ${formaterTaille(fichier.size)}` })
+          ? el("span", {
+              class: "partage-detail",
+              role: "alert",
+              texte: `${envoi.erreur} — ${formaterTaille(fichier.size)}`,
+            })
           : el(
               "div",
               { class: "partage-progres" },
               el(
                 "div",
-                { class: "partage-progres-piste", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct), "aria-label": `Envoi de ${nomAffiche(fichier.name)}` },
+                {
+                  class: "partage-progres-piste",
+                  role: "progressbar",
+                  "aria-valuemin": "0",
+                  "aria-valuemax": "100",
+                  "aria-valuenow": String(pct),
+                  "aria-label": `Envoi de ${nomAffiche(fichier.name)}`,
+                },
                 el("div", { class: "partage-progres-barre", style: `width:${pct}%` }),
               ),
               el("span", { class: "partage-pourcent", texte: `${pct} %` }),
@@ -195,7 +244,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
         "div",
         { class: "partage-actions" },
         echec
-          ? el("button", { type: "button", class: "partage-action", texte: "Réessayer", onclick: () => demarrer(envoi) })
+          ? el("button", {
+              type: "button",
+              class: "partage-action",
+              texte: "Réessayer",
+              onclick: () => demarrer(envoi),
+            })
           : null,
         el("button", {
           type: "button",
@@ -232,7 +286,9 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
   async function obtenirFichier(e) {
     const blob = await obtenirBlob(e);
     // The type is forced: never text/html, never an image/svg opened in the app's context.
-    const type = telechargementSeulement(e.contenu, e.typeMime) ? "application/octet-stream" : blob.type || e.typeMime || "application/octet-stream";
+    const type = telechargementSeulement(e.contenu, e.typeMime)
+      ? "application/octet-stream"
+      : blob.type || e.typeMime || "application/octet-stream";
     return new File([blob], nomAffiche(e.contenu), { type });
   }
 
@@ -240,7 +296,11 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
     try {
       const fichier = await obtenirFichier(e);
       // iPhone / iPad (installed app): `a[download]` is unreliable, the share sheet is not.
-      if (typeof navigator.canShare === "function" && navigator.canShare({ files: [fichier] }) && estTactile()) {
+      if (
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({ files: [fichier] }) &&
+        estTactile()
+      ) {
         await navigator.share({ files: [fichier] });
         return;
       }
@@ -287,7 +347,12 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
     try {
       if (!miniatures.has(e.id)) miniatures.set(e.id, URL.createObjectURL(await obtenirBlob(e)));
       if (!cadre.isConnected) return;
-      const img = el("img", { class: "partage-miniature", alt: nomAffiche(e.contenu), src: miniatures.get(e.id), draggable: "false" });
+      const img = el("img", {
+        class: "partage-miniature",
+        alt: nomAffiche(e.contenu),
+        src: miniatures.get(e.id),
+        draggable: "false",
+      });
       // A picture the browser cannot show (HEIC on a computer): the family icon stays.
       img.addEventListener("error", () => img.remove(), { once: true });
       cadre.replaceChildren(img);
@@ -297,8 +362,13 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
   }
 
   async function ouvrirVisionneuse(e) {
-    const images = elementsVus.filter((x) => x.type === "fichier" && apercuPossible(x.contenu, x.typeMime));
-    let i = Math.max(0, images.findIndex((x) => x.id === e.id));
+    const images = elementsVus.filter(
+      (x) => x.type === "fichier" && apercuPossible(x.contenu, x.typeMime),
+    );
+    let i = Math.max(
+      0,
+      images.findIndex((x) => x.id === e.id),
+    );
     const img = el("img", { class: "partage-visionneuse-image", alt: "", draggable: "false" });
     const legende = el("p", { class: "partage-visionneuse-legende" });
     let url = null;
@@ -336,8 +406,19 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
     const retour = document.activeElement;
     const fond = el(
       "div",
-      { class: "partage-visionneuse", role: "dialog", "aria-label": "Aperçu de l'image", "aria-modal": "true" },
-      el("button", { type: "button", class: "partage-fermer", "aria-label": "Fermer", texte: "×", onclick: fermer }),
+      {
+        class: "partage-visionneuse",
+        role: "dialog",
+        "aria-label": "Aperçu de l'image",
+        "aria-modal": "true",
+      },
+      el("button", {
+        type: "button",
+        class: "partage-fermer",
+        "aria-label": "Fermer",
+        texte: "×",
+        onclick: fermer,
+      }),
       img,
       legende,
     );
@@ -352,35 +433,76 @@ export function creerFichiers({ charger, uid, store, rendre, octets }) {
   // --- Cards ---------------------------------------------------------------------------------------
   function carte(e) {
     const famille = familleDe(e.contenu, e.typeMime);
-    const cadre = el("span", { class: "partage-vignette", "aria-hidden": "true", texte: ICONES_FAMILLE[famille] });
+    const cadre = el("span", {
+      class: "partage-vignette",
+      "aria-hidden": "true",
+      texte: ICONES_FAMILLE[famille],
+    });
     miniature(e, cadre);
     const avertissement = avertissementTelechargement(e.contenu, e.typeMime);
     const peutVoir = apercuPossible(e.contenu, e.typeMime);
     return el(
       "li",
-      { class: `partage-carte partage-carte--fichier${e.enAttente ? " partage-carte--attente" : ""}`, dataset: { id: e.id, type: "fichier" } },
+      {
+        class: `partage-carte partage-carte--fichier${e.enAttente ? " partage-carte--attente" : ""}`,
+        dataset: { id: e.id, type: "fichier" },
+      },
       cadre,
       el(
         "div",
         { class: "partage-texte" },
-        el("span", { class: "partage-nom", title: nomAffiche(e.contenu), texte: tronquerMilieu(e.contenu) }),
-        el("span", { class: "partage-detail", texte: `${formaterTaille(e.taille)}${avertissement ? ` · ${avertissement}` : ""}` }),
+        el("span", {
+          class: "partage-nom",
+          title: nomAffiche(e.contenu),
+          texte: tronquerMilieu(e.contenu),
+        }),
+        el("span", {
+          class: "partage-detail",
+          texte: `${formaterTaille(e.taille)}${avertissement ? ` · ${avertissement}` : ""}`,
+        }),
       ),
       el(
         "div",
         { class: "partage-actions" },
-        peutVoir ? el("button", { type: "button", class: "partage-action", texte: "Voir", onclick: () => ouvrirVisionneuse(e) }) : null,
-        el("button", { type: "button", class: "partage-action", texte: "Télécharger", onclick: () => telecharger(e) }),
-        typeof navigator.share === "function" && estTactile()
-          ? el("button", { type: "button", class: "partage-action", texte: "Partager", onclick: () => partager(e) })
+        peutVoir
+          ? el("button", {
+              type: "button",
+              class: "partage-action",
+              texte: "Voir",
+              onclick: () => ouvrirVisionneuse(e),
+            })
           : null,
-        el("button", { type: "button", class: "partage-action partage-action--danger", texte: "Supprimer", onclick: () => supprimer(e) }),
+        el("button", {
+          type: "button",
+          class: "partage-action",
+          texte: "Télécharger",
+          onclick: () => telecharger(e),
+        }),
+        typeof navigator.share === "function" && estTactile()
+          ? el("button", {
+              type: "button",
+              class: "partage-action",
+              texte: "Partager",
+              onclick: () => partager(e),
+            })
+          : null,
+        el("button", {
+          type: "button",
+          class: "partage-action partage-action--danger",
+          texte: "Supprimer",
+          onclick: () => supprimer(e),
+        }),
       ),
     );
   }
 
   // --- Drag and drop (computer) and paste ----------------------------------------------------------
-  const cadreDepot = el("div", { class: "partage-depot", hidden: true, "aria-hidden": "true", texte: "Déposer ici" });
+  const cadreDepot = el("div", {
+    class: "partage-depot",
+    hidden: true,
+    "aria-hidden": "true",
+    texte: "Déposer ici",
+  });
   function brancherZone(zone) {
     let niveau = 0;
     const porteFichiers = (ev) => [...(ev.dataTransfer?.types ?? [])].includes("Files");

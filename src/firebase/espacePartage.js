@@ -12,10 +12,12 @@ import {
   serverTimestamp,
   setDoc,
   startAfter,
+  Timestamp,
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
 import { PAGE_ELEMENTS, lireElement } from "../core/espacePartage.js";
+import { BORNE_BASSE_MS, calculerExpiration, DUREE_DEFAUT } from "../core/expirationPartage.js";
 import { deleteObject, listAll, ref } from "firebase/storage";
 import { obtenirApp } from "./app.js";
 import { appareilCourant } from "./sauvegardes.js";
@@ -44,8 +46,20 @@ export function ecouterEspacePartage(uid, rappel, surErreur, limite = PAGE_ELEME
     { includeMetadataChanges: true },
     (s) =>
       rappel(
-        s.docs.map((d) => lireElement(d.id, d.data({ serverTimestamps: "estimate" }), d.metadata.hasPendingWrites)).filter(Boolean),
-        { depuisCache: s.metadata.fromCache, enAttente: s.metadata.hasPendingWrites, plein: s.size >= limite },
+        s.docs
+          .map((d) =>
+            lireElement(
+              d.id,
+              d.data({ serverTimestamps: "estimate" }),
+              d.metadata.hasPendingWrites,
+            ),
+          )
+          .filter(Boolean),
+        {
+          depuisCache: s.metadata.fromCache,
+          enAttente: s.metadata.hasPendingWrites,
+          plein: s.size >= limite,
+        },
       ),
     surErreur,
   );
@@ -64,12 +78,34 @@ export function ecouterCompteur(uid, rappel, surErreur) {
  * Adds an element: one batch (element + counter). @returns {Promise<string>} its id.
  * The batch is queued offline and sent once, when the network is back.
  */
-export async function ajouter(uid, { type, contenu, titre, appareil = appareilCourant(), epingle = false, chiffre = false }, chiffrer = null) {
+export async function ajouter(
+  uid,
+  {
+    type,
+    contenu,
+    titre,
+    appareil = appareilCourant(),
+    epingle = false,
+    chiffre = false,
+    expireLe = calculerExpiration(DUREE_DEFAUT),
+  },
+  chiffrer = null,
+) {
   const ref = doc(elements(uid)); // automatic id: no clash between devices
   const lot = writeBatch(db());
   // V4.26: the encryption needs the id (it is part of the authenticated data), hence the callback.
-  const corps = chiffre && chiffrer ? { contenu: await chiffrer(ref.id, { contenu, titre }), titre: "", chiffre: true } : { contenu, titre };
-  lot.set(ref, { type, ...corps, appareil, epingle, creeLe: serverTimestamp() });
+  const corps =
+    chiffre && chiffrer
+      ? { contenu: await chiffrer(ref.id, { contenu, titre }), titre: "", chiffre: true }
+      : { contenu, titre };
+  lot.set(ref, {
+    type,
+    ...corps,
+    appareil,
+    epingle,
+    creeLe: serverTimestamp(),
+    expireLe: Timestamp.fromMillis(expireLe),
+  });
   lot.set(meta(uid), { nb: increment(1) }, { merge: true });
   await lot.commit();
   return ref.id;
@@ -94,7 +130,29 @@ export async function supprimer(uid, id) {
 
 /** Puts a removed element back (the "Annuler" of the toast): same content, same pin. */
 export async function restaurer(uid, e) {
-  return ajouter(uid, e);
+  // The rule wants at least 55 minutes ahead: an item nearly over gets one more hour.
+  return ajouter(uid, {
+    ...e,
+    expireLe: Math.max(e.expireLe ?? 0, Date.now() + BORNE_BASSE_MS + 5 * 60_000),
+  });
+}
+
+/** V4.27: new expiry (ms) of one item (extension). */
+export async function prolonger(uid, id, expireLe) {
+  await updateDoc(doc(elements(uid), id), { expireLe: Timestamp.fromMillis(expireLe) });
+}
+
+/** V4.27: gives an expiry to items created before V4.27, with the user's agreement. */
+export async function migrerExpiration(uid, ids, expireLe) {
+  for (let i = 0; i < ids.length; i += 400) {
+    const lot = writeBatch(db());
+    ids
+      .slice(i, i + 400)
+      .forEach((id) =>
+        lot.update(doc(elements(uid), id), { expireLe: Timestamp.fromMillis(expireLe) }),
+      );
+    await lot.commit();
+  }
 }
 
 /** Empties the space, by batches of 400 documents; the counter goes to 0. */
@@ -124,9 +182,17 @@ export async function recalculerCompteur(uid) {
 
 /** The next elements after `dernier` (a "Voir plus" page of 50). */
 export async function lirePage(uid, dernierCreeLe, taille = PAGE_ELEMENTS) {
-  const q = query(elements(uid), orderBy("creeLe", "desc"), startAfter(new Date(dernierCreeLe)), limit(taille));
+  const q = query(
+    elements(uid),
+    orderBy("creeLe", "desc"),
+    startAfter(new Date(dernierCreeLe)),
+    limit(taille),
+  );
   const s = await getDocs(q);
-  return { elements: s.docs.map((d) => lireElement(d.id, d.data())).filter(Boolean), plein: s.size >= taille };
+  return {
+    elements: s.docs.map((d) => lireElement(d.id, d.data())).filter(Boolean),
+    plein: s.size >= taille,
+  };
 }
 
 /** Every element, for the export of the user's data. */

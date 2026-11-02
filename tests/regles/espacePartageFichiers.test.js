@@ -4,7 +4,7 @@ import {
   assertSucceeds,
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, increment, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
+import { Timestamp, doc, increment, serverTimestamp, setDoc, writeBatch } from "firebase/firestore";
 import { deleteObject, getBytes, listAll, ref, uploadBytes } from "firebase/storage";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 
@@ -86,6 +86,7 @@ describe("Firestore : élément de type fichier et compteur d'octets", () => {
     appareil: "extension",
     epingle: false,
     creeLe: serverTimestamp(),
+    expireLe: Timestamp.fromMillis(Date.now() + 86_400_000),
     taille,
     typeMime: "application/pdf",
     chemin: `partages/${uid}/id1/rapport.pdf`,
@@ -129,6 +130,7 @@ describe("Firestore : élément de type fichier et compteur d'octets", () => {
       appareil: "extension",
       epingle: false,
       creeLe: serverTimestamp(),
+      expireLe: Timestamp.fromMillis(Date.now() + 86_400_000),
       taille: 5,
     });
     await assertFails(lot.commit());

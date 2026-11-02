@@ -5,7 +5,7 @@
  */
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineInt, defineSecret } from "firebase-functions/params";
@@ -21,6 +21,8 @@ import { parseHTML } from "linkedom";
 import { extraireContenu } from "./src/partage/extraitPage.js";
 import { consommer } from "./src/quota.js";
 import { recupererPage, sonderSite } from "./src/reseau/recupererPage.js";
+import { nettoyerEspacePartage } from "./src/espacePartage/nettoyer.js";
+import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
 
 initializeApp();
@@ -180,5 +182,39 @@ export const nettoyageComptesNonVerifies = onSchedule(
   async () => {
     const n = await nettoyerComptes(getAuth());
     logger.info("comptes non vérifiés supprimés", { nombre: n });
+  },
+);
+
+// --- V4.27: expiry of the sharing space (every item expires, files included) -------------------
+const stockagePartage = {
+  async supprimerFichier(chemin) {
+    // Idempotent: a file already gone is not an error.
+    await getStorage().bucket().file(chemin).delete({ ignoreNotFound: true });
+  },
+};
+export const nettoyerEspacePartageProgramme = onSchedule(
+  { schedule: "every 10 minutes", region: "europe-west1", maxInstances: 1, timeoutSeconds: 120 },
+  async () => {
+    const r = await nettoyerEspacePartage({
+      db: getFirestore(),
+      stockage: stockagePartage,
+      valeurs: { increment: (n) => FieldValue.increment(n), timestamp: (ms) => Timestamp.fromMillis(ms) },
+    });
+    // Volumes only: never a name, a path or a content.
+    logger.info("espace de partage nettoyé", r);
+  },
+);
+export const reconcilierEspacePartageProgramme = onSchedule(
+  { schedule: "every day 03:30", timeZone: "Europe/Paris", region: "europe-west1", maxInstances: 1, timeoutSeconds: 300 },
+  async () => {
+    const bucket = getStorage().bucket();
+    const r = await reconcilierEspacePartage({
+      db: getFirestore(),
+      stockage: {
+        lister: async (uid) => (await bucket.getFiles({ prefix: `partages/${uid}/` }))[0].map((f) => f.name),
+        supprimer: (chemin) => bucket.file(chemin).delete({ ignoreNotFound: true }),
+      },
+    });
+    logger.info("espace de partage réconcilié", r);
   },
 );

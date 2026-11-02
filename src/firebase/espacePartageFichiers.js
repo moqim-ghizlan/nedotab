@@ -5,11 +5,19 @@ import {
   increment,
   serverTimestamp,
   setDoc,
+  Timestamp,
   writeBatch,
 } from "firebase/firestore";
 import { deleteObject, getBlob, listAll, ref, uploadBytesResumable } from "firebase/storage";
-import { QUOTA_MAX, cheminStockage, creerFile, nomAffiche, typeDeclare } from "../core/espacePartageFichiers.js";
+import {
+  QUOTA_MAX,
+  cheminStockage,
+  creerFile,
+  nomAffiche,
+  typeDeclare,
+} from "../core/espacePartageFichiers.js";
 import { lireElement } from "../core/espacePartage.js";
+import { DUREE_DEFAUT, calculerExpiration } from "../core/expirationPartage.js";
 import { obtenirApp } from "./app.js";
 import { appareilCourant } from "./sauvegardes.js";
 
@@ -36,7 +44,12 @@ const file = creerFile();
  * @param {(part: number) => void} [surProgres] 0 to 1
  * @returns {{ promesse: Promise<string>, annuler: () => void }} promise of the element id
  */
-export function envoyerFichier(uid, fichier, surProgres) {
+export function envoyerFichier(
+  uid,
+  fichier,
+  surProgres,
+  expireLe = calculerExpiration(DUREE_DEFAUT),
+) {
   const reference = doc(elements(uid)); // automatic id
   const chemin = cheminStockage(uid, reference.id, fichier.name);
   const objet = ref(obtenirApp().stockage, chemin);
@@ -68,6 +81,7 @@ export function envoyerFichier(uid, fichier, surProgres) {
         appareil: appareilCourant(),
         epingle: false,
         creeLe: serverTimestamp(),
+        expireLe: Timestamp.fromMillis(expireLe),
         taille: fichier.size,
         typeMime: typeDeclare(fichier),
         chemin,
@@ -99,9 +113,14 @@ export function lireFichier(chemin) {
 export async function supprimerFichier(uid, element) {
   const lot = writeBatch(db());
   lot.delete(doc(elements(uid), element.id));
-  lot.set(meta(uid), { nb: increment(-1), octets: increment(-(element.taille ?? 0)) }, { merge: true });
+  lot.set(
+    meta(uid),
+    { nb: increment(-1), octets: increment(-(element.taille ?? 0)) },
+    { merge: true },
+  );
   await lot.commit();
-  if (element.chemin) await deleteObject(ref(obtenirApp().stockage, element.chemin)).catch(() => {});
+  if (element.chemin)
+    await deleteObject(ref(obtenirApp().stockage, element.chemin)).catch(() => {});
 }
 
 // No "Annuler" for a deleted file: the file itself is gone from Storage.

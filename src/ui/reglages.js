@@ -1,4 +1,5 @@
 import { A } from "../core/actions.js";
+import { DUREES } from "../core/expirationPartage.js";
 import { parcourir } from "../core/arbre.js";
 import { estimerTaille, niveauTaille } from "../core/taille.js";
 import { URL_SITE } from "../core/constantes.js";
@@ -880,6 +881,31 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
               class: "reglages-note",
               texte:
                 "Textes et liens envoyés d'un appareil à l'autre (bouton ⇄ en bas à gauche). Non inclus dans les sauvegardes ; inclus dans l'export de vos données ; jamais envoyés à l'assistant IA.",
+            }),
+            // V4.27: every item expires; the default duration is per device.
+            el(
+              "label",
+              { class: "reglages-ligne" },
+              el("span", { texte: "Durée par défaut avant suppression " }),
+              el(
+                "select",
+                {
+                  "aria-label": "Durée par défaut",
+                  onchange: (e) => session.partage?.definirDuree(e.target.value),
+                },
+                DUREES.map((d) =>
+                  el("option", {
+                    value: d.id,
+                    selected: d.id === (session.partage?.dureeDefaut() ?? "1j"),
+                    texte: d.libelle,
+                  }),
+                ),
+              ),
+            ),
+            el("p", {
+              class: "reglages-note",
+              texte:
+                "Les éléments sont supprimés automatiquement, fichiers compris, à l'échéance (30 jours au plus).",
             }),
             el(
               "div",

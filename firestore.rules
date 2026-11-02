@@ -124,7 +124,7 @@ service cloud.firestore {
     match /users/{uid}/espacePartage/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre'])
+        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre', 'expireLe'])
         && chiffreValide(request.resource.data)
         && request.resource.data.type in ['texte', 'lien', 'fichier']
         && (request.resource.data.type == 'fichier'
@@ -136,6 +136,7 @@ service cloud.firestore {
         && request.resource.data.titre is string
         && request.resource.data.titre.size() <= 200
         && request.resource.data.creeLe == request.time
+        && expirationValide(request.resource.data.get('expireLe', null))
         && request.resource.data.appareil is string
         && request.resource.data.appareil.size() <= 64
         && request.resource.data.epingle is bool
@@ -144,11 +145,27 @@ service cloud.firestore {
           == (exists(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage)
               ? get(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb : 0) + 1;
       // Pin / unpin, or bring an element back to the top (same content sent again).
+      // V4.27: also an extension of the expiry (or its first value, for an item created before
+      // V4.27): within [now + 55 min, now + 31 days], later than the old one, and at most 31 days
+      // after the creation. There is NO read rule based on request.time (a rule is not a filter).
       allow update: if proprietaire(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe'])
         && request.resource.data.epingle is bool
         && (request.resource.data.creeLe == resource.data.creeLe
-            || request.resource.data.creeLe == request.time);
+            || request.resource.data.creeLe == request.time)
+        && (request.resource.data.get('expireLe', null) == resource.data.get('expireLe', null)
+            || (expirationValide(request.resource.data.get('expireLe', null))
+                && (!('expireLe' in resource.data)
+                    || (request.resource.data.expireLe > resource.data.expireLe
+                        && request.resource.data.expireLe <= resource.data.creeLe + duration.value(31, 'd')))));
+    }
+
+    // V4.27: every item expires: a timestamp between 55 minutes and 31 days from now (margins
+    // for the offset between the device clock and the server).
+    function expirationValide(t) {
+      return t is timestamp
+        && t >= request.time + duration.value(55, 'm')
+        && t <= request.time + duration.value(31, 'd');
     }
 
     // V4.26: an encrypted item holds "v<n>.<iv>.<data>" (base64url) in `contenu` and nothing in

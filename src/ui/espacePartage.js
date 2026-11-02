@@ -20,8 +20,31 @@ import { vibrer } from "./haptique.js";
 import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
 import { creerCoffreUI } from "./coffre/coffre.js";
+import { demander } from "./dialogues/commun.js";
+import {
+  DUREES,
+  DUREE_DEFAUT,
+  MIGRATION_JOURS,
+  calculerExpiration,
+  dureeParId,
+  dureesProlongeables,
+  ecartDepuisConfirmation,
+  estExpire,
+  libelleExpiration,
+  prolonger,
+  sansExpiration,
+} from "../core/expirationPartage.js";
 
 const CLE_VU = "nedotab:partageVu";
+const CLE_DUREE = "nedotab:partageDuree"; // default duration, per device
+
+const lireDuree = () => {
+  try {
+    return dureeParId(localStorage.getItem(CLE_DUREE)).id;
+  } catch {
+    return DUREE_DEFAUT;
+  }
+};
 
 /**
  * Sharing space panel (V4.24): texts and links sent from one device to the others. A side
@@ -60,7 +83,15 @@ export function creerEspacePartage({
   const dechiffres = new Map(); // id → { contenu, titre } | { corrompu: true }
   const enCours = new Set();
 
+  // V4.27: every item expires. `ecart` = server clock − device clock, learnt when an item we
+  // sent is confirmed; the display and the new expiries use the corrected time.
+  let dureeId = lireDuree();
+  let ecart = 0;
+  const enAttenteVus = new Set();
+  const expiration = () => calculerExpiration(dureeId, ecart);
+
   const fichiers = creerFichiers({
+    expiration,
     charger,
     uid,
     store,
@@ -118,6 +149,21 @@ export function creerEspacePartage({
     onclick: () => envoyerContenu("lien"),
   });
   const bandeau = el("p", { class: "partage-bandeau", role: "status", hidden: true });
+  const selecteurDuree = el(
+    "div",
+    { class: "partage-durees", role: "radiogroup", "aria-label": "Durée avant suppression" },
+    DUREES.map((d) =>
+      el("button", {
+        type: "button",
+        role: "radio",
+        class: "partage-duree",
+        dataset: { duree: d.id },
+        texte: d.libelle,
+        onclick: () => choisirDuree(d.id),
+      }),
+    ),
+  );
+  const migration = el("div", { class: "partage-migration", role: "status", hidden: true });
   const liste = el("ul", { class: "partage-liste", "aria-live": "polite" });
   const plus = el("button", {
     type: "button",
@@ -151,6 +197,7 @@ export function creerEspacePartage({
     ),
     bandeau,
     coffre.bandeau,
+    migration,
     fichiers.quota,
     fichiers.cadreDepot,
     el(
@@ -166,6 +213,7 @@ export function creerEspacePartage({
         envoyer,
       ),
       coffre.caseChiffrer,
+      selecteurDuree,
       fichiers.entree,
       fichiers.message,
       proposerLien,
@@ -174,6 +222,38 @@ export function creerEspacePartage({
     liste,
     plus,
   );
+
+  function choisirDuree(id) {
+    dureeId = dureeParId(id).id;
+    try {
+      localStorage.setItem(CLE_DUREE, dureeId);
+    } catch {
+      /* the choice then only lasts for this session */
+    }
+    majSelecteur();
+  }
+  function majSelecteur() {
+    for (const b of selecteurDuree.children)
+      b.setAttribute("aria-checked", String(b.dataset.duree === dureeId));
+  }
+  majSelecteur();
+
+  async function choisirProlongation(e) {
+    const options = dureesProlongeables(e, ecart);
+    if (!options.length) return toast("Durée maximale atteinte");
+    const choix = await demander({
+      titre: "Prolonger",
+      message: "Nouvelle durée à partir de maintenant (30 jours au total depuis l'envoi).",
+      boutons: [
+        { libelle: "Annuler", valeur: null },
+        ...options.map((d) => ({ libelle: d.libelle, valeur: d.id })),
+      ],
+    });
+    if (!choix) return;
+    const r = prolonger(e, choix, ecart);
+    if (!r.ok) return toast(r.erreur);
+    action(() => charger().then((fb) => fb.prolongerPartage(uid(), e.id, r.expireLe)));
+  }
 
   const lienDe = (e) => (e.type === "lien" ? urlSure(e.contenu) : null);
 
@@ -253,6 +333,14 @@ export function creerEspacePartage({
         onclick: () =>
           action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
       }),
+      e.type === "fichier"
+        ? null
+        : el("button", {
+            type: "button",
+            class: "partage-action",
+            texte: "Prolonger",
+            onclick: () => choisirProlongation(e),
+          }),
       el("button", {
         type: "button",
         class: "partage-action partage-action--danger",
@@ -273,6 +361,12 @@ export function creerEspacePartage({
         texte: brut.chiffre ? (verrouille ? "🔒" : "🔓") : e.type === "lien" ? "🔗" : "📝",
       }),
       texte,
+      libelleExpiration(e, ecart).texte
+        ? el("span", {
+            class: `partage-expire${libelleExpiration(e, ecart).urgent ? " partage-expire--urgent" : ""}`,
+            texte: libelleExpiration(e, ecart).texte,
+          })
+        : null,
       el("span", {
         class: "partage-meta",
         texte: `${e.enAttente ? "Envoi… · " : ""}${ilYA(e.creeLe)} · depuis ${libelleAppareil(e.appareil)}`,
@@ -282,6 +376,33 @@ export function creerEspacePartage({
   }
 
   function rendre() {
+    // An expired item disappears at once (the server deletes it a little later).
+    const visibles = elements.filter((e) => !estExpire(e, ecart));
+    const sans = sansExpiration(visibles);
+    migration.hidden = sans.length === 0;
+    migration.replaceChildren();
+    if (sans.length) {
+      migration.append(
+        el("span", {
+          texte: `${sans.length} élément${sans.length > 1 ? "s" : ""} sans date d'expiration. `,
+        }),
+        el("button", {
+          type: "button",
+          class: "lien-discret",
+          texte: `Les faire expirer dans ${MIGRATION_JOURS} jours`,
+          onclick: () =>
+            action(() =>
+              charger().then((fb) =>
+                fb.migrerExpirationPartage(
+                  uid(),
+                  sans.map((e) => e.id),
+                  calculerExpiration("7j", ecart),
+                ),
+              ),
+            ),
+        }),
+      );
+    }
     const hors = typeof navigator !== "undefined" && navigator.onLine === false;
     bandeau.hidden = !(hors || depuisCache);
     bandeau.textContent = hors
@@ -318,7 +439,7 @@ export function creerEspacePartage({
     } else {
       liste.append(
         ...fichiers.cartesEnvoi(),
-        ...trier(elements).map((e) => (e.type === "fichier" ? fichiers.carte(e) : carte(e))),
+        ...trier(visibles).map((e) => (e.type === "fichier" ? fichiers.carte(e) : carte(e))),
       );
     }
     dechiffrerVisibles();
@@ -405,7 +526,7 @@ export function creerEspacePartage({
       else
         await fb.ajouterAuPartage(
           uid(),
-          { ...r.element, chiffre },
+          { ...r.element, chiffre, expireLe: expiration() },
           chiffre ? coffre.chiffrer : null,
         );
       champ.value = "";
@@ -498,6 +619,12 @@ export function creerEspacePartage({
         fb.ecouterEspacePartage(
           uid(),
           (liste_, infos) => {
+            // Learn the clock offset from an item we sent: seen pending, now confirmed.
+            for (const e of liste_) {
+              if (e.enAttente) enAttenteVus.add(e.id);
+              else if (enAttenteVus.delete(e.id) && e.creeLe)
+                ecart = ecartDepuisConfirmation(e.creeLe);
+            }
             elements = liste_;
             statut = "ok";
             depuisCache = infos.depuisCache && !infos.enAttente;
@@ -629,6 +756,8 @@ export function creerEspacePartage({
       if (!ouvert) arreterEcoute();
     } else if (disponible() && (ouvert || bouton.hidden === false)) demarrerEcoute();
   });
+  // The remaining time is shown to the minute: refreshed every 30 s, not every second (battery).
+  setInterval(() => ouvert && rendre(), 30_000);
   addEventListener("online", rendre);
   addEventListener("offline", rendre);
 
@@ -651,6 +780,9 @@ export function creerEspacePartage({
 
   return {
     coffre,
+    /** Default duration of a new item (settings). */
+    dureeDefaut: () => dureeId,
+    definirDuree: choisirDuree,
     bouton,
     panneau,
     ouvrir,

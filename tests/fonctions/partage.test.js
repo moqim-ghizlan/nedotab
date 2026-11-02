@@ -8,7 +8,7 @@ import { extraireContenu as extraireClient } from "../../src/core/extraitPage.js
 const lire = (chemin) => readFileSync(new URL(chemin, import.meta.url), "utf8");
 
 describe("code partagé client / serveur", () => {
-  it.each(["extraitPage", "confidentialiteUrl", "infosPage", "url", "listeCompacte", "preFiltre", "besoinContexteSites", "outils", "estimation", "confidentialiteIa", "usage", "constantes"])(
+  it.each(["extraitPage", "confidentialiteUrl", "infosPage", "url", "listeCompacte", "preFiltre", "besoinContexteSites", "outils", "estimation", "confidentialiteIa", "usage", "constantes", "expirationPartage"])(
     "%s : copie identique",
     (nom) => {
       const copie = lire(`../../functions/src/partage/${nom}.js`).split("\n").slice(1).join("\n");

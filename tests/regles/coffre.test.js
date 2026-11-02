@@ -1,6 +1,20 @@
 import { readFileSync } from "node:fs";
-import { assertFails, assertSucceeds, initializeTestEnvironment } from "@firebase/rules-unit-testing";
-import { doc, increment, serverTimestamp, setDoc, updateDoc, writeBatch, deleteDoc, getDoc } from "firebase/firestore";
+import {
+  assertFails,
+  assertSucceeds,
+  initializeTestEnvironment,
+} from "@firebase/rules-unit-testing";
+import {
+  Timestamp,
+  doc,
+  increment,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  writeBatch,
+  deleteDoc,
+  getDoc,
+} from "firebase/firestore";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 
 // Vault (V4.26) contre l'émulateur Firestore.
@@ -15,7 +29,9 @@ beforeEach(() => env.clearFirestore());
 afterAll(() => env?.cleanup());
 
 const db = (uid) =>
-  uid ? env.authenticatedContext(uid, { email_verified: true }).firestore() : env.unauthenticatedContext().firestore();
+  uid
+    ? env.authenticatedContext(uid, { email_verified: true }).firestore()
+    : env.unauthenticatedContext().firestore();
 const cle = (d, uid = "alice") => doc(d, `users/${uid}/vaultMeta/cle`);
 const ENV = "v1.AAAAAAAAAAAAAAAA.QUJDREVGR0hJSktMTU5PUA";
 const meta = (extra = {}) => ({
@@ -36,6 +52,7 @@ const elem = (extra = {}) => ({
   appareil: "Chrome",
   epingle: false,
   creeLe: serverTimestamp(),
+  expireLe: Timestamp.fromMillis(Date.now() + 86_400_000),
   ...extra,
 });
 const ajouter = (d, id, e) => {
@@ -67,9 +84,19 @@ describe("vaultMeta", () => {
   });
 
   it("update limité aux champs d'enveloppe", async () => {
-    await env.withSecurityRulesDisabled((c) => setDoc(cle(c.firestore()), { ...meta(), creeLe: new Date() }));
-    await assertSucceeds(updateDoc(cle(db("alice")), { enveloppeMdp: "v1.CCCCCCCCCCCCCCCC.QUJD", sel1: "CCCCCCCCCCCCCCCCCCCCCC", majLe: serverTimestamp() }));
-    await assertFails(updateDoc(cle(db("alice")), { iterations: 310000, majLe: serverTimestamp() }));
+    await env.withSecurityRulesDisabled((c) =>
+      setDoc(cle(c.firestore()), { ...meta(), creeLe: new Date() }),
+    );
+    await assertSucceeds(
+      updateDoc(cle(db("alice")), {
+        enveloppeMdp: "v1.CCCCCCCCCCCCCCCC.QUJD",
+        sel1: "CCCCCCCCCCCCCCCCCCCCCC",
+        majLe: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(cle(db("alice")), { iterations: 310000, majLe: serverTimestamp() }),
+    );
     await assertFails(updateDoc(cle(db("alice")), { enveloppeMdp: "v1.CCCCCCCCCCCCCCCC.QUJD" })); // sans majLe
     await assertSucceeds(deleteDoc(cle(db("alice"))));
   });
@@ -78,13 +105,17 @@ describe("vaultMeta", () => {
 describe("éléments chiffrés", () => {
   it("accepte une forme chiffrée valide (contenu > 20 000 caractères inclus)", async () => {
     await assertSucceeds(ajouter(db("alice"), "e1", elem()));
-    await assertSucceeds(ajouter(db("alice"), "e2", elem({ contenu: `v1.AAAAAAAAAAAAAAAA.${"A".repeat(40000)}` })));
+    await assertSucceeds(
+      ajouter(db("alice"), "e2", elem({ contenu: `v1.AAAAAAAAAAAAAAAA.${"A".repeat(40000)}` })),
+    );
   });
   it("refuse chiffre:true avec un contenu en clair ou un titre lisible", async () => {
     await assertFails(ajouter(db("alice"), "e1", elem({ contenu: "mon secret en clair" })));
     await assertFails(ajouter(db("alice"), "e2", elem({ titre: "divorce-avocat.pdf" })));
   });
   it("refuse un contenu clair de plus de 20 000 caractères", async () => {
-    await assertFails(ajouter(db("alice"), "e1", elem({ chiffre: false, contenu: "x".repeat(20001), titre: "t" })));
+    await assertFails(
+      ajouter(db("alice"), "e1", elem({ chiffre: false, contenu: "x".repeat(20001), titre: "t" })),
+    );
   });
 });

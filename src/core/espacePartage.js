@@ -132,6 +132,8 @@ export function lireElement(id, brut, enAttente = false) {
     titre: typeof brut.titre === "string" ? brut.titre : "",
     appareil: typeof brut.appareil === "string" ? brut.appareil : "",
     epingle: brut.epingle === true,
+    // V4.27: expiry (ms, UTC); undefined for an item created before V4.27.
+    expireLe: brut.expireLe?.toMillis?.() ?? (Number.isFinite(brut.expireLe) ? brut.expireLe : undefined),
     // V4.26: `contenu` is then an encrypted block (readable only with the vault key).
     chiffre: brut.chiffre === true,
     creeLe,
@@ -168,6 +170,7 @@ export function exporterElements(elements) {
     appareil: e.appareil,
     epingle: !!e.epingle,
     creeLe: e.creeLe ?? null,
+    expireLe: e.expireLe ?? null,
     // A file is listed (name and size), never embedded: it is downloaded from the app.
     ...(e.type === "fichier" ? { taille: e.taille ?? 0, typeMime: e.typeMime ?? "" } : {}),
   }));

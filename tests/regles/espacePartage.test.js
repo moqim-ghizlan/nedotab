@@ -40,6 +40,7 @@ const elem = (extra = {}) => ({
   appareil: "Chrome",
   epingle: false,
   creeLe: serverTimestamp(),
+  expireLe: Timestamp.fromMillis(Date.now() + 86_400_000),
   ...extra,
 });
 const meta = (d, uid = "alice") => doc(d, `users/${uid}/espacePartageMeta/usage`);
@@ -103,10 +104,7 @@ describe("espacePartage", () => {
   });
   it("concurrence : deux ajouts simultanés au 200e, un seul passe", async () => {
     await remplirCompteur(199);
-    const [a, b] = await Promise.allSettled([
-      ajouter(db("alice"), "p"),
-      ajouter(db("alice"), "q"),
-    ]);
+    const [a, b] = await Promise.allSettled([ajouter(db("alice"), "p"), ajouter(db("alice"), "q")]);
     const reussis = [a, b].filter((r) => r.status === "fulfilled").length;
     if (reussis !== 1) throw new Error(`${reussis} ajouts ont réussi au lieu d'un seul`);
   });
@@ -123,6 +121,48 @@ describe("espacePartage", () => {
     await assertSucceeds(setDoc(meta(db("alice")), { nb: 0 }));
   });
   it("la collection d'un autre chemin reste fermée", async () => {
-    await assertFails(setDoc(doc(collection(db("alice"), "users/alice/espacePartage2"), "x"), elem()));
+    await assertFails(
+      setDoc(doc(collection(db("alice"), "users/alice/espacePartage2"), "x"), elem()),
+    );
+  });
+});
+
+describe("expiration (V4.27)", () => {
+  const dans = (ms) => Timestamp.fromMillis(Date.now() + ms);
+  it("expireLe obligatoire et borné à la création", async () => {
+    const sans = elem();
+    delete sans.expireLe;
+    const alice = db("alice");
+    const lot = writeBatch(alice);
+    lot.set(el(alice, "e0"), sans);
+    lot.set(meta(alice), { nb: increment(1) }, { merge: true });
+    await assertFails(lot.commit()); // absent
+    await assertFails(ajouter(db("alice"), "e1", { expireLe: dans(30 * 60_000) })); // trop proche
+    await assertFails(ajouter(db("alice"), "e2", { expireLe: dans(32 * 86_400_000) })); // trop loin
+    await assertFails(ajouter(db("alice"), "e3", { expireLe: dans(-3_600_000) })); // déjà passé
+    await assertFails(ajouter(db("alice"), "e4", { expireLe: Date.now() + 86_400_000 })); // pas un timestamp
+    await assertSucceeds(ajouter(db("alice"), "e5", { expireLe: dans(60 * 60_000 + 5 * 60_000) }));
+    await assertSucceeds(ajouter(db("alice"), "e6", { expireLe: dans(30 * 86_400_000) }));
+  });
+
+  it("prolongation : plus tard seulement, bornée ; jamais raccourcie", async () => {
+    await assertSucceeds(ajouter(db("alice"), "e1", { expireLe: dans(2 * 3_600_000) }));
+    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: dans(86_400_000) }));
+    await assertFails(updateDoc(el(db("alice"), "e1"), { expireLe: dans(3_600_000 + 600_000) })); // plus tôt
+    await assertFails(updateDoc(el(db("alice"), "e1"), { expireLe: dans(40 * 86_400_000) })); // trop loin
+  });
+
+  it("un élément d'avant la V4.27 reçoit sa première échéance", async () => {
+    const vieux = { ...elem(), creeLe: Timestamp.fromMillis(Date.now() - 90 * 86_400_000) };
+    delete vieux.expireLe;
+    await env.withSecurityRulesDisabled((ctx) => setDoc(el(ctx.firestore(), "vieux"), vieux));
+    await assertSucceeds(updateDoc(el(db("alice"), "vieux"), { expireLe: dans(7 * 86_400_000) }));
+  });
+
+  it("la lecture ne dépend pas de l'expiration (un élément expiré reste lisible jusqu'à sa suppression)", async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(el(ctx.firestore(), "x"), { ...elem(), expireLe: dans(-1000) }),
+    );
+    await assertSucceeds(getDoc(el(db("alice"), "x")));
   });
 });

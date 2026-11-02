@@ -433,3 +433,13 @@
 .coffre-message--erreur { color: #b3402a; }
 .coffre-reglages { display: grid; gap: 0.5rem; }
 .coffre-zone-danger { margin-top: 0.75rem; padding: 0.75rem; border: 1px solid #b3402a; border-radius: 0.5rem; }
+
+/* V4.27 — expiry */
+.partage-durees { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin: 0.25rem 0; }
+.partage-durees::-webkit-scrollbar { display: none; }
+.partage-duree { flex: none; min-height: 44px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; opacity: 0.7; }
+.partage-duree[aria-checked="true"] { opacity: 1; font-weight: 600; background: color-mix(in srgb, currentColor 12%, transparent); }
+.partage-expire { font-size: 0.8rem; opacity: 0.75; margin-left: auto; }
+.partage-expire--urgent { color: #c0620f; opacity: 1; font-weight: 600; }
+.partage-migration { margin: 0.5rem 0; font-size: 0.9rem; }
+@media (prefers-reduced-motion: no-preference) { .partage-carte { transition: opacity 200ms; } }

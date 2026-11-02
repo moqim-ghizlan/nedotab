@@ -2,6 +2,32 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.27.0] - 2026-11-02
+
+### Ajouté
+
+- **Expiration de chaque élément** de l'espace de partage : 1 h, 2 h, 1 j, 7 j, 30 j (pas de « jamais », 30 jours de vie au plus, prolongation comprise). Pastilles de durée à l'ajout, durée par défaut dans Réglages → Espace de partage (1 jour, propre à l'appareil), libellé « expire dans 3 h » (orange sous 15 min, rafraîchi toutes les 30 s), action **Prolonger** (« Durée maximale atteinte » au plafond), élément expiré masqué aussitôt côté client. Les fichiers expirent aussi.
+- **Horloge** : `expireLe` est borné par les règles ([maintenant + 55 min ; maintenant + 31 j], `creeLe == request.time`) ; l'écart appareil/serveur est appris quand un envoi est confirmé et corrige l'affichage. Aucune règle de lecture basée sur `request.time`.
+- **Fonctions planifiées** (`functions/src/espacePartage/`) : `nettoyerEspacePartageProgramme` (toutes les 10 min : lots de 200, verrou léger, fichier puis document, compteurs `nb`/`octets` décrémentés, journal = volumes seulement) et `reconcilierEspacePartageProgramme` (chaque jour 03:30, 50 utilisateurs par passage avec curseur : recompte, fichiers orphelins supprimés, documents sans fichier signalés).
+- **Filets de sécurité** : TTL Firestore sur `espacePartage.expireLe` (déclaré dans `firestore.indexes.json`) ; règle de cycle de vie Storage de 40 jours sur `partages/` (`cycle-vie-storage.json`). Index de groupe de collection pour le nettoyage.
+- **Migration** : les éléments d'avant la V4.27 restent visibles ; un bandeau propose « Les faire expirer dans 7 jours » (rien n'est supprimé sans accord). Les règles autorisent leur première échéance.
+- **Tests** : calculs et bornes, décalages d'horloge de ±3 h, plafond de prolongation, formats ; nettoyage (lot partiel, relance, fichier absent, élément chiffré, verrou, journal) et réconciliation (orphelins, compteurs, plafond par passage) sur une base simulée ; règles d'émulateur (échéance absente/trop proche/trop loin/passée, prolongation, migration, lecture indépendante de l'expiration) ; copie serveur identique.
+
+### À faire par le propriétaire (déploiement, avec accord)
+
+Dans l'ordre : `firebase deploy --only firestore:indexes` → `firestore:rules` → `functions`, puis la configuration Google Cloud :
+```
+gcloud storage buckets update gs://<bucket> --lifecycle-file=cycle-vie-storage.json
+```
+(le TTL Firestore est créé par le déploiement des index). Vérifier le nombre de tâches Cloud Scheduler gratuites du projet (2 ajoutées).
+
+### Non fait / limites connues
+
+- La requête d'écoute n'a **pas** de `where('expireLe', '>', …)` : elle exclurait les éléments d'avant la V4.27 (sans champ). Le masquage est fait côté client ; le nettoyage serveur retire les documents.
+- Pas d'alerte avant expiration, pas de fondu de 200 ms, pas de message « Cet élément a expiré » pour un élément ouvert (les cartes simplement disparaissent) ; pas de bouton Prolonger sur les fichiers (limite de l'interface actuelle).
+- Premier envoi depuis un appareil dont l'horloge est très décalée : l'écart n'est connu qu'après le premier envoi confirmé (une échéance hors bornes est alors refusée par les règles).
+- Les tests de nettoyage utilisent une base simulée en mémoire, pas l'émulateur ; vérifications manuelles du plan non faites.
+
 ## [4.26.0] - 2026-11-02
 
 ### Ajouté
