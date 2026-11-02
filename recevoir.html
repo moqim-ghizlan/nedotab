@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- Second line of defence: if a generic Hosting header ever won over the one of /r, this policy still applies (policies add up). -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Élément partagé</title>
+  </head>
+  <body>
+    <main id="recevoir" aria-live="polite"></main>
+    <script type="module" src="/src/receveur/recevoir.js"></script>
+  </body>
+</html>

@@ -12,13 +12,28 @@ const site = (id, titre, url, extra = {}) => ({ id, type: "site", titre, url, ta
 const grille = [
   site("id-resa", "Booking", "https://booking.com"),
   site("id-vol", "Skyscanner", "https://skyscanner.fr"),
-  { id: "id-archives", type: "dossier", titre: "Archives", items: [site("id-vieux", "Vieux", "https://vieux.fr")] },
+  {
+    id: "id-archives",
+    type: "dossier",
+    titre: "Archives",
+    items: [site("id-vieux", "Vieux", "https://vieux.fr")],
+  },
 ];
 const bloc = (actions) => `\n\n\`\`\`actions\n${JSON.stringify(actions)}\n\`\`\``;
 
-async function monter({ reponse, question = "Crée un dossier Voyage avec mes sites de réservation", grilleUtilisateur = grille, flux = null }) {
+async function monter({
+  reponse,
+  question = "Crée un dossier Voyage avec mes sites de réservation",
+  grilleUtilisateur = grille,
+  flux = null,
+}) {
   const db = baseMemoire({
-    [`users/u1/conversations/${CONV}`]: { titre: "T", majLe: new Date(0), creeLe: new Date(0), nbMessages: 0 },
+    [`users/u1/conversations/${CONV}`]: {
+      titre: "T",
+      majLe: new Date(0),
+      creeLe: new Date(0),
+      nbMessages: 0,
+    },
     [`users/u1/conversations/${CONV}/messages/0000000000001-a`]: {
       role: "user",
       texte: question,
@@ -26,7 +41,12 @@ async function monter({ reponse, question = "Crée un dossier Voyage avec mes si
       etat: "ok",
     },
   });
-  const envoyer = vi.fn(async () => ({ texte: reponse, modele: "m", jetonsEntree: 1, jetonsSortie: 1 }));
+  const envoyer = vi.fn(async () => ({
+    texte: reponse,
+    modele: "m",
+    jetonsEntree: 1,
+    jetonsSortie: 1,
+  }));
   const envoyerFlux = vi.fn(
     flux ??
       async function* () {
@@ -39,7 +59,12 @@ async function monter({ reponse, question = "Crée un dossier Voyage avec mes si
     db,
     secret: () => secret,
     fournisseurs: {
-      gemini: { formatCle: /^sk-/, verifierCle: async () => ({ valide: true }), envoyer, envoyerFlux },
+      gemini: {
+        formatCle: /^sk-/,
+        verifierCle: async () => ({ valide: true }),
+        envoyer,
+        envoyerFlux,
+      },
     },
     config: async () => CONFIG_PAR_DEFAUT,
     consommer: (u, o) => consommer(db, u, o),
@@ -133,7 +158,12 @@ describe("propositions d'actions (V4.16)", () => {
     const r = await ia.chatConversation("u1", { convId: CONV });
     expect(r.proposition.actions).toEqual([
       { outil: "creer_dossier", titre: "Dev", parent: null, sites: [] },
-      { outil: "ajouter_site", url: "https://github.com", titre: "GitHub", dossier: { nouveau: 0 } },
+      {
+        outil: "ajouter_site",
+        url: "https://github.com",
+        titre: "GitHub",
+        dossier: { nouveau: 0 },
+      },
     ]);
   });
 

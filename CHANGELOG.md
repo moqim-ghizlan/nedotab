@@ -2,6 +2,33 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.28.0] - 2026-11-02
+
+### Ajouté
+
+- **Liens de partage publics** : depuis un texte ou un lien de l'espace de partage, « Créer un lien » (durée 1 h → 30 j, ouvertures 1 / 5 / 10 / 25 / illimité, mot de passe optionnel avec jauge). Le lien `https://<projet>.web.app/r#<jeton>.<clé>` est affiché une seule fois (Copier / Partager) ; la clé n'est stockée nulle part. « Mes liens » : compteur d'ouvertures, expiration, badges mot de passe / verrouillé, **Révoquer** (annulable 5 s).
+- **Chiffrement de bout en bout** : copie chiffrée dans l'appareil (AES-GCM, clé HKDF du lien [+ clé PBKDF2 du mot de passe], AAD = jeton). Le serveur ne reçoit que la copie chiffrée, un hash d'une **preuve** du mot de passe (dérivée autrement que la clé) et les paramètres. L'élément du vault déverrouillé peut être partagé : la copie est rechiffrée avec la clé du lien.
+- **Fonctions** (`functions/src/espacePartage/liens/liens.js`) : `creerLienPartage`, `listerLiensPartage`, `revoquerLienPartage` (comptes vérifiés), `ouvrirLienPartage` et `signalerLienPartage` (HTTP publiques, sans compte, même origine via Hosting). Décompte d'ouverture en **transaction**, **reçu de 2 min** (nouvel essai sans recompter), mot de passe vérifié côté serveur (5 essais puis verrouillage), réponse **identique** pour inconnu / expiré / épuisé / révoqué, délai minimal constant de 250 ms sur les échecs, limite de débit par empreinte salée d'adresse (30/min, rotation 10 min, jamais l'adresse en clair), `maxInstances: 5`, **interrupteur d'urgence** `config/partage.liensActifs` (cache 30 s), 20 liens actifs et 10 créations/heure par compte, signalement (3 adresses distinctes → lien suspendu, compte marqué `users/{uid}/prive/partage`). Nettoyage couplé à la fonction planifiée de la V4.27 ; suppression de compte = liens et copies supprimés.
+- **Page de réception** (`recevoir.html`, `src/receveur/`, 5 Ko, sans SDK Firebase, sans CDN) : étapes info → Ouvrir (clic obligatoire : les aperçus de messagerie ne consomment pas le lien) → mot de passe → contenu. Fragment effacé de l'URL (`replaceState`), aucun stockage ni cookie, texte via `textContent`, lien jamais cliquable directement (deux clics, http/https seulement), fichier **téléchargé seulement** (type neutre, nom nettoyé), « Signaler ce contenu », états : incomplet, indisponible, mauvais mot de passe (« il reste N essais »), verrouillé, réseau (Réessayer).
+- **Hébergement** : réécritures `/r` → `recevoir.html` et `/api/lien/*` → fonctions placées **avant** `**` ; en-têtes stricts (CSP sans `unsafe-inline`, `Referrer-Policy: no-referrer`, `no-store`, `X-Frame-Options: DENY`, `noindex`, `nosniff`) ; la même CSP en `<meta>` dans la page ; service worker : `/r` et `/api` exclus du repli.
+- **Règles** : `liensPartage`, `signalements`, `limitesPartage`, `config/partage` fermés à tous les clients (le joker `config/*` ne lit plus que les autres documents) ; `liens/**` fermé dans Storage.
+- **Tests** : génération (100 000 jetons distincts), analyse de liens, décisions, chiffrement (autre clé / autre jeton / sans ou avec faux mot de passe), 10 ouvertures simultanées pour 1 → une seule, reçu, réponses identiques, verrou après 5 essais, interrupteur, débit, signalements, limites de création, nettoyage, aucune clé / mot de passe / adresse dans la base, aucun journal dans le module ; page de réception (HTML et `javascript:` en texte, fichier sans aperçu, fragment effacé, pas de stockage, mot de passe) ; règles d'émulateur et en-têtes de `firebase.json`.
+
+### À faire par le propriétaire (déploiement, avec accord)
+
+1. Créer `config/partage` dans la console : `{ liensActifs: true, ouvertA: "liste", createurs: ["<ton uid>"] }` (par défaut **tout est coupé** et réservé à une liste blanche, décision 1 du plan).
+2. Déployer dans l'ordre : règles Firestore et Storage → fonctions → Hosting (`npm run deployer:pwa`).
+3. Le TTL de `limitesPartage.expireLe` est déclaré dans `firestore.indexes.json` (déployé avec les index) ; `cycle-vie-storage.json` couvre maintenant `partages/` et `liens/` (à réappliquer avec `gcloud storage buckets update`).
+4. Alerte de budget Google Cloud (voir V4.25), puis test avec un lien réel sur iPhone et PC.
+
+### Non fait / limites connues
+
+- **Fichiers** : la fonction et la page savent les transporter (5 Mo au plus, et non 10 Mo : la requête d'une fonction appelable est limitée à 10 Mo en base64), mais l'interface propose « Créer un lien » pour les textes et liens seulement.
+- Pas de compte de la copie dans le quota de la V4.25, pas de rendu du lien en deux lignes tronquées au milieu, pas de bouton « Signaler » par e-mail (le signalement est en base ; l'alerte e-mail n'est pas faite).
+- L'émulateur Hosting n'applique pas les en-têtes personnalisés : l'ordre de priorité entre le bloc `**` et les blocs de `/r` n'a pas pu être vérifié localement (d'où la CSP en `<meta>`). À vérifier après déploiement (`curl -I https://<projet>.web.app/r`).
+- L'empreinte d'adresse utilise un sel de projet (variable `SEL_EMPREINTE_PARTAGE` possible), pas un secret Google.
+- Tests des fonctions sur une base simulée en mémoire, pas l'émulateur ; test de charge, revue `/security-review` et essai sur iPhone non faits.
+
 ## [4.27.0] - 2026-11-02
 
 ### Ajouté

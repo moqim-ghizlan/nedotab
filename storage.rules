@@ -34,6 +34,11 @@ service firebase.storage {
       // A file is never modified: a new send is a new folder {id}.
       allow update: if false;
     }
+    // V4.28: encrypted copies of the share links, at the root so that a lifecycle rule can target
+    // "liens/". Clients never read nor write them: the functions (Admin SDK) do.
+    match /liens/{tout=**} {
+      allow read, write: if false;
+    }
     // Listing the folders is allowed to their owner only (reconciliation of the orphans).
     match /partages/{uid}/{tout=**} {
       allow list: if verifie() && request.auth.uid == uid;

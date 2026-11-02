@@ -92,6 +92,7 @@ export {
   reconcilier as reconcilierPartage,
   supprimerFichier as supprimerFichierPartage,
 } from "./espacePartageFichiers.js";
+export { creerLien as creerLienPartage, listerLiens, revoquerLien } from "./liensPartage.js";
 export {
   creerMeta as creerMetaCoffre,
   detruireCoffre,

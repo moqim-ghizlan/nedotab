@@ -1,11 +1,7 @@
 import http, { createServer } from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { adresseInterdite } from "../../functions/src/reseau/ipInterdite.js";
-import {
-  ErreurPage,
-  recupererPage,
-  TAILLE_MAX,
-} from "../../functions/src/reseau/recupererPage.js";
+import { ErreurPage, recupererPage, TAILLE_MAX } from "../../functions/src/reseau/recupererPage.js";
 
 const PUBLIC = [{ address: "93.184.216.34", family: 4 }];
 
@@ -32,9 +28,8 @@ describe("adresseInterdite", () => {
     "::ffff:10.0.0.1",
     "pas une ip",
   ])("%s refusée", (a) => expect(adresseInterdite(a)).toBe(true));
-  it.each(["93.184.216.34", "8.8.8.8", "172.32.0.1", "2606:4700:4700::1111"])(
-    "%s autorisée",
-    (a) => expect(adresseInterdite(a)).toBe(false),
+  it.each(["93.184.216.34", "8.8.8.8", "172.32.0.1", "2606:4700:4700::1111"])("%s autorisée", (a) =>
+    expect(adresseInterdite(a)).toBe(false),
   );
 });
 
@@ -66,7 +61,8 @@ const html = (rep, corps = "<html><title>ok</title></html>", type = "text/html; 
   rep.end(corps);
 };
 const publics = { resoudre: async () => PUBLIC, ouvrir };
-const refus = (adresse, deps = {}) => expect(recupererPage(adresse, { ...publics, ...deps })).rejects;
+const refus = (adresse, deps = {}) =>
+  expect(recupererPage(adresse, { ...publics, ...deps })).rejects;
 // Private hosts are stopped by two layers (privacy rules of V4.3, then the network rules).
 const INTERDIT = { code: expect.stringMatching(/^(adresse-interdite|confidentialite)$/) };
 const redirige = (vers) => (_q, r) => {

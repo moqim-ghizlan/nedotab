@@ -292,12 +292,21 @@ describe("genererTags (V4.4)", () => {
     await m.db.doc("users/u1").set({ reglages: { ia: { actif: true } } });
     m.faux.envoyer.mockReset();
     for (const r of reponses)
-      m.faux.envoyer.mockResolvedValueOnce({ texte: r, jetonsEntree: 1, jetonsSortie: 1, modele: "m" });
+      m.faux.envoyer.mockResolvedValueOnce({
+        texte: r,
+        jetonsEntree: 1,
+        jetonsSortie: 1,
+        modele: "m",
+      });
     return m;
   }
   it("réponse valide", async () => {
     const m = await pret(['{"tags":["Mail"],"description":"Messagerie."}']);
-    expect(await m.ia.genererTags("u1", entree)).toEqual({ tags: ["mail"], description: "Messagerie.", modele: "m" });
+    expect(await m.ia.genererTags("u1", entree)).toEqual({
+      tags: ["mail"],
+      description: "Messagerie.",
+      modele: "m",
+    });
   });
   it("invalide puis valide : un seul nouvel essai", async () => {
     const m = await pret(["n'importe quoi", '{"tags":["a"],"description":"d"}']);
@@ -306,7 +315,9 @@ describe("genererTags (V4.4)", () => {
   });
   it("deux fois invalide : reponse-invalide", async () => {
     const m = await pret(["x", "y"]);
-    await expect(m.ia.genererTags("u1", entree)).rejects.toMatchObject({ code: "reponse-invalide" });
+    await expect(m.ia.genererTags("u1", entree)).rejects.toMatchObject({
+      code: "reponse-invalide",
+    });
   });
   it("IA désactivée : aucun appel au fournisseur", async () => {
     const m = monter();

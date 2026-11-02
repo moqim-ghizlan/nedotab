@@ -5,7 +5,12 @@ import { messagePage } from "../../functions/src/ia/prompts/tags.js";
 import { lireSortieTags } from "../../functions/src/ia/tagsSortie.js";
 
 describe("normalisation partagée", () => {
-  const tags = ["  #Outils ", "OUTILS", "x".repeat(50), ...Array.from({ length: 15 }, (_, i) => `t${i}`)];
+  const tags = [
+    "  #Outils ",
+    "OUTILS",
+    "x".repeat(50),
+    ...Array.from({ length: 15 }, (_, i) => `t${i}`),
+  ];
   it("même résultat côté client et côté serveur", () => {
     expect(serveur.normaliserTags(tags)).toEqual(client.normaliserTags(tags));
     expect(serveur.normaliserDescription("a".repeat(500))).toEqual(

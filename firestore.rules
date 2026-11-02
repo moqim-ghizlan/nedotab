@@ -228,10 +228,19 @@ service cloud.firestore {
                 && request.resource.data.octets <= 209715200));
     }
 
+    // V4.28: config/partage (emergency switch, allowed creators) and the working documents of
+    // the cleanup are for the functions only: no client may read them. The other documents
+    // (config/ia…) stay readable by a signed-in user.
     match /config/{doc} {
-      allow read: if connecte();
+      allow read: if connecte() && !(doc in ['partage', 'nettoyageEspacePartage', 'reconciliationEspacePartage']);
       allow write: if false;
     }
+
+    // V4.28: share links, reports and rate limits: the functions (Admin SDK) only. Written out
+    // so the intent is visible: a client can neither read nor write any of it.
+    match /liensPartage/{tout=**} { allow read, write: if false; }
+    match /signalements/{tout=**} { allow read, write: if false; }
+    match /limitesPartage/{tout=**} { allow read, write: if false; }
 
     // Everything else (including users/{uid}/prive/**) is denied by default.
   }

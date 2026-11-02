@@ -9,7 +9,9 @@ import { FieldValue, Timestamp, getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineInt, defineSecret } from "firebase-functions/params";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { createHash } from "node:crypto";
+import process from "node:process";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { AGE_CONNEXION_MAX_S, connexionRecente, emailVerifie, stockageAbsent } from "./regles.js";
 import { nettoyerComptes } from "./src/nettoyageComptes.js";
@@ -22,6 +24,7 @@ import { extraireContenu } from "./src/partage/extraitPage.js";
 import { consommer } from "./src/quota.js";
 import { recupererPage, sonderSite } from "./src/reseau/recupererPage.js";
 import { nettoyerEspacePartage } from "./src/espacePartage/nettoyer.js";
+import { ErreurLien, creerLiens } from "./src/espacePartage/liens/liens.js";
 import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
 
@@ -50,6 +53,8 @@ export const supprimerMonCompte = onCall(
     // Data first, the Auth account last: if anything fails, the user can try again.
     const db = getFirestore();
     await db.recursiveDelete(db.doc(`users/${uid}`));
+    // V4.28: the share links of the account (documents and encrypted copies).
+    await liens.supprimerLiensDe(uid);
     // Backgrounds (users/{uid}/) and files of the sharing space (partages/{uid}/, V4.25).
     for (const prefix of [`users/${uid}/`, `partages/${uid}/`]) {
       try {
@@ -201,7 +206,7 @@ export const nettoyerEspacePartageProgramme = onSchedule(
       valeurs: { increment: (n) => FieldValue.increment(n), timestamp: (ms) => Timestamp.fromMillis(ms) },
     });
     // Volumes only: never a name, a path or a content.
-    logger.info("espace de partage nettoyé", r);
+    logger.info("espace de partage nettoyé", { ...r, ...(await liens.nettoyerLiens()) });
   },
 );
 export const reconcilierEspacePartageProgramme = onSchedule(
@@ -218,3 +223,83 @@ export const reconcilierEspacePartageProgramme = onSchedule(
     logger.info("espace de partage réconcilié", r);
   },
 );
+
+// --- V4.28: public share links (the only public door of the application) ------------------------
+const bucketLiens = () => getStorage().bucket();
+const sel = process.env.SEL_EMPREINTE_PARTAGE ?? process.env.GCLOUD_PROJECT ?? "nedotab";
+const liens = creerLiens({
+  db: getFirestore(),
+  stockage: {
+    ecrire: (chemin, octets) => bucketLiens().file(chemin).save(octets, { contentType: "application/octet-stream", resumable: false }),
+    lire: async (chemin) => (await bucketLiens().file(chemin).download())[0],
+    supprimer: (chemin) => bucketLiens().file(chemin).delete({ ignoreNotFound: true }),
+  },
+  horodatage: (ms) => Timestamp.fromMillis(ms),
+  // Salted and rotating (10 min): the address itself is never stored nor logged.
+  empreinteAdresse: (adresse, t) =>
+    createHash("sha256").update(`${adresse}:${sel}:${Math.floor(t / 600_000)}`).digest("base64url"),
+});
+
+const CODES_APPEL = {
+  desactive: "unavailable",
+  interdit: "permission-denied",
+  invalide: "invalid-argument",
+  plein: "resource-exhausted",
+  limite: "resource-exhausted",
+};
+const appelLien = (f) =>
+  onCall(
+    { region: "europe-west1", maxInstances: 5, timeoutSeconds: 60, memory: "512MiB", enforceAppCheck: false },
+    async (requete) => {
+      if (!requete.auth) throw new HttpsError("unauthenticated", "Connectez-vous pour gérer vos liens.");
+      if (!emailVerifie(requete.auth))
+        throw new HttpsError("permission-denied", "Vérifiez votre adresse e-mail pour continuer.");
+      try {
+        const r = await f(requete.auth.uid, requete.data ?? {});
+        logger.info("lien de partage", { action: f.name }); // a volume, never a token or a content
+        return r;
+      } catch (e) {
+        if (e instanceof ErreurLien) throw new HttpsError(CODES_APPEL[e.code] ?? "internal", e.message);
+        logger.error("lien de partage : erreur interne", { nom: e?.name });
+        throw new HttpsError("internal", "Erreur interne.");
+      }
+    },
+  );
+export const creerLienPartage = appelLien(function creer(uid, d) {
+  return liens.creer(uid, d);
+});
+export const listerLiensPartage = appelLien(function lister(uid) {
+  return liens.lister(uid);
+});
+export const revoquerLienPartage = appelLien(function revoquer(uid, d) {
+  return liens.revoquer(uid, d.idLien);
+});
+
+const STATUTS_PUBLICS = { indisponible: 404, verrouille: 423, "mot-de-passe": 401, limite: 429, invalide: 400 };
+/** Public endpoint (no account): POST JSON, same-origin through the Hosting rewrite. */
+const publique = (f) =>
+  onRequest(
+    { region: "europe-west1", maxInstances: 5, timeoutSeconds: 60, memory: "512MiB", cors: false },
+    async (req, res) => {
+      res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Type": "application/json" });
+      const projet = process.env.GCLOUD_PROJECT;
+      const origine = req.get("origin");
+      if (req.method !== "POST" || (origine && ![`https://${projet}.web.app`, `https://${projet}.firebaseapp.com`].includes(origine))) {
+        res.status(404).send(JSON.stringify({ erreur: "indisponible" }));
+        return;
+      }
+      const adresse = String(req.get("x-forwarded-for") ?? req.ip ?? "").split(",")[0].trim();
+      try {
+        res.status(200).send(JSON.stringify(await f(req.body ?? {}, adresse)));
+      } catch (e) {
+        if (e instanceof ErreurLien) {
+          res.status(STATUTS_PUBLICS[e.code] ?? 404).send(JSON.stringify({ erreur: e.code, ...(e.details ?? {}) }));
+        } else {
+          logger.error("lien public : erreur interne", { nom: e?.name });
+          res.status(500).send(JSON.stringify({ erreur: "interne" }));
+        }
+      }
+    },
+  );
+export const ouvrirLienPartage = publique((corps, adresse) => liens.ouvrir(corps, adresse));
+export const signalerLienPartage = publique((corps, adresse) => liens.signaler(corps, adresse));

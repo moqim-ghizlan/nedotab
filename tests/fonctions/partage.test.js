@@ -8,13 +8,25 @@ import { extraireContenu as extraireClient } from "../../src/core/extraitPage.js
 const lire = (chemin) => readFileSync(new URL(chemin, import.meta.url), "utf8");
 
 describe("code partagé client / serveur", () => {
-  it.each(["extraitPage", "confidentialiteUrl", "infosPage", "url", "listeCompacte", "preFiltre", "besoinContexteSites", "outils", "estimation", "confidentialiteIa", "usage", "constantes", "expirationPartage"])(
-    "%s : copie identique",
-    (nom) => {
-      const copie = lire(`../../functions/src/partage/${nom}.js`).split("\n").slice(1).join("\n");
-      expect(copie.replace(/\r/g, "")).toBe(lire(`../../src/core/${nom}.js`).replace(/\r/g, ""));
-    },
-  );
+  it.each([
+    "extraitPage",
+    "confidentialiteUrl",
+    "infosPage",
+    "url",
+    "listeCompacte",
+    "preFiltre",
+    "besoinContexteSites",
+    "outils",
+    "estimation",
+    "confidentialiteIa",
+    "usage",
+    "constantes",
+    "expirationPartage",
+    "lienPartage",
+  ])("%s : copie identique", (nom) => {
+    const copie = lire(`../../functions/src/partage/${nom}.js`).split("\n").slice(1).join("\n");
+    expect(copie.replace(/\r/g, "")).toBe(lire(`../../src/core/${nom}.js`).replace(/\r/g, ""));
+  });
 });
 
 describe("extraction serveur (linkedom) = extraction client sur les fixtures V4.3", () => {

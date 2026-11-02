@@ -60,7 +60,11 @@ export default defineConfig(({ mode }) => {
       publicDir: "public",
       define,
       resolve: resolve_,
-      build: { ...build, outDir: "dist/pwa", rollupOptions: { input: { index: "index.html" } } },
+      build: {
+        ...build,
+        outDir: "dist/pwa",
+        rollupOptions: { input: { index: "index.html", recevoir: "recevoir.html" } },
+      },
       plugins: [
         // V3.7: the interface opens without network; a new version is offered, never forced
         // (registerSW in src/ui/miseAJour.js). Only in this build: the extension has none.
@@ -71,7 +75,7 @@ export default defineConfig(({ mode }) => {
           workbox: {
             globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2,webmanifest}"],
             // The debug console is loaded on demand only: not worth precaching (V3.10).
-            globIgnores: ["**/eruda-*.js"],
+            globIgnores: ["**/eruda-*.js", "**/recevoir*"],
             navigateFallback: "/index.html",
             // The sign-in redirect pages of Firebase (/__/auth/...) must reach the server.
             navigateFallbackDenylist: [/^\/__\//],

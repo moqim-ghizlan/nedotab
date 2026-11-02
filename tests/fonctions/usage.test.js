@@ -17,7 +17,12 @@ const config = {
 };
 let maintenant = Date.UTC(2026, 10, 21, 10); // 21 November 2026
 
-async function monter({ cfg = config, reglagesIa = { actif: true }, textes = [], jetons = [1000, 500] } = {}) {
+async function monter({
+  cfg = config,
+  reglagesIa = { actif: true },
+  textes = [],
+  jetons = [1000, 500],
+} = {}) {
   const db = baseMemoire();
   const file = [...textes];
   const envoyer = vi.fn(async () => ({
@@ -40,13 +45,17 @@ async function monter({ cfg = config, reglagesIa = { actif: true }, textes = [],
   await ia.enregistrerCle("u1", { fournisseur: "gemini", cle: CLE });
   await db.doc("users/u1").set({
     reglages: { ia: reglagesIa },
-    grille: [{ id: "a", type: "site", titre: "Marmiton", url: "https://marmiton.org", tags: ["cuisine"] }, { id: "b", type: "site", titre: "GitHub", url: "https://github.com", tags: [] }],
+    grille: [
+      { id: "a", type: "site", titre: "Marmiton", url: "https://marmiton.org", tags: ["cuisine"] },
+      { id: "b", type: "site", titre: "GitHub", url: "https://github.com", tags: [] },
+    ],
   });
   return { ia, db, envoyer };
 }
 const usage = (db, mois = "2026-11") => db.lire(`users/u1/usage/${mois}`);
 const recherche = (texte) => ({ question: texte });
-const JSON_RECHERCHE = '{"intention":"site","resultats":[{"id":"s1","score":0.9}],"aucunResultat":false}';
+const JSON_RECHERCHE =
+  '{"intention":"site","resultats":[{"id":"s1","score":0.9}],"aucunResultat":false}';
 
 describe("usage enregistré (V4.19)", () => {
   it("un appel : compteurs par jour, usage, fournisseur et total ; coût estimé avec les prix de config/ia", async () => {
@@ -99,8 +108,18 @@ describe("usage enregistré (V4.19)", () => {
   it("le chat en flux : jetons de la fin ; interrompu = incomplet", async () => {
     const db = baseMemoire({
       "users/u1": { reglages: { ia: { actif: true } }, grille: [] },
-      "users/u1/conversations/conv-0001": { titre: "T", majLe: new Date(0), creeLe: new Date(0), nbMessages: 0 },
-      "users/u1/conversations/conv-0001/messages/0000000000001-a": { role: "user", texte: "Bonjour", creeLe: new Date(1), etat: "ok" },
+      "users/u1/conversations/conv-0001": {
+        titre: "T",
+        majLe: new Date(0),
+        creeLe: new Date(0),
+        nbMessages: 0,
+      },
+      "users/u1/conversations/conv-0001/messages/0000000000001-a": {
+        role: "user",
+        texte: "Bonjour",
+        creeLe: new Date(1),
+        etat: "ok",
+      },
     });
     const flux = async function* () {
       yield { type: "texte", delta: "Salut" };
@@ -109,7 +128,14 @@ describe("usage enregistré (V4.19)", () => {
     const ia = creerFonctionsIa({
       db,
       secret: () => secret,
-      fournisseurs: { gemini: { formatCle: /^sk-/, verifierCle: async () => ({ valide: true }), envoyer: vi.fn(), envoyerFlux: flux } },
+      fournisseurs: {
+        gemini: {
+          formatCle: /^sk-/,
+          verifierCle: async () => ({ valide: true }),
+          envoyer: vi.fn(),
+          envoyerFlux: flux,
+        },
+      },
       config: async () => ({ ...config, modele: "m" }),
       consommer: (u, o) => consommer(db, u, o),
       increment: inc,
@@ -130,7 +156,9 @@ describe("limites personnelles", () => {
     });
     await ia.rechercher("u1", recherche("a"));
     await ia.rechercher("u1", recherche("b"));
-    await expect(ia.rechercher("u1", recherche("c"))).rejects.toMatchObject({ code: "limite-personnelle" });
+    await expect(ia.rechercher("u1", recherche("c"))).rejects.toMatchObject({
+      code: "limite-personnelle",
+    });
     expect(envoyer).toHaveBeenCalledTimes(2);
     expect(db.lire("users/u1/prive/quota").appels).toBe(2); // the service quota is not consumed by the refusal
   });
@@ -141,10 +169,14 @@ describe("limites personnelles", () => {
       textes: Array(5).fill(JSON_RECHERCHE),
     });
     await ia.rechercher("u1", recherche("a"));
-    await expect(ia.rechercher("u1", recherche("b"))).rejects.toMatchObject({ code: "limite-personnelle" });
+    await expect(ia.rechercher("u1", recherche("b"))).rejects.toMatchObject({
+      code: "limite-personnelle",
+    });
     maintenant += 24 * 3600 * 1000;
     await ia.rechercher("u1", recherche("c"));
-    await expect(ia.rechercher("u1", recherche("d"))).rejects.toMatchObject({ code: "limite-personnelle" });
+    await expect(ia.rechercher("u1", recherche("d"))).rejects.toMatchObject({
+      code: "limite-personnelle",
+    });
     maintenant -= 24 * 3600 * 1000;
   });
 
@@ -155,7 +187,9 @@ describe("limites personnelles", () => {
     });
     await ia.rechercher("u1", recherche("a")); // 0,0015 €
     await ia.rechercher("u1", recherche("b")); // 0,003 € in all: reached
-    await expect(ia.rechercher("u1", recherche("c"))).rejects.toMatchObject({ code: "limite-personnelle" });
+    await expect(ia.rechercher("u1", recherche("c"))).rejects.toMatchObject({
+      code: "limite-personnelle",
+    });
   });
 
   it("limite invalide ignorée ; pas de limite : aucun refus", async () => {
@@ -174,14 +208,21 @@ describe("consommation (écran)", () => {
       reglagesIa: { actif: true, limites: { jour: { appels: 5 } } },
       textes: Array(5).fill(JSON_RECHERCHE),
     });
-    await db.doc("users/u1/usage/2026-10").set({ total: { appels: 7, jetonsEntree: 1, jetonsSortie: 1, coutEstime: 0.01 }, appelsEvites: 3 });
+    await db
+      .doc("users/u1/usage/2026-10")
+      .set({
+        total: { appels: 7, jetonsEntree: 1, jetonsSortie: 1, coutEstime: 0.01 },
+        appelsEvites: 3,
+      });
     for (const q of ["a", "b", "c", "d"]) await ia.rechercher("u1", recherche(q));
     const c = await ia.consommation("u1", {});
     expect(c.aujourdhui.appels).toBe(4);
     expect(c.ceMois.total.appels).toBe(4);
     expect(c.etatLimites.atteinte).toBeNull();
     expect(c.etatLimites.alertes).toEqual([{ periode: "jour", type: "appels", pourcent: 80 }]);
-    expect(c.precedents).toEqual([{ mois: "2026-10", total: expect.objectContaining({ appels: 7 }), appelsEvites: 3 }]);
+    expect(c.precedents).toEqual([
+      { mois: "2026-10", total: expect.objectContaining({ appels: 7 }), appelsEvites: 3 },
+    ]);
     expect(c.prix.majLe).toBe(1_700_000_000_000);
   });
 
@@ -208,7 +249,15 @@ describe("cache des réponses (V4.19)", () => {
     const { ia, db, envoyer } = await monter({ textes: [JSON_RECHERCHE, JSON_RECHERCHE] });
     await ia.rechercher("u1", recherche("cuisine"));
     const doc = db.lire("users/u1");
-    await db.doc("users/u1").set({ ...doc, grille: [...doc.grille, { id: "c", type: "site", titre: "Nouveau", url: "https://nouveau.fr", tags: [] }] });
+    await db
+      .doc("users/u1")
+      .set({
+        ...doc,
+        grille: [
+          ...doc.grille,
+          { id: "c", type: "site", titre: "Nouveau", url: "https://nouveau.fr", tags: [] },
+        ],
+      });
     await ia.rechercher("u1", recherche("cuisine"));
     expect(envoyer).toHaveBeenCalledTimes(2);
   });
@@ -225,7 +274,9 @@ describe("cache des réponses (V4.19)", () => {
   it("pas de partage entre deux utilisateurs", async () => {
     const { ia, db, envoyer } = await monter({ textes: [JSON_RECHERCHE, JSON_RECHERCHE] });
     await ia.enregistrerCle("u2", { fournisseur: "gemini", cle: CLE });
-    await db.doc("users/u2").set({ reglages: { ia: { actif: true } }, grille: db.lire("users/u1").grille });
+    await db
+      .doc("users/u2")
+      .set({ reglages: { ia: { actif: true } }, grille: db.lire("users/u1").grille });
     await ia.rechercher("u1", recherche("cuisine"));
     await ia.rechercher("u2", recherche("cuisine"));
     expect(envoyer).toHaveBeenCalledTimes(2);
@@ -235,17 +286,25 @@ describe("cache des réponses (V4.19)", () => {
     const { ia, db } = await monter({ textes: [JSON_RECHERCHE] });
     await ia.rechercher("u1", recherche("cuisine"));
     await db.doc("users/u1").set({ ...db.lire("users/u1"), reglages: { ia: { actif: false } } });
-    await expect(ia.rechercher("u1", recherche("cuisine"))).rejects.toMatchObject({ code: "ia-desactivee" });
+    await expect(ia.rechercher("u1", recherche("cuisine"))).rejects.toMatchObject({
+      code: "ia-desactivee",
+    });
   });
 
   it("tags : même page, un seul appel ; le chat n'est jamais mis en cache", async () => {
-    const { ia, envoyer } = await monter({ textes: ['{"tags":["a"],"description":"d"}', '{"tags":["b"],"description":"d"}'] });
+    const { ia, envoyer } = await monter({
+      textes: ['{"tags":["a"],"description":"d"}', '{"tags":["b"],"description":"d"}'],
+    });
     const extrait = { titre: "A" };
     const a = await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait });
     const b = await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait });
     expect(b).toEqual(a);
     expect(envoyer).toHaveBeenCalledTimes(1);
-    const c = await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait: { titre: "A", texte: "autre contenu" } });
+    const c = await ia.genererTags("u1", {
+      url: "https://a.fr",
+      titre: "A",
+      extrait: { titre: "A", texte: "autre contenu" },
+    });
     expect(c.tags).toEqual(["b"]);
   });
 
@@ -259,7 +318,18 @@ describe("cache des réponses (V4.19)", () => {
     expect(await cache.lire("u1", cle)).toEqual({ a: 1 });
     t = 1600;
     expect(await cache.lire("u1", cle)).toBeNull();
-    const casse = creerCache({ db: { doc: () => ({ get: async () => { throw new Error("boom"); }, set: async () => { throw new Error("boom"); } }) } });
+    const casse = creerCache({
+      db: {
+        doc: () => ({
+          get: async () => {
+            throw new Error("boom");
+          },
+          set: async () => {
+            throw new Error("boom");
+          },
+        }),
+      },
+    });
     expect(await casse.lire("u1", cle)).toBeNull();
     await casse.ecrire("u1", cle, {}, 1);
     expect(cleCache(["x", 1])).toBe(cle);
@@ -269,9 +339,18 @@ describe("cache des réponses (V4.19)", () => {
 
 describe("creerUsage : jamais bloquant", () => {
   it("une erreur d'écriture ne fait pas échouer l'appel", async () => {
-    const db = { doc: () => ({ set: async () => { throw new Error("boom"); }, get: async () => ({ exists: false }) }) };
+    const db = {
+      doc: () => ({
+        set: async () => {
+          throw new Error("boom");
+        },
+        get: async () => ({ exists: false }),
+      }),
+    };
     const u = creerUsage({ db, config: async () => config, increment: inc });
-    await expect(u.enregistrer("u1", { usage: "chat", fournisseur: "gemini", modele: "m" })).resolves.toBeUndefined();
+    await expect(
+      u.enregistrer("u1", { usage: "chat", fournisseur: "gemini", modele: "m" }),
+    ).resolves.toBeUndefined();
     await expect(u.evite("u1")).resolves.toBeUndefined();
   });
 });

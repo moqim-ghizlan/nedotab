@@ -134,8 +134,10 @@ describe("lireSortieRecherche", () => {
   });
   it("intention (V4.13) : question, les_deux, inconnue ou absente → site", () => {
     const lire = (intention) =>
-      lireSortieRecherche(JSON.stringify({ ...(intention ? { intention } : {}), resultats: [] }), table)
-        .intention;
+      lireSortieRecherche(
+        JSON.stringify({ ...(intention ? { intention } : {}), resultats: [] }),
+        table,
+      ).intention;
     expect(lire("question")).toBe("question");
     expect(lire("les_deux")).toBe("les_deux");
     expect(lire("site")).toBe("site");

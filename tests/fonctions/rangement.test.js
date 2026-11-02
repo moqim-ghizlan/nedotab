@@ -25,7 +25,11 @@ describe("lireSortieRangement", () => {
             { outil: "deplacer", element: "s3", vers: "nouveau:0" },
           ],
         },
-        { titre: "Renommer", explication: "", actions: [{ outil: "renommer", element: "d1", titre: "Dev" }] },
+        {
+          titre: "Renommer",
+          explication: "",
+          actions: [{ outil: "renommer", element: "d1", titre: "Dev" }],
+        },
       ],
     });
     expect(r.groupes).toHaveLength(2);
@@ -76,8 +80,20 @@ describe("lireSortieRangement", () => {
     expect(r.groupes).toHaveLength(8);
     const deux = lire({
       groupes: [
-        { titre: "A", actions: Array.from({ length: 5 }, (_, i) => ({ outil: "creer_dossier", titre: `a${i}` })) },
-        { titre: "B", actions: Array.from({ length: 5 }, (_, i) => ({ outil: "creer_dossier", titre: `b${i}` })) },
+        {
+          titre: "A",
+          actions: Array.from({ length: 5 }, (_, i) => ({
+            outil: "creer_dossier",
+            titre: `a${i}`,
+          })),
+        },
+        {
+          titre: "B",
+          actions: Array.from({ length: 5 }, (_, i) => ({
+            outil: "creer_dossier",
+            titre: `b${i}`,
+          })),
+        },
       ],
     });
     expect(deux.groupes.map((g) => g.titre)).toEqual(["A"]);

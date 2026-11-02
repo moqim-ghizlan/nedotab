@@ -38,7 +38,12 @@ const conversation = (extra = {}) => ({
 
 async function monter(initial = {}, { reponse = "Bonne réponse", flux = null } = {}) {
   const db = baseMemoire(initial);
-  const envoyer = vi.fn(async () => ({ texte: reponse, modele: "m", jetonsEntree: 3, jetonsSortie: 4 }));
+  const envoyer = vi.fn(async () => ({
+    texte: reponse,
+    modele: "m",
+    jetonsEntree: 3,
+    jetonsSortie: 4,
+  }));
   const envoyerFlux = vi.fn(
     flux ??
       async function* () {
@@ -251,7 +256,9 @@ describe("rotation et suppression", () => {
     const db = baseMemoire(initial);
     const c = creerConversations({ db, horloge: () => 10 ** 12 });
     expect(await c.rotation("u1")).toBe(2);
-    const restantes = db.chemins("users/u1/conversations/").filter((k) => k.split("/").length === 4);
+    const restantes = db
+      .chemins("users/u1/conversations/")
+      .filter((k) => k.split("/").length === 4);
     expect(restantes).toHaveLength(CONVERSATIONS_MAX);
     expect(db.lire("users/u1/conversations/c0001")).toBeUndefined();
     expect(db.chemins("users/u1/conversations/c0001/")).toEqual([]);
@@ -276,9 +283,7 @@ describe("rotation et suppression", () => {
 
 describe("referencesReelles", () => {
   it("convertit selon la table, ? pour l'inconnu", () => {
-    expect(referencesReelles("[[site:s1]] [[site:s2]]", { s1: "a" })).toBe(
-      "[[site:a]] [[site:?]]",
-    );
+    expect(referencesReelles("[[site:s1]] [[site:s2]]", { s1: "a" })).toBe("[[site:a]] [[site:?]]");
     expect(referencesReelles("rien", undefined)).toBe("rien");
   });
 });

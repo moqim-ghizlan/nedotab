@@ -21,6 +21,7 @@ import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
 import { creerCoffreUI } from "./coffre/coffre.js";
 import { demander } from "./dialogues/commun.js";
+import { creerLienPourElement, ouvrirMesLiens } from "./liensPartage.js";
 import {
   DUREES,
   DUREE_DEFAUT,
@@ -193,6 +194,13 @@ export function creerEspacePartage({
       "header",
       { class: "partage-entete" },
       el("h2", { texte: "Espace de partage" }),
+      // V4.28: the active share links (create / revoke).
+      el("button", {
+        type: "button",
+        class: "lien-discret",
+        texte: "Mes liens",
+        onclick: () => ouvrirMesLiens({ charger }),
+      }),
       fermerBouton,
     ),
     bandeau,
@@ -333,6 +341,22 @@ export function creerEspacePartage({
         onclick: () =>
           action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
       }),
+      // V4.28: a public link to a COPY of this text or link (the clear content, decrypted if it
+      // came from the vault; the copy is re-encrypted with the key of the link).
+      e.type !== "fichier" && !(brut.chiffre && (verrouille || clair?.corrompu))
+        ? el("button", {
+            type: "button",
+            class: "partage-action",
+            texte: "Créer un lien",
+            onclick: () =>
+              creerLienPourElement({
+                charger,
+                copier,
+                element: { type: e.type, contenu: e.contenu },
+                dureeId,
+              }),
+          })
+        : null,
       e.type === "fichier"
         ? null
         : el("button", {

@@ -459,3 +459,74 @@ export async function dechiffrerFichier(vk, uid, id, octets) {
 
 /** Size shown for an encrypted file: rounded up to the next 64 KB (the real size stays visible in Storage). */
 export const tailleAffichee = (octets) => Math.ceil(octets / 65536) * 65536;
+
+/* ---------- public share links (V4.28) ---------- */
+
+const texteVersOctets = (t) => encodeur.encode(t);
+
+/** PBKDF2 of the link password, bound to the token (a different salt for the key and the proof). */
+async function deriverBitsLien(motDePasse, jeton, but, iterations) {
+  if (!Number.isInteger(iterations) || iterations < ITERATIONS_MIN) throw new Error("Paramètres du lien invalides.");
+  const base = await subtle().importKey("raw", texteVersOctets(normaliserMotDePasse(motDePasse)), "PBKDF2", false, ["deriveBits"]);
+  return new Uint8Array(
+    await subtle().deriveBits(
+      { name: "PBKDF2", salt: texteVersOctets(`nedotab-lien-${but}:${jeton}`), iterations, hash: "SHA-256" },
+      base,
+      256,
+    ),
+  );
+}
+
+/** Content key of a link: HKDF(link key [|| password bits]), salt = token. */
+async function cleDeLien(cle, jeton, motDePasse, iterations) {
+  const ikm = depuisB64u(cle);
+  const entree = motDePasse
+    ? new Uint8Array([...ikm, ...(await deriverBitsLien(motDePasse, jeton, "cle", iterations))])
+    : ikm;
+  const base = await subtle().importKey("raw", entree, "HKDF", false, ["deriveKey"]);
+  return subtle().deriveKey(
+    { name: "HKDF", hash: "SHA-256", salt: texteVersOctets(jeton), info: texteVersOctets("nedotab-lien-v1") },
+    base,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+}
+
+/**
+ * Proof of the link password, DIFFERENT from the key derivation: the server keeps only its hash
+ * and checks it before releasing the (encrypted) copy; it never sees the password.
+ * @returns {Promise<string>} base64url
+ */
+export async function preuveMotDePasseLien(motDePasse, jeton, iterations = ITERATIONS) {
+  return versB64u(await deriverBitsLien(motDePasse, jeton, "preuve", iterations));
+}
+
+/** Encrypts the copy shared by a link. AAD = token. @returns {Promise<Uint8Array>} iv || ciphertext */
+export async function chiffrerPourLien({ cle, jeton, motDePasse = null, octets, iterations = ITERATIONS }) {
+  const k = await cleDeLien(cle, jeton, motDePasse, iterations);
+  const iv = aleatoire(OCTETS_IV);
+  const ct = new Uint8Array(
+    await subtle().encrypt({ name: "AES-GCM", iv, additionalData: texteVersOctets(jeton) }, k, octets),
+  );
+  const sortie = new Uint8Array(iv.length + ct.length);
+  sortie.set(iv);
+  sortie.set(ct, iv.length);
+  return sortie;
+}
+
+/** @throws ErreurCoffre("corrompu") with a wrong key, password or token */
+export async function dechiffrerDepuisLien({ cle, jeton, motDePasse = null, donnees, iterations = ITERATIONS }) {
+  const k = await cleDeLien(cle, jeton, motDePasse, iterations);
+  try {
+    return new Uint8Array(
+      await subtle().decrypt(
+        { name: "AES-GCM", iv: donnees.subarray(0, OCTETS_IV), additionalData: texteVersOctets(jeton) },
+        k,
+        donnees.subarray(OCTETS_IV),
+      ),
+    );
+  } catch {
+    throw new ErreurCoffre("corrompu", "Déchiffrement impossible.");
+  }
+}

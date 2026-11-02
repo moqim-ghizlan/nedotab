@@ -27,15 +27,37 @@ const grille = [
     id: "d",
     type: "dossier",
     titre: "Loisirs-prives",
-    items: [{ id: "b", type: "site", titre: "Jeux", url: "https://jeux.fr", tags: ["jeu"], description: "Jeux en ligne" }],
+    items: [
+      {
+        id: "b",
+        type: "site",
+        titre: "Jeux",
+        url: "https://jeux.fr",
+        tags: ["jeu"],
+        description: "Jeux en ligne",
+      },
+    ],
   },
-  { id: "x", type: "site", titre: "Secret", url: "https://secret.fr", tags: [], description: "", iaExclu: true },
+  {
+    id: "x",
+    type: "site",
+    titre: "Secret",
+    url: "https://secret.fr",
+    tags: [],
+    description: "",
+    iaExclu: true,
+  },
 ];
 const JSON_RECHERCHE = '{"intention":"site","resultats":[],"aucunResultat":true}';
 
 async function monter({ confidentialite, textes = [JSON_RECHERCHE], g = grille, lirePage } = {}) {
   const db = baseMemoire({
-    [`users/u1/conversations/${CONV}`]: { titre: "T", majLe: new Date(0), creeLe: new Date(0), nbMessages: 0 },
+    [`users/u1/conversations/${CONV}`]: {
+      titre: "T",
+      majLe: new Date(0),
+      creeLe: new Date(0),
+      nbMessages: 0,
+    },
     [`users/u1/conversations/${CONV}/messages/0000000000001-a`]: {
       role: "user",
       texte: "Quels sont mes sites de cuisine ?",
@@ -44,11 +66,18 @@ async function monter({ confidentialite, textes = [JSON_RECHERCHE], g = grille, 
     },
   });
   const file = [...textes];
-  const envoyer = vi.fn(async () => ({ texte: file.shift() ?? '{"tags":["t"],"description":"d"}', modele: "m", jetonsEntree: 1, jetonsSortie: 1 }));
+  const envoyer = vi.fn(async () => ({
+    texte: file.shift() ?? '{"tags":["t"],"description":"d"}',
+    modele: "m",
+    jetonsEntree: 1,
+    jetonsSortie: 1,
+  }));
   const ia = creerFonctionsIa({
     db,
     secret: () => secret,
-    fournisseurs: { gemini: { formatCle: /^sk-/, verifierCle: async () => ({ valide: true }), envoyer } },
+    fournisseurs: {
+      gemini: { formatCle: /^sk-/, verifierCle: async () => ({ valide: true }), envoyer },
+    },
     config: async () => CONFIG_PAR_DEFAUT,
     consommer: (u, o) => consommer(db, u, o),
     increment: inc,
@@ -76,10 +105,27 @@ describe("réglages de confidentialité (module partagé)", () => {
     expect(permis({ chemins: false }, "chemins")).toBe(false);
   });
   it("champs de la liste selon les choix", () => {
-    expect(champsAutorises(null)).toEqual(["titre", "domaine", "tags", "description", "chemin", "ajoute"]);
-    expect(champsAutorises({ tagsDescriptions: false })).toEqual(["titre", "domaine", "chemin", "ajoute"]);
+    expect(champsAutorises(null)).toEqual([
+      "titre",
+      "domaine",
+      "tags",
+      "description",
+      "chemin",
+      "ajoute",
+    ]);
+    expect(champsAutorises({ tagsDescriptions: false })).toEqual([
+      "titre",
+      "domaine",
+      "chemin",
+      "ajoute",
+    ]);
     expect(champsAutorises({ chemins: false })).not.toContain("chemin");
-    expect(champsAutorises({ titresAdresses: false })).toEqual(["tags", "description", "chemin", "ajoute"]);
+    expect(champsAutorises({ titresAdresses: false })).toEqual([
+      "tags",
+      "description",
+      "chemin",
+      "ajoute",
+    ]);
   });
 });
 
@@ -115,7 +161,10 @@ describe("recherche : champs envoyés décidés par le serveur", () => {
 
 describe("chat : la collection n'est jointe que si permis", () => {
   it("titres refusés : le chat répond sans connaître les sites", async () => {
-    const { ia, envoyer } = await monter({ confidentialite: { titresAdresses: false }, textes: ["Je ne les connais pas."] });
+    const { ia, envoyer } = await monter({
+      confidentialite: { titresAdresses: false },
+      textes: ["Je ne les connais pas."],
+    });
     const r = await ia.chatConversation("u1", { convId: CONV });
     expect(envoyer.mock.calls[0][0].systeme).not.toMatch(/<sites>|Marmiton/);
     expect(r).not.toHaveProperty("consulte");
@@ -139,7 +188,9 @@ describe("chat : la collection n'est jointe que si permis", () => {
   });
   it("historique conservé : l'historique envoyé par le navigateur est refusé", async () => {
     const { ia } = await monter();
-    await expect(ia.chatConversation("u1", { messages: [{ role: "user", texte: "x" }] })).rejects.toThrow();
+    await expect(
+      ia.chatConversation("u1", { messages: [{ role: "user", texte: "x" }] }),
+    ).rejects.toThrow();
   });
 });
 
@@ -170,9 +221,22 @@ describe("tags : contenu des pages", () => {
   });
   it("une réponse en cache d'avant le réglage n'est pas resservie comme « avec contenu »", async () => {
     const { ia, db, envoyer } = await monter({ textes: [] });
-    await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait: { titre: "A", texte: "contenu" } });
-    await db.doc("users/u1").set({ ...db.lire("users/u1"), reglages: { ia: { actif: true, confidentialite: { lirePages: false } } } });
-    await ia.genererTags("u1", { url: "https://a.fr", titre: "A", extrait: { titre: "A", texte: "contenu" } });
+    await ia.genererTags("u1", {
+      url: "https://a.fr",
+      titre: "A",
+      extrait: { titre: "A", texte: "contenu" },
+    });
+    await db
+      .doc("users/u1")
+      .set({
+        ...db.lire("users/u1"),
+        reglages: { ia: { actif: true, confidentialite: { lirePages: false } } },
+      });
+    await ia.genererTags("u1", {
+      url: "https://a.fr",
+      titre: "A",
+      extrait: { titre: "A", texte: "contenu" },
+    });
     expect(envoyer).toHaveBeenCalledTimes(2);
   });
 });
@@ -183,12 +247,20 @@ describe("rangement et exclusions", () => {
     await ia.suggererRangement("u1", { portee: "tout" });
     expect(prompt(envoyer)).not.toMatch(/Secret|secret\.fr/);
     const refus = await monter({ confidentialite: { titresAdresses: false } });
-    await expect(refus.ia.suggererRangement("u1", { portee: "tout" })).rejects.toMatchObject({ code: "confidentialite-sites" });
+    await expect(refus.ia.suggererRangement("u1", { portee: "tout" })).rejects.toMatchObject({
+      code: "confidentialite-sites",
+    });
   });
   it("un dossier exclu masque tout son contenu", async () => {
     const g = [
       { id: "s1", type: "site", titre: "Visible", url: "https://v.fr", tags: [] },
-      { id: "d", type: "dossier", titre: "Cache", iaExclu: true, items: [{ id: "s2", type: "site", titre: "Dedans", url: "https://dedans.fr", tags: [] }] },
+      {
+        id: "d",
+        type: "dossier",
+        titre: "Cache",
+        iaExclu: true,
+        items: [{ id: "s2", type: "site", titre: "Dedans", url: "https://dedans.fr", tags: [] }],
+      },
     ];
     const { ia, envoyer } = await monter({ g, textes: [JSON_RECHERCHE] });
     await ia.rechercher("u1", { question: "visible" });
