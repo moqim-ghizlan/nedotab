@@ -91,6 +91,50 @@ describe("section Confidentialité de l'IA", () => {
     expect(m.section.querySelector("#conf-lirePages").checked).toBe(false);
   });
 
+  it("une phrase dit ce que l'assistant reçoit et suit les réglages", () => {
+    const m = monter();
+    const dit = () => m.section.querySelector(".ia-conf-phrase").textContent;
+    expect(dit()).toMatch(/reçoit de vos sites : titres, adresses, tags, descriptions et noms de dossiers\./);
+    const bascule = (cle, autorise) => {
+      const c = m.section.querySelector(`#conf-${cle}`);
+      c.checked = autorise;
+      c.dispatchEvent(new Event("change"));
+    };
+    bascule("chemins", false);
+    expect(dit()).toMatch(/reçoit de vos sites : titres, adresses, tags et descriptions\./);
+    expect(dit()).toMatch(/Il ne reçoit pas : noms de dossiers\./);
+    bascule("titresAdresses", false);
+    expect(dit()).toMatch(/ne reçoit rien sur vos sites/);
+    expect(dit()).toMatch(/messages au chat lui sont toujours transmis/);
+    expect(m.section.querySelector(".ia-conf-etat").textContent).toBe("2 limités");
+  });
+
+  it("les réglages sont groupés (sites, pages web, conversations) et gardent le focus", () => {
+    const m = monter();
+    expect([...m.section.querySelectorAll(".ia-conf-groupe-titre")].map((h) => h.textContent)).toEqual([
+      "Vos sites",
+      "Pages web",
+      "Conversations",
+      "Effacer mes données",
+    ]);
+    const c = m.section.querySelector("#conf-tagsDescriptions");
+    document.body.append(m.section);
+    c.focus();
+    c.checked = false;
+    c.dispatchEvent(new Event("change"));
+    expect(document.activeElement.id).toBe("conf-tagsDescriptions");
+    expect(m.section.querySelector(".ia-conf-etat").textContent).toBe("1 limité");
+  });
+
+  it("l'effacement le plus large est à part et nommé comme tel", () => {
+    const m = monter();
+    const lignes = [...m.section.querySelectorAll(".ia-conf-effacement")];
+    expect(lignes).toHaveLength(6);
+    expect(lignes.filter((l) => l.classList.contains("ia-conf-effacement--danger"))).toHaveLength(1);
+    expect(lignes.at(-1).querySelector("strong").textContent).toBe("Tout effacer et désactiver l'IA");
+    expect(m.section.querySelector("#effacer-cache").getAttribute("aria-label")).toBe("Effacer : Cache de l'IA");
+  });
+
   it("compte les sites masqués", () => {
     const m = monter([site("a", { iaExclu: true }), site("b")]);
     expect(m.section.textContent).toMatch(/1 site masqué à l'IA/);

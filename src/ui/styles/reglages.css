@@ -2072,114 +2072,521 @@ body.fond-clair .carte-action--principale {
   }
 }
 
-/* V4.19: consumption screen */
+/* ------------------------------------------------------------------------------------------
+   V4.19 Consumption. The month's cost comes first, in large figures; everything else is quieter.
+   ------------------------------------------------------------------------------------------ */
+.dialogue:has(.conso) {
+  width: min(520px, calc(100vw - 2 * var(--espace-4)));
+}
+
 .conso {
   display: flex;
   flex-direction: column;
-  gap: var(--espace-3);
-  max-height: 65vh;
+  gap: var(--espace-5);
+  max-height: min(68vh, 640px);
+  padding-right: var(--espace-2);
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
-.conso-bloc h3 {
-  margin: 0 0 var(--espace-1);
+.conso h3 {
+  margin: 0;
   font-size: var(--taille-m);
+  font-weight: 600;
+}
+
+.conso-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.conso-bandeau {
+  margin: 0;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--accent);
+  border-radius: var(--rayon-petit);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: var(--taille-s);
+}
+
+.conso-bandeau--stop {
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.conso-resume {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--espace-4);
+  padding: var(--espace-4);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+}
+
+.conso-mois-bloc,
+.conso-jour {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  min-width: 0;
+}
+
+.conso-jour {
+  padding-left: var(--espace-4);
+  border-left: 1px solid var(--bordure);
+}
+
+.conso-legende {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.conso-valeur {
+  font-size: var(--taille-xl);
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.conso-valeur--petite {
+  font-size: var(--taille-l);
+}
+
+.conso-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--espace-3);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.conso-vide {
+  margin: 0;
+  padding: var(--espace-4);
+  border: 1px dashed var(--bordure);
+  border-radius: var(--rayon);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  line-height: 1.5;
+}
+
+.conso-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+.conso-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+}
+
+.conso-segments {
+  display: inline-grid;
+  grid-template-columns: repeat(2, auto);
+}
+
+.conso-segments .segment {
+  padding: 5px var(--espace-3);
+  font-size: var(--taille-s);
 }
 
 .conso-graphique {
+  display: block;
   width: 100%;
-  height: 80px;
+  height: 84px;
+}
+
+.conso-base {
+  stroke: var(--bordure);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .conso-barre {
+  fill: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.conso-barre--aujourdhui {
   fill: var(--accent);
 }
 
-.conso-choix {
+.conso-axe {
   display: flex;
-  gap: var(--espace-2);
-  margin: var(--espace-2) 0;
-}
-
-.conso-choix [aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
+  justify-content: space-between;
+  margin-top: calc(-1 * var(--espace-2));
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .conso-tableau {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--taille-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.conso-tableau caption {
+  padding-bottom: var(--espace-1);
+  color: var(--texte-secondaire);
+  text-align: left;
 }
 
 .conso-tableau th,
 .conso-tableau td {
-  padding: 2px var(--espace-2);
+  padding: var(--espace-1) 0;
+  border-top: 1px solid var(--bordure);
   text-align: right;
 }
 
-.conso-tableau th[scope="row"],
-.conso-tableau caption {
-  text-align: left;
+.conso-tableau thead th {
+  border-top: 0;
+  color: var(--texte-secondaire);
+  font-weight: 400;
 }
 
-.conso-champ {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--espace-2);
-  margin-top: var(--espace-1);
+.conso-tableau th[scope="row"],
+.conso-tableau thead th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.conso-cache {
+  margin: 0;
+  color: var(--texte-secondaire);
   font-size: var(--taille-s);
 }
 
-.conso-limite {
-  width: 6rem;
-  padding: var(--espace-1) var(--espace-2);
+.conso-cache--actif {
+  color: var(--accent);
 }
 
 .conso-mois {
+  display: flex;
+  flex-direction: column;
   margin: 0;
-  padding-left: var(--espace-4);
+  padding: 0;
+  list-style: none;
+  font-size: var(--taille-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.conso-mois li {
+  display: grid;
+  grid-template-columns: 1fr auto 5.5rem;
+  gap: var(--espace-3);
+  padding: var(--espace-1) 0;
+  border-top: 1px solid var(--bordure);
+}
+
+.conso-mois-nom {
+  text-transform: capitalize;
+}
+
+.conso-mois-cout {
+  text-align: right;
+}
+
+.conso-limites {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7.5rem 7.5rem;
+  align-items: center;
+  gap: var(--espace-2) var(--espace-3);
+}
+
+.conso-limite-tete {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.conso-limite-nom {
   font-size: var(--taille-s);
 }
 
-/* V4.20: AI privacy */
-.ia-confidentialite {
-  margin-top: var(--espace-3);
-  padding: var(--espace-2) var(--espace-3);
-  border: 1px solid var(--bordure);
-  border-radius: var(--rayon-petit);
+.conso-limite-case {
+  position: relative;
+  display: block;
 }
 
-.ia-confidentialite summary {
+.conso-champ-boite {
+  position: relative;
+  display: block;
+}
+
+.conso-limite {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 3.2rem 0 var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--fond);
+  color: inherit;
+  font: inherit;
+  font-size: var(--taille-s);
+  font-variant-numeric: tabular-nums;
+}
+
+.conso-limite:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  outline-offset: 1px;
+}
+
+.conso-unite {
+  position: absolute;
+  top: 50%;
+  right: var(--espace-3);
+  transform: translateY(-50%);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  pointer-events: none;
+}
+
+.conso-mention {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  line-height: 1.5;
+}
+
+@media (max-width: 460px) {
+  .conso-resume {
+    grid-template-columns: 1fr;
+  }
+
+  .conso-jour {
+    padding-left: 0;
+    padding-top: var(--espace-3);
+    border-left: 0;
+    border-top: 1px solid var(--bordure);
+  }
+
+  .conso-limites {
+    grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem;
+  }
+}
+
+/* ------------------------------------------------------------------------------------------
+   V4.20 AI privacy. One sentence says what the assistant receives; the switches are grouped by
+   what they are about; the erasures are a separate, quieter zone.
+   ------------------------------------------------------------------------------------------ */
+.ia-confidentialite {
+  margin-top: var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: color-mix(in srgb, var(--texte) 3%, transparent);
+}
+
+.ia-conf-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  min-height: 48px;
+  padding: var(--espace-3) var(--espace-4);
+  border-radius: var(--rayon);
+  list-style: none;
   cursor: pointer;
+}
+
+.ia-conf-resume::-webkit-details-marker {
+  display: none;
+}
+
+.ia-conf-resume::after {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-right: 2px solid var(--texte-secondaire);
+  border-bottom: 2px solid var(--texte-secondaire);
+  transform: rotate(45deg);
+  transition: transform 220ms var(--ressort, ease);
+}
+
+.ia-confidentialite[open] > .ia-conf-resume::after {
+  transform: rotate(-135deg);
+}
+
+.ia-conf-resume:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.ia-conf-titre {
+  font-size: var(--taille-m);
   font-weight: 600;
 }
 
-.ia-confidentialite-liste {
+.ia-conf-etat {
+  padding: 2px var(--espace-2);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+}
+
+.ia-conf-etat--limite {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ia-confidentialite[open] > :not(summary) {
+  margin-inline: var(--espace-4);
+}
+
+.ia-confidentialite[open] > :last-child {
+  margin-bottom: var(--espace-4);
+}
+
+.ia-conf-phrase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  padding: var(--espace-3);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--rayon-petit) var(--rayon-petit) 0;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+
+.ia-conf-phrase p {
+  margin: 0;
+}
+
+.ia-conf-recu {
+  font-size: var(--taille-m);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ia-conf-groupe {
   display: flex;
   flex-direction: column;
   gap: var(--espace-2);
-  margin: var(--espace-2) 0;
+  margin-top: var(--espace-4);
+}
+
+.ia-conf-groupe-titre {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  font-weight: 600;
+}
+
+.ia-conf-lignes {
+  display: flex;
+  flex-direction: column;
+}
+
+.ia-conf-ligne {
+  padding: var(--espace-3) 0;
+  border-top: 1px solid var(--bordure);
+}
+
+.ia-conf-ligne:first-child {
+  border-top: 0;
+}
+
+.ia-conf-ligne:focus-within .interrupteur-bouton {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ia-conf-masques {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-block: var(--espace-4) 0;
+  padding: var(--espace-3);
+  border: 1px dashed var(--bordure);
+  border-radius: var(--rayon-petit);
+  font-size: var(--taille-s);
+}
+
+.ia-conf-masques--actif {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.ia-conf-zone-effacement {
+  padding-top: var(--espace-4);
+  border-top: 1px solid var(--bordure);
+}
+
+.ia-conf-effacements {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ia-confidentialite-liste li {
+.ia-conf-effacement {
   display: flex;
-  align-items: flex-start;
-  gap: var(--espace-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  padding: var(--espace-3) 0;
+  border-top: 1px solid var(--bordure);
   font-size: var(--taille-s);
 }
 
-.ia-confidentialite-titre {
-  margin: var(--espace-3) 0 var(--espace-1);
-  font-size: var(--taille-m);
+.ia-conf-effacement:first-child {
+  border-top: 0;
 }
 
-.ia-confidentialite-boutons {
+.ia-conf-effacement-texte {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--espace-2);
+  gap: 2px;
+  min-width: 0;
+}
+
+.ia-conf-effacer {
+  flex: none;
+  min-width: 5rem;
+  padding: 6px var(--espace-3);
+  font-size: var(--taille-s);
+}
+
+.ia-conf-effacement--danger {
+  margin-top: var(--espace-2);
+  padding: var(--espace-3);
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  border-radius: var(--rayon-petit);
+  background: color-mix(in srgb, var(--danger) 7%, transparent);
+}
+
+.ia-conf-effacement--danger strong {
+  color: var(--danger);
+}
+
+@media (pointer: coarse) {
+  .ia-conf-resume {
+    min-height: 52px;
+  }
+
+  .ia-conf-effacer {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-conf-resume::after {
+    transition: none;
+  }
 }
