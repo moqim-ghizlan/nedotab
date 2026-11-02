@@ -94,12 +94,16 @@ export function sectionCompte(session) {
     const { google, motDePasse } = methodesDeConnexion(profil.fournisseurs);
     if (motDePasse) {
       return [
-        action("restaurer", "Changer le mot de passe", async () => {
+        action("cadenas", "Changer le mot de passe", async () => {
           const v = await demanderMotsDePasse({
             titre: "Changer le mot de passe",
             message: "Confirmez votre identité avec votre mot de passe actuel.",
             champs: [
-              { id: "mdp-actuel", libelle: "Mot de passe actuel", autocomplete: "current-password" },
+              {
+                id: "mdp-actuel",
+                libelle: "Mot de passe actuel",
+                autocomplete: "current-password",
+              },
               { id: "mdp-nouveau", libelle: "Nouveau mot de passe", autocomplete: "new-password" },
             ],
           });
@@ -107,27 +111,43 @@ export function sectionCompte(session) {
           const erreur = validerMotDePasse(v[1]);
           if (erreur) return toast(erreur, { type: "erreur", duree: 6000 });
           const r = await compte.changerMotDePasse(v[0], v[1]);
-          toast(r.ok ? "Mot de passe modifié" : r.erreur, { type: r.ok ? "info" : "erreur", duree: 6000 });
+          toast(r.ok ? "Mot de passe modifié" : r.erreur, {
+            type: r.ok ? "info" : "erreur",
+            duree: 6000,
+          });
         }),
       ];
     }
     if (google) {
       return [
-        action("restaurer", "Ajouter un mot de passe", async () => {
+        action("cadenas", "Ajouter un mot de passe", async () => {
           // Re-authenticating with Google first (same uid afterwards: no data moves).
           if (!(await compte.reconnecter())) {
-            return toast("Reconnectez-vous avec Google pour continuer.", { type: "erreur", duree: 6000 });
+            return toast("Reconnectez-vous avec Google pour continuer.", {
+              type: "erreur",
+              duree: 6000,
+            });
           }
           const v = await demanderMotsDePasse({
             titre: "Ajouter un mot de passe",
-            message: "Vous pourrez ensuite vous connecter avec Google ou avec votre e-mail et ce mot de passe. Vos données restent les mêmes.",
-            champs: [{ id: "mdp-ajout", libelle: "Mot de passe (10 caractères au moins)", autocomplete: "new-password" }],
+            message:
+              "Vous pourrez ensuite vous connecter avec Google ou avec votre e-mail et ce mot de passe. Vos données restent les mêmes.",
+            champs: [
+              {
+                id: "mdp-ajout",
+                libelle: "Mot de passe (10 caractères au moins)",
+                autocomplete: "new-password",
+              },
+            ],
           });
           if (!v) return;
           const erreur = validerMotDePasse(v[0]);
           if (erreur) return toast(erreur, { type: "erreur", duree: 6000 });
           const r = await compte.ajouterMotDePasse(v[0]);
-          toast(r.ok ? "Mot de passe ajouté" : r.erreur, { type: r.ok ? "info" : "erreur", duree: 6000 });
+          toast(r.ok ? "Mot de passe ajouté" : r.erreur, {
+            type: r.ok ? "info" : "erreur",
+            duree: 6000,
+          });
         }),
       ];
     }
@@ -189,15 +209,10 @@ export function sectionCompte(session) {
               })
             : null,
           lireMiseAJour().disponible
-            ? action(
-                "synchroniser",
-                "Mettre à jour",
-                () => lireMiseAJour().appliquer?.(),
-                {
-                  classe: "carte-action--principale",
-                  titre: "Une nouvelle version est disponible : recharger l'application",
-                },
-              )
+            ? action("synchroniser", "Mettre à jour", () => lireMiseAJour().appliquer?.(), {
+                classe: "carte-action--principale",
+                titre: "Une nouvelle version est disponible : recharger l'application",
+              })
             : null,
           action("restaurer", "Restaurer la copie", () => session.restaurerCopie(), {
             titre: "Restaurer la copie de cet appareil",

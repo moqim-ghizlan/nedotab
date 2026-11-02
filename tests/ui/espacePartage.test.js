@@ -15,7 +15,9 @@ function monter({ elements = [], compteur = 0, disponible = true } = {}) {
   const fb = {
     ecouterEspacePartage: (_uid, rappel) => {
       rappelElements = rappel;
-      queueMicrotask(() => rappel(elements, { depuisCache: false, enAttente: false, plein: false }));
+      queueMicrotask(() =>
+        rappel(elements, { depuisCache: false, enAttente: false, plein: false }),
+      );
       return () => {};
     },
     ecouterCompteurPartage: (_uid, rappel) => {
@@ -37,10 +39,25 @@ function monter({ elements = [], compteur = 0, disponible = true } = {}) {
   });
   document.body.append(p.bouton, p.panneau);
   p.actualiser();
-  return { p, fb, appels, pousser: (e) => rappelElements?.(e, { depuisCache: false, enAttente: false, plein: false }) };
+  return {
+    p,
+    fb,
+    appels,
+    pousser: (e) => rappelElements?.(e, { depuisCache: false, enAttente: false, plein: false }),
+  };
 }
 
-const el_ = (over) => ({ id: "1", type: "texte", contenu: "bonjour", titre: "b", appareil: "iphone", epingle: false, creeLe: Date.now() - 60_000, enAttente: false, ...over });
+const el_ = (over) => ({
+  id: "1",
+  type: "texte",
+  contenu: "bonjour",
+  titre: "b",
+  appareil: "iphone",
+  epingle: false,
+  creeLe: Date.now() - 60_000,
+  enAttente: false,
+  ...over,
+});
 
 describe("panneau de l'espace de partage (V4.24)", () => {
   it("le bouton n'apparaît que si le compte est utilisable", () => {
@@ -155,7 +172,9 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     await attendre();
     await attendre();
     expect(appels.supprimer).toEqual(["1"]);
-    const annuler = [...document.querySelectorAll("button")].find((x) => x.textContent === "Annuler");
+    const annuler = [...document.querySelectorAll("button")].find(
+      (x) => x.textContent === "Annuler",
+    );
     expect(annuler).toBeTruthy();
     annuler.click();
     await attendre();
@@ -177,13 +196,18 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     p.bouton.focus();
     p.ouvrir();
     await attendre();
-    const cibles = [...p.panneau.querySelectorAll("button, a[href], textarea")].filter((n) => !n.disabled && !n.closest("[hidden]"));
+    // V4.30: the vault box is an input of the composer, inside the loop too.
+    const cibles = [
+      ...p.panneau.querySelectorAll("button, a[href], textarea, input:not([type=file])"),
+    ].filter((n) => !n.disabled && !n.closest("[hidden]") && n.tabIndex >= 0);
     cibles.at(-1).focus();
     const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
     document.dispatchEvent(tab);
     expect(tab.defaultPrevented).toBe(true);
     expect(document.activeElement).toBe(cibles[0]);
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }),
+    );
     expect(p.panneau.hidden).toBe(true);
     expect(document.activeElement).toBe(p.bouton);
   });
@@ -209,12 +233,19 @@ describe("panneau de l'espace de partage (V4.24)", () => {
       },
       ecouterCompteurPartage: () => () => {},
     };
-    const p = creerEspacePartage({ store, disponible: () => true, charger: async () => fb, uid: () => "u" });
+    const p = creerEspacePartage({
+      store,
+      disponible: () => true,
+      charger: async () => fb,
+      uid: () => "u",
+    });
     document.body.append(p.bouton, p.panneau);
     p.ouvrir();
     await attendre();
     await attendre();
-    const reessayer = [...p.panneau.querySelectorAll("button")].find((x) => x.textContent === "Réessayer");
+    const reessayer = [...p.panneau.querySelectorAll("button")].find(
+      (x) => x.textContent === "Réessayer",
+    );
     expect(reessayer).toBeTruthy();
     reessayer.click();
     await attendre();

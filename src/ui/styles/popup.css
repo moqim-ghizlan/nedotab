@@ -42,6 +42,18 @@ body.popup {
   min-height: 52px;
   font-size: 1rem;
 }
+/* V4.30: the two choices side by side, as large icons (their name stays in the tooltip). */
+.popup-choix:has(.popup-icone) {
+  grid-template-columns: 1fr 1fr;
+}
+.popup-choix .popup-bandeau {
+  grid-column: 1 / -1;
+}
+.popup-choix .popup-icone {
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+}
 .popup-pied {
   padding: 0 1rem 0.75rem;
   margin: 0;

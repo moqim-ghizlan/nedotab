@@ -4,7 +4,9 @@ import { migrer } from "../../core/migration.js";
 import { creerStore } from "../../core/store.js";
 import { domaine } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
+import { iconeRobot } from "../chat/boutonRobot.js";
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
 import { ouvrirChat } from "./chatLateral.js";
 import { ecranAjout } from "./ecranAjout.js";
 
@@ -28,16 +30,22 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
     /* no tab readable: the add screen explains */
   }
   const stockage = plateforme.stockage();
-  let brut = null;
-  let erreurLecture = false;
-  try {
-    brut = (await stockage.lire()).etat;
-  } catch {
-    erreurLecture = true;
+  // The state is only read when "Ajouter ce site" is clicked: the window shows up at once
+  // instead of waiting for the whole storage (the slowness reported in V4.30).
+  async function charger() {
+    let brut = null;
+    let erreurLecture = false;
+    try {
+      brut = (await stockage.lire()).etat;
+    } catch {
+      erreurLecture = true;
+    }
+    const { etat, lectureSeule } = migrer(brut);
+    return {
+      store: creerStore(etat, reduire, { geler: false }),
+      peutEcrire: !erreurLecture && !lectureSeule,
+    };
   }
-  const { etat, lectureSeule } = migrer(brut);
-  const store = creerStore(etat, reduire, { geler: false });
-  const peutEcrire = !erreurLecture && !lectureSeule;
 
   const ouvrirNedoTab = () => {
     chromeApi.tabs.create({ url: chromeApi.runtime.getURL("newtab.html") });
@@ -45,28 +53,48 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
   };
 
   function accueil() {
-    const ajouter = el("button", {
-      type: "button",
-      class: "bouton bouton--principal",
-      texte: "Ajouter ce site",
-      disabled: !onglet.ok,
-      onclick: () =>
-        ecranAjout({
-          racine,
-          store,
-          stockage,
-          onglet,
-          retour: accueil,
-          peutEcrire,
-          ouvrirNedoTab,
-        }).catch((e) => console.error("ECRAN", e)),
-    });
-    const chat = el("button", {
-      type: "button",
-      class: "bouton",
-      texte: "Ouvrir le chat",
-      onclick: () => ouvrirChat(),
-    });
+    // V4.30: icons only; the label stays the button's name (read, shown as a tooltip).
+    const libelle = (texte) => el("span", { class: "visuellement-cache", texte });
+    const ajouter = el(
+      "button",
+      {
+        type: "button",
+        class: "bouton bouton--principal popup-icone",
+        title: "Ajouter ce site",
+        disabled: !onglet.ok,
+        onclick: async () => {
+          ajouter.disabled = true;
+          try {
+            const { store, peutEcrire } = await charger();
+            await ecranAjout({
+              racine,
+              store,
+              stockage,
+              onglet,
+              retour: accueil,
+              peutEcrire,
+              ouvrirNedoTab,
+            });
+          } catch (e) {
+            console.error("ECRAN", e);
+            ajouter.disabled = false;
+          }
+        },
+      },
+      icone("ajouter", { taille: 26 }),
+      libelle("Ajouter ce site"),
+    );
+    const chat = el(
+      "button",
+      {
+        type: "button",
+        class: "bouton popup-icone",
+        title: "Ouvrir le chat",
+        onclick: () => ouvrirChat(),
+      },
+      iconeRobot({ taille: 28 }),
+      libelle("Ouvrir le chat"),
+    );
     racine.replaceChildren(
       el(
         "div",
@@ -109,12 +137,13 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
     (onglet.ok ? ajouter : chat).focus();
   }
   racine.addEventListener("keydown", (e) => {
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    const suivant = { ArrowDown: true, ArrowRight: true, ArrowUp: false, ArrowLeft: false }[e.key];
+    if (suivant === undefined) return;
     const boutons = [...racine.querySelectorAll(".popup-choix button:not(:disabled)")];
     const i = boutons.indexOf(document.activeElement);
     if (i < 0) return;
     e.preventDefault();
-    boutons[(i + (e.key === "ArrowDown" ? 1 : boutons.length - 1)) % boutons.length].focus();
+    boutons[(i + (suivant ? 1 : boutons.length - 1)) % boutons.length].focus();
   });
   accueil();
 }

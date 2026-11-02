@@ -1,5 +1,4 @@
 import {
-  ICONES_FAMILLE,
   QUOTA_MAX,
   TAILLE_MAX_RESEAU_MOBILE,
   apercuPossible,
@@ -15,13 +14,26 @@ import {
 } from "../core/espacePartageFichiers.js";
 import { demander } from "./dialogues/commun.js";
 import { el } from "./dom.js";
+import { boutonAction, rangeeActions, tuileType } from "./espacePartageActions.js";
 import { vibrer } from "./haptique.js";
+import { icone } from "./icones.js";
 import { toast } from "./toast.js";
 
 /** Thumbnails: only small images, downloaded once and kept in memory for the session. */
 const MINIATURE_MAX = 8 * 1024 * 1024;
 /** Opened files kept in memory (the session only, never stored: the content may be private). */
 const CACHE_MAX = 60 * 1024 * 1024;
+/** Line icon of each family of file (V4.30: drawn icons instead of emoji). */
+const ICONE_FAMILLE = {
+  image: "image",
+  pdf: "fichier",
+  document: "fichier",
+  tableur: "grille",
+  archive: "archive",
+  audio: "audio",
+  video: "video",
+  autre: "fichier",
+};
 
 /**
  * Files and images of the sharing space (V4.25): add (picker, drop, paste), send with progress
@@ -44,6 +56,9 @@ export function creerFichiers({
   expiration,
   coffre = null,
   creerLien = null,
+  tiroirsOuverts = new Set(),
+  estNouveau = () => false,
+  pied = () => [],
 }) {
   const envois = []; // { cle, fichier, part, etat: "envoi"|"echec"|"interrompu", erreur, annuler }
   const cache = new Map(); // id → Blob
@@ -77,14 +92,17 @@ export function creerFichiers({
     message.hidden = !texte;
   };
   // The picker must be opened by a real click.
-  const boutonAjout = el("button", {
-    type: "button",
-    class: "bouton partage-trombone",
-    "aria-label": "Ajouter un fichier",
-    title: "Ajouter un fichier",
-    texte: "📎 Fichier",
-    onclick: () => entree.click(),
-  });
+  const boutonAjout = el(
+    "button",
+    {
+      type: "button",
+      class: "partage-outil partage-trombone",
+      "aria-label": "Ajouter un fichier",
+      title: "Ajouter un fichier",
+      onclick: () => entree.click(),
+    },
+    icone("trombone", { taille: 18 }),
+  );
 
   // --- Quota -----------------------------------------------------------------------------------
   const barre = el("div", { class: "partage-quota-barre" });
@@ -177,7 +195,9 @@ export function creerFichiers({
           : null,
       );
       envoi.annuler = annuler;
-      await promesse;
+      const idElement = await promesse;
+      // The file is already here: no need to download it again for the thumbnail.
+      if (idElement && envoi.fichier.size <= MINIATURE_MAX) cache.set(idElement, envoi.fichier);
       envois.splice(envois.indexOf(envoi), 1);
       vibrer(store, 15);
     } catch (e) {
@@ -224,11 +244,7 @@ export function creerFichiers({
         class: `partage-carte partage-carte--fichier${echec ? " partage-carte--erreur" : ""}`,
         dataset: { envoi: envoi.cle },
       },
-      el("span", {
-        class: "partage-type",
-        "aria-hidden": "true",
-        texte: ICONES_FAMILLE[familleDe(fichier.name, fichier.type)],
-      }),
+      tuileType(ICONE_FAMILLE[familleDe(fichier.name, fichier.type)], "fichier"),
       el(
         "div",
         { class: "partage-texte" },
@@ -264,34 +280,39 @@ export function creerFichiers({
       el(
         "div",
         { class: "partage-actions" },
-        echec
-          ? el("button", {
-              type: "button",
-              class: "partage-action",
-              texte: "Réessayer",
-              onclick: () => demarrer(envoi),
-            })
-          : null,
-        el("button", {
-          type: "button",
-          class: "partage-action",
-          texte: echec ? "Abandonner" : "Annuler",
-          onclick: () => {
-            envoi.annule = true;
-            envoi.annuler?.();
-            if (echec) {
-              envois.splice(envois.indexOf(envoi), 1);
-              rendre();
-            }
-          },
-        }),
+        el(
+          "div",
+          { class: "partage-actions-ligne" },
+          echec
+            ? boutonAction("synchroniser", "Réessayer", { onclick: () => demarrer(envoi) })
+            : null,
+          boutonAction("fermer", echec ? "Abandonner" : "Annuler", {
+            onclick: () => {
+              envoi.annule = true;
+              envoi.annuler?.();
+              if (echec) {
+                envois.splice(envois.indexOf(envoi), 1);
+                rendre();
+              }
+            },
+          }),
+        ),
       ),
     );
   }
 
   // --- Reading ---------------------------------------------------------------------------------
-  async function obtenirBlob(e) {
-    if (cache.has(e.id)) return cache.get(e.id);
+  const enCoursLecture = new Map(); // id → promise, one download per file at a time
+  function obtenirBlob(e) {
+    if (cache.has(e.id)) return Promise.resolve(cache.get(e.id));
+    if (!enCoursLecture.has(e.id))
+      enCoursLecture.set(
+        e.id,
+        lireBlob(e).finally(() => enCoursLecture.delete(e.id)),
+      );
+    return enCoursLecture.get(e.id);
+  }
+  async function lireBlob(e) {
     let blob = await (await charger()).lireFichierPartage(e.chemin);
     if (e.chiffre) {
       // Decrypted in memory; the type is the one stored in the encrypted block.
@@ -438,13 +459,11 @@ export function creerFichiers({
         "aria-label": "Aperçu de l'image",
         "aria-modal": "true",
       },
-      el("button", {
-        type: "button",
-        class: "partage-fermer",
-        "aria-label": "Fermer",
-        texte: "×",
-        onclick: fermer,
-      }),
+      el(
+        "button",
+        { type: "button", class: "partage-fermer", "aria-label": "Fermer", onclick: fermer },
+        icone("fermer", { taille: 20 }),
+      ),
       img,
       legende,
     );
@@ -466,21 +485,29 @@ export function creerFichiers({
       e = { ...brut, contenu: m.contenu, typeMime: m.typeMime };
     }
     const famille = familleDe(e.contenu, e.typeMime);
-    const cadre = el("span", {
-      class: "partage-vignette",
-      "aria-hidden": "true",
-      texte: ICONES_FAMILLE[famille],
-    });
+    const cadre = tuileType(ICONE_FAMILLE[famille], "fichier");
     miniature(e, cadre);
     const avertissement = avertissementTelechargement(e.contenu, e.typeMime);
     const peutVoir = apercuPossible(e.contenu, e.typeMime);
     return el(
       "li",
       {
-        class: `partage-carte partage-carte--fichier${e.enAttente ? " partage-carte--attente" : ""}`,
+        class: `partage-carte partage-carte--fichier${e.enAttente ? " partage-carte--attente" : ""}${estNouveau(brut.id) ? " partage-carte--nouvelle" : ""}`,
         dataset: { id: e.id, type: "fichier" },
       },
-      cadre,
+      peutVoir
+        ? el(
+            "button",
+            {
+              type: "button",
+              class: "partage-vignette-bouton",
+              "aria-label": `Voir ${nomAffiche(e.contenu)}`,
+              tabindex: "-1",
+              onclick: () => ouvrirVisionneuse(e),
+            },
+            cadre,
+          )
+        : cadre,
       el(
         "div",
         { class: "partage-texte" },
@@ -494,53 +521,36 @@ export function creerFichiers({
           texte: `${formaterTaille(e.taille)}${avertissement ? ` · ${avertissement}` : ""}`,
         }),
       ),
-      el(
-        "div",
-        { class: "partage-actions" },
-        peutVoir
-          ? el("button", {
-              type: "button",
-              class: "partage-action",
-              texte: "Voir",
-              onclick: () => ouvrirVisionneuse(e),
-            })
-          : null,
-        el("button", {
-          type: "button",
-          class: "partage-action",
-          texte: "Télécharger",
-          onclick: () => telecharger(e),
-        }),
-        // V4.28: a public link to a COPY of the file (5 MB at most), decrypted if it was in the vault.
-        creerLien && e.taille <= 5 * 1024 * 1024
-          ? el("button", {
-              type: "button",
-              class: "partage-action",
-              texte: "Créer un lien",
-              onclick: async () => {
-                try {
-                  const blob = await obtenirBlob(e);
-                  creerLien(e, new Uint8Array(await blob.arrayBuffer()));
-                } catch {
-                  toast("Lien impossible pour l'instant.", { type: "erreur" });
-                }
-              },
-            })
-          : null,
-        typeof navigator.share === "function" && estTactile()
-          ? el("button", {
-              type: "button",
-              class: "partage-action",
-              texte: "Partager",
-              onclick: () => partager(e),
-            })
-          : null,
-        el("button", {
-          type: "button",
-          class: "partage-action partage-action--danger",
-          texte: "Supprimer",
-          onclick: () => supprimer(e),
-        }),
+      ...pied(e),
+      rangeeActions(
+        brut.id,
+        [
+          peutVoir ? boutonAction("oeil", "Voir", { onclick: () => ouvrirVisionneuse(e) }) : null,
+          boutonAction("telecharger", "Télécharger", { onclick: () => telecharger(e) }),
+        ],
+        [
+          typeof navigator.share === "function" && estTactile()
+            ? boutonAction("partager", "Partager", { onclick: () => partager(e) })
+            : null,
+          // V4.28: a public link to a COPY of the file (5 MB at most), decrypted if it was in the vault.
+          creerLien && e.taille <= 5 * 1024 * 1024
+            ? boutonAction("lien", "Créer un lien", {
+                onclick: async () => {
+                  try {
+                    const blob = await obtenirBlob(e);
+                    creerLien(e, new Uint8Array(await blob.arrayBuffer()));
+                  } catch {
+                    toast("Lien impossible pour l'instant.", { type: "erreur" });
+                  }
+                },
+              })
+            : null,
+          boutonAction("poubelle", "Supprimer", {
+            classe: "partage-action--danger",
+            onclick: () => supprimer(e),
+          }),
+        ],
+        tiroirsOuverts,
       ),
     );
   }
@@ -549,7 +559,7 @@ export function creerFichiers({
     return el(
       "li",
       { class: "partage-carte partage-carte--fichier", dataset: { id: e.id, type: "fichier" } },
-      el("span", { class: "partage-vignette", "aria-hidden": "true", texte: "🔒" }),
+      tuileType("cadenas", "coffre"),
       el(
         "div",
         { class: "partage-texte" },
@@ -559,15 +569,18 @@ export function creerFichiers({
         }),
         el("span", { class: "partage-detail", texte: formaterTaille(e.taille) }),
       ),
+      ...pied(e),
       el(
         "div",
         { class: "partage-actions" },
-        el("button", {
-          type: "button",
-          class: "partage-action partage-action--danger",
-          texte: "Supprimer",
-          onclick: () => supprimer(e),
-        }),
+        el(
+          "div",
+          { class: "partage-actions-ligne" },
+          boutonAction("poubelle", "Supprimer", {
+            classe: "partage-action--danger",
+            onclick: () => supprimer(e),
+          }),
+        ),
       ),
     );
   }

@@ -31,6 +31,7 @@ import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerHorloge } from "./horloge.js";
 import { creerRecherche } from "./recherche.js";
 import { permis } from "../core/confidentialiteIa.js";
+import { exemplesQuestions } from "../core/exemplesQuestions.js";
 import { creerGestionPropositions } from "./chat/carteProposition.js";
 import { creerChat } from "./chat/panneau.js";
 import { ouvrirReglages } from "./reglages.js";
@@ -304,7 +305,9 @@ export async function demarrerApp(racine) {
         const v = await demanderMotsDePasse({
           titre: "Confirmez votre identité",
           message: "Saisissez votre mot de passe pour supprimer le compte.",
-          champs: [{ id: "mdp-suppression", libelle: "Mot de passe", autocomplete: "current-password" }],
+          champs: [
+            { id: "mdp-suppression", libelle: "Mot de passe", autocomplete: "current-password" },
+          ],
         });
         const r = v ? await compte.reconnecterMotDePasse(v[0]) : { ok: false };
         if (r.erreur) toast(r.erreur, { type: "erreur", duree: 7000 });
@@ -604,10 +607,13 @@ export async function demarrerApp(racine) {
     ecouter: (convId, rappel) => {
       let arret = null;
       let arrete = false;
-      avecFb((fb, uid) => fb.ecouterMessages(uid, convId, rappel, () => {})).then((stop) => {
-        if (arrete) stop();
-        else arret = stop;
-      }, () => {});
+      avecFb((fb, uid) => fb.ecouterMessages(uid, convId, rappel, () => {})).then(
+        (stop) => {
+          if (arrete) stop();
+          else arret = stop;
+        },
+        () => {},
+      );
       return () => {
         arrete = true;
         arret?.();
@@ -615,7 +621,8 @@ export async function demarrerApp(racine) {
     },
     chargerAvant: (convId, avantMs) =>
       avecFb((fb, uid) => fb.chargerMessagesAvant(uid, convId, avantMs)),
-    supprimerMessage: (convId, msgId) => avecFb((fb, uid) => fb.supprimerMessage(uid, convId, msgId)),
+    supprimerMessage: (convId, msgId) =>
+      avecFb((fb, uid) => fb.supprimerMessage(uid, convId, msgId)),
     majStatut: (convId, msgId, statut) =>
       avecFb((fb, uid) => fb.majStatutProposition(uid, convId, msgId, statut)),
     lister: (options) => avecFb((fb, uid) => fb.listerConversations(uid, options)),
@@ -651,6 +658,8 @@ export async function demarrerApp(racine) {
     afficherSite,
     proposer,
     historiqueActif: () => permis(iaDe(store.lire().reglages).confidentialite, "historique"),
+    // V4.30: questions to start with, made locally from the user's tags (never sent).
+    exemples: () => exemplesQuestions(store.lire().grille),
     confirmer: async ({ titre, message, valider }) =>
       (await demander({
         titre,
@@ -698,9 +707,26 @@ export async function demarrerApp(racine) {
     chat.actualiser();
   });
   usage.abonner(() => recherche.usageChange());
-  page.insertBefore(recherche.racine, vide);
-  recherche.racine.after(frequents.racine);
-  page.insertBefore(creerHorloge(store).racine, recherche.racine);
+  const boutonAjoutRecherche = el("button", {
+    type: "button",
+    class: "recherche-ajout",
+    "aria-label": "Ajouter un site ou un dossier",
+    title: "Ajouter un site ou un dossier",
+    texte: "+",
+  });
+  boutonAjoutRecherche.addEventListener(
+    "click",
+    (e) => !lectureSeule && menuAjout(e.currentTarget),
+  );
+  const ligneRecherche = el(
+    "div",
+    { class: "recherche-ligne" },
+    boutonAjoutRecherche,
+    recherche.racine,
+  );
+  page.insertBefore(ligneRecherche, vide);
+  ligneRecherche.after(frequents.racine);
+  page.insertBefore(creerHorloge(store).racine, ligneRecherche);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
   // The "?focus=1" marker is then removed from the address shown by Chrome.
   if (new URLSearchParams(location.search).has("focus")) {
@@ -779,6 +805,8 @@ export async function demarrerApp(racine) {
         }),
       ajouter: menuAjout,
       libelleAjout: "Ajouter un site ou un dossier",
+      // The home "+" sits next to the search bar instead of ending the grid.
+      tuileAjout: false,
       pagination,
     });
   };

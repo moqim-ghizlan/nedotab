@@ -27,9 +27,10 @@ export function creerEditeurIcone({
   lireSite,
   onChange,
   importBloque = () => false,
+  modeInitial = null,
 }) {
   let icone = { ...iconeInitiale };
-  let mode = modeDe(icone);
+  let mode = modeInitial ?? modeDe(icone);
   const definir = (nouvelle) => {
     icone = nouvelle;
     onChange(icone);

@@ -84,6 +84,7 @@ export async function ajouter(
     type,
     contenu,
     titre,
+    description = "",
     appareil = appareilCourant(),
     epingle = false,
     chiffre = false,
@@ -96,8 +97,12 @@ export async function ajouter(
   // V4.26: the encryption needs the id (it is part of the authenticated data), hence the callback.
   const corps =
     chiffre && chiffrer
-      ? { contenu: await chiffrer(ref.id, { contenu, titre }), titre: "", chiffre: true }
-      : { contenu, titre };
+      ? {
+          contenu: await chiffrer(ref.id, { contenu, titre, description }),
+          titre: "",
+          chiffre: true,
+        }
+      : { contenu, titre, ...(description ? { description } : {}) };
   lot.set(ref, {
     type,
     ...corps,

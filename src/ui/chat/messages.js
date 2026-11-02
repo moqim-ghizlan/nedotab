@@ -1,4 +1,6 @@
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
+import { iconeRobot } from "./boutonRobot.js";
 import { masquerBlocActions } from "../../core/outils.js";
 import { referencesDe, rendreAvecSites } from "./referencesSites.js";
 
@@ -21,6 +23,8 @@ export function creerMessages({
   afficherSite,
   surChargerPrecedents = () => {},
   carteProposition = () => null,
+  exemples = () => [],
+  surExemple = () => {},
 }) {
   const liste = el("div", {
     class: "chat-liste",
@@ -29,13 +33,12 @@ export function creerMessages({
     "aria-label": "Conversation avec l'assistant",
     tabindex: "0",
   });
-  const bas = el("button", {
-    type: "button",
-    class: "chat-bas",
-    texte: "↓ Derniers messages",
-    hidden: true,
-    onclick: () => defiler(),
-  });
+  const bas = el(
+    "button",
+    { type: "button", class: "chat-bas", hidden: true, onclick: () => defiler() },
+    icone("bas", { taille: 14 }),
+    el("span", { texte: "Derniers messages" }),
+  );
   const annonce = el("p", { class: "chat-annonce", role: "status" });
   const racine = el("div", { class: "chat-messages" }, liste, bas, annonce);
 
@@ -57,26 +60,43 @@ export function creerMessages({
   // An answer is a bubble that is kept: only its content is rendered again when its text grows.
   const reponses = new Map();
   let dernierId = null;
+  // V4.30: a message appears with a short movement the first time only (the list is drawn
+  // again at each change, the same bubble must not move again).
+  const vus = new Set();
+  let premierRendu = true;
+  const entree = (noeud, id) => {
+    if (vus.has(id)) return noeud;
+    vus.add(id);
+    if (premierRendu) return noeud;
+    noeud.classList.add("chat-entree");
+    noeud.addEventListener("animationend", () => noeud.classList.remove("chat-entree"), {
+      once: true,
+    });
+    return noeud;
+  };
   const bulleReponse = (m) => {
     let e = reponses.get(m.id);
     if (!e) {
       const contenu = el("div", { class: "chat-contenu" });
       const pied = el("div", { class: "chat-pied" });
-      const copier = el("button", {
-        type: "button",
-        class: "chat-copier",
-        texte: "Copier",
-        "aria-label": "Copier la réponse",
-        onclick: () => surCopier(m),
-      });
+      const copier = el(
+        "button",
+        {
+          type: "button",
+          class: "chat-copier",
+          "aria-label": "Copier la réponse",
+          title: "Copier la réponse",
+          onclick: () => surCopier(m),
+        },
+        icone("copier", { taille: 14 }),
+        el("span", { texte: "Copier" }),
+      );
       const actions = el("div", { class: "chat-actions-zone" });
       const bulle = el(
         "div",
         { class: "chat-bulle chat-bulle--assistant" },
-        contenu,
-        actions,
-        pied,
-        copier,
+        el("span", { class: "chat-avatar", "aria-hidden": "true" }, iconeRobot({ taille: 18 })),
+        el("div", { class: "chat-corps" }, contenu, actions, pied, copier),
       );
       e = { bulle, contenu, actions, pied, copier, rendu: null };
       reponses.set(m.id, e);
@@ -96,7 +116,11 @@ ${sites}
 ${texte}`;
     if (e.rendu !== cle) {
       e.contenu.replaceChildren(
-        rendreAvecSites(texte, { trouver: trouverSite, afficher: afficherSite, fluxEnCours: enFlux }),
+        rendreAvecSites(texte, {
+          trouver: trouverSite,
+          afficher: afficherSite,
+          fluxEnCours: enFlux,
+        }),
       );
       e.rendu = cle;
     }
@@ -106,7 +130,12 @@ ${texte}`;
     e.copier.hidden = enFlux;
     e.pied.replaceChildren(
       ...(m.consulte && !enFlux
-        ? [el("p", { class: "chat-consulte", texte: "L'assistant a consulté vos sites pour cette réponse" })]
+        ? [
+            el("p", {
+              class: "chat-consulte",
+              texte: "L'assistant a consulté vos sites pour cette réponse",
+            }),
+          ]
         : []),
       ...(m.echec
         ? [
@@ -179,7 +208,7 @@ ${texte}`;
       annoncer("Réponse de l'assistant reçue");
     etaitEnFlux = enFlux;
     const enfants = messages.flatMap((m) => {
-      if (m.role === "assistant") return [bulleReponse(m)];
+      if (m.role === "assistant") return [entree(bulleReponse(m), `a${m.id}`)];
       const estDernier = m === dernier;
       const bulle = el(
         "div",
@@ -206,6 +235,7 @@ ${texte}`;
             )
           : null,
       );
+      entree(bulle, `u${m.id}`);
       return m.sites?.length ? [bulle, carteSites(m.sites)] : [bulle];
     });
     if (enAttente)
@@ -216,9 +246,14 @@ ${texte}`;
             class: "chat-bulle chat-bulle--assistant chat-attente",
             "aria-label": "L'assistant écrit…",
           },
-          el("span", { class: "chat-point", "aria-hidden": "true" }),
-          el("span", { class: "chat-point", "aria-hidden": "true" }),
-          el("span", { class: "chat-point", "aria-hidden": "true" }),
+          el("span", { class: "chat-avatar", "aria-hidden": "true" }, iconeRobot({ taille: 18 })),
+          el(
+            "span",
+            { class: "chat-points" },
+            el("span", { class: "chat-point", "aria-hidden": "true" }),
+            el("span", { class: "chat-point", "aria-hidden": "true" }),
+            el("span", { class: "chat-point", "aria-hidden": "true" }),
+          ),
         ),
       );
     if (peutCharger)
@@ -230,14 +265,42 @@ ${texte}`;
           onclick: () => surChargerPrecedents(),
         }),
       );
-    liste.replaceChildren(
-      ...(enfants.length
-        ? enfants
-        : [el("p", { class: "chat-vide", texte: "Posez une question à l'assistant." })]),
-    );
+    liste.replaceChildren(...(enfants.length ? enfants : [accueil()]));
+    premierRendu = false;
     // Follow the end, unless the user went up to read (then a button brings them back).
     if (suivre || dernier?.role === "user") defiler();
     else bas.hidden = false;
+  }
+
+  /** Empty conversation: the robot says hello and offers a few questions to start with. */
+  function accueil() {
+    const questions = exemples().slice(0, 3);
+    return el(
+      "div",
+      { class: "chat-vide" },
+      el("span", { class: "chat-vide-robot", "aria-hidden": "true" }, iconeRobot({ taille: 40 })),
+      el("p", { class: "chat-vide-titre", texte: "Posez une question à l'assistant." }),
+      el("p", {
+        class: "chat-vide-texte",
+        texte:
+          "Il retrouve vos sites, répond à vos questions et peut proposer de ranger la grille.",
+      }),
+      questions.length
+        ? el(
+            "div",
+            { class: "chat-exemples", role: "group", "aria-label": "Exemples de questions" },
+            questions.map((q, i) =>
+              el("button", {
+                type: "button",
+                class: "chat-exemple",
+                style: `--i:${i}`,
+                texte: q,
+                onclick: () => surExemple(q),
+              }),
+            ),
+          )
+        : null,
+    );
   }
 
   return { racine, liste, rendre, majReponse, defiler };

@@ -36,10 +36,18 @@ export async function scenarioApparence({ nav, url, verifier, dossier }) {
   const sections = await p.eval(
     `[...document.querySelectorAll(".reglages-section h3")].map((h) => h.textContent).join(", ")`,
   );
+  // V4.30: sections grouped by rubric (Compte, Apparence, Accueil, Général, Partage…).
   verifier(
     "Panneau Réglages en sections",
-    sections ===
-      "Compte, Apparence, Ouverture des liens, Nouvel onglet, Sauvegardes, Mes données, Autorisations, Stockage, À propos",
+    [
+      "Thème",
+      "Fond d'écran",
+      "Disposition",
+      "Icônes",
+      "Ouverture des liens",
+      "Stockage",
+      "À propos",
+    ].every((t) => sections.split(", ").includes(t)),
     sections,
   );
   verifier(

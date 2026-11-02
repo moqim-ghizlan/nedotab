@@ -421,8 +421,8 @@ export const ressembleAChiffre = (texte) =>
  * Encrypts what the item shows: its content AND its title/name (decision 4), in one block.
  * @returns {Promise<string>} the string to store in `contenu`
  */
-export async function chiffrerElement(vk, uid, id, { contenu, titre = "" }) {
-  const octets = encodeur.encode(JSON.stringify({ contenu, titre }));
+export async function chiffrerElement(vk, uid, id, { contenu, titre = "", description = "" }) {
+  const octets = encodeur.encode(JSON.stringify({ contenu, titre, description }));
   return versTexte(await chiffrerOctets(vk, uid, id, octets));
 }
 
@@ -431,7 +431,11 @@ export async function dechiffrerElement(vk, uid, id, texte) {
   const octets = await dechiffrerOctets(vk, uid, id, depuisTexte(texte));
   try {
     const o = JSON.parse(decodeur.decode(octets));
-    return { contenu: String(o.contenu ?? ""), titre: String(o.titre ?? "") };
+    return {
+      contenu: String(o.contenu ?? ""),
+      titre: String(o.titre ?? ""),
+      description: String(o.description ?? ""),
+    };
   } catch {
     throw new ErreurCoffre("corrompu", "Élément corrompu.");
   }

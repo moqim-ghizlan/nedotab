@@ -9,9 +9,10 @@ import {
 import { iaPrete } from "../../core/ia.js";
 import { etatModes } from "../../core/modeRecherche.js";
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
 import { messageErreurIa } from "../messagesIa.js";
 import { toast } from "../toast.js";
-import { creerBoutonRobot } from "./boutonRobot.js";
+import { creerBoutonRobot, iconeRobot } from "./boutonRobot.js";
 import { geometrieFeuille } from "./geometrie.js";
 import { creerHistorique } from "./historique.js";
 import { creerMessages } from "./messages.js";
@@ -67,6 +68,7 @@ export function creerChat({
   conversations = null,
   proposer = null,
   historiqueActif = () => true,
+  exemples = () => [],
 }) {
   /** Stored conversations: the service exists AND the user keeps their history (V4.20). */
   const stocke = () => !!conversations && historiqueActif();
@@ -89,31 +91,35 @@ export function creerChat({
 
   const bouton = creerBoutonRobot({ surClic: () => ouvrir() });
   const titreModele = el("span", { class: "chat-modele" });
-  const boutonHistorique = el("button", {
-    type: "button",
+  // V4.30: round icon buttons; their name stays their text (read, shown as a tooltip).
+  const boutonIcone = (nom, libelle, attributs) =>
+    el(
+      "button",
+      { type: "button", title: libelle, ...attributs },
+      icone(nom),
+      el("span", { class: "chat-libelle-cache", texte: libelle }),
+    );
+  const boutonHistorique = boutonIcone("sauvegardes", "Historique", {
     class: "chat-entete-bouton chat-historique-bouton",
-    texte: "Historique",
     "aria-pressed": "false",
     hidden: !conversations,
     onclick: () => basculerHistorique(),
   });
-  const nouvelle = el("button", {
-    type: "button",
+  const nouvelle = boutonIcone("nouvelle", "Nouvelle conversation", {
     class: "chat-entete-bouton",
-    texte: "Nouvelle conversation",
     onclick: () => nouvelleConversation(),
   });
-  const fermerBouton = el("button", {
-    type: "button",
+  const fermerBouton = boutonIcone("fermer", "Fermer l'assistant", {
     class: "chat-entete-bouton chat-fermer",
     "aria-label": "Fermer l'assistant",
-    texte: "✕",
+    title: "Fermer (Échap)",
     onclick: () => fermer(),
   });
   const entete = el(
     "header",
     { class: "chat-entete" },
     el("span", { class: "chat-poignee", "aria-hidden": "true" }),
+    el("span", { class: "chat-entete-robot", "aria-hidden": "true" }, iconeRobot({ taille: 22 })),
     el(
       "div",
       { class: "chat-titres" },
@@ -129,6 +135,8 @@ export function creerChat({
     afficherSite,
     surChargerPrecedents: () => chargerPrecedents(),
     carteProposition: (m) => proposer?.carte(m) ?? null,
+    exemples: () => (modes.envoi ? exemples() : []),
+    surExemple: (q) => envoyer(q),
     surReessayer: (m) => demanderReponse(m),
     surReessayerReponse: (m) => {
       const i = messages.indexOf(m);
@@ -192,6 +200,8 @@ export function creerChat({
     boutonHistorique.setAttribute("aria-pressed", String(vueHistorique));
     titreModele.textContent = modele;
     titreModele.hidden = !modele;
+    // The robot of the header "thinks" while an answer is awaited or written.
+    panneau.classList.toggle("chat--reflechit", enAttente);
     nouvelle.disabled = messages.length === 0 && !enAttente;
     saisie.definirAttente(enAttente);
     saisie.activer(modes.envoi);
@@ -238,10 +248,14 @@ export function creerChat({
     bouton.hidden = true;
     document.body.classList.remove("avec-robot");
     rendre();
-    saisie.focus();
+    // No automatic focus on a touch screen: the keyboard would cover half the sheet at once.
+    if (!toucher()) saisie.focus();
     liste.defiler();
     actualiser(); // the key or the connection may have changed
   }
+  const toucher = () => !!globalThis.matchMedia?.("(pointer: coarse)").matches;
+  /** Phone or narrow tablet: the panel is a full-screen sheet (chat.css). */
+  const feuille = () => toucher() && !!globalThis.matchMedia?.("(max-width: 639px)").matches;
 
   function fermer({ rendreLeFocus = true } = {}) {
     if (!ouvert) return;
@@ -417,7 +431,8 @@ export function creerChat({
     }
     rendre();
     appliquerDocs(); // what another device wrote while the answer was received
-    if (ouvert) saisie.focus();
+    // Not on a touch screen: the keyboard would come back after every answer.
+    if (ouvert && !toucher()) saisie.focus();
   }
 
   // --- V4.15: stored conversations ----------------------------------------------------------
@@ -590,9 +605,37 @@ export function creerChat({
     });
     panneau.style.setProperty("--chat-hauteur", `${g.hauteur}px`);
     panneau.style.setProperty("--chat-decalage", `${g.decalage}px`);
+    panneau.classList.toggle("chat--clavier", g.hauteur < globalThis.innerHeight - 120);
   };
-  globalThis.visualViewport?.addEventListener("resize", suivreClavier);
+  // V4.30: iOS moves the visible area AFTER the keyboard has opened, sometimes without any
+  // "scroll" event: the position is read again on every frame while the keyboard moves.
+  let fin = 0;
+  const suivreUnMoment = () => {
+    const debut = !fin;
+    fin = performance.now() + 700;
+    if (!debut) return;
+    const boucle = () => {
+      suivreClavier();
+      if (performance.now() < fin) requestAnimationFrame(boucle);
+      else fin = 0;
+    };
+    requestAnimationFrame(boucle);
+  };
+  globalThis.visualViewport?.addEventListener("resize", suivreUnMoment);
   globalThis.visualViewport?.addEventListener("scroll", suivreClavier);
+  panneau.addEventListener("focusin", suivreUnMoment);
+  panneau.addEventListener("focusout", suivreUnMoment);
+  // The page itself must not scroll under the sheet (iOS scrolls it to show the field).
+  globalThis.addEventListener?.(
+    "scroll",
+    () => {
+      if (ouvert && feuille() && globalThis.scrollY !== 0) {
+        globalThis.scrollTo(0, 0);
+        suivreClavier();
+      }
+    },
+    { passive: true },
+  );
 
   // Ctrl/Cmd+I opens or closes the assistant (when it is available).
   document.addEventListener("keydown", (e) => {

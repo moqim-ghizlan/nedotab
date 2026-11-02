@@ -2,6 +2,24 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.30.0] - 2026-11-02
+
+### Modifié
+
+- **Espace de partage redessiné** : panneau flottant (PC, tablette) ou plein écran qui monte du bas (téléphone), avec ouverture et fermeture animées. Un seul « composeur » : le texte, puis fichier / coller / titre et le bouton **Envoyer** ; dessous, la durée (« Supprimer après ») en sélecteur compact et la pastille **Chiffrer**. Titre et description repliés derrière « Titre ». Cartes calmes : carré d'icône (texte, lien, fichier ou miniature, vault), pied avec date, appareil et échéance, **Copier / Ouvrir** (ou **Voir / Télécharger**) visibles et le reste (épingler, lien public, prolonger, partager, supprimer) dans un tiroir « ⋯ ». Un élément envoyé « tombe » dans la liste. Icônes dessinées à la place des emojis. Quota sous le titre.
+- **Réglages réorganisés** en 8 rubriques : **Compte** (carte du compte, export / import, confidentialité, suppression), **Apparence** (thème, fond, animations), **Accueil** (disposition, icônes, titres, dossiers, horloge et recherche, sites fréquents), **Général** (liens, comportement, rangement, historique d'utilisation), **Partage** (durée par défaut, vault, entretien), **Sauvegardes**, **IA**, **Avancé**. PC : liste à gauche avec un résumé du compte. Téléphone et fenêtre étroite (moins de 720 px) : liste des rubriques avec leur contenu, puis la rubrique glisse par-dessus avec un bouton retour. Curseurs avec leur valeur (%, px), mention « Cet appareil » plus discrète, listes déroulantes harmonisées, actions du compte qui passent à la ligne.
+- **Assistant redessiné** : panneau flottant, en-tête à icônes (nouvelle conversation, historique, fermer), petit robot qui cligne des yeux et « réfléchit » pendant la réponse, messages qui apparaissent, réponse sans bulle avec l'avatar du robot, tableaux et listes plus lisibles, champ arrondi avec bouton rond (flèche, carré pour arrêter). Conversation vide : accueil et 3 questions d'exemple (faites sur l'appareil à partir de vos tags, jamais envoyées) qui partent d'un toucher.
+- **iPhone** : la feuille de l'assistant suit le clavier pendant toute son ouverture (position relue à chaque image pendant 0,7 s, page remise en haut si iOS la fait défiler) ; plus de clavier qui s'ouvre tout seul à l'ouverture ni après chaque réponse.
+
+### Corrigé
+
+- **Fenêtre de l'icône** : s'affiche tout de suite (le stockage n'est lu qu'au clic sur « Ajouter ce site »), « Remplir avec l'IA » attend la session (plus de « Connectez-vous »), l'éditeur d'icône retrouve son style, l'icône est en mode Automatique par défaut, et un site ajouté en étant connecté est envoyé au compte (file d'opérations) au lieu de disparaître à la prochaine synchro.
+
+### Non fait / limites connues
+
+- Clavier de l'iPhone non vérifié sur un vrai appareil (pas de Mac ni d'iPhone dans l'environnement de test) : à confirmer via `https://<projet>.web.app`.
+- Animations d'ouverture et de fermeture par `@starting-style` / `transition-behavior: allow-discrete` : Chrome 117+ et Safari 17.5+ ; ailleurs le panneau apparaît sans animation.
+
 ## [4.29.2] - 2026-11-02
 
 ### Corrigé

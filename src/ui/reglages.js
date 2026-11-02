@@ -23,6 +23,7 @@ import { petitCote } from "./ecran.js";
 import { plateforme } from "../platform/index.js";
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
+import { creerAvatar } from "./avatar.js";
 import { grilleAccueil } from "../core/pages.js";
 import { creerBibliothequeFonds } from "./reglages/bibliothequeFonds.js";
 import { creerGalerie } from "./reglages/galerie.js";
@@ -44,25 +45,44 @@ import { poidsDataUrl } from "./services/imageIcone.js";
 
 let ouvert = null;
 
+/** Sections of the panel (V4.30): key, label, what it holds (shown in the phone's list). */
 const ONGLETS = [
-  ["apparence", "Apparence"],
-  ["general", "Général"],
-  ["sauvegardes", "Sauvegardes"],
-  ["donnees", "Données"],
-  ["ia", "IA"],
-  ["avance", "Avancé"],
+  ["compte", "Compte", "Connexion, synchronisation, export de vos données"],
+  ["apparence", "Apparence", "Thème, fond d'écran, animations"],
+  ["accueil", "Accueil", "Grille, icônes, dossiers, horloge"],
+  ["general", "Général", "Ouverture des liens, comportement, utilisation"],
+  ["partage", "Partage", "Durée de conservation, vault"],
+  ["sauvegardes", "Sauvegardes", "Copies datées et restauration"],
+  ["ia", "IA", "Assistant, clé, confidentialité"],
+  ["avance", "Avancé", "Stockage, diagnostic, à propos"],
 ];
+/** Below this width the sections are a list, and one opens over it (phone, small tablet). */
+const LISTE_MAX = "(max-width: 719px)";
 const CLE_ONGLET = "nedotab:onglet-reglages";
 const SORTIE_MS = 140;
 
-/** Label of a setting kept on this device only (never synced, V2.9). */
-const libelleAppareil = (texte) =>
-  el(
-    "p",
-    { class: "reglages-libelle" },
-    texte,
-    el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
-  );
+/** Quiet mark of a setting kept on this device only (never synced, V2.9). */
+const mentionAppareil = () =>
+  el("span", {
+    class: "mention-appareil",
+    title: "Réglage propre à cet appareil, non synchronisé",
+    texte: "Cet appareil",
+  });
+
+/** Label of a setting kept on this device only. */
+const libelleAppareil = (texte) => el("p", { class: "reglages-libelle" }, texte, mentionAppareil());
+
+/** A slider with its value written next to its label. */
+function curseurAvecValeur(libelle, input, format) {
+  const valeur = el("output", { class: "reglages-valeur", for: input.id });
+  const maj = () => (valeur.textContent = format(Number(input.value)));
+  input.addEventListener("input", maj);
+  maj();
+  const tete =
+    typeof libelle === "string" ? el("p", { class: "reglages-libelle", texte: libelle }) : libelle;
+  tete.append(valeur);
+  return { racine: el("div", { class: "reglages-curseur" }, tete, input), maj };
+}
 
 const ko = (octets) => `${(octets / 1024).toFixed(octets < 10240 ? 1 : 0)} Ko`;
 
@@ -353,13 +373,6 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = [
-    "gardeDossierOuvert",
-    "animationsReduites",
-    "masquerRecherche",
-    "masquerTitres",
-    "confirmerSuppression",
-  ];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
   const ligneDes = (cles) => interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
 
@@ -464,11 +477,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     el(
       "span",
       { class: "interrupteur-texte" },
-      el(
-        "span",
-        { texte: "Vibration au glisser-déposer" },
-        el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
-      ),
+      el("span", { texte: "Vibration au glisser-déposer" }, mentionAppareil()),
       el("span", {
         class: "reglages-note",
         texte:
@@ -561,6 +570,16 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     step: "1",
     id: "reglage-flou",
   });
+  const curseurVoile = curseurAvecValeur(
+    el("label", { for: "reglage-voile", class: "reglages-libelle", texte: "Voile" }),
+    voile,
+    (v) => `${Math.round((v / VOILE_MAX) * 100)} %`,
+  );
+  const curseurFlou = curseurAvecValeur(
+    el("label", { for: "reglage-flou", class: "reglages-libelle", texte: "Flou" }),
+    flou,
+    (v) => `${v} px`,
+  );
   /** A photo is shown: the user's picture, or one of the gallery (V2.13). */
   const estPhoto = (type) => ["image", "galerie", "aleatoire"].includes(type);
   /** The gallery and random backgrounds are set from the "Image" panel. */
@@ -645,10 +664,8 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       sourceImage.groupe,
       galerie.racine,
       mesImages,
-      el("label", { for: "reglage-voile", texte: "Voile" }),
-      voile,
-      el("label", { for: "reglage-flou", texte: "Flou" }),
-      flou,
+      curseurVoile.racine,
+      curseurFlou.racine,
     ),
   };
   const typeFond = segments(
@@ -728,38 +745,47 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   // --- Compte (account) -----------------------------------------------------------------
   const compteUi = session ? sectionCompte(session) : null;
 
-  // --- panel: account card on top, then one tab at a time -----------------------------------
+  // --- Sliders with their value (V4.30) -------------------------------------------------------
+  const pourcent = (v) => `${v} %`;
+  const curseurTuiles = curseurAvecValeur(
+    libelleAppareil("Taille des cartes"),
+    tailleTuiles,
+    pourcent,
+  );
+  const curseurTitres = curseurAvecValeur(
+    libelleAppareil("Taille du texte des titres"),
+    tailleTitres,
+    pourcent,
+  );
+  const curseurOpacite = curseurAvecValeur(
+    libelleAppareil("Opacité de la fenêtre de dossier"),
+    opaciteDossier,
+    pourcent,
+  );
+  const curseurs = [curseurTuiles, curseurTitres, curseurOpacite, curseurVoile, curseurFlou];
+
+  // --- Sections (V4.30: grouped by what the user is looking for) ------------------------------
   const contenus = {
+    compte: compteUi
+      ? [
+          compteUi.section,
+          session.donnees
+            ? sectionDonnees({
+                donnees: session.donnees,
+                restauration: session.restauration,
+                store,
+              }).section
+            : null,
+          compteUi.confidentialite,
+          compteUi.danger,
+        ]
+      : null,
     apparence: [
+      section("Thème", theme.groupe),
+      section("Fond d'écran", typeFond.groupe, ...Object.values(panneaux)),
       section(
-        "Apparence",
-        el("p", { class: "reglages-libelle", texte: "Thème" }),
-        theme.groupe,
-        el("p", { class: "reglages-libelle", texte: "Fond" }),
-        typeFond.groupe,
-        ...Object.values(panneaux),
-        libelleAppareil("Taille des cartes"),
-        tailleTuiles,
-        libelleAppareil("Forme des icônes"),
-        formeIcones.groupe,
-        libelleAppareil("Espacement des cartes"),
-        espacement.groupe,
-        libelleAppareil("Taille du texte des titres"),
-        tailleTitres,
-        libelleAppareil("Ombre sous les icônes"),
-        ombreIcones.groupe,
-        libelleAppareil("Style des dossiers"),
-        styleDossier.groupe,
-        libelleAppareil("Opacité de la fenêtre de dossier"),
-        opaciteDossier,
-        libelleAppareil("Affichage de l'accueil"),
-        affichageAccueil.groupe,
-        reglagesPages,
-        reglagesDefilement,
-      ),
-      sectionFrequents.section,
-      section(
-        "Animation",
+        "Animations",
+        ...ligneDes(["animationsReduites"]),
         libelleAppareil("Passage d'une page à l'autre"),
         animationPage.groupe,
         el("p", {
@@ -775,6 +801,40 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             "Effet joué à l'ouverture d'un dossier et quand on entre dans un sous-dossier ou qu'on en sort.",
         }),
       ),
+    ],
+    accueil: [
+      section(
+        "Disposition",
+        libelleAppareil("Affichage de l'accueil"),
+        affichageAccueil.groupe,
+        reglagesPages,
+        reglagesDefilement,
+      ),
+      section(
+        "Icônes",
+        curseurTuiles.racine,
+        libelleAppareil("Forme des icônes"),
+        formeIcones.groupe,
+        libelleAppareil("Espacement des cartes"),
+        espacement.groupe,
+        libelleAppareil("Ombre sous les icônes"),
+        ombreIcones.groupe,
+      ),
+      section("Titres des icônes", ...ligneDes(["masquerTitres"]), curseurTitres.racine),
+      section(
+        "Dossiers",
+        libelleAppareil("Style des dossiers"),
+        styleDossier.groupe,
+        curseurOpacite.racine,
+        ...ligneDes(["gardeDossierOuvert"]),
+      ),
+      section(
+        "Horloge et recherche",
+        libelleAppareil("Heure et date"),
+        affichageHeure.groupe,
+        ...ligneDes(["masquerRecherche"]),
+      ),
+      sectionFrequents.section,
     ],
     general: [
       section(
@@ -793,13 +853,6 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             ]
           : []),
       ),
-      section(
-        "Interface",
-        ...ligneDes(CLES_INTERFACE),
-        ligneHaptique,
-        libelleAppareil("Heure et date"),
-        affichageHeure.groupe,
-      ),
       curseurRecherche
         ? section(
             "Nouvel onglet",
@@ -809,11 +862,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
               el(
                 "span",
                 { class: "interrupteur-texte" },
-                el(
-                  "span",
-                  { texte: "Curseur dans la recherche NedoTab" },
-                  el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
-                ),
+                el("span", { texte: "Curseur dans la recherche NedoTab" }, mentionAppareil()),
                 el("span", {
                   class: "reglages-note",
                   texte:
@@ -824,15 +873,9 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             ),
           )
         : null,
-    ],
-    sauvegardes: session?.sauvegardes
-      ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
-      : null,
-    donnees: session?.donnees
-      ? [
-          sectionDonnees({ donnees: session.donnees, restauration: session.restauration, store })
-            .section,
-          section(
+      section("Comportement", ...ligneDes(["confirmerSuppression"]), ligneHaptique),
+      session
+        ? section(
             "Ranger mes sites",
             el("p", {
               class: "reglages-note",
@@ -841,7 +884,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             }),
             el("button", {
               type: "button",
-              class: "bouton",
+              class: "bouton reglages-bouton-seul",
               texte: "Ranger mes sites…",
               onclick: (e) =>
                 ouvrirRangement({
@@ -851,13 +894,15 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                   retourFocus: e.currentTarget,
                 }),
             }),
-          ),
-          section(
-            "Utilisation",
+          )
+        : null,
+      session
+        ? section(
+            "Historique d'utilisation",
             ...ligneDes(["sansSuiviUsage", "sansUsagePourIa"]),
             el("button", {
               type: "button",
-              class: "bouton",
+              class: "bouton reglages-bouton-seul",
               texte: "Effacer l'historique d'utilisation",
               onclick: async () => {
                 const ok = await demander({
@@ -874,23 +919,28 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 toast("Historique d'utilisation effacé");
               },
             }),
-          ),
+          )
+        : null,
+    ],
+    partage: session?.partage
+      ? [
           section(
             "Espace de partage",
             el("p", {
               class: "reglages-note",
               texte:
-                "Textes et liens envoyés d'un appareil à l'autre (bouton ⇄ en bas à gauche). Non inclus dans les sauvegardes ; inclus dans l'export de vos données ; jamais envoyés à l'assistant IA.",
+                "Textes, liens et fichiers envoyés d'un appareil à l'autre (bouton en bas à gauche de l'accueil). Non inclus dans les sauvegardes ; inclus dans l'export de vos données ; jamais envoyés à l'assistant IA.",
             }),
             // V4.27: every item expires; the default duration is per device.
             el(
               "label",
-              { class: "reglages-ligne" },
-              el("span", { texte: "Durée par défaut avant suppression " }),
+              { class: "reglages-ligne reglages-ligne--choix" },
+              el("span", { class: "reglages-libelle" }, "Durée par défaut", mentionAppareil()),
               el(
                 "select",
                 {
-                  "aria-label": "Durée par défaut",
+                  class: "reglages-select",
+                  "aria-label": "Durée par défaut avant suppression",
                   onchange: (e) => session.partage?.definirDuree(e.target.value),
                 },
                 DUREES.map((d) =>
@@ -906,6 +956,26 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
               class: "reglages-note",
               texte:
                 "Les éléments sont supprimés automatiquement, fichiers compris, à l'échéance (30 jours au plus).",
+            }),
+          ),
+          // V4.26: the vault (end-to-end encryption of sharing-space items).
+          session.partage.coffre
+            ? section(
+                "Vault",
+                el("p", {
+                  class: "reglages-note",
+                  texte:
+                    "Chiffre des éléments de l'espace de partage sur l'appareil. Le mot de passe et la clé de secours ne sont jamais envoyés ; sans eux, le contenu est irrécupérable. Copier un texte du vault tente d'effacer le presse-papiers après 30 s (sans garantie). Jamais envoyé à l'assistant IA.",
+                }),
+                session.partage.coffre.sectionReglages(),
+              )
+            : null,
+          section(
+            "Entretien",
+            el("p", {
+              class: "reglages-note",
+              texte:
+                "Recalcule l'espace utilisé si le compteur semble faux, ou supprime tout ce qui est partagé.",
             }),
             el(
               "div",
@@ -934,7 +1004,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                   const ok = await demander({
                     titre: "Vider l'espace de partage",
                     message:
-                      "Tous les textes et liens partagés seront supprimés, sur tous vos appareils. Cette action est définitive.",
+                      "Tous les textes, liens et fichiers partagés seront supprimés, sur tous vos appareils. Cette action est définitive.",
                     boutons: [
                       { libelle: "Annuler", valeur: false },
                       { libelle: "Tout supprimer", valeur: true, principal: true, danger: true },
@@ -953,21 +1023,10 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
               }),
             ),
           ),
-          // V4.26: the vault (end-to-end encryption of sharing-space items).
-          session.partage?.coffre
-            ? section(
-                "Sécurité — Vault",
-                el("p", {
-                  class: "reglages-note",
-                  texte:
-                    "Chiffre des éléments de l'espace de partage sur l'appareil. Le mot de passe et la clé de secours ne sont jamais envoyés ; sans eux, le contenu est irrécupérable. Copier un texte du vault tente d'effacer le presse-papiers après 30 s (sans garantie). Jamais envoyé à l'assistant IA.",
-                }),
-                session.partage.coffre.sectionReglages(),
-              )
-            : null,
-          compteUi?.confidentialite,
-          compteUi?.danger,
         ]
+      : null,
+    sauvegardes: session?.sauvegardes
+      ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
       : null,
     ia: session ? [sectionIa({ store, session }).section] : null,
     avance: [
@@ -989,7 +1048,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             onchange: (e) => modifier({ debug: e.currentTarget.checked }),
           }),
           el("span", { texte: "Journal de débogage dans la console" }),
-          el("span", { class: "mention-appareil", texte: "Sur cet appareil uniquement" }),
+          mentionAppareil(),
         ),
         el(
           "p",
@@ -1033,19 +1092,64 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
           class: "onglet-panneau",
           id: `onglet-panneau-${cle}`,
           role: "tabpanel",
-          "aria-label": libelle,
+          "aria-labelledby": `onglet-${cle}`,
+          tabindex: "-1",
           hidden: true,
         },
+        el("h3", { class: "onglet-panneau-titre", texte: libelle }),
         ...contenus[cle],
       ),
     ]),
   );
-  const curseur = el("span", { class: "onglets-curseur", "aria-hidden": "true" });
+
+  // The account, in short, at the top of the list: a press opens its section.
+  const resumeCompte = el("button", {
+    type: "button",
+    class: "reglages-resume-compte",
+    hidden: !contenus.compte,
+    onclick: () => choisirOnglet("compte", { focus: true }),
+  });
+  const majResume = () => {
+    if (!session) return;
+    const etat = session.compte.lire();
+    const profil = etat.statut === "connecte" ? etat.profil : null;
+    const sync = session.synchro?.lire() ?? { mode: "local" };
+    resumeCompte.replaceChildren(
+      profil
+        ? creerAvatar(profil, { taille: 40 })
+        : el("span", { class: "reglages-resume-icone" }, icone("compte", { taille: 20 })),
+      el(
+        "span",
+        { class: "reglages-resume-texte" },
+        el("strong", { texte: profil ? profil.nom || profil.email : "Se connecter" }),
+        el("span", {
+          texte: profil
+            ? sync.mode === "compte"
+              ? "Synchronisé"
+              : "Pas encore synchronisé"
+            : "Retrouvez vos sites sur tous vos appareils",
+        }),
+      ),
+      icone("chevron", { taille: 16 }),
+    );
+    resumeCompte.dataset.synchro = profil ? (sync.mode === "compte" ? "oui" : "non") : "aucun";
+  };
+  majResume();
+  const arretsResume = session
+    ? [session.compte.abonner?.(majResume), session.synchro?.abonner?.(majResume)].filter(
+        (a) => typeof a === "function",
+      )
+    : [];
+
   const barreOnglets = el(
     "div",
-    { class: "reglages-onglets", role: "tablist", "aria-label": "Rubriques des réglages" },
-    curseur,
-    onglets.map(([cle, libelle]) =>
+    {
+      class: "reglages-onglets",
+      role: "tablist",
+      "aria-label": "Rubriques des réglages",
+      "aria-orientation": "vertical",
+    },
+    onglets.map(([cle, libelle, resume]) =>
       el(
         "button",
         {
@@ -1055,32 +1159,49 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
           id: `onglet-${cle}`,
           "aria-controls": `onglet-panneau-${cle}`,
           dataset: { onglet: cle },
-          onclick: () => choisirOnglet(cle),
+          onclick: () => choisirOnglet(cle, { focus: true }),
         },
-        icone(cle),
-        el("span", { texte: libelle }),
+        el("span", { class: "onglet-icone" }, icone(cle === "accueil" ? "grille" : cle)),
+        el(
+          "span",
+          { class: "onglet-texte" },
+          el("span", { class: "onglet-libelle", texte: libelle }),
+          el("span", { class: "onglet-resume", texte: resume }),
+        ),
+        el("span", { class: "onglet-chevron" }, icone("chevron", { taille: 16 })),
       ),
     ),
   );
   barreOnglets.addEventListener("keydown", (e) => {
-    const sens = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    const sens = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
     if (!sens) return;
     e.preventDefault();
-    const i = onglets.findIndex(([cle]) => cle === ongletActif);
-    const [suivant] = onglets[(i + sens + onglets.length) % onglets.length];
-    choisirOnglet(suivant);
-    barreOnglets.querySelector(`[data-onglet="${suivant}"]`).focus();
+    const boutons = [...barreOnglets.querySelectorAll(".onglet")];
+    const i = boutons.indexOf(document.activeElement);
+    const suivant = boutons[(i + sens + boutons.length) % boutons.length];
+    suivant.focus();
+    // A wide screen shows the section at once; the phone's list waits for Enter.
+    if (!enListe()) choisirOnglet(suivant.dataset.onglet);
   });
   const corps = el("div", { class: "reglages-corps" }, Object.values(panneauxOnglets));
+  const navigation = el(
+    "nav",
+    { class: "reglages-nav", "aria-label": "Rubriques" },
+    resumeCompte,
+    barreOnglets,
+  );
 
+  const enListe = () => !!globalThis.matchMedia?.(LISTE_MAX).matches;
   let ongletActif = null;
-  function choisirOnglet(cle) {
-    if (cle === ongletActif) return;
+  /** Shows a section. On a phone it slides over the list (`vue` = "detail"). */
+  function choisirOnglet(cle, { focus = false } = {}) {
     const ordre = onglets.map(([c]) => c);
-    const sens =
-      ongletActif && ordre.indexOf(cle) < ordre.indexOf(ongletActif) ? "gauche" : "droite";
+    const sens = ongletActif && ordre.indexOf(cle) < ordre.indexOf(ongletActif) ? "haut" : "bas";
+    const meme = cle === ongletActif;
     const premier = ongletActif === null;
     ongletActif = cle;
+    panneau.dataset.vue = "detail";
+    rubrique.textContent = onglets.find(([c]) => c === cle)?.[1] ?? "";
     for (const b of barreOnglets.querySelectorAll(".onglet")) {
       const actif = b.dataset.onglet === cle;
       b.setAttribute("aria-selected", String(actif));
@@ -1088,51 +1209,54 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     }
     for (const [c, p] of Object.entries(panneauxOnglets)) {
       p.hidden = c !== cle;
-      if (c === cle && !premier) p.dataset.entree = sens;
+      if (c === cle && !premier && !meme) p.dataset.entree = sens;
     }
-    corps.scrollTop = 0;
-    placerCurseur();
+    if (!meme) corps.scrollTop = 0;
+    if (focus && enListe()) panneauxOnglets[cle].focus({ preventScroll: true });
     try {
       localStorage.setItem(CLE_ONGLET, cle);
     } catch {
       /* the remembered tab is only a convenience */
     }
   }
-  function placerCurseur() {
-    const b = barreOnglets.querySelector(`[data-onglet="${ongletActif}"]`);
-    if (!b) return;
-    curseur.style.setProperty("--x", `${b.offsetLeft}px`);
-    curseur.style.setProperty("--l", `${b.offsetWidth}px`);
-    // Narrow screens: the tab bar scrolls sideways, keep the chosen tab in view.
-    const visible = barreOnglets.clientWidth;
-    if (barreOnglets.scrollWidth > visible) {
-      barreOnglets.scrollTo({
-        left: b.offsetLeft - (visible - b.offsetWidth) / 2,
-        behavior: "smooth",
-      });
-    }
+  /** Phone: back to the list of sections. */
+  function revenirALaListe() {
+    panneau.dataset.vue = "liste";
+    barreOnglets.querySelector(`[data-onglet="${ongletActif}"]`)?.focus({ preventScroll: true });
   }
 
+  const rubrique = el("span", { class: "reglages-rubrique", "aria-hidden": "true" });
   const panneau = el(
     "dialog",
     { class: "reglages", "aria-labelledby": "reglages-titre", tabindex: "-1" },
     el(
       "header",
       { class: "reglages-entete" },
+      el(
+        "button",
+        {
+          type: "button",
+          class: "reglages-retour",
+          "aria-label": "Retour aux rubriques",
+          onclick: () => revenirALaListe(),
+        },
+        icone("retour"),
+      ),
       el("h2", { id: "reglages-titre", texte: "Réglages" }),
+      rubrique,
       el(
         "button",
         {
           type: "button",
           class: "reglages-fermer",
           "aria-label": "Fermer les réglages",
+          title: "Fermer (Échap)",
           onclick: () => fermer(),
         },
         icone("fermer"),
       ),
     ),
-    compteUi?.section,
-    barreOnglets,
+    navigation,
     corps,
   );
 
@@ -1200,6 +1324,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       flou.value = String(r.fond.flou);
     }
     sectionFrequents.maj(!r.sansSuiviUsage);
+    for (const c of curseurs) c.maj();
     majStockage();
   };
   const desabonner = store.abonner(actualiser);
@@ -1240,6 +1365,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   function fermer() {
     desabonner();
     compteUi?.arreter();
+    arretsResume.forEach((a) => a());
     bibliotheque?.arreter();
     galerie.arreter();
     observateur?.disconnect();
@@ -1269,9 +1395,11 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   } catch {
     /* no remembered tab */
   }
+  // Former keys (V4.29: "donnees") lead to the section that now holds their content.
+  memorise = { donnees: "compte" }[memorise] ?? memorise;
   choisirOnglet(onglets.some(([c]) => c === memorise) ? memorise : onglets[0][0]);
-  // The tab cursor only glides once it has found its first place.
-  requestAnimationFrame(() => barreOnglets.classList.add("reglages-onglets--pret"));
+  // Phone: the list of sections first, unless the caller asked for one (the AI tab).
+  if (enListe() && !onglet) panneau.dataset.vue = "liste";
   // Focus goes to the panel itself: Tab then reaches its controls in order.
   panneau.focus({ preventScroll: true });
   ouvert = { fermer };

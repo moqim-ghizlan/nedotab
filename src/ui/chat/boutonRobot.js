@@ -3,18 +3,23 @@ import { visibiliteRobot } from "./geometrie.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
-function forme(tag, attributs) {
+function forme(tag, attributs, ...enfants) {
   const noeud = document.createElementNS(NS, tag);
   for (const [cle, valeur] of Object.entries(attributs)) noeud.setAttribute(cle, valeur);
+  noeud.append(...enfants);
   return noeud;
 }
 
-/** The robot, drawn here (a round head, an antenna, two eyes): no icon taken from a product. */
-export function iconeRobot() {
+/**
+ * The robot, drawn here (a round head, an antenna, two eyes): no icon taken from a product.
+ * V4.30: its eyes and antenna have classes so the panel can make it blink and "think".
+ */
+export function iconeRobot({ taille = 26 } = {}) {
   const svg = forme("svg", {
     viewBox: "0 0 24 24",
-    width: "26",
-    height: "26",
+    width: String(taille),
+    height: String(taille),
+    class: "robot",
     fill: "none",
     stroke: "currentColor",
     "stroke-width": "1.7",
@@ -25,11 +30,22 @@ export function iconeRobot() {
   });
   svg.append(
     forme("path", { d: "M12 3.2v2.6" }),
-    forme("circle", { cx: "12", cy: "2.7", r: "0.9", fill: "currentColor", stroke: "none" }),
+    forme("circle", {
+      class: "robot-antenne",
+      cx: "12",
+      cy: "2.7",
+      r: "0.9",
+      fill: "currentColor",
+      stroke: "none",
+    }),
     forme("rect", { x: "4", y: "5.8", width: "16", height: "12.4", rx: "4.2" }),
     forme("path", { d: "M2 10.5v3M22 10.5v3" }),
-    forme("circle", { cx: "9", cy: "11.4", r: "1.2", fill: "currentColor", stroke: "none" }),
-    forme("circle", { cx: "15", cy: "11.4", r: "1.2", fill: "currentColor", stroke: "none" }),
+    forme(
+      "g",
+      { class: "robot-yeux" },
+      forme("circle", { cx: "9", cy: "11.4", r: "1.2", fill: "currentColor", stroke: "none" }),
+      forme("circle", { cx: "15", cy: "11.4", r: "1.2", fill: "currentColor", stroke: "none" }),
+    ),
     forme("path", { d: "M9 15.1c1.8 1.2 4.2 1.2 6 0" }),
     forme("path", { d: "M8.5 21h7" }),
   );

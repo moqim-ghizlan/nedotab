@@ -19,6 +19,14 @@ import {
 } from "../core/espacePartage.js";
 import { domaine } from "../core/url.js";
 import { el } from "./dom.js";
+import { icone } from "./icones.js";
+import {
+  boutonAction,
+  confirmerAction,
+  lienAction,
+  rangeeActions,
+  tuileType,
+} from "./espacePartageActions.js";
 import { vibrer } from "./haptique.js";
 import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
@@ -85,6 +93,10 @@ export function creerEspacePartage({
   let retourFocus = null;
   let envoiEnCours = false;
   const erreurs = new Map(); // contenu → message, for "Réessayer"
+  // V4.30: cards whose drawer of actions is open, and the ids already shown (a new one drops in).
+  const tiroirsOuverts = new Set();
+  const dejaVus = new Set();
+  let premierRendu = true;
   // V4.26: decrypted content of the vault items, in memory only, emptied when the vault locks.
   const dechiffres = new Map(); // id → { contenu, titre } | { corrompu: true }
   const enCours = new Set();
@@ -111,6 +123,9 @@ export function creerEspacePartage({
     charger,
     uid,
     store,
+    tiroirsOuverts,
+    estNouveau: (id) => estNouveau(id),
+    pied: (e) => pied(e),
     rendre: () => rendre(),
     octets: () => octets,
   });
@@ -127,13 +142,13 @@ export function creerEspacePartage({
       hidden: true,
       onclick: () => (ouvert ? fermer() : ouvrir()),
     },
-    el("span", { class: "partage-bouton-icone", "aria-hidden": "true", texte: "⇄" }),
+    icone("partage", { taille: 22 }),
     pastille,
   );
   const champ = el("textarea", {
     id: "partage-champ",
     class: "partage-champ",
-    rows: "3",
+    rows: "2",
     placeholder: "Texte ou lien à envoyer",
     "aria-label": "Texte ou lien à envoyer",
     spellcheck: "false",
@@ -148,31 +163,66 @@ export function creerEspacePartage({
     autocomplete: "off",
   });
   const champDescription = el("textarea", {
-    class: "partage-champ",
+    class: "partage-champ partage-champ--description",
     rows: "2",
     placeholder: "Description (facultatif)",
     "aria-label": "Description (facultatif)",
     maxlength: String(DESCRIPTION_MAX),
   });
-  const compteurCaracteres =el("span", { class: "partage-compte", "aria-live": "polite" });
+  const compteurCaracteres = el("span", { class: "partage-compte", "aria-live": "polite" });
+  // The title and the description stay folded until asked for (most items need neither).
+  const extras = el(
+    "div",
+    { class: "partage-extras", id: "partage-extras", hidden: true },
+    champTitre,
+    champDescription,
+  );
+  const basculerExtras = el(
+    "button",
+    {
+      type: "button",
+      class: "partage-outil partage-outil--texte",
+      "aria-expanded": "false",
+      "aria-controls": "partage-extras",
+      title: "Ajouter un titre et une description",
+      onclick: () => montrerExtras(extras.hidden),
+    },
+    icone("texte", { taille: 18 }),
+    el("span", { class: "partage-outil-libelle", texte: "Titre" }),
+  );
+  function montrerExtras(oui) {
+    extras.hidden = !oui;
+    basculerExtras.setAttribute("aria-expanded", String(oui));
+    if (oui) champTitre.focus();
+  }
   const messageAjout = el("p", {
     class: "partage-message",
     role: "status",
     "aria-live": "polite",
     hidden: true,
   });
-  const envoyer = el("button", {
-    type: "button",
-    class: "bouton bouton--principal",
-    texte: "Envoyer",
-    onclick: () => envoyerContenu(),
-  });
-  const coller = el("button", {
-    type: "button",
-    class: "bouton",
-    texte: "Coller",
-    onclick: () => collerPressePapiers(),
-  });
+  const envoyer = el(
+    "button",
+    {
+      type: "button",
+      class: "partage-envoyer",
+      title: "Envoyer (Ctrl+Entrée)",
+      onclick: () => envoyerContenu(),
+    },
+    el("span", { texte: "Envoyer" }),
+    icone("envoyer", { taille: 18 }),
+  );
+  const coller = el(
+    "button",
+    {
+      type: "button",
+      class: "partage-outil",
+      "aria-label": "Coller",
+      title: "Coller le presse-papiers",
+      onclick: () => collerPressePapiers(),
+    },
+    icone("coller", { taille: 18 }),
+  );
   const proposerLien = el("button", {
     type: "button",
     class: "lien-discret",
@@ -183,7 +233,12 @@ export function creerEspacePartage({
   const bandeau = el("p", { class: "partage-bandeau", role: "status", hidden: true });
   const selecteurDuree = el(
     "div",
-    { class: "partage-durees", role: "radiogroup", "aria-label": "Durée avant suppression" },
+    {
+      class: "partage-durees",
+      role: "radiogroup",
+      "aria-label": "Durée avant suppression",
+      "aria-describedby": "partage-durees-libelle",
+    },
     DUREES.map((d) =>
       el("button", {
         type: "button",
@@ -204,19 +259,23 @@ export function creerEspacePartage({
     texte: "Voir plus",
     onclick: () => voirPlus(),
   });
-  const fermerBouton = el("button", {
-    type: "button",
-    class: "partage-fermer",
-    "aria-label": "Fermer",
-    texte: "×",
-    onclick: () => fermer(),
-  });
+  const fermerBouton = el(
+    "button",
+    {
+      type: "button",
+      class: "partage-fermer",
+      "aria-label": "Fermer",
+      title: "Fermer (Échap)",
+      onclick: () => fermer(),
+    },
+    icone("fermer", { taille: 18 }),
+  );
   const panneau = el(
     "aside",
     {
       class: "partage",
       role: "dialog",
-      "aria-label": "Espace de partage",
+      "aria-labelledby": "partage-titre",
       "aria-modal": "false",
       hidden: true,
     },
@@ -224,44 +283,75 @@ export function creerEspacePartage({
     el(
       "header",
       { class: "partage-entete" },
-      el("h2", { texte: "Espace de partage" }),
+      el(
+        "div",
+        { class: "partage-entete-titre" },
+        el("h2", { id: "partage-titre", texte: "Espace de partage" }),
+        fichiers.quota,
+      ),
       // V4.28: the active share links (create / revoke).
-      el("button", {
-        type: "button",
-        class: "lien-discret",
-        texte: "Mes liens",
-        onclick: () => ouvrirMesLiens({ charger }),
-      }),
+      el(
+        "button",
+        {
+          type: "button",
+          class: "partage-entete-bouton",
+          title: "Liens publics actifs",
+          onclick: () => ouvrirMesLiens({ charger }),
+        },
+        icone("lien", { taille: 16 }),
+        el("span", { texte: "Mes liens" }),
+      ),
       fermerBouton,
     ),
-    bandeau,
-    coffre.bandeau,
-    migration,
-    fichiers.quota,
     fichiers.cadreDepot,
     el(
       "div",
-      { class: "partage-ajout" },
-      champ,
-      champTitre,
-      champDescription,
+      { class: "partage-corps" },
+      bandeau,
+      coffre.bandeau,
+      migration,
       el(
         "div",
-        { class: "partage-ajout-actions" },
-        compteurCaracteres,
-        fichiers.boutonAjout,
-        coller,
-        envoyer,
+        { class: "partage-ajout" },
+        el(
+          "div",
+          { class: "partage-composeur" },
+          champ,
+          extras,
+          el(
+            "div",
+            { class: "partage-ajout-actions" },
+            fichiers.boutonAjout,
+            coller,
+            basculerExtras,
+            compteurCaracteres,
+            envoyer,
+          ),
+        ),
+        el(
+          "div",
+          { class: "partage-options" },
+          el(
+            "div",
+            { class: "partage-option-duree" },
+            el(
+              "span",
+              { id: "partage-durees-libelle", class: "partage-option-libelle" },
+              icone("horloge", { taille: 14 }),
+              el("span", { texte: "Supprimer après" }),
+            ),
+            selecteurDuree,
+          ),
+          coffre.caseChiffrer,
+        ),
+        fichiers.entree,
+        fichiers.message,
+        proposerLien,
+        messageAjout,
       ),
-      coffre.caseChiffrer,
-      selecteurDuree,
-      fichiers.entree,
-      fichiers.message,
-      proposerLien,
-      messageAjout,
+      liste,
+      plus,
     ),
-    liste,
-    plus,
   );
 
   function choisirDuree(id) {
@@ -314,10 +404,10 @@ export function creerEspacePartage({
         el("span", {
           class: "partage-apercu partage-chiffre",
           texte: clair?.corrompu
-            ? "🔒 Élément corrompu"
+            ? "Élément corrompu"
             : coffre.session.estDeverrouille()
-              ? "🔒 Déchiffrement…"
-              : "🔒 Contenu chiffré",
+              ? "Déchiffrement…"
+              : "Contenu chiffré",
         }),
       );
     } else if (url) {
@@ -330,7 +420,11 @@ export function creerEspacePartage({
           rel: "noopener noreferrer",
           texte: domaine(url),
         }),
-        el("span", { class: "partage-detail", texte: apercu(url, 120) }),
+        el("span", {
+          class: "partage-detail partage-detail--url",
+          title: url,
+          texte: apercu(url, 120),
+        }),
       );
     } else {
       texte.append(el("span", { class: "partage-apercu", texte: apercu(e.contenu) }));
@@ -342,11 +436,9 @@ export function creerEspacePartage({
       if (e.description)
         texte.append(el("span", { class: "partage-detail", texte: e.description }));
     }
-    const copie = el("button", {
-      type: "button",
-      class: "partage-action",
-      hidden: brut.chiffre && (verrouille || clair?.corrompu),
-      texte: "Copier",
+    const masque = brut.chiffre && (verrouille || clair?.corrompu);
+    const copie = boutonAction("copier", "Copier", {
+      hidden: masque,
       "aria-label": "Copier",
       onclick: async (ev) => {
         const b = ev.currentTarget;
@@ -354,91 +446,92 @@ export function creerEspacePartage({
           await copier(e.contenu);
           // Best effort (no guarantee, said in the help): the clipboard is emptied after 30 s.
           if (brut.chiffre) setTimeout(() => copier("").catch(() => {}), 30_000);
-          b.textContent = "Copié ✓";
+          confirmerAction(b, "Copié ✓");
           vibrer(store, 12);
-          setTimeout(() => (b.textContent = "Copier"), 1500);
         } catch {
           toast("Copie impossible : sélectionnez le texte à la main.", { type: "erreur" });
         }
       },
     });
-    const actions = el(
-      "div",
-      { class: "partage-actions" },
-      copie,
-      url
-        ? el("a", {
-            class: "partage-action",
-            href: url,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            texte: "Ouvrir",
-          })
-        : null,
-      el("button", {
-        type: "button",
-        class: "partage-action",
-        "aria-pressed": String(e.epingle),
-        texte: e.epingle ? "Désépingler" : "Épingler",
-        onclick: () =>
-          action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
-      }),
-      // V4.28: a public link to a COPY of this text or link (the clear content, decrypted if it
-      // came from the vault; the copy is re-encrypted with the key of the link).
-      e.type !== "fichier" && !(brut.chiffre && (verrouille || clair?.corrompu))
-        ? el("button", {
-            type: "button",
-            class: "partage-action",
-            texte: "Créer un lien",
-            onclick: () =>
-              creerLienPourElement({
-                charger,
-                copier,
-                element: { type: e.type, contenu: e.contenu },
-                dureeId,
-              }),
-          })
-        : null,
-      e.type === "fichier"
-        ? null
-        : el("button", {
-            type: "button",
-            class: "partage-action",
-            texte: "Prolonger",
-            onclick: () => choisirProlongation(e),
-          }),
-      el("button", {
-        type: "button",
-        class: "partage-action partage-action--danger",
-        texte: "Supprimer",
-        onclick: () => supprimerAvecAnnulation(e),
-      }),
+    const actions = rangeeActions(
+      brut.id,
+      [copie, url ? lienAction("ouvrir", "Ouvrir", url) : null],
+      [
+        boutonAction("epingle", e.epingle ? "Désépingler" : "Épingler", {
+          "aria-pressed": String(e.epingle),
+          onclick: () =>
+            action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
+        }),
+        // V4.28: a public link to a COPY of this text or link (the clear content, decrypted if it
+        // came from the vault; the copy is re-encrypted with the key of the link).
+        e.type !== "fichier" && !masque
+          ? boutonAction("lien", "Créer un lien", {
+              onclick: () =>
+                creerLienPourElement({
+                  charger,
+                  copier,
+                  element: { type: e.type, contenu: e.contenu },
+                  dureeId,
+                }),
+            })
+          : null,
+        e.type === "fichier"
+          ? null
+          : boutonAction("horloge", "Prolonger", { onclick: () => choisirProlongation(e) }),
+        boutonAction("poubelle", "Supprimer", {
+          classe: "partage-action--danger",
+          onclick: () => supprimerAvecAnnulation(e),
+        }),
+      ],
+      tiroirsOuverts,
     );
-
     return el(
       "li",
       {
-        class: `partage-carte${e.enAttente ? " partage-carte--attente" : ""}${e.epingle ? " partage-carte--epingle" : ""}`,
+        class: `partage-carte${e.enAttente ? " partage-carte--attente" : ""}${e.epingle ? " partage-carte--epingle" : ""}${estNouveau(brut.id) ? " partage-carte--nouvelle" : ""}`,
         dataset: { id: e.id, type: e.type },
       },
-      el("span", {
-        class: "partage-type",
-        "aria-hidden": "true",
-        texte: brut.chiffre ? (verrouille ? "🔒" : "🔓") : e.type === "lien" ? "🔗" : "📝",
-      }),
+      brut.chiffre
+        ? tuileType(verrouille ? "cadenas" : "cadenasOuvert", "coffre")
+        : tuileType(e.type === "lien" ? "lien" : "texte", e.type),
       texte,
-      libelleExpiration(e, ecart).texte
-        ? el("span", {
-            class: `partage-expire${libelleExpiration(e, ecart).urgent ? " partage-expire--urgent" : ""}`,
-            texte: libelleExpiration(e, ecart).texte,
-          })
-        : null,
-      el("span", {
-        class: "partage-meta",
-        texte: `${e.enAttente ? "Envoi… · " : ""}${ilYA(e.creeLe)} · depuis ${libelleAppareil(e.appareil)}`,
-      }),
+      ...pied(e),
       actions,
     );
+  }
+
+  /** When and where it was sent, and when it goes (texts, links and files alike). */
+  function pied(e) {
+    const expire = libelleExpiration(e, ecart);
+    return [
+      el(
+        "div",
+        { class: "partage-pied" },
+        el(
+          "span",
+          { class: "partage-meta" },
+          e.epingle ? icone("epingle", { taille: 12 }) : null,
+          el("span", {
+            texte: `${e.enAttente ? "Envoi… · " : ""}${ilYA(e.creeLe)} · depuis ${libelleAppareil(e.appareil)}`,
+          }),
+        ),
+        expire.texte
+          ? el(
+              "span",
+              { class: `partage-expire${expire.urgent ? " partage-expire--urgent" : ""}` },
+              icone("horloge", { taille: 12 }),
+              expire.texte,
+            )
+          : null,
+      ),
+    ];
+  }
+
+  /** A card seen for the first time after the first load: it drops into the list once. */
+  function estNouveau(id) {
+    if (dejaVus.has(id)) return false;
+    dejaVus.add(id);
+    return !premierRendu;
   }
 
   function rendre() {
@@ -512,9 +605,17 @@ export function creerEspacePartage({
         el(
           "li",
           { class: "partage-vide" },
-          el("span", { class: "partage-vide-icone", "aria-hidden": "true", texte: "⇄" }),
-          el("p", { texte: "Envoyez un texte ou un lien d'un appareil à l'autre." }),
+          el(
+            "span",
+            { class: "partage-vide-icone", "aria-hidden": "true" },
+            icone("partage", { taille: 28 }),
+          ),
           el("p", { class: "partage-aucun", texte: "Aucun élément" }),
+          el("p", { texte: "Envoyez un texte ou un lien d'un appareil à l'autre." }),
+          el("p", {
+            class: "partage-vide-astuce",
+            texte: "Vous pouvez aussi glisser un fichier ici ou coller une image.",
+          }),
         ),
       );
     } else {
@@ -523,6 +624,7 @@ export function creerEspacePartage({
         ...trier(visibles).map((e) => (e.type === "fichier" ? fichiers.carte(e) : carte(e))),
       );
     }
+    if (statut === "ok") premierRendu = false;
     dechiffrerVisibles();
     fichiers.elementsVus(elements);
     plus.hidden = !peutPlus;
@@ -602,12 +704,13 @@ export function creerEspacePartage({
     try {
       const fb = await charger();
       // Same content already there: it goes back to the top (not for the vault: contents are unreadable).
-      const doublon = chiffre || champTitre.value.trim() || champDescription.value.trim()
-        ? null
-        : trouverDoublon(
-            elements.filter((x) => !x.chiffre),
-            r.element,
-          );
+      const doublon =
+        chiffre || champTitre.value.trim() || champDescription.value.trim()
+          ? null
+          : trouverDoublon(
+              elements.filter((x) => !x.chiffre),
+              r.element,
+            );
       if (doublon) await fb.remonterPartage(uid(), doublon.id);
       else
         await fb.ajouterAuPartage(
@@ -618,6 +721,8 @@ export function creerEspacePartage({
       champ.value = "";
       champTitre.value = "";
       champDescription.value = "";
+      extras.hidden = true;
+      basculerExtras.setAttribute("aria-expanded", "false");
       montrerErreur(null);
       if (!ouvert) toast("Envoyé");
     } catch (e) {
@@ -802,9 +907,9 @@ export function creerEspacePartage({
       fermer();
     } else if (e.key === "Tab") {
       // Focus kept inside the panel while it is open.
-      const cibles = [...panneau.querySelectorAll("button, a[href], textarea")].filter(
-        (n) => !n.disabled && !n.closest("[hidden]"),
-      );
+      const cibles = [
+        ...panneau.querySelectorAll("button, a[href], textarea, input:not([type=file])"),
+      ].filter((n) => !n.disabled && !n.closest("[hidden]") && n.tabIndex >= 0);
       if (cibles.length === 0) return;
       const premier = cibles[0];
       const dernier = cibles.at(-1);

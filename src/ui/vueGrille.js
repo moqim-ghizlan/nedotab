@@ -30,6 +30,7 @@ export function creerVueGrille({
   apresFusion,
   ajouter,
   libelleAjout,
+  tuileAjout = true,
   pagination = null,
   sortie = null,
 }) {
@@ -49,8 +50,9 @@ export function creerVueGrille({
       ? document.activeElement.closest("[data-id], [data-action]")
       : null;
     const cle = actif?.dataset.id ?? actif?.dataset.action;
-    if (pagination) pagination.rendre(liste, { avecAjout: !lectureSeule(), libelleAjout });
-    else rendreGrille(conteneur, liste, { avecAjout: !lectureSeule(), libelleAjout });
+    const avecAjout = tuileAjout && !lectureSeule();
+    if (pagination) pagination.rendre(liste, { avecAjout, libelleAjout });
+    else rendreGrille(conteneur, liste, { avecAjout, libelleAjout });
     glisser?.synchroniser();
     if (cle) {
       const retrouve = conteneur.querySelector(

@@ -192,7 +192,7 @@ describe("éléments chiffrés", () => {
     const c = await chiffrerElement(vk, "u1", "e1", { contenu, titre: "mon titre" });
     expect(ressembleAChiffre(c)).toBe(true);
     expect(c).not.toContain("mon titre");
-    expect(await dechiffrerElement(vk, "u1", "e1", c)).toEqual({ contenu, titre: "mon titre" });
+    expect(await dechiffrerElement(vk, "u1", "e1", c)).toEqual({ contenu, titre: "mon titre", description: "" });
   });
 
   it("fichier de 25 Mo", async () => {

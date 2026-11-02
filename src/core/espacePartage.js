@@ -14,6 +14,7 @@ export const PAGE_ELEMENTS = 50;
 export const APERCU_CARACTERES = 160;
 export const APPAREIL_MAX = 64;
 export const TITRE_MAX = 200;
+export const DESCRIPTION_MAX = 500;
 
 /** Characters of a text, counted by code points (an emoji counts for one). */
 export const longueur = (texte) => [...String(texte ?? "")].length;
@@ -61,7 +62,7 @@ export function titreDe(type, contenu) {
  * applied alone): by default a text stays a text.
  * @returns {{ ok: true, element: object } | { ok: false, erreur: string }}
  */
-export function creerElement({ contenu, type = "texte", appareil }) {
+export function creerElement({ contenu, type = "texte", appareil, titre = "", description = "" }) {
   const erreur = validerContenu(contenu);
   if (erreur) return { ok: false, erreur };
   let valeur = String(contenu);
@@ -78,7 +79,9 @@ export function creerElement({ contenu, type = "texte", appareil }) {
     element: {
       type: t,
       contenu: valeur,
-      titre: titreDe(t, valeur).slice(0, TITRE_MAX),
+      // The title and the description are optional: without a title, a short one is derived.
+      titre: ([...String(titre).trim()].slice(0, TITRE_MAX).join("") || titreDe(t, valeur)).slice(0, TITRE_MAX),
+      description: [...String(description).trim()].slice(0, DESCRIPTION_MAX).join(""),
       appareil: String(appareil ?? "").slice(0, APPAREIL_MAX),
       epingle: false,
     },
@@ -130,6 +133,7 @@ export function lireElement(id, brut, enAttente = false) {
     type: brut.type,
     contenu: brut.contenu,
     titre: typeof brut.titre === "string" ? brut.titre : "",
+    description: typeof brut.description === "string" ? brut.description : "",
     appareil: typeof brut.appareil === "string" ? brut.appareil : "",
     epingle: brut.epingle === true,
     // V4.27: expiry (ms, UTC); undefined for an item created before V4.27.
@@ -167,6 +171,7 @@ export function exporterElements(elements) {
     type: e.type,
     contenu: e.contenu,
     titre: e.titre,
+    description: e.description ?? "",
     appareil: e.appareil,
     epingle: !!e.epingle,
     creeLe: e.creeLe ?? null,

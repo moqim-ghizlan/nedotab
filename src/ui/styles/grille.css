@@ -324,11 +324,40 @@
 
 /* --- search ----------------------------------------------------------------------- */
 
+.recherche-ligne {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3, 12px);
+  width: min(620px, 100%);
+  margin: 0 auto var(--espace-6);
+}
+
+.recherche-ajout {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 2px dashed var(--texte-secondaire);
+  border-radius: 14px;
+  background: transparent;
+  color: var(--texte-secondaire);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.recherche-ajout:hover,
+.recherche-ajout:focus-visible {
+  color: var(--texte);
+  border-color: var(--texte);
+}
+
 .recherche {
   position: relative;
   z-index: 5;
-  width: min(560px, 100%);
-  margin: 0 auto var(--espace-6);
+  flex: 1;
+  min-width: 0;
 }
 
 .recherche-loupe {

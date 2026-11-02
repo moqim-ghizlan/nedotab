@@ -1,194 +1,728 @@
 /*
- * Sharing space (V4.24): same variables and themes as the rest of the app. A side panel of
- * 380 px on a wide screen, a full-screen sheet rising from the bottom on a phone.
+ * Sharing space (V4.24, redrawn in V4.30). A floating glass sheet on the right from 640 px of
+ * width, a full-screen sheet rising from the bottom on a phone. One composer at the top (the
+ * text, its tools, then the options), the items under it as quiet cards whose secondary
+ * actions wait in a drawer. Colours come from tokens.css only.
  */
+
+/* --- Floating button ------------------------------------------------------------------------- */
 .partage-bouton {
   position: fixed;
-  left: max(var(--espace-4, 16px), env(safe-area-inset-left, 0px));
-  bottom: max(var(--espace-4, 16px), env(safe-area-inset-bottom, 0px));
+  left: max(var(--espace-4), env(safe-area-inset-left, 0px));
+  bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px));
   z-index: 30;
-  width: 48px;
-  height: 48px;
   display: grid;
   place-items: center;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--trait);
   border-radius: 50%;
-  background: var(--surface, rgba(255, 255, 255, 0.9));
-  color: inherit;
-  font-size: 22px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  color: var(--texte);
+  box-shadow: var(--ombre);
   cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  transition:
+    transform 260ms var(--ressort),
+    background-color 160ms;
+}
+.partage-bouton:hover {
+  transform: translateY(-2px);
+}
+.partage-bouton:active {
+  transform: scale(0.94);
+}
+.partage-bouton[aria-expanded="true"] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-texte);
 }
 .partage-bouton[hidden] {
   display: none;
 }
 .partage-pastille {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 5px;
+  right: 5px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--accent, #3b82f6);
-  box-shadow: 0 0 0 2px var(--surface, #fff);
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--surface);
+  animation: partage-pouls 2.4s ease-out 3;
 }
 .partage-pastille[hidden] {
   display: none;
 }
+@keyframes partage-pouls {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  60% {
+    box-shadow:
+      0 0 0 2px var(--surface),
+      0 0 0 9px transparent;
+  }
+}
 
+/* --- Sheet ----------------------------------------------------------------------------------- */
 .partage {
   position: fixed;
   z-index: 40;
   display: flex;
   flex-direction: column;
-  gap: var(--espace-3, 12px);
   box-sizing: border-box;
-  padding: var(--espace-4, 16px);
-  background: color-mix(in srgb, var(--surface, #fff) 92%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  color: inherit;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  animation: partage-entree 180ms ease-out;
+  margin: 0;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  backdrop-filter: blur(28px) saturate(1.5);
+  color: var(--texte);
+  font-size: 0.875rem;
+  overflow: hidden;
+  /* Opening and closing glide (the closing keeps the sheet drawn until it has left). */
+  transition:
+    opacity 220ms ease,
+    translate 380ms var(--glisse),
+    display 380ms allow-discrete;
 }
 .partage[hidden] {
   display: none;
+  opacity: 0;
+  pointer-events: none;
 }
-@media (min-width: 900px) {
+@media (min-width: 640px) {
   .partage {
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 380px;
-    border-left: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+    top: var(--panneau-marge);
+    right: var(--panneau-marge);
+    bottom: var(--panneau-marge);
+    width: min(400px, calc(100vw - 2 * var(--panneau-marge)));
+    border: 1px solid var(--trait);
+    border-radius: var(--panneau-rayon);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.05),
+      var(--ombre-forte);
+  }
+  .partage[hidden] {
+    translate: 32px 0;
+  }
+  @starting-style {
+    .partage:not([hidden]) {
+      opacity: 0;
+      translate: 32px 0;
+    }
   }
   .partage-poignee {
     display: none;
   }
 }
-@media (max-width: 899px) {
+@media (max-width: 639px) {
   .partage {
+    /* Over the assistant's button and its sheet: one full-screen thing at a time. */
+    z-index: 46;
     inset: 0;
-    padding-top: max(var(--espace-4, 16px), env(safe-area-inset-top, 0px));
-    padding-bottom: max(var(--espace-4, 16px), env(safe-area-inset-bottom, 0px));
-    padding-left: max(var(--espace-4, 16px), env(safe-area-inset-left, 0px));
-    padding-right: max(var(--espace-4, 16px), env(safe-area-inset-right, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    background: var(--surface);
+  }
+  .partage[hidden] {
+    translate: 0 40px;
+  }
+  @starting-style {
+    .partage:not([hidden]) {
+      opacity: 0;
+      translate: 0 40px;
+    }
   }
   .partage-poignee {
-    width: 40px;
+    width: 36px;
     height: 4px;
-    margin: 0 auto;
+    margin: 6px auto 0;
     border-radius: 2px;
-    background: color-mix(in srgb, currentColor 30%, transparent);
+    background: var(--trait-fort);
   }
 }
 
+/* --- Header ---------------------------------------------------------------------------------- */
 .partage-entete {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--espace-2);
+  padding: 14px 12px 12px 20px;
+  border-bottom: 1px solid var(--trait);
+}
+.partage-entete-titre {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 5px;
 }
 .partage-entete h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.partage-entete-bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms;
+}
+.partage-entete-bouton:hover {
+  background: var(--survol);
+  color: var(--texte);
 }
 .partage-fermer {
-  width: 44px;
-  height: 44px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: 0;
+  border-radius: 50%;
   background: none;
-  color: inherit;
-  font-size: 26px;
+  color: var(--texte-secondaire);
   cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms;
 }
-.partage-bandeau {
-  margin: 0;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  font-size: 13px;
+.partage-fermer:hover {
+  background: var(--survol);
+  color: var(--texte);
 }
-.partage-bandeau[hidden] {
+.partage-fermer .icone {
+  transition: transform 320ms var(--ressort);
+}
+.partage-fermer:hover .icone {
+  transform: rotate(90deg);
+}
+
+/* Quota under the title: one quiet line and a hairline gauge. */
+.partage-quota {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+}
+.partage-quota[hidden] {
   display: none;
 }
+.partage-quota-piste {
+  order: 2;
+  flex: 0 1 88px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--trait);
+}
+.partage-quota-barre {
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 400ms var(--glisse);
+}
+.partage-quota[data-niveau="avertissement"] .partage-quota-barre {
+  background: var(--attention);
+}
+.partage-quota[data-niveau="plein"] .partage-quota-barre {
+  background: var(--danger);
+}
+.partage-quota[data-niveau="plein"] .partage-quota-texte {
+  color: var(--danger);
+}
+
+/* --- Body ------------------------------------------------------------------------------------ */
+.partage-corps {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  padding: 16px 16px max(24px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.partage-bandeau,
+.partage-migration,
+.coffre-bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+}
+.partage-bandeau[hidden],
+.partage-migration[hidden],
+.coffre-bandeau[hidden] {
+  display: none;
+}
+
+/* Vault: a calm line, its own colour (never red). */
+.coffre-bandeau {
+  background: color-mix(in srgb, var(--coffre) 12%, transparent);
+  color: var(--texte);
+}
+.coffre-symbole {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--coffre) 20%, transparent);
+  color: var(--coffre);
+}
+.coffre-bandeau[data-etat="ouvert"] .coffre-symbole {
+  background: var(--accent-doux);
+  color: var(--accent);
+}
+.coffre-etat {
+  flex: 1;
+  min-width: 0;
+  font-weight: 550;
+}
+.coffre-bandeau .coffre-action {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--trait-fort);
+  border-radius: 999px;
+  background: none;
+  color: var(--texte);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.coffre-bandeau .coffre-action:hover {
+  background: var(--survol);
+}
+
+/* --- Composer -------------------------------------------------------------------------------- */
 .partage-ajout {
   display: grid;
-  gap: var(--espace-2, 8px);
+  gap: 10px;
+}
+.partage-composeur {
+  display: grid;
+  border: 1px solid var(--trait);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--fond) 55%, transparent);
+  transition:
+    border-color 180ms,
+    box-shadow 180ms;
+}
+.partage-composeur:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 .partage-champ {
+  display: block;
   width: 100%;
-  min-height: 84px;
-  box-sizing: border-box;
-  resize: vertical;
+  margin: 0;
+  padding: 14px 16px 6px;
+  border: 0;
+  background: none;
+  color: var(--texte);
   font: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  resize: none;
+  outline: none;
+}
+#partage-champ {
+  min-height: 3.6em;
+  max-height: 40vh;
+  field-sizing: content;
+}
+.partage-champ::placeholder {
+  color: color-mix(in srgb, var(--texte-secondaire) 80%, transparent);
+}
+.partage-extras {
+  display: grid;
+  gap: 6px;
+  margin: 2px 12px 4px;
+}
+.partage-extras[hidden] {
+  display: none;
+}
+@starting-style {
+  .partage-extras:not([hidden]) {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+.partage-extras {
+  transition:
+    opacity 200ms,
+    translate 260ms var(--glisse);
+}
+.partage-extras .partage-champ {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--creux);
+  font-size: 0.875rem;
+}
+.partage-champ--description {
+  min-height: 3.2em;
+  field-sizing: content;
+  max-height: 30vh;
 }
 .partage-ajout-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--espace-2, 8px);
+  gap: 2px;
+  padding: 6px 6px 6px 8px;
 }
-.partage-ajout-actions .bouton {
-  min-height: 44px;
+.partage-outil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms;
+}
+.partage-outil:hover,
+.partage-outil[aria-expanded="true"] {
+  background: var(--survol);
+  color: var(--texte);
 }
 .partage-compte {
-  margin-right: auto;
-  font-size: 12px;
-  opacity: 0.7;
+  margin-left: auto;
+  padding: 0 8px;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.partage-envoyer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  margin-left: auto;
+  padding: 0 14px 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-texte);
+  font-size: 0.875rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--ressort),
+    filter 160ms,
+    opacity 160ms;
+}
+.partage-compte:not(:empty) + .partage-envoyer {
+  margin-left: 0;
+}
+.partage-envoyer:hover {
+  filter: brightness(1.06);
+}
+.partage-envoyer:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.partage-envoyer:hover .icone {
+  transform: translateY(-1px);
+}
+.partage-envoyer .icone {
+  transition: transform 220ms var(--ressort);
+}
+.partage-envoyer:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Options under the composer: how long it stays, and the vault. */
+.partage-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 0 2px;
+}
+.partage-option-duree {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.partage-option-libelle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.partage-durees {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--creux);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.partage-durees::-webkit-scrollbar {
+  display: none;
+}
+.partage-duree {
+  flex: none;
+  min-width: 32px;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms;
+}
+.partage-duree:hover {
+  color: var(--texte);
+}
+.partage-duree[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
+}
+.partage-chiffrer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+  font-weight: 550;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 160ms,
+    color 160ms,
+    border-color 160ms;
+}
+.partage-chiffrer[hidden] {
+  display: none;
+}
+.partage-chiffrer input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.partage-chiffrer:hover {
+  color: var(--texte);
+}
+.partage-chiffrer:has(input:checked) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--coffre) 18%, transparent);
+  color: var(--coffre);
+}
+.partage-chiffrer:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.partage-ajout > .lien-discret {
+  justify-self: start;
+  font-size: 0.8125rem;
 }
 .partage-message {
   margin: 0;
-  font-size: 13px;
-  color: var(--danger, #d64545);
+  color: var(--danger);
+  font-size: 0.8125rem;
 }
 .partage-message[hidden] {
   display: none;
 }
 
+/* --- Items ------------------------------------------------------------------------------------ */
 .partage-liste {
   display: grid;
-  gap: var(--espace-2, 8px);
-  margin: 0;
+  gap: 8px;
+  margin: 4px 0 0;
   padding: 0;
   list-style: none;
 }
 .partage-carte {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px var(--espace-2, 8px);
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface, #fff) 70%, transparent);
-  animation: partage-entree 160ms ease-out;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 2px 12px;
+  padding: 12px 12px 8px;
+  border: 1px solid var(--trait);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  transition:
+    border-color 180ms,
+    background-color 180ms;
+}
+.partage-carte:hover {
+  border-color: var(--trait-fort);
 }
 .partage-carte--epingle {
-  border-color: var(--accent, #3b82f6);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface) 70%);
 }
 .partage-carte--attente {
-  opacity: 0.7;
+  opacity: 0.65;
+}
+.partage-carte--nouvelle {
+  animation: partage-arrivee 520ms var(--ressort) both;
+}
+@keyframes partage-arrivee {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.97);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
 }
 .partage-carte--erreur {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+li.partage-carte--erreur:not(.partage-carte--fichier) {
   grid-template-columns: 1fr auto;
   align-items: center;
-  border-color: color-mix(in srgb, var(--danger, #d64545) 60%, transparent);
-  background: color-mix(in srgb, var(--danger, #d64545) 10%, transparent);
+  padding: 12px;
 }
-.partage-squelette {
-  height: 64px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, currentColor 10%, transparent),
-    transparent
-  );
-  background-size: 200% 100%;
-  animation: partage-squelette 1.2s linear infinite;
-}
-.partage-texte {
+
+/* The square on the left: the kind of item, or the picture of a file. */
+.partage-vignette {
+  grid-row: 1 / span 2;
   display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 11px;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+}
+.partage-vignette--lien {
+  background: var(--accent-doux);
+  color: var(--accent);
+}
+.partage-vignette--coffre {
+  background: color-mix(in srgb, var(--coffre) 16%, transparent);
+  color: var(--coffre);
+}
+.partage-vignette--fichier {
+  background: color-mix(in srgb, var(--attention) 13%, transparent);
+  color: var(--attention);
+}
+.partage-vignette-bouton {
+  grid-row: 1 / span 2;
+  padding: 0;
+  border: 0;
+  border-radius: 11px;
+  background: none;
+  cursor: zoom-in;
+}
+.partage-carte--fichier .partage-vignette,
+.partage-carte--fichier .partage-vignette-bouton {
+  width: 48px;
+  height: 48px;
+}
+.partage-carte--fichier {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+.partage-miniature {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: partage-fondu 240ms ease both;
+}
+@keyframes partage-fondu {
+  from {
+    opacity: 0;
+  }
+}
+
+.partage-texte {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  display: grid;
+  gap: 2px;
   min-width: 0;
+  padding-top: 1px;
+}
+/* An address on one line, cut at the end: the domain above already says where it goes. */
+.partage-detail.partage-detail--url {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.partage-titre,
+.partage-nom,
+.partage-lien {
+  display: block;
+  color: var(--texte);
+  font-size: 0.9375rem;
+  font-weight: 620;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.partage-lien {
+  text-decoration: none;
+}
+.partage-lien:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .partage-apercu,
 .partage-detail {
@@ -199,170 +733,265 @@
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
+.partage-apercu {
+  color: var(--texte);
+  line-height: 1.45;
+}
+.partage-titre + .partage-apercu {
+  color: var(--texte-secondaire);
+}
 .partage-detail {
-  font-size: 12px;
-  opacity: 0.7;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
 }
-.partage-lien {
-  font-weight: 600;
-  color: inherit;
-  overflow-wrap: anywhere;
+.partage-chiffre {
+  color: var(--texte-secondaire);
+  font-style: italic;
 }
-.partage-meta {
-  grid-column: 2;
-  font-size: 12px;
-  opacity: 0.7;
-}
-.partage-actions {
-  grid-column: 1 / -1;
+.partage-pied {
+  grid-column: 2 / -1;
+  grid-row: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin-top: 4px;
 }
-.partage-action {
-  min-height: 44px;
-  padding: 0 12px;
+.partage-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+}
+.partage-meta .icone {
+  flex: none;
+}
+.partage-meta .icone {
+  color: var(--accent);
+}
+.partage-expire {
   display: inline-flex;
   align-items: center;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  border-radius: 10px;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.partage-expire--urgent {
+  background: color-mix(in srgb, var(--attention) 16%, transparent);
+  color: var(--attention);
+}
+
+/* Actions: the main ones in view, the others in a drawer behind "Plus". */
+.partage-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  margin: 6px -4px 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--trait);
+}
+.partage-actions-ligne,
+.partage-tiroir {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+.partage-tiroir {
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--creux);
+  transition:
+    opacity 180ms,
+    translate 240ms var(--glisse);
+}
+@starting-style {
+  .partage-tiroir:not([hidden]) {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+.partage-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 9px;
   background: none;
-  color: inherit;
+  color: var(--texte-secondaire);
   font: inherit;
-  font-size: 13px;
+  font-size: 0.8125rem;
+  font-weight: 560;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms;
 }
-.partage-action--danger {
-  color: var(--danger, #d64545);
+.partage-action:hover {
+  background: var(--survol);
+  color: var(--texte);
 }
-.partage-vide {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  padding: var(--espace-5, 24px) 0;
-  text-align: center;
-  opacity: 0.8;
+.partage-action:active {
+  transform: scale(0.97);
 }
-.partage-vide-icone {
-  font-size: 40px;
+.partage-action--plus {
+  margin-left: auto;
+  width: 34px;
+  padding: 0;
+  justify-content: center;
 }
-.partage-vide p {
-  margin: 0;
+.partage-action--plus[aria-expanded="true"] {
+  background: var(--survol);
+  color: var(--texte);
 }
-.partage-aucun {
-  font-size: 12px;
+.partage-action--danger,
+.partage-action--danger:hover {
+  color: var(--danger);
 }
-
-@keyframes partage-entree {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
+.partage-action--danger:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
-@keyframes partage-squelette {
-  to {
-    background-position: -200% 0;
-  }
+.partage-action--fait,
+.partage-action--fait:hover {
+  color: var(--accent);
 }
-@media (prefers-reduced-motion: reduce) {
-  .partage,
-  .partage-carte,
-  .partage-squelette {
-    animation: none;
-  }
-}
-:root[data-animations-reduites] .partage,
-:root[data-animations-reduites] .partage-carte {
-  animation: none;
+/* A hidden action stays hidden (the class sets display and would override the attribute). */
+.partage-action[hidden],
+.partage-actions [hidden] {
+  display: none !important;
 }
 
-/* --- Files and images (V4.25) ------------------------------------------------------------ */
-.partage-quota {
-  display: grid;
-  gap: 4px;
-  font-size: 12px;
-}
-.partage-quota[hidden] {
-  display: none;
-}
-.partage-quota-piste {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 3px;
-  background: color-mix(in srgb, currentColor 14%, transparent);
-}
-.partage-quota-barre {
-  height: 100%;
-  width: 0;
-  background: var(--accent, #3b82f6);
-  transition: width 200ms;
-}
-.partage-quota[data-niveau="avertissement"] .partage-quota-barre {
-  background: #e08a00;
-}
-.partage-quota[data-niveau="plein"] .partage-quota-barre {
-  background: var(--danger, #d64545);
-}
-.partage-carte--fichier {
-  grid-template-columns: 56px 1fr;
-  align-items: center;
-}
-.partage-vignette {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 10px;
-  background: color-mix(in srgb, currentColor 8%, transparent);
-  font-size: 28px;
-}
-.partage-miniature {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.partage-nom {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
+/* Upload in progress. */
 .partage-progres {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 4px;
 }
 .partage-progres-piste {
   flex: 1;
   height: 4px;
   overflow: hidden;
   border-radius: 2px;
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  background: var(--trait);
 }
 .partage-progres-barre {
   height: 100%;
-  background: var(--accent, #3b82f6);
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 200ms linear;
 }
 .partage-pourcent {
-  font-size: 12px;
   min-width: 36px;
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
+
+/* Loading and empty states. */
+.partage-squelette {
+  height: 92px;
+  border-color: transparent;
+  background: linear-gradient(90deg, var(--creux) 0%, var(--survol) 50%, var(--creux) 100%);
+  background-size: 200% 100%;
+  animation: partage-squelette 1.4s ease-in-out infinite;
+}
+.partage-squelette:nth-child(2) {
+  animation-delay: 120ms;
+}
+.partage-squelette:nth-child(3) {
+  animation-delay: 240ms;
+}
+@keyframes partage-squelette {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+.partage-vide {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 36px 16px 24px;
+  color: var(--texte-secondaire);
+  text-align: center;
+}
+.partage-vide-icone {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
+  border: 1.5px dashed var(--trait-fort);
+  border-radius: 20px;
+  color: var(--accent);
+}
+.partage-vide-icone .icone {
+  animation: partage-va-vient 2.8s var(--glisse) infinite;
+}
+@keyframes partage-va-vient {
+  0%,
+  100% {
+    transform: translateX(-3px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+}
+.partage-vide p {
+  max-width: 30ch;
+  margin: 0;
+}
+.partage-aucun {
+  color: var(--texte);
+  font-size: 0.9375rem;
+  font-weight: 620;
+}
+.partage-vide-astuce {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+.partage-plus {
+  justify-self: center;
+  border-radius: 999px;
+}
+
+/* Drop zone while a file is dragged over the sheet. */
 .partage-depot {
   position: absolute;
-  inset: 8px;
+  inset: 10px;
   z-index: 5;
   display: grid;
   place-items: center;
-  border: 2px dashed var(--accent, #3b82f6);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--surface, #fff) 85%, transparent);
-  font-weight: 600;
+  border: 2px dashed var(--accent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 650;
   pointer-events: none;
 }
 .partage-depot[hidden] {
   display: none;
 }
+
+/* --- Image viewer ---------------------------------------------------------------------------- */
 .partage-visionneuse {
   position: fixed;
   inset: 0;
@@ -370,82 +999,139 @@
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
-  background: rgba(0, 0, 0, 0.88);
-  color: #fff;
-  touch-action: pinch-zoom;
-}
-.partage-visionneuse {
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgb(8 12 10 / 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff;
+  touch-action: pinch-zoom;
+  animation: partage-fondu 200ms ease both;
 }
 .partage-visionneuse .partage-fermer {
   justify-self: end;
-  margin: 8px max(8px, env(safe-area-inset-right, 0px)) 0 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  width: 44px;
+  height: 44px;
+  margin: 10px max(10px, env(safe-area-inset-right, 0px)) 0 0;
+  background: rgb(255 255 255 / 0.14);
   color: #fff;
-  font-size: 30px;
-  line-height: 1;
 }
 .partage-visionneuse-image {
   max-width: 100%;
   max-height: 100%;
   min-height: 0;
   object-fit: contain;
+  animation: partage-zoom 320ms var(--ressort) both;
+}
+@keyframes partage-zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 .partage-visionneuse-legende {
   margin: 0;
   padding: 12px;
-  font-size: 13px;
+  font-size: 0.8125rem;
+  opacity: 0.85;
 }
 
-/* V4.26 — Vault: calm tones (blue/green), red only for the destruction. */
-.coffre-bandeau {
+/* --- Vault dialogs and settings (V4.26) ------------------------------------------------------- */
+.coffre-action {
+  min-height: 44px;
+}
+.coffre-ligne {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  margin: 0.5rem 0;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, #2f7d6d 14%, transparent);
-  font-size: 0.9rem;
 }
-.coffre-action { min-height: 44px; }
-.partage-chiffrer { display: flex; align-items: center; gap: 0.25rem; min-height: 44px; font-size: 0.9rem; }
-.partage-chiffre { opacity: 0.8; font-style: italic; }
-.coffre-ligne { display: flex; align-items: center; gap: 0.5rem; }
-.coffre-champ { flex: 1; min-height: 44px; }
+.coffre-champ {
+  flex: 1;
+  min-height: 44px;
+}
 .coffre-cle {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border: 2px dashed var(--coffre);
+  border-radius: 12px;
   font-family: ui-monospace, monospace;
   font-size: 1.15rem;
   letter-spacing: 0.05em;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
-  border: 2px dashed currentColor;
-  border-radius: 0.5rem;
   text-align: center;
   user-select: all;
 }
-.coffre-jauge, .coffre-message { font-size: 0.9rem; margin: 0.25rem 0; }
-.coffre-message--erreur { color: #b3402a; }
-.coffre-reglages { display: grid; gap: 0.5rem; }
-.coffre-zone-danger { margin-top: 0.75rem; padding: 0.75rem; border: 1px solid #b3402a; border-radius: 0.5rem; }
+.coffre-jauge,
+.coffre-message {
+  margin: 0.25rem 0;
+  font-size: 0.875rem;
+}
+.coffre-message--erreur {
+  color: var(--danger);
+}
+.coffre-reglages {
+  display: grid;
+  gap: 0.5rem;
+}
+.coffre-zone-danger {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  border-radius: 12px;
+}
 
-/* V4.27 — expiry */
-.partage-durees { display: flex; gap: 0.25rem; overflow-x: auto; scrollbar-width: none; margin: 0.25rem 0; }
-.partage-durees::-webkit-scrollbar { display: none; }
-.partage-duree { flex: none; min-height: 44px; padding: 0 0.75rem; border-radius: 999px; border: 1px solid currentColor; background: transparent; color: inherit; opacity: 0.7; }
-.partage-duree[aria-checked="true"] { opacity: 1; font-weight: 600; background: color-mix(in srgb, currentColor 12%, transparent); }
-.partage-expire { font-size: 0.8rem; opacity: 0.75; margin-left: auto; }
-.partage-expire--urgent { color: #c0620f; opacity: 1; font-weight: 600; }
-.partage-migration { margin: 0.5rem 0; font-size: 0.9rem; }
-@media (prefers-reduced-motion: no-preference) { .partage-carte { transition: opacity 200ms; } }
+/* --- Touch screens: 44 px targets -------------------------------------------------------------- */
+@media (pointer: coarse) {
+  .partage-action,
+  .partage-outil,
+  .partage-fermer,
+  .partage-entete-bouton {
+    min-height: 44px;
+  }
+  .partage-action--plus,
+  .partage-outil,
+  .partage-fermer {
+    min-width: 44px;
+  }
+  .partage-envoyer {
+    height: 44px;
+  }
+  .partage-duree {
+    height: 36px;
+  }
+  .partage-chiffrer {
+    height: 38px;
+  }
+}
 
-/* A hidden action stays hidden (the class sets display and would override the attribute). */
-.partage-action[hidden],
-.partage-actions [hidden] {
-  display: none !important;
+/* Narrow phones: labels of the tools go, the icons stay. */
+@media (max-width: 379px) {
+  .partage-outil-libelle,
+  .partage-entete-bouton span {
+    display: none;
+  }
+  .partage-entete-bouton {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .partage-option-libelle span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .partage,
+  .partage-carte,
+  .partage-tiroir,
+  .partage-extras {
+    transition: none;
+  }
+  .partage-carte--nouvelle,
+  .partage-squelette,
+  .partage-pastille,
+  .partage-vide-icone .icone,
+  .partage-visionneuse,
+  .partage-visionneuse-image {
+    animation: none;
+  }
 }

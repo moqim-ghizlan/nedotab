@@ -40,6 +40,20 @@
   --ombre: 0 1px 2px rgb(29 42 35 / 0.08), 0 6px 18px rgb(29 42 35 / 0.1);
   --ombre-forte: 0 2px 6px rgb(29 42 35 / 0.12), 0 18px 48px rgb(29 42 35 / 0.22);
   --duree: 120ms;
+
+  /* Panels (sharing space, settings, assistant, V4.30): derived from the colours above. */
+  --verre: color-mix(in srgb, var(--surface) 90%, transparent);
+  --trait: color-mix(in srgb, var(--texte) 10%, transparent);
+  --trait-fort: color-mix(in srgb, var(--texte) 18%, transparent);
+  --creux: color-mix(in srgb, var(--texte) 4.5%, transparent);
+  --survol: color-mix(in srgb, var(--texte) 8%, transparent);
+  --accent-doux: color-mix(in srgb, var(--accent) 15%, transparent);
+  --coffre: #4a5a9c;
+  --attention: #b0610f;
+  --ressort: cubic-bezier(0.2, 0.9, 0.25, 1.04);
+  --glisse: cubic-bezier(0.32, 0.72, 0, 1);
+  --panneau-marge: 12px;
+  --panneau-rayon: 22px;
 }
 
 /* Dark theme: chosen in the settings (data-theme), or the system's when none is set yet. */
@@ -54,6 +68,8 @@
   --accent: #78c2aa;
   --accent-texte: #0f1c16;
   --danger: #f08a7a;
+  --coffre: #9fb0f0;
+  --attention: #f0a35c;
   --voile: rgb(0 0 0 / 0.55);
   --ombre: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
   --ombre-forte: 0 2px 6px rgb(0 0 0 / 0.35), 0 18px 48px rgb(0 0 0 / 0.5);
@@ -74,6 +90,8 @@
     --accent: #78c2aa;
     --accent-texte: #0f1c16;
     --danger: #f08a7a;
+    --coffre: #9fb0f0;
+    --attention: #f0a35c;
     --voile: rgb(0 0 0 / 0.55);
     --ombre: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 18px rgb(0 0 0 / 0.3);
     --ombre-forte: 0 2px 6px rgb(0 0 0 / 0.35), 0 18px 48px rgb(0 0 0 / 0.5);

@@ -1,5 +1,6 @@
 import { MESSAGE_MAX, compteurVisible } from "../../core/chat.js";
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
 
 const LIGNES_MAX = 6;
 
@@ -22,12 +23,24 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     autocomplete: "off",
   });
   const compteur = el("span", { class: "chat-compteur", "aria-hidden": "true", hidden: true });
-  const bouton = el("button", { type: "submit", class: "chat-envoyer", texte: "Envoyer" });
+  // V4.30: a round button inside the field, an arrow that becomes a square while waiting. Its
+  // text ("Envoyer" / "Arrêter") stays the button's name, read but not shown.
+  const libelle = el("span", { class: "chat-envoyer-libelle", texte: "Envoyer" });
+  const symbole = el(
+    "span",
+    { class: "chat-envoyer-symbole", "aria-hidden": "true" },
+    icone("envoyer"),
+  );
+  const bouton = el(
+    "button",
+    { type: "submit", class: "chat-envoyer", title: "Envoyer" },
+    symbole,
+    libelle,
+  );
   const racine = el(
     "form",
     { class: "chat-saisie", novalidate: true },
-    el("div", { class: "chat-zone-boite" }, zone, compteur),
-    bouton,
+    el("div", { class: "chat-zone-boite" }, zone, compteur, bouton),
   );
   let attente = false;
   let actif = true;
@@ -46,6 +59,7 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     const texte = zone.value.trim();
     if (!texte || attente) return;
     zone.value = "";
+    racine.classList.remove("chat-saisie--remplie");
     ajuster();
     surEnvoyer(texte);
   }
@@ -55,7 +69,10 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     if (attente) surArreter();
     else envoyer();
   });
-  zone.addEventListener("input", ajuster);
+  zone.addEventListener("input", () => {
+    ajuster();
+    racine.classList.toggle("chat-saisie--remplie", zone.value.trim() !== "");
+  });
   zone.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" || e.shiftKey || e.isComposing || toucheSeule()) return;
     e.preventDefault();
@@ -70,6 +87,7 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     /** Puts a text in the field (a question that could not be sent right away). */
     remplir(texte) {
       zone.value = texte;
+      racine.classList.toggle("chat-saisie--remplie", texte.trim() !== "");
       ajuster();
       zone.focus();
     },
@@ -82,7 +100,10 @@ export function creerSaisie({ surEnvoyer, surArreter }) {
     /** While waiting, the button stops the wait instead of sending. */
     definirAttente(oui) {
       attente = oui;
-      bouton.textContent = oui ? "Arrêter" : "Envoyer";
+      libelle.textContent = oui ? "Arrêter" : "Envoyer";
+      bouton.title = oui ? "Arrêter la réponse" : "Envoyer";
+      if (bouton.classList.contains("chat-envoyer--arret") !== oui)
+        symbole.replaceChildren(icone(oui ? "arret" : "envoyer"));
       bouton.classList.toggle("chat-envoyer--arret", oui);
       bouton.disabled = oui ? false : !actif;
     },

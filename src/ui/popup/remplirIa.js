@@ -37,6 +37,9 @@ export function creerRemplissageIa({
           ? ((await plateforme.lireExtrait?.(onglet.url).catch(() => null)) ?? null)
           : null;
         const fb = await charger();
+        // A fresh window has not restored the saved session yet: wait for it, or the server
+        // sees nobody ("Connectez-vous pour utiliser l'IA").
+        await fb.obtenirAuth?.().authStateReady?.();
         const r = await fb.appelerIa("iaProposerSite", {
           url: onglet.url,
           titre: onglet.titre,

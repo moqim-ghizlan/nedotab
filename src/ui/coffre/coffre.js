@@ -17,6 +17,7 @@ import {
 import { creerSessionCoffre, delaiApresErreurs } from "../../core/sessionCoffre.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
 import { toast } from "../toast.js";
 
 /**
@@ -33,13 +34,15 @@ export function creerCoffreUI({ charger, uid, session = creerSessionCoffre() }) 
 
   const etat = el("span", { class: "coffre-etat", role: "status", "aria-live": "polite" });
   const action = el("button", { type: "button", class: "lien-discret coffre-action" });
-  const bandeau = el("p", { class: "coffre-bandeau", hidden: true }, etat, action);
+  const symbole = el("span", { class: "coffre-symbole", "aria-hidden": "true" });
+  const bandeau = el("p", { class: "coffre-bandeau", hidden: true }, symbole, etat, action);
   const case_ = el("input", { type: "checkbox", id: "partage-chiffrer" });
   const caseChiffrer = el(
     "label",
-    { class: "partage-chiffrer", hidden: true },
+    { class: "partage-chiffrer", hidden: true, title: "Chiffrer avec le vault avant l'envoi" },
     case_,
-    el("span", { texte: " Chiffrer (vault)" }),
+    icone("cadenas", { taille: 15 }),
+    el("span", { texte: "Chiffrer" }),
   );
   let surChangement = () => {};
 
@@ -52,11 +55,15 @@ export function creerCoffreUI({ charger, uid, session = creerSessionCoffre() }) 
     if (!meta) return;
     if (session.estDeverrouille()) {
       const min = session.minutesRestantes();
-      etat.textContent = `Vault ouvert — se verrouille dans ${min} min`;
-      action.textContent = "Verrouiller maintenant";
+      bandeau.dataset.etat = "ouvert";
+      symbole.replaceChildren(icone("cadenasOuvert", { taille: 16 }));
+      etat.textContent = `Vault ouvert · se verrouille dans ${min} min`;
+      action.textContent = "Verrouiller";
       action.onclick = () => session.verrouiller();
     } else {
-      etat.textContent = "Vault verrouillé 🔒";
+      bandeau.dataset.etat = "verrouille";
+      symbole.replaceChildren(icone("cadenas", { taille: 16 }));
+      etat.textContent = "Vault verrouillé";
       action.textContent = "Déverrouiller";
       action.onclick = () => demanderDeverrouillage();
     }

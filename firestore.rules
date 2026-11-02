@@ -124,7 +124,10 @@ service cloud.firestore {
     match /users/{uid}/espacePartage/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre', 'expireLe'])
+        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre', 'expireLe', 'description'])
+        && (!('description' in request.resource.data)
+            || (request.resource.data.description is string
+                && request.resource.data.description.size() <= 2000))
         && chiffreValide(request.resource.data)
         && request.resource.data.type in ['texte', 'lien', 'fichier']
         && (request.resource.data.type == 'fichier'

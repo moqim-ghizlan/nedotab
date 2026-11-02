@@ -1,7 +1,9 @@
 import { A } from "../../core/actions.js";
 import { dossiersCibles, emplacementValide, siteExistant } from "../../core/ajoutRapide.js";
 import { couleurDepuisTexte } from "../../core/couleurs.js";
+import { ajouter as ajouterOperation } from "../../core/fileOperations.js";
 import { creerSite } from "../../core/modele.js";
+import { decrire } from "../../core/rejeu.js";
 import { DESCRIPTION_MAX, tagsUtilises } from "../../core/tags.js";
 import { domaine } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
@@ -104,7 +106,10 @@ export async function ecranAjout({
     iconeInitiale: { type: "lettre", couleur: couleurDepuisTexte(onglet.url) },
     lireSite: () => ({ titre: champNom.value, url: onglet.url }),
     onChange: () => {},
+    modeInitial: "auto",
   });
+  // Automatic by default: the detection runs now; the letter stays the fallback.
+  const detectee = editeurIcone.redetecter().catch(() => {});
   const hors = typeof navigator !== "undefined" && navigator.onLine === false;
   const boutonIa = el("button", {
     type: "button",
@@ -167,13 +172,27 @@ export async function ecranAjout({
     if (!peutEcrire) return dire("Le stockage n'est pas lisible : ouvrez NedoTab pour le réparer.");
     ia.annuler(); // an answer arriving after the save must change nothing
     const parentId = emplacementValide(grille(), lieu.value || null);
-    await Promise.race([recherchee, new Promise((ok) => setTimeout(ok, 1500))]);
+    await Promise.race([
+      Promise.all([recherchee, detectee]),
+      new Promise((ok) => setTimeout(ok, 1500)),
+    ]);
     const site = creerSite({
       titre: champNom.value.trim() || domaine(onglet.url),
       url: onglet.url,
       icone: editeurIcone.lire(),
     });
-    store.envoyer({ type: A.SITE_AJOUTER, site, parentId });
+    // Account mode: the sync of the open page only sees operations, never a reloaded state.
+    const operations = [];
+    const envoyer = (action) => {
+      operations.push({
+        idOp: globalThis.crypto.randomUUID(),
+        action,
+        creeLe: Date.now(),
+        ...decrire(store.lire(), action),
+      });
+      store.envoyer(action);
+    };
+    envoyer({ type: A.SITE_AJOUTER, site, parentId });
     const tags = champTags.lire();
     const desc = description.value.trim();
     if (tags.length || desc) {
@@ -182,7 +201,7 @@ export async function ecranAjout({
         propositionIa &&
         (!tags.length || propositionIa.tags) &&
         (!desc || propositionIa.description);
-      store.envoyer(
+      envoyer(
         garde
           ? {
               type: A.SITE_DEFINIR_IA,
@@ -201,9 +220,18 @@ export async function ecranAjout({
     }
     try {
       await stockage.sauvegarder(store.lire());
+      const synchro = await plateforme.preferences.lire("synchro").catch(() => null);
+      if (synchro?.uid) {
+        let file = [];
+        for (const operation of operations) file = ajouterOperation(file, operation).file;
+        await plateforme.operations.ecrire(globalThis.crypto.randomUUID(), {
+          uid: synchro.uid,
+          file,
+        });
+      }
       await plateforme.preferences.ecrire("dernierDossierAjout", parentId);
-    } catch {
-      return dire("Enregistrement impossible. Réessayez.");
+    } catch (e) {
+      return dire(`Enregistrement impossible : ${e?.message ?? "réessayez"}.`);
     }
     const chemin = cibles.find((c) => c.id === parentId)?.chemin ?? "Accueil";
     racine.replaceChildren(
@@ -217,7 +245,7 @@ export async function ecranAjout({
     class: "bouton bouton--principal",
     texte: "Ajouter",
     disabled: !!existant,
-    onclick: () => enregistrer(),
+    onclick: () => enregistrer().catch((e) => dire(`Erreur : ${e?.message ?? e}`)),
   });
   const bandeauDoublon = existant
     ? el(
