@@ -90,3 +90,9 @@ export {
   reconcilier as reconcilierPartage,
   supprimerFichier as supprimerFichierPartage,
 } from "./espacePartageFichiers.js";
+export {
+  creerMeta as creerMetaCoffre,
+  detruireCoffre,
+  lireMeta as lireMetaCoffre,
+  majEnveloppes as majEnveloppesCoffre,
+} from "./coffre.js";

@@ -150,7 +150,9 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     "aria-label": "Taille des cartes",
     value: String(store.lire().reglagesAppareil?.tailleTuiles ?? 100),
   });
-  tailleTuiles.addEventListener("input", () => modifier({ tailleTuiles: Number(tailleTuiles.value) }));
+  tailleTuiles.addEventListener("input", () =>
+    modifier({ tailleTuiles: Number(tailleTuiles.value) }),
+  );
 
   // Device-only (V2.11): the home grid in pages, or one grid that scrolls.
   const affichageAccueil = segments(
@@ -168,9 +170,14 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
 
   // Device-only: cards with a looping mini demo of each effect (5 prototypes each).
   const cartesAnimation = (libelle, type, options, valeur, onChoix) => {
-    const groupe = el("div", { class: "demos-animation", role: "radiogroup", "aria-label": libelle });
+    const groupe = el("div", {
+      class: "demos-animation",
+      role: "radiogroup",
+      "aria-label": libelle,
+    });
     const maj = (v) => {
-      for (const b of groupe.children) b.setAttribute("aria-checked", String(b.dataset.valeur === v));
+      for (const b of groupe.children)
+        b.setAttribute("aria-checked", String(b.dataset.valeur === v));
     };
     const page = (classe) =>
       el("span", { class: `demo-page ${classe}` }, ...[1, 2, 3, 4].map(() => el("i")));
@@ -345,10 +352,15 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     return { cle, bouton, ligne, inverse };
   });
 
-  const CLES_INTERFACE = ["gardeDossierOuvert", "animationsReduites", "masquerRecherche", "masquerTitres", "confirmerSuppression"];
+  const CLES_INTERFACE = [
+    "gardeDossierOuvert",
+    "animationsReduites",
+    "masquerRecherche",
+    "masquerTitres",
+    "confirmerSuppression",
+  ];
   const CLES_LIENS = ["nouvelOnglet", "rechercheNouvelOnglet"];
-  const ligneDes = (cles) =>
-    interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
+  const ligneDes = (cles) => interrupteurs.filter((i) => cles.includes(i.cle)).map((i) => i.ligne);
 
   // Device-only (V4.5.7): shape of the icons.
   const formeIcones = segments(
@@ -396,7 +408,9 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     "aria-label": "Taille du texte des titres",
     value: String(store.lire().reglagesAppareil?.tailleTitres ?? 100),
   });
-  tailleTitres.addEventListener("input", () => modifier({ tailleTitres: Number(tailleTitres.value) }));
+  tailleTitres.addEventListener("input", () =>
+    modifier({ tailleTitres: Number(tailleTitres.value) }),
+  );
 
   // Device-only (V4.5.11): ombre sous les icônes.
   const ombreIcones = segments(
@@ -431,7 +445,9 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     "aria-label": "Opacité de la fenêtre de dossier",
     value: String(store.lire().reglagesAppareil?.opaciteDossier ?? 100),
   });
-  opaciteDossier.addEventListener("input", () => modifier({ opaciteDossier: Number(opaciteDossier.value) }));
+  opaciteDossier.addEventListener("input", () =>
+    modifier({ opaciteDossier: Number(opaciteDossier.value) }),
+  );
 
   // Device-only: a short vibration when an icon is picked up and dropped.
   const retourHaptique = el("input", {
@@ -776,7 +792,13 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             ]
           : []),
       ),
-      section("Interface", ...ligneDes(CLES_INTERFACE), ligneHaptique, libelleAppareil("Heure et date"), affichageHeure.groupe),
+      section(
+        "Interface",
+        ...ligneDes(CLES_INTERFACE),
+        ligneHaptique,
+        libelleAppareil("Heure et date"),
+        affichageHeure.groupe,
+      ),
       curseurRecherche
         ? section(
             "Nouvel onglet",
@@ -885,7 +907,8 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 onclick: async () => {
                   const ok = await demander({
                     titre: "Vider l'espace de partage",
-                    message: "Tous les textes et liens partagés seront supprimés, sur tous vos appareils. Cette action est définitive.",
+                    message:
+                      "Tous les textes et liens partagés seront supprimés, sur tous vos appareils. Cette action est définitive.",
                     boutons: [
                       { libelle: "Annuler", valeur: false },
                       { libelle: "Tout supprimer", valeur: true, principal: true, danger: true },
@@ -893,7 +916,9 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                   });
                   if (!ok) return;
                   try {
-                    await (await chargerFirebase()).viderLePartage(session.compte.lire().profil.uid);
+                    await (
+                      await chargerFirebase()
+                    ).viderLePartage(session.compte.lire().profil.uid);
                     toast("Espace de partage vidé");
                   } catch {
                     toast("Impossible pour l'instant (hors ligne ?).", { type: "erreur" });
@@ -902,6 +927,18 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
               }),
             ),
           ),
+          // V4.26: the vault (end-to-end encryption of sharing-space items).
+          session.partage?.coffre
+            ? section(
+                "Sécurité — Vault",
+                el("p", {
+                  class: "reglages-note",
+                  texte:
+                    "Chiffre des éléments de l'espace de partage sur l'appareil. Le mot de passe et la clé de secours ne sont jamais envoyés ; sans eux, le contenu est irrécupérable. Copier un texte du vault tente d'effacer le presse-papiers après 30 s (sans garantie). Jamais envoyé à l'assistant IA.",
+                }),
+                session.partage.coffre.sectionReglages(),
+              )
+            : null,
           compteUi?.confidentialite,
           compteUi?.danger,
         ]

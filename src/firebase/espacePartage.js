@@ -64,10 +64,12 @@ export function ecouterCompteur(uid, rappel, surErreur) {
  * Adds an element: one batch (element + counter). @returns {Promise<string>} its id.
  * The batch is queued offline and sent once, when the network is back.
  */
-export async function ajouter(uid, { type, contenu, titre, appareil = appareilCourant(), epingle = false }) {
+export async function ajouter(uid, { type, contenu, titre, appareil = appareilCourant(), epingle = false, chiffre = false }, chiffrer = null) {
   const ref = doc(elements(uid)); // automatic id: no clash between devices
   const lot = writeBatch(db());
-  lot.set(ref, { type, contenu, titre, appareil, epingle, creeLe: serverTimestamp() });
+  // V4.26: the encryption needs the id (it is part of the authenticated data), hence the callback.
+  const corps = chiffre && chiffrer ? { contenu: await chiffrer(ref.id, { contenu, titre }), titre: "", chiffre: true } : { contenu, titre };
+  lot.set(ref, { type, ...corps, appareil, epingle, creeLe: serverTimestamp() });
   lot.set(meta(uid), { nb: increment(1) }, { merge: true });
   await lot.commit();
   return ref.id;

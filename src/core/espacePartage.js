@@ -132,6 +132,8 @@ export function lireElement(id, brut, enAttente = false) {
     titre: typeof brut.titre === "string" ? brut.titre : "",
     appareil: typeof brut.appareil === "string" ? brut.appareil : "",
     epingle: brut.epingle === true,
+    // V4.26: `contenu` is then an encrypted block (readable only with the vault key).
+    chiffre: brut.chiffre === true,
     creeLe,
     enAttente,
   };
@@ -158,6 +160,8 @@ export const estPlein = (nb) => nb >= LIMITE_ELEMENTS;
 /** Export (RGPD): content, type, date and device of each element. */
 export function exporterElements(elements) {
   return elements.map((e) => ({
+    // V4.26: an encrypted item is exported as is (unreadable), flagged `chiffre`.
+    ...(e.chiffre ? { chiffre: true } : {}),
     type: e.type,
     contenu: e.contenu,
     titre: e.titre,

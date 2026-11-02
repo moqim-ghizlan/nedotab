@@ -2,6 +2,26 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.26.0] - 2026-11-02
+
+### Ajouté
+
+- **Vault** : chiffrement de bout en bout, **sur l'appareil**, des textes et liens de l'espace de partage (contenu **et** titre). Algorithmes : PBKDF2-SHA-256 (600 000 itérations) + AES-GCM 256 (Web Crypto, aucune dépendance), un seul module (`src/core/coffre.js`). Clé du vault (VK) **aléatoire**, enveloppée par le mot de passe et par une **clé de secours** de 24 symboles ; changer le mot de passe ré-enveloppe la VK sans rien rechiffrer. IV neuf à chaque chiffrement, AAD = `uid:id:v` (un contenu copié ailleurs ne se déchiffre pas), VK importée **non extractable**, format versionné (`v1.<iv>.<données>`, base64url). Normalisation NFKC du mot de passe.
+- **Interface** : assistant de création en 4 écrans (explication, mot de passe + jauge textuelle, clé de secours affichée une fois, retapage de 3 groupes), déverrouillage (œil, « Mot de passe oublié ? » par clé de secours, délai croissant après 5 erreurs), bandeau « Vault verrouillé / ouvert — se verrouille dans N min », case « Chiffrer (vault) » à l'ajout, cartes 🔒 sans aperçu quand verrouillé, verrouillage automatique (inactivité 5–60 min, onglet caché 5 min, manuel, déconnexion), effacement du presse-papiers 30 s après une copie (sans garantie). Réglages → Sécurité — Vault : changer le mot de passe, régénérer la clé, délai, **détruire** (saisie « DÉTRUIRE »).
+- **Règles Firestore** : `users/{uid}/vaultMeta/cle` (propriétaire seul, `create` seulement si absent donc jamais deux VK, champs bornés, `update` limité aux champs d'enveloppe) ; un élément `chiffre: true` doit avoir la forme `v<n>.<iv>.<données>` et un titre vide ; contenu chiffré jusqu'à 110 000 caractères.
+- **Tests** : vecteurs PBKDF2 (RFC 7914) et AES-GCM (NIST), allers-retours (vide, emoji, 20 000 caractères, fichier de 25 Mo), mauvais mot de passe / clé, bit modifié, AAD (autre id, autre uid), 10 000 IV distincts, changement de mot de passe, réinitialisation par clé de secours, NFKC, aucune écriture dans localStorage/sessionStorage/console, minuteurs de verrouillage ; règles d'émulateur.
+- **RGPD** : l'export contient les éléments chiffrés tels quels (`chiffre: true`) ; la suppression du compte supprime `vaultMeta` ; jamais envoyé à l'assistant IA (l'espace de partage n'est lu par aucun module d'IA).
+
+### Décisions du plan prises par défaut (non posées)
+
+Rien n'est chiffré par défaut (case à cocher) ; déverrouillage non retenu sur l'appareil (option « Rester déverrouillé » non faite) ; verrouillage après 15 min ; noms et titres chiffrés ; mot de passe de 12 caractères ou phrase de 4 mots ; export oui.
+
+### Non fait / limites connues
+
+- **Fichiers chiffrés** : les fonctions (`chiffrerFichier` / `dechiffrerFichier`, testées avec 25 Mo) existent mais **ne sont pas branchées** au bouton « Fichier » ; seuls les textes et liens se chiffrent depuis l'interface.
+- Liste des mots de passe courants embarquée : environ 150 entrées (le plan en demandait 200).
+- Mesure PBKDF2 sur un iPhone ancien, vérifications sur iPhone/iPad, revue `/security-review` : **non faites**. Les sauvegardes automatiques ne contiennent pas l'espace de partage.
+
 ## [4.25.1] - 2026-11-02
 
 ### Corrigé

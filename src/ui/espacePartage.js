@@ -19,6 +19,7 @@ import { el } from "./dom.js";
 import { vibrer } from "./haptique.js";
 import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
+import { creerCoffreUI } from "./coffre/coffre.js";
 
 const CLE_VU = "nedotab:partageVu";
 
@@ -35,7 +36,14 @@ const CLE_VU = "nedotab:partageVu";
  * @param {() => string|null} d.uid
  * @param {(texte: string) => Promise<void>} [d.copier]
  */
-export function creerEspacePartage({ store, disponible, charger, uid, copier = copierTexte }) {
+export function creerEspacePartage({
+  store,
+  disponible,
+  charger,
+  uid,
+  copier = copierTexte,
+  coffre = creerCoffreUI({ charger, uid }),
+}) {
   let ouvert = false;
   let elements = [];
   let compteur = 0;
@@ -48,8 +56,17 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   let retourFocus = null;
   let envoiEnCours = false;
   const erreurs = new Map(); // contenu → message, for "Réessayer"
+  // V4.26: decrypted content of the vault items, in memory only, emptied when the vault locks.
+  const dechiffres = new Map(); // id → { contenu, titre } | { corrompu: true }
+  const enCours = new Set();
 
-  const fichiers = creerFichiers({ charger, uid, store, rendre: () => rendre(), octets: () => octets });
+  const fichiers = creerFichiers({
+    charger,
+    uid,
+    store,
+    rendre: () => rendre(),
+    octets: () => octets,
+  });
 
   // --- Elements of the DOM --------------------------------------------------------------------
   const pastille = el("span", { class: "partage-pastille", hidden: true, "aria-hidden": "true" });
@@ -75,9 +92,24 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     spellcheck: "false",
   });
   const compteurCaracteres = el("span", { class: "partage-compte", "aria-live": "polite" });
-  const messageAjout = el("p", { class: "partage-message", role: "status", "aria-live": "polite", hidden: true });
-  const envoyer = el("button", { type: "button", class: "bouton bouton--principal", texte: "Envoyer", onclick: () => envoyerContenu() });
-  const coller = el("button", { type: "button", class: "bouton", texte: "Coller", onclick: () => collerPressePapiers() });
+  const messageAjout = el("p", {
+    class: "partage-message",
+    role: "status",
+    "aria-live": "polite",
+    hidden: true,
+  });
+  const envoyer = el("button", {
+    type: "button",
+    class: "bouton bouton--principal",
+    texte: "Envoyer",
+    onclick: () => envoyerContenu(),
+  });
+  const coller = el("button", {
+    type: "button",
+    class: "bouton",
+    texte: "Coller",
+    onclick: () => collerPressePapiers(),
+  });
   const proposerLien = el("button", {
     type: "button",
     class: "lien-discret",
@@ -87,21 +119,53 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   });
   const bandeau = el("p", { class: "partage-bandeau", role: "status", hidden: true });
   const liste = el("ul", { class: "partage-liste", "aria-live": "polite" });
-  const plus = el("button", { type: "button", class: "bouton partage-plus", hidden: true, texte: "Voir plus", onclick: () => voirPlus() });
-  const fermerBouton = el("button", { type: "button", class: "partage-fermer", "aria-label": "Fermer", texte: "×", onclick: () => fermer() });
+  const plus = el("button", {
+    type: "button",
+    class: "bouton partage-plus",
+    hidden: true,
+    texte: "Voir plus",
+    onclick: () => voirPlus(),
+  });
+  const fermerBouton = el("button", {
+    type: "button",
+    class: "partage-fermer",
+    "aria-label": "Fermer",
+    texte: "×",
+    onclick: () => fermer(),
+  });
   const panneau = el(
     "aside",
-    { class: "partage", role: "dialog", "aria-label": "Espace de partage", "aria-modal": "false", hidden: true },
+    {
+      class: "partage",
+      role: "dialog",
+      "aria-label": "Espace de partage",
+      "aria-modal": "false",
+      hidden: true,
+    },
     el("div", { class: "partage-poignee", "aria-hidden": "true" }),
-    el("header", { class: "partage-entete" }, el("h2", { texte: "Espace de partage" }), fermerBouton),
+    el(
+      "header",
+      { class: "partage-entete" },
+      el("h2", { texte: "Espace de partage" }),
+      fermerBouton,
+    ),
     bandeau,
+    coffre.bandeau,
     fichiers.quota,
     fichiers.cadreDepot,
     el(
       "div",
       { class: "partage-ajout" },
       champ,
-      el("div", { class: "partage-ajout-actions" }, compteurCaracteres, fichiers.boutonAjout, coller, envoyer),
+      el(
+        "div",
+        { class: "partage-ajout-actions" },
+        compteurCaracteres,
+        fichiers.boutonAjout,
+        coller,
+        envoyer,
+      ),
+      coffre.caseChiffrer,
       fichiers.entree,
       fichiers.message,
       proposerLien,
@@ -114,13 +178,35 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   const lienDe = (e) => (e.type === "lien" ? urlSure(e.contenu) : null);
 
   // --- Rendering ------------------------------------------------------------------------------
-  function carte(e) {
-    const url = lienDe(e);
+  function carte(brut) {
+    // V4.26: an encrypted item is shown with its decrypted content only while the vault is open.
+    const clair = brut.chiffre ? dechiffres.get(brut.id) : null;
+    const verrouille = brut.chiffre && !clair?.contenu && !clair?.corrompu;
+    const e =
+      clair?.contenu !== undefined ? { ...brut, contenu: clair.contenu, titre: clair.titre } : brut;
+    const url = brut.chiffre && !clair ? null : lienDe(e);
     const texte = el("div", { class: "partage-texte" });
-    if (url) {
+    if (brut.chiffre && (verrouille || clair?.corrompu)) {
+      texte.append(
+        el("span", {
+          class: "partage-apercu partage-chiffre",
+          texte: clair?.corrompu
+            ? "🔒 Élément corrompu"
+            : coffre.session.estDeverrouille()
+              ? "🔒 Déchiffrement…"
+              : "🔒 Contenu chiffré",
+        }),
+      );
+    } else if (url) {
       // Only an http(s) address becomes a link; the text is the domain and the address.
       texte.append(
-        el("a", { class: "partage-lien", href: url, target: "_blank", rel: "noopener noreferrer", texte: domaine(url) }),
+        el("a", {
+          class: "partage-lien",
+          href: url,
+          target: "_blank",
+          rel: "noopener noreferrer",
+          texte: domaine(url),
+        }),
         el("span", { class: "partage-detail", texte: apercu(url, 120) }),
       );
     } else {
@@ -129,12 +215,15 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     const copie = el("button", {
       type: "button",
       class: "partage-action",
+      hidden: brut.chiffre && (verrouille || clair?.corrompu),
       texte: "Copier",
       "aria-label": "Copier",
       onclick: async (ev) => {
         const b = ev.currentTarget;
         try {
           await copier(e.contenu);
+          // Best effort (no guarantee, said in the help): the clipboard is emptied after 30 s.
+          if (brut.chiffre) setTimeout(() => copier("").catch(() => {}), 30_000);
           b.textContent = "Copié ✓";
           vibrer(store, 12);
           setTimeout(() => (b.textContent = "Copier"), 1500);
@@ -147,20 +236,42 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
       "div",
       { class: "partage-actions" },
       copie,
-      url ? el("a", { class: "partage-action", href: url, target: "_blank", rel: "noopener noreferrer", texte: "Ouvrir" }) : null,
+      url
+        ? el("a", {
+            class: "partage-action",
+            href: url,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            texte: "Ouvrir",
+          })
+        : null,
       el("button", {
         type: "button",
         class: "partage-action",
         "aria-pressed": String(e.epingle),
         texte: e.epingle ? "Désépingler" : "Épingler",
-        onclick: () => action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
+        onclick: () =>
+          action(() => charger().then((fb) => fb.epinglerPartage(uid(), e.id, !e.epingle))),
       }),
-      el("button", { type: "button", class: "partage-action partage-action--danger", texte: "Supprimer", onclick: () => supprimerAvecAnnulation(e) }),
+      el("button", {
+        type: "button",
+        class: "partage-action partage-action--danger",
+        texte: "Supprimer",
+        onclick: () => supprimerAvecAnnulation(e),
+      }),
     );
+
     return el(
       "li",
-      { class: `partage-carte${e.enAttente ? " partage-carte--attente" : ""}${e.epingle ? " partage-carte--epingle" : ""}`, dataset: { id: e.id, type: e.type } },
-      el("span", { class: "partage-type", "aria-hidden": "true", texte: e.type === "lien" ? "🔗" : "📝" }),
+      {
+        class: `partage-carte${e.enAttente ? " partage-carte--attente" : ""}${e.epingle ? " partage-carte--epingle" : ""}`,
+        dataset: { id: e.id, type: e.type },
+      },
+      el("span", {
+        class: "partage-type",
+        "aria-hidden": "true",
+        texte: brut.chiffre ? (verrouille ? "🔒" : "🔓") : e.type === "lien" ? "🔗" : "📝",
+      }),
       texte,
       el("span", {
         class: "partage-meta",
@@ -173,17 +284,25 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   function rendre() {
     const hors = typeof navigator !== "undefined" && navigator.onLine === false;
     bandeau.hidden = !(hors || depuisCache);
-    bandeau.textContent = hors ? "Hors ligne — vos envois partiront à la reconnexion." : "Contenu du cache — mise à jour en cours…";
+    bandeau.textContent = hors
+      ? "Hors ligne — vos envois partiront à la reconnexion."
+      : "Contenu du cache — mise à jour en cours…";
     liste.replaceChildren();
     if (statut === "chargement" && elements.length === 0) {
-      for (let i = 0; i < 3; i++) liste.append(el("li", { class: "partage-carte partage-squelette", "aria-hidden": "true" }));
+      for (let i = 0; i < 3; i++)
+        liste.append(el("li", { class: "partage-carte partage-squelette", "aria-hidden": "true" }));
     } else if (statut === "erreur") {
       liste.append(
         el(
           "li",
           { class: "partage-carte partage-carte--erreur", role: "alert" },
           el("span", { texte: "Impossible de lire l'espace de partage." }),
-          el("button", { type: "button", class: "partage-action", texte: "Réessayer", onclick: () => demarrerEcoute() }),
+          el("button", {
+            type: "button",
+            class: "partage-action",
+            texte: "Réessayer",
+            onclick: () => demarrerEcoute(),
+          }),
         ),
       );
     } else if (elements.length === 0 && fichiers.nbEnvois() === 0) {
@@ -202,9 +321,13 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
         ...trier(elements).map((e) => (e.type === "fichier" ? fichiers.carte(e) : carte(e))),
       );
     }
+    dechiffrerVisibles();
     fichiers.elementsVus(elements);
     plus.hidden = !peutPlus;
-    compteurCaracteres.textContent = longueur(champ.value) > LIMITE_CARACTERES * 0.8 ? `${longueur(champ.value).toLocaleString("fr-FR")} / ${LIMITE_CARACTERES.toLocaleString("fr-FR")}` : "";
+    compteurCaracteres.textContent =
+      longueur(champ.value) > LIMITE_CARACTERES * 0.8
+        ? `${longueur(champ.value).toLocaleString("fr-FR")} / ${LIMITE_CARACTERES.toLocaleString("fr-FR")}`
+        : "";
     const plein = estPlein(compteur);
     envoyer.disabled = envoiEnCours;
     messageAjout.hidden = !plein && !messageAjout.textContent;
@@ -214,6 +337,34 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     }
     proposerLien.hidden = !(detecterType(champ.value) === "lien" && champ.value.trim() !== "");
   }
+
+  /** Decrypts (in memory) the encrypted items on screen while the vault is open. */
+  async function dechiffrerVisibles() {
+    if (!coffre.session.estDeverrouille()) return;
+    const aFaire = elements.filter(
+      (e) => e.chiffre && e.type !== "fichier" && !dechiffres.has(e.id) && !enCours.has(e.id),
+    );
+    if (!aFaire.length) return;
+    aFaire.forEach((e) => enCours.add(e.id));
+    for (const e of aFaire) {
+      try {
+        dechiffres.set(e.id, await coffre.dechiffrer(e));
+      } catch {
+        dechiffres.set(e.id, { corrompu: true });
+      }
+      enCours.delete(e.id);
+    }
+    rendre();
+  }
+
+  // The vault locks: nothing decrypted stays in memory or in the DOM.
+  coffre.session.surVerrouille(() => {
+    dechiffres.clear();
+    rendre();
+  });
+  coffre.session.surDeverrouille(() => rendre());
+  panneau.addEventListener("pointerdown", () => coffre.session.activite());
+  panneau.addEventListener("keydown", () => coffre.session.activite());
 
   // --- Actions --------------------------------------------------------------------------------
   const montrerErreur = (message) => {
@@ -236,14 +387,27 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     if (estPlein(compteur)) return rendre();
     const r = creerElement({ contenu: brut, type });
     if (!r.ok) return montrerErreur(r.erreur);
+    const chiffre = coffre.veutChiffrer();
+    // V4.26: the vault must be open (created or unlocked) BEFORE anything is sent.
+    if (chiffre && !(await coffre.assurerDeverrouille())) return;
     envoiEnCours = true;
     rendre();
     try {
       const fb = await charger();
-      const doublon = trouverDoublon(elements, r.element);
-      // Same content already there: it goes back to the top instead of a second copy.
+      // Same content already there: it goes back to the top (not for the vault: contents are unreadable).
+      const doublon = chiffre
+        ? null
+        : trouverDoublon(
+            elements.filter((x) => !x.chiffre),
+            r.element,
+          );
       if (doublon) await fb.remonterPartage(uid(), doublon.id);
-      else await fb.ajouterAuPartage(uid(), r.element);
+      else
+        await fb.ajouterAuPartage(
+          uid(),
+          { ...r.element, chiffre },
+          chiffre ? coffre.chiffrer : null,
+        );
       champ.value = "";
       montrerErreur(null);
       if (!ouvert) toast("Envoyé");
@@ -278,9 +442,34 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     try {
       const fb = await charger();
       await fb.supprimerDuPartage(uid(), e.id);
+      // An encrypted item is re-encrypted under its NEW id: possible only if it was decrypted.
+      const clair = e.chiffre ? dechiffres.get(e.id) : null;
+      const restaurable =
+        !e.chiffre || (clair?.contenu !== undefined && coffre.session.estDeverrouille());
       toast("Supprimé", {
         duree: 5000,
-        action: { libelle: "Annuler", onClic: () => action(() => fb.restaurerPartage(uid(), e)) },
+        action: restaurable
+          ? {
+              libelle: "Annuler",
+              onClic: () =>
+                action(() =>
+                  e.chiffre
+                    ? fb.ajouterAuPartage(
+                        uid(),
+                        {
+                          type: e.type,
+                          contenu: clair.contenu,
+                          titre: clair.titre,
+                          epingle: e.epingle,
+                          appareil: e.appareil,
+                          chiffre: true,
+                        },
+                        coffre.chiffrer,
+                      )
+                    : fb.restaurerPartage(uid(), e),
+                ),
+            }
+          : undefined,
       });
     } catch {
       toast("Suppression impossible pour l'instant.", { type: "erreur" });
@@ -344,7 +533,10 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
   };
   const noterVu = () => {
     try {
-      localStorage.setItem(CLE_VU, String(Math.max(dernierVu(), ...elements.map((e) => e.creeLe ?? 0))));
+      localStorage.setItem(
+        CLE_VU,
+        String(Math.max(dernierVu(), ...elements.map((e) => e.creeLe ?? 0))),
+      );
     } catch {
       /* the dot is only a comfort */
     }
@@ -394,7 +586,9 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
       fermer();
     } else if (e.key === "Tab") {
       // Focus kept inside the panel while it is open.
-      const cibles = [...panneau.querySelectorAll("button, a[href], textarea")].filter((n) => !n.disabled && !n.closest("[hidden]"));
+      const cibles = [...panneau.querySelectorAll("button, a[href], textarea")].filter(
+        (n) => !n.disabled && !n.closest("[hidden]"),
+      );
       if (cibles.length === 0) return;
       const premier = cibles[0];
       const dernier = cibles.at(-1);
@@ -408,7 +602,12 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     }
   };
   const surExterieur = (e) => {
-    if (!panneau.contains(e.target) && !bouton.contains(e.target) && !e.target.closest?.(".toast, .menu, dialog")) fermer();
+    if (
+      !panneau.contains(e.target) &&
+      !bouton.contains(e.target) &&
+      !e.target.closest?.(".toast, .menu, dialog")
+    )
+      fermer();
   };
 
   fichiers.brancherZone(panneau);
@@ -438,6 +637,7 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
     const dispo = disponible();
     bouton.hidden = !dispo;
     if (!dispo) {
+      coffre.session.verrouiller(); // signing out locks the vault
       arreterEcoute();
       if (ouvert) fermer();
       elements = [];
@@ -446,9 +646,11 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
       return;
     }
     if (!arret.length && !document.hidden) demarrerEcoute();
+    coffre.actualiser();
   }
 
   return {
+    coffre,
     bouton,
     panneau,
     ouvrir,
@@ -463,7 +665,11 @@ export function creerEspacePartage({ store, disponible, charger, uid, copier = c
 /** Copies a text: the clipboard API, or a hidden field where it is missing (older Safari). */
 async function copierTexte(texte) {
   if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(texte);
-  const t = el("textarea", { value: texte, style: "position:fixed;left:-1000px;top:-1000px", "aria-hidden": "true" });
+  const t = el("textarea", {
+    value: texte,
+    style: "position:fixed;left:-1000px;top:-1000px",
+    "aria-hidden": "true",
+  });
   document.body.append(t);
   t.select();
   const ok = document.execCommand?.("copy");
