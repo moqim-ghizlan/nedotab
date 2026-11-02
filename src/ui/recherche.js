@@ -89,6 +89,7 @@ export function creerRecherche(
     demanderIa = null, // async (question) => { intention, resultats: [{ id, score }] } (V4.9)
     poserAuChat = null, // (question, { origine, sites }) => void: the assistant's chat (V4.13)
     lireClassementUsage = () => [], // V4.21: classementUsage() of the statistics (computed once per load)
+    frequents = null, // V4.22: { visible(), focaliser() } of the row under the bar
   },
 ) {
   const champ = el("input", {
@@ -346,8 +347,12 @@ export function creerRecherche(
     const grille = store.lire().grille;
     if (!texte.trim()) {
       // V4.21: empty bar on focus → the 8 most used sites (pinned first); nothing if no visit.
-      const frequents = document.activeElement === champ ? plusUtilises(grille, classement(), 8) : [];
-      options = frequents.map((site) => ({
+      // The row of V4.22 replaces this list when it is shown.
+      const plus =
+        document.activeElement === champ && !frequents?.visible()
+          ? plusUtilises(grille, classement(), 8)
+          : [];
+      options = plus.map((site) => ({
         type: "site",
         resultat: { entree: indexer(grille).find((e) => e.id === site.id), plages: [], raison: null },
       }));
@@ -594,6 +599,11 @@ export function creerRecherche(
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      // V4.22: from the empty bar, ↓ goes into the row "Les plus utilisés".
+      if (liste.hidden && mode === "rechercher" && champ.value === "" && frequents?.visible()) {
+        frequents.focaliser();
+        return;
+      }
       if (liste.hidden) rendre();
       else choisirActif(actif + 1);
     } else if (e.key === "ArrowUp") {

@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.22.0] - 2026-11-02
+
+### Ajouté
+
+- **Rangée « Les plus utilisés »** sous la barre de recherche (extension et PWA) : une seule ligne de raccourcis (jusqu'à 8 icônes de 40 px, 3 au minimum selon la largeur, recalculée au redimensionnement avec un délai de 150 ms), y compris vers les sites rangés au fond d'un dossier (infobulle « Travail › Clients »). Ni retour à la ligne, ni défilement horizontal.
+- **Choix des sites** (`src/core/frequents.js`, pur) : épinglés d'abord, puis score d'usage (V4.21) ; sites masqués, supprimés ou de score < 0,1 exclus. La rangée n'apparaît qu'avec au moins 10 visites **et** 3 sites éligibles (3 épinglés suffisent). Suivi désactivé : épinglés seulement.
+- **Ordre figé** : calculé une fois à l'ouverture de la page, il ne bouge plus quand les statistiques changent ; seuls un site supprimé, renommé, re-iconé, épinglé/désépinglé ou masqué mettent la rangée à jour tout de suite. La rangée vue la dernière fois garde sa place dès le début (pas de saut de mise en page).
+- **Interactions** : clic = comme une tuile (onglet courant, Ctrl/Cmd + clic et clic molette = nouvel onglet) et **visite comptée** par le service de la V4.21 ; `Tab` depuis la recherche, `←` `→` `Début` `Fin`, `Entrée`, `↓` depuis la barre vide ; menu (clic droit, touche Menu, appui long sur tactile) : Ouvrir dans un nouvel onglet, Afficher dans la grille, Épingler / Désépingler, **Masquer de cette rangée** (avec « Annuler »), Modifier le site. Aucun glisser-déposer.
+- **Réglages → Apparence → « Les plus utilisés »** (synchronisés) : afficher la rangée, petit titre (désactivé par défaut), liste des sites masqués avec « Réafficher » (200 au plus). `reglages.frequents` n'est stocké que s'il diffère des valeurs par défaut (validation idempotente, refus de plus de 200 masqués dans `REGLAGES_MODIFIER`).
+- Les pages de l'accueil (V2.11) se recalculent seules : la rangée prend sa place dans la colonne de la page, la hauteur des pages diminue et `mesure.js` (observateur de taille) ajuste les tuiles ; aucune barre de défilement. Paysage de téléphone (hauteur ≤ 480 px) : rangée masquée.
+- Quand la rangée est affichée, la barre vide ne propose plus la liste des plus utilisés de la V4.21 (doublon) : `↓` va dans la rangée.
+- **Non fait** : retrait automatique des identifiants masqués d'un site supprimé (la fonction `masquesObsoletes` existe mais n'est pas appelée ; ils n'ont aucun effet) ; vérifications manuelles du plan sur PC, iPhone et iPad.
+
 ## [4.21.0] - 2026-11-02
 
 ### Ajouté

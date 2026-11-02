@@ -1,0 +1,135 @@
+/*
+ * Row "Les plus utilisés" (V4.22): one line under the search bar, never wrapping, never
+ * scrolling sideways. Icons are 40 px (smaller than the tiles), titles on one line.
+ */
+.frequents {
+  width: min(560px, 100%);
+  margin: calc(var(--espace-3) * -0.5) auto var(--espace-4);
+  flex: none;
+  animation: frequents-entree 150ms ease-out;
+}
+
+.frequents[hidden] {
+  display: none;
+}
+
+.frequents-titre {
+  margin: 0 0 var(--espace-1);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--texte-discret, #8a8a8a);
+  text-align: center;
+}
+
+.frequents-liste {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: var(--espace-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.frequent {
+  flex: 0 1 72px;
+  min-width: 0;
+}
+
+.frequent-lien {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border-radius: var(--rayon-2, 10px);
+  color: inherit;
+  text-decoration: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.frequent-lien:hover,
+.frequent-lien:focus-visible {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.frequent-lien .tuile-icone {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.frequent-lien img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none;
+}
+
+.frequent-titre {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Same legibility rule as the grid on a picture background (V1.9). */
+  text-shadow: var(--ombre-titre, none);
+}
+
+.frequent-punaise {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.frequent-lien:hover .frequent-punaise,
+.frequent-lien:focus-visible .frequent-punaise,
+:root[data-edition] .frequent-punaise {
+  opacity: 0.85;
+}
+
+/* A short landscape screen (iPhone on its side): the grid keeps the room. */
+@media (max-height: 480px) {
+  .frequents {
+    display: none;
+  }
+}
+
+:root[data-masquer-recherche] .frequents {
+  margin-top: 0;
+}
+
+:root[data-masquer-titres] .frequent-titre {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@keyframes frequents-entree {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frequents {
+    animation: none;
+  }
+}
+
+:root[data-animations-reduites] .frequents {
+  animation: none;
+}

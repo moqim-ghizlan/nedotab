@@ -9,9 +9,11 @@ export function creerServiceUsage({ store, uid, charger, visites, actif }) {
   let stats = normaliserStats(null);
   let classement = [];
   const abonnes = new Set();
+  let charge = false;
   const maintenant = () => Date.now();
 
   const recalculer = () => {
+    charge = true;
     classement = actif() ? classementUsage(stats, store.lire().grille, maintenant()) : [];
     for (const f of abonnes) f(classement);
   };
@@ -36,6 +38,7 @@ export function creerServiceUsage({ store, uid, charger, visites, actif }) {
     actualiser,
     recalculer,
     classement: () => classement,
+    charge: () => charge,
     stats: () => stats,
     abonner(f) {
       abonnes.add(f);

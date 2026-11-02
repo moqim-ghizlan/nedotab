@@ -31,6 +31,7 @@ import { brancherGesteVersion } from "./debug.js";
 import { sectionDiagnostic } from "./reglages/diagnostic.js";
 import { toast } from "./toast.js";
 import { demander } from "./dialogues/commun.js";
+import { creerSectionFrequents } from "./reglages/frequents.js";
 import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
@@ -704,6 +705,8 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     etatStockage.classList.toggle("reglages-note--alerte", niveau !== "ok");
   };
 
+  const sectionFrequents = creerSectionFrequents({ store });
+
   // --- Compte (account) -----------------------------------------------------------------
   const compteUi = session ? sectionCompte(session) : null;
 
@@ -736,6 +739,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
         reglagesPages,
         reglagesDefilement,
       ),
+      sectionFrequents.section,
       section(
         "Animation",
         libelleAppareil("Passage d'une page à l'autre"),
@@ -1081,6 +1085,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       voile.value = String(r.fond.voile);
       flou.value = String(r.fond.flou);
     }
+    sectionFrequents.maj(!r.sansSuiviUsage);
     majStockage();
   };
   const desabonner = store.abonner(actualiser);

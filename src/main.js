@@ -7,6 +7,7 @@ import "./ui/styles/dossiers.css";
 import "./ui/styles/reglages.css";
 import "./ui/styles/pages.css";
 import "./ui/styles/chat.css";
+import "./ui/styles/frequents.css";
 import { appliquerCacheDemarrage } from "./ui/apparence.js";
 import { demarrerApp } from "./ui/app.js";
 import { plateforme } from "./platform/index.js";

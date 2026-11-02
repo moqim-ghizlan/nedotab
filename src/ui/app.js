@@ -23,7 +23,7 @@ import { creerEnrichissement, installerEnrichissement } from "./services/enrichi
 import { creerRattrapage } from "./services/rattrapage.js";
 import { creerServiceIa } from "./services/ia.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
-import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
+import { ouvrirAjoutSite, ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
@@ -54,6 +54,7 @@ import {
 } from "./tuile.js";
 import { creerServiceVisites } from "./services/visites.js";
 import { creerServiceUsage } from "./services/usage.js";
+import { creerFrequents } from "./frequents.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -515,8 +516,22 @@ export async function demarrerApp(racine) {
     etaitEnCompte = enCompte;
   });
 
+  // V4.22: row "Les plus utilisés" under the search bar (stays still while the page is open).
+  const frequents = creerFrequents({
+    store,
+    usage,
+    suiviActif,
+    lectureSeule,
+    afficherDansGrille: (id) => afficherSite(id),
+    modifierSite: (id) => {
+      const r = trouverElement(store.lire().grille, id);
+      if (r?.element.type === "site") ouvrirEditionSite(store, r.element, {});
+    },
+  });
+
   // Search bar above the grid; a folder found opens directly at its level.
   const recherche = creerRecherche(store, {
+    frequents,
     lireClassementUsage: () => usage.classement(),
     ouvrirDossier: (id) => ouvrirDossier(id),
     contexteIa,
@@ -640,6 +655,7 @@ export async function demarrerApp(racine) {
   });
   usage.abonner(() => recherche.usageChange());
   page.insertBefore(recherche.racine, vide);
+  recherche.racine.after(frequents.racine);
   page.insertBefore(creerHorloge(store).racine, recherche.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
   // The "?focus=1" marker is then removed from the address shown by Chrome.

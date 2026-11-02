@@ -10,6 +10,7 @@
  *     | { type: "aleatoire", categorie, frequence: "onglet"|"jour"|"clic", choix?, voile, flou }
  */
 import { estCategorie, estIdPhoto, FREQUENCES } from "./galerie.js";
+import { frequentsAStocker } from "./frequents.js";
 import { iaAStocker, validerIa } from "./ia.js";
 import { NAVIGATEURS } from "./navigateurs.js";
 import { capaciteDe, comptesAStocker, normaliserComptes, validerGrilleAccueil } from "./pages.js";
@@ -166,7 +167,7 @@ export const INTERRUPTEURS = [
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  const permises = ["theme", "fond", "grilleAccueil", "ia", ...INTERRUPTEURS];
+  const permises = ["theme", "fond", "grilleAccueil", "ia", "frequents", ...INTERRUPTEURS];
   if (cles.length === 0 || cles.some((c) => !permises.includes(c))) return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
@@ -191,6 +192,17 @@ export function modifierReglages(reglages, changements) {
     if (ia) suivant.ia = ia;
     else delete suivant.ia;
     if (JSON.stringify(suivant.ia) === JSON.stringify(reglages.ia) && cles.length === 1)
+      return reglages;
+  }
+  if ("frequents" in changements) {
+    // V4.22: row "Les plus utilisés" (shown, title, hidden ids: 200 at most), synced.
+    const f = changements.frequents;
+    if (!f || typeof f !== "object" || (Array.isArray(f.masques) && f.masques.length > 200))
+      return reglages;
+    const stocke = frequentsAStocker(f);
+    if (stocke) suivant.frequents = stocke;
+    else delete suivant.frequents;
+    if (JSON.stringify(suivant.frequents) === JSON.stringify(reglages.frequents) && cles.length === 1)
       return reglages;
   }
   for (const cle of INTERRUPTEURS.filter((c) => c in changements)) {
@@ -221,6 +233,9 @@ export function validerReglages(reglages) {
   const ia = iaAStocker(r.ia);
   if (ia) resultat.ia = ia;
   else delete resultat.ia;
+  const frequents = frequentsAStocker(r.frequents);
+  if (frequents) resultat.frequents = frequents;
+  else delete resultat.frequents;
   const grille = validerGrilleAccueil(r.grilleAccueil);
   if (grille) resultat.grilleAccueil = grille;
   else delete resultat.grilleAccueil;

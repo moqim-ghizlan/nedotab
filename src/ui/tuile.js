@@ -99,13 +99,13 @@ let navigateur = "safari";
 /** Applies the setting to the tiles already shown and to those created afterwards. */
 export function ouvrirSitesDansNouvelOnglet(actif) {
   nouvelOnglet = !!actif;
-  for (const lien of document.querySelectorAll("a.tuile--site")) cibler(lien);
+  for (const lien of document.querySelectorAll("a.tuile--site, a.frequent-lien")) cibler(lien);
 }
 
 /** Same for the browser chosen on this device. */
 export function ouvrirSitesAvec(choix) {
   navigateur = choix ?? "safari";
-  for (const lien of document.querySelectorAll("a.tuile--site")) cibler(lien);
+  for (const lien of document.querySelectorAll("a.tuile--site, a.frequent-lien")) cibler(lien);
 }
 
 /** Address that opens a site in the chosen browser. */
@@ -143,7 +143,7 @@ export function ouvrirSite(url, { nouvelOnglet: onglet = false, id = null } = {}
  * (drag, long press) is not a visit.
  */
 export function suivreOuverturesTuiles(racine = document) {
-  const trouver = (e) => e.target?.closest?.("a.tuile--site[data-id]");
+  const trouver = (e) => e.target?.closest?.("a.tuile--site[data-id], a.frequent-lien[data-id]");
   const surClic = (e) => {
     const lien = trouver(e);
     if (!lien || e.defaultPrevented || !surVisite) return;
