@@ -67,6 +67,27 @@ describe("espacePartage", () => {
     lot.set(meta(d), { nb: increment(-1) }, { merge: true });
     await assertSucceeds(lot.commit());
   });
+  it("V4.31 : titre et description modifiables ; le contenu en clair, jamais", async () => {
+    await ajouter(db("alice"), "e1");
+    const ref = el(db("alice"), "e1");
+    await assertSucceeds(updateDoc(ref, { titre: "Mon titre", description: "Une note" }));
+    await assertSucceeds(updateDoc(ref, { description: "" }));
+    await assertFails(updateDoc(ref, { titre: "x".repeat(201) }));
+    await assertFails(updateDoc(ref, { description: "x".repeat(2001) }));
+    await assertFails(updateDoc(ref, { titre: 3 }));
+    await assertFails(updateDoc(ref, { contenu: "autre chose" }));
+    await assertFails(updateDoc(ref, { type: "lien" }));
+    await assertFails(updateDoc(el(db("bob"), "e1", "alice"), { titre: "pirate" }));
+  });
+  it("V4.31 : le bloc chiffré d'un élément du vault peut être rechiffré", async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(el(ctx.firestore(), "c1"), { ...elem({ contenu: "bloc1", titre: "", chiffre: true }), creeLe: Timestamp.now() }),
+    );
+    const ref = el(db("alice"), "c1");
+    await assertSucceeds(updateDoc(ref, { contenu: "bloc2" }));
+    await assertFails(updateDoc(ref, { contenu: "" }));
+    await assertFails(updateDoc(ref, { chiffre: false }));
+  });
   it("un autre utilisateur ou un visiteur : refusé en lecture et en écriture", async () => {
     await ajouter(db("alice"), "e1");
     for (const d of [db("bob"), db(null)]) {

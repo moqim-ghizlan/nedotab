@@ -8,7 +8,6 @@
         "condition": {
           "age": 40,
           "matchesPrefix": [
-            "partages/",
             "liens/"
           ]
         }

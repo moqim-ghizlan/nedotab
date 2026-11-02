@@ -2,12 +2,16 @@
 /**
  * Expiry of the sharing space (V4.27). Pure: no DOM, no Firebase. Identical copy in
  * functions/src/partage/expirationPartage.js (same method as listeCompacte; a test compares
- * them). Every item expires: 1 h, 2 h, 1 day, 7 days or 30 days; there is no "never".
+ * them). An item expires after 1 h, 2 h, 1 day, 7 days or 30 days, or never ("jamais": expireLe is
+ * the far-future ILLIMITE, so every comparison, rule and cleanup query keeps working unchanged).
  * All times are UTC milliseconds; the device clock is corrected by `ecart` (server − device).
  */
 export const MINUTE = 60_000;
 export const HEURE = 60 * MINUTE;
 export const JOUR = 24 * HEURE;
+/** expireLe of an item kept for ever: 9999-12-31 UTC (what the rules compare against). */
+export const ILLIMITE = Date.UTC(9999, 11, 31);
+export const estIllimite = (expireLe) => expireLe === ILLIMITE;
 
 /** Allowed durations: { id, libelle, ms }. */
 export const DUREES = [
@@ -16,6 +20,7 @@ export const DUREES = [
   { id: "1j", libelle: "1 j", ms: JOUR },
   { id: "7j", libelle: "7 j", ms: 7 * JOUR },
   { id: "30j", libelle: "30 j", ms: 30 * JOUR },
+  { id: "jamais", libelle: "Illimité", ms: null },
 ];
 export const DUREE_DEFAUT = "1j";
 /** Total life (created + extended) never goes past this: the Storage lifecycle is set to 40 days. */
@@ -35,7 +40,9 @@ export const maintenantCorrige = (ecart = 0, maintenant = Date.now()) =>
 
 /** expireLe (ms) of a new item. */
 export const calculerExpiration = (dureeId, ecart = 0, maintenant = Date.now()) =>
-  maintenantCorrige(ecart, maintenant) + dureeParId(dureeId).ms;
+  dureeParId(dureeId).ms === null
+    ? ILLIMITE
+    : maintenantCorrige(ecart, maintenant) + dureeParId(dureeId).ms;
 
 /** True when the item is past its expiry (an item without expireLe never expires: legacy). */
 export function estExpire(element, ecart = 0, maintenant = Date.now()) {
@@ -54,6 +61,7 @@ export function tempsRestantMs(element, ecart = 0, maintenant = Date.now()) {
 /** "3 j", "2 h 10", "45 min", "moins d'1 min". */
 export function formaterTempsRestant(ms) {
   if (ms == null) return "";
+  if (ms > 1000 * JOUR) return "illimité"; // far-future ILLIMITE
   if (ms < MINUTE) return "moins d'1 min";
   const min = Math.floor(ms / MINUTE);
   if (min < 60) return `${min} min`;
@@ -66,6 +74,7 @@ export function formaterTempsRestant(ms) {
 export function libelleExpiration(element, ecart = 0, maintenant = Date.now()) {
   const ms = tempsRestantMs(element, ecart, maintenant);
   if (ms === null) return { texte: "", urgent: false };
+  if (estIllimite(element.expireLe)) return { texte: "illimité", urgent: false };
   return { texte: `expire dans ${formaterTempsRestant(ms)}`, urgent: ms < ALERTE_MS };
 }
 
@@ -74,9 +83,10 @@ export function libelleExpiration(element, ecart = 0, maintenant = Date.now()) {
  * after its creation. @returns {{ ok: true, expireLe: number } | { ok: false, erreur: string }}
  */
 export function prolonger(element, dureeId, ecart = 0, maintenant = Date.now()) {
+  if (estIllimite(element.expireLe)) return { ok: false, erreur: "Déjà illimité" };
   const plafond = (element.creeLe ?? maintenantCorrige(ecart, maintenant)) + VIE_MAX_MS;
   const voulu = calculerExpiration(dureeId, ecart, maintenant);
-  const nouveau = Math.min(voulu, plafond);
+  const nouveau = estIllimite(voulu) ? voulu : Math.min(voulu, plafond);
   if (!Number.isFinite(element.expireLe) ? false : nouveau <= element.expireLe)
     return { ok: false, erreur: "Durée maximale atteinte" };
   return { ok: true, expireLe: nouveau };
@@ -90,8 +100,8 @@ export const dureesProlongeables = (element, ecart = 0, maintenant = Date.now())
 export function expirationValide(expireLe, maintenant) {
   return (
     Number.isFinite(expireLe) &&
-    expireLe >= maintenant + BORNE_BASSE_MS &&
-    expireLe <= maintenant + BORNE_HAUTE_MS
+    (estIllimite(expireLe) ||
+      (expireLe >= maintenant + BORNE_BASSE_MS && expireLe <= maintenant + BORNE_HAUTE_MS))
   );
 }
 

@@ -88,6 +88,18 @@ export function creerElement({ contenu, type = "texte", appareil, titre = "", de
   };
 }
 
+/**
+ * Title and description written by the user (sending a file, or "Modifier" afterwards): trimmed
+ * and cut on whole characters. An empty title means "none" (the automatic one is shown).
+ * @returns {{ titre: string, description: string }}
+ */
+export function nettoyerDetails({ titre = "", description = "" } = {}) {
+  return {
+    titre: [...String(titre).trim()].slice(0, TITRE_MAX).join(""),
+    description: [...String(description).trim()].slice(0, DESCRIPTION_MAX).join(""),
+  };
+}
+
 /** Beginning of a text on `max` code points, cut on a whole character, "…" if shortened. */
 export function apercu(texte, max = APERCU_CARACTERES) {
   const propre = String(texte ?? "").replace(/\s+/g, " ").trim();

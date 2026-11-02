@@ -83,6 +83,8 @@ export function decisionOuverture(lien, maintenant) {
 export function validerCreation({ type, dureeId, ouverturesMax, tailleChiffree, motDePasse }) {
   if (!TYPES.includes(type)) return "Type d'élément inconnu.";
   if (!DUREES.some((d) => d.id === dureeId)) return "Durée inconnue.";
+  if (type === "fichier" && dureeId === "jamais")
+    return "Un lien vers un fichier dure 30 jours au plus.";
   if (!OUVERTURES_PROPOSEES.includes(ouverturesMax)) return "Nombre d'ouvertures inconnu.";
   if (typeof motDePasse !== "boolean") return "Paramètre de mot de passe manquant.";
   const max = type === "fichier" ? FICHIER_MAX_OCTETS : TEXTE_MAX_OCTETS;

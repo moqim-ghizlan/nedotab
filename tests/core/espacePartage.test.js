@@ -12,6 +12,7 @@ import {
   trouverDoublon,
   urlSure,
   validerContenu,
+  nettoyerDetails,
 } from "../../src/core/espacePartage.js";
 import { creerExport } from "../../src/core/export.js";
 
@@ -126,5 +127,17 @@ describe("export RGPD et IA", () => {
     for (const f of readdirSync(new URL("../../functions/src/ia/", import.meta.url)).filter((n) => n.endsWith(".js"))) {
       expect(readFileSync(new URL(`../../functions/src/ia/${f}`, import.meta.url), "utf8")).not.toMatch(/espacePartage/i);
     }
+  });
+});
+
+describe("nettoyerDetails (V4.31)", () => {
+  it("espaces retirés, vide = aucun titre", () => {
+    expect(nettoyerDetails({ titre: "  Vacances ", description: " plage\t" })).toEqual({ titre: "Vacances", description: "plage" });
+    expect(nettoyerDetails({})).toEqual({ titre: "", description: "" });
+  });
+  it("coupés aux limites sur des caractères entiers", () => {
+    const r = nettoyerDetails({ titre: "😀".repeat(300), description: "é".repeat(900) });
+    expect([...r.titre]).toHaveLength(200);
+    expect([...r.description]).toHaveLength(500);
   });
 });

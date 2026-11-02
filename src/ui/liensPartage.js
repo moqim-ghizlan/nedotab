@@ -1,5 +1,5 @@
 import { validerMotDePasse } from "../core/coffre.js";
-import { DUREES, formaterTempsRestant } from "../core/expirationPartage.js";
+import { DUREES, ILLIMITE, formaterTempsRestant } from "../core/expirationPartage.js";
 import { LIENS_ACTIFS_MAX, OUVERTURES_PROPOSEES, libelleOuvertures } from "../core/lienPartage.js";
 import { demander } from "./dialogues/commun.js";
 import { el } from "./dom.js";
@@ -210,7 +210,7 @@ export async function ouvrirMesLiens({ charger }) {
             }),
             el("span", {
               class: "partage-detail",
-              texte: `expire dans ${formaterTempsRestant(l.expireLe - maintenant())}${l.motDePasse ? " · protégé par mot de passe" : ""}${l.verrouille ? " · verrouillé" : ""}${l.suspendu ? " · suspendu" : ""}`,
+              texte: `${l.expireLe === ILLIMITE ? "illimité" : `expire dans ${formaterTempsRestant(l.expireLe - maintenant())}`}${l.motDePasse ? " · protégé par mot de passe" : ""}${l.verrouille ? " · verrouillé" : ""}${l.suspendu ? " · suspendu" : ""}`,
             }),
           ),
           el("button", {

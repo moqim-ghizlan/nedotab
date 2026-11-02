@@ -76,6 +76,7 @@ export {
   ecouterCompteur as ecouterCompteurPartage,
   ecouterEspacePartage,
   epingler as epinglerPartage,
+  modifierDetails as modifierDetailsPartage,
   lirePage as lirePagePartage,
   migrerExpiration as migrerExpirationPartage,
   prolonger as prolongerPartage,

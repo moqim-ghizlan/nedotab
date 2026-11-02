@@ -21,7 +21,7 @@
  */
 import { Buffer } from "node:buffer";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-import { DUREES } from "../../partage/expirationPartage.js";
+import { calculerExpiration } from "../../partage/expirationPartage.js";
 import {
   CREATIONS_PAR_HEURE,
   ESSAIS_MAX,
@@ -148,7 +148,7 @@ export function creerLiens({
       uid,
       idLien,
       creeLe: t,
-      expireLe: t + DUREES.find((x) => x.id === p.dureeId).ms,
+      expireLe: calculerExpiration(p.dureeId, 0, t),
       ouverturesMax: p.ouverturesMax,
       ouvertures: 0,
       motDePasse,

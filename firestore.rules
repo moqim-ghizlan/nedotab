@@ -152,23 +152,37 @@ service cloud.firestore {
       // V4.27): within [now + 55 min, now + 31 days], later than the old one, and at most 31 days
       // after the creation. There is NO read rule based on request.time (a rule is not a filter).
       allow update: if proprietaire(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe', 'titre', 'description', 'contenu'])
         && request.resource.data.epingle is bool
+        // V4.31: title and description changed afterwards ("Modifier"). The content itself
+        // never changes, except the encrypted block of a vault item (re-encrypted on the device).
+        && request.resource.data.titre is string
+        && request.resource.data.titre.size() <= 200
+        && (!('description' in request.resource.data)
+            || (request.resource.data.description is string
+                && request.resource.data.description.size() <= 2000))
+        && (request.resource.data.contenu == resource.data.contenu
+            || (resource.data.get('chiffre', false) == true
+                && request.resource.data.contenu is string
+                && request.resource.data.contenu.size() >= 1
+                && request.resource.data.contenu.size() <= 110000))
         && (request.resource.data.creeLe == resource.data.creeLe
             || request.resource.data.creeLe == request.time)
         && (request.resource.data.get('expireLe', null) == resource.data.get('expireLe', null)
             || (expirationValide(request.resource.data.get('expireLe', null))
                 && (!('expireLe' in resource.data)
                     || (request.resource.data.expireLe > resource.data.expireLe
-                        && request.resource.data.expireLe <= resource.data.creeLe + duration.value(31, 'd')))));
+                        && (request.resource.data.expireLe == timestamp.date(9999, 12, 31)
+                            || request.resource.data.expireLe <= resource.data.creeLe + duration.value(31, 'd'))))));
     }
 
-    // V4.27: every item expires: a timestamp between 55 minutes and 31 days from now (margins
+    // V4.27: every item expires: a timestamp (or 9999-12-31 = kept for ever) between 55 minutes and 31 days from now (margins
     // for the offset between the device clock and the server).
     function expirationValide(t) {
       return t is timestamp
-        && t >= request.time + duration.value(55, 'm')
-        && t <= request.time + duration.value(31, 'd');
+        && (t == timestamp.date(9999, 12, 31)
+            || (t >= request.time + duration.value(55, 'm')
+                && t <= request.time + duration.value(31, 'd')));
     }
 
     // V4.26: an encrypted item holds "v<n>.<iv>.<data>" (base64url) in `contenu` and nothing in

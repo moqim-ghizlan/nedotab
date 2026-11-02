@@ -192,7 +192,13 @@ describe("éléments chiffrés", () => {
     const c = await chiffrerElement(vk, "u1", "e1", { contenu, titre: "mon titre" });
     expect(ressembleAChiffre(c)).toBe(true);
     expect(c).not.toContain("mon titre");
-    expect(await dechiffrerElement(vk, "u1", "e1", c)).toEqual({ contenu, titre: "mon titre", description: "" });
+    expect(await dechiffrerElement(vk, "u1", "e1", c)).toEqual({ contenu, titre: "mon titre", description: "", libelle: "" });
+  });
+  it("V4.31 : le titre écrit pour un fichier (libelle) est chiffré avec le reste", async () => {
+    const { vk } = await creerCoffre(MDP, { iterations: ITER });
+    const c = await chiffrerElement(vk, "u1", "e1", { contenu: "a.png", titre: "image/png", libelle: "Vacances", description: "plage" });
+    expect(c).not.toContain("Vacances");
+    expect(await dechiffrerElement(vk, "u1", "e1", c)).toEqual({ contenu: "a.png", titre: "image/png", description: "plage", libelle: "Vacances" });
   });
 
   it("fichier de 25 Mo", async () => {

@@ -9,7 +9,7 @@ const attendre = () => new Promise((r) => setTimeout(r, 0));
 const MO = 1024 * 1024;
 const fichier = (nom, taille = 100, type = "application/pdf") => ({ name: nom, size: taille, type });
 
-function monter({ octets = 0, envoi } = {}) {
+function monter({ octets = 0, envoi, details, editerDetails } = {}) {
   const store = creerStore(etatInitial(), reduire);
   const liste = document.createElement("ul");
   const rendre = vi.fn(() => liste.replaceChildren(...f.cartesEnvoi()));
@@ -23,10 +23,12 @@ function monter({ octets = 0, envoi } = {}) {
     ),
     lireFichierPartage: vi.fn(async () => new Blob([new Uint8Array(10)], { type: "image/png" })),
     supprimerFichierPartage: vi.fn(async () => {}),
+    modifierDetailsPartage: vi.fn(async () => {}),
   };
-  const f = creerFichiers({ charger: async () => fb, uid: () => "u1", store, rendre, octets: () => octets });
+  const viderDetails = vi.fn();
+  const f = creerFichiers({ charger: async () => fb, uid: () => "u1", store, rendre, octets: () => octets, details, viderDetails, editerDetails });
   document.body.append(f.quota, f.message, liste);
-  return { f, fb, liste, rendre };
+  return { f, fb, liste, rendre, viderDetails };
 }
 
 describe("fichiers du partage (V4.25)", () => {
@@ -149,6 +151,28 @@ describe("fichiers du partage (V4.25)", () => {
       c.remove();
     }
     expect(fb.lireFichierPartage).toHaveBeenCalledTimes(1);
+  });
+  it("V4.31 : le titre et la description saisis partent avec le fichier, puis sont vidés", async () => {
+    const { f, fb, viderDetails } = monter({ details: () => ({ titre: "Vacances", description: "plage" }) });
+    await f.ajouter([fichier("a.pdf")]);
+    await attendre();
+    expect(fb.envoyerFichierPartage.mock.calls[0][5]).toEqual({ titre: "Vacances", description: "plage" });
+    expect(viderDetails).toHaveBeenCalled();
+  });
+  it("V4.31 : carte avec titre et description ; « Modifier » enregistre les nouveaux", async () => {
+    const editerDetails = vi.fn(async () => ({ titre: "", description: "nouvelle" }));
+    const { f, fb } = monter({ editerDetails });
+    const c = f.carte({ id: "5", type: "fichier", contenu: "a.pdf", titre: "Vacances", description: "plage", typeMime: "application/pdf", taille: 10, chemin: "partages/u1/5/a.pdf" });
+    expect(c.querySelector(".partage-titre").textContent).toBe("Vacances");
+    expect(c.textContent).toContain("plage");
+    [...c.querySelectorAll("button")].find((b) => b.textContent === "Modifier").click();
+    await attendre();
+    await attendre();
+    expect(editerDetails).toHaveBeenCalledWith({ titre: "Vacances", description: "plage" });
+    // An empty title: the name of the file again.
+    expect(fb.modifierDetailsPartage).toHaveBeenCalledWith("u1", "5", { titre: "a.pdf", description: "nouvelle" });
+    const sans = f.carte({ id: "6", type: "fichier", contenu: "b.pdf", titre: "b.pdf", typeMime: "application/pdf", taille: 10, chemin: "partages/u1/6/b.pdf" });
+    expect(sans.querySelector(".partage-titre")).toBeNull();
   });
   it("nom affiché en texte : un nom piégé ne crée aucun élément", () => {
     const { f } = monter();

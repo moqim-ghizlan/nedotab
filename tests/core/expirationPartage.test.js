@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DUREES,
+  ILLIMITE,
   HEURE,
   JOUR,
   MINUTE,
@@ -21,11 +22,14 @@ const T0 = Date.UTC(2026, 10, 2, 12, 0, 0);
 
 describe("durées", () => {
   it.each(DUREES)("calcule l'échéance de $id", (d) => {
-    expect(calculerExpiration(d.id, 0, T0)).toBe(T0 + d.ms);
+    expect(calculerExpiration(d.id, 0, T0)).toBe(d.ms === null ? ILLIMITE : T0 + d.ms);
   });
-  it("une durée inconnue retombe sur 1 jour ; pas de « jamais »", () => {
-    expect(calculerExpiration("jamais", 0, T0)).toBe(T0 + JOUR);
-    expect(DUREES.map((d) => d.id)).not.toContain("jamais");
+  it("une durée inconnue retombe sur 1 jour ; « jamais » donne l'échéance illimitée", () => {
+    expect(calculerExpiration("inconnue", 0, T0)).toBe(T0 + JOUR);
+    expect(calculerExpiration("jamais", 0, T0)).toBe(ILLIMITE);
+    expect(expirationValide(ILLIMITE, T0)).toBe(true);
+    expect(prolonger({ creeLe: T0, expireLe: T0 + JOUR }, "jamais", 0, T0)).toEqual({ ok: true, expireLe: ILLIMITE });
+    expect(prolonger({ creeLe: T0, expireLe: ILLIMITE }, "jamais", 0, T0).ok).toBe(false);
   });
   it("bornes des règles : 59 min refusé, 55 min accepté, 31 jours accepté, 31 j + 1 min refusé", () => {
     expect(expirationValide(T0 + 54 * MINUTE, T0)).toBe(false);
@@ -97,7 +101,7 @@ describe("prolongation", () => {
       ok: false,
       erreur: "Durée maximale atteinte",
     });
-    expect(dureesProlongeables(plafonne, 0, T0)).toEqual([]);
+    expect(dureesProlongeables(plafonne, 0, T0).map((d) => d.id)).toEqual(["jamais"]);
   });
   it("ne raccourcit jamais", () => {
     expect(prolonger(e(T0, T0 + 7 * JOUR), "1h", 0, T0).ok).toBe(false);

@@ -12,6 +12,7 @@ import {
   estPlein,
   ilYA,
   longueur,
+  nettoyerDetails,
   trier,
   trouverDoublon,
   urlSure,
@@ -120,6 +121,11 @@ export function creerEspacePartage({
         element: { type: "fichier", octets, nom: e.contenu, typeMime: e.typeMime },
       }),
     expiration,
+    // V4.31: the title and description typed before attaching a file go with it.
+    details: () =>
+      nettoyerDetails({ titre: champTitre.value, description: champDescription.value }),
+    viderDetails: () => viderDetails(),
+    editerDetails: (valeurs) => editerDetails(valeurs),
     charger,
     uid,
     store,
@@ -374,7 +380,7 @@ export function creerEspacePartage({
     if (!options.length) return toast("Durée maximale atteinte");
     const choix = await demander({
       titre: "Prolonger",
-      message: "Nouvelle durée à partir de maintenant (30 jours au total depuis l'envoi).",
+      message: "Nouvelle durée à partir de maintenant (30 jours au plus depuis l'envoi, ou illimité).",
       boutons: [
         { libelle: "Annuler", valeur: null },
         ...options.map((d) => ({ libelle: d.libelle, valeur: d.id })),
@@ -474,6 +480,9 @@ export function creerEspacePartage({
                   dureeId,
                 }),
             })
+          : null,
+        !masque
+          ? boutonAction("crayon", "Modifier", { onclick: () => modifierTexte(brut, e) })
           : null,
         e.type === "fichier"
           ? null
@@ -646,15 +655,20 @@ export function creerEspacePartage({
   async function dechiffrerVisibles() {
     if (!coffre.session.estDeverrouille()) return;
     const aFaire = elements.filter(
-      (e) => e.chiffre && e.type !== "fichier" && !dechiffres.has(e.id) && !enCours.has(e.id),
+      // `bloc`: the encrypted text read; a block changed elsewhere ("Modifier") is read again.
+      (e) =>
+        e.chiffre &&
+        e.type !== "fichier" &&
+        dechiffres.get(e.id)?.bloc !== e.contenu &&
+        !enCours.has(e.id),
     );
     if (!aFaire.length) return;
     aFaire.forEach((e) => enCours.add(e.id));
     for (const e of aFaire) {
       try {
-        dechiffres.set(e.id, await coffre.dechiffrer(e));
+        dechiffres.set(e.id, { ...(await coffre.dechiffrer(e)), bloc: e.contenu });
       } catch {
-        dechiffres.set(e.id, { corrompu: true });
+        dechiffres.set(e.id, { corrompu: true, bloc: e.contenu });
       }
       enCours.delete(e.id);
     }
@@ -719,10 +733,7 @@ export function creerEspacePartage({
           chiffre ? coffre.chiffrer : null,
         );
       champ.value = "";
-      champTitre.value = "";
-      champDescription.value = "";
-      extras.hidden = true;
-      basculerExtras.setAttribute("aria-expanded", "false");
+      viderDetails();
       montrerErreur(null);
       if (!ouvert) toast("Envoyé");
     } catch (e) {
@@ -736,6 +747,70 @@ export function creerEspacePartage({
       envoiEnCours = false;
       rendre();
     }
+  }
+
+  function viderDetails() {
+    champTitre.value = "";
+    champDescription.value = "";
+    extras.hidden = true;
+    basculerExtras.setAttribute("aria-expanded", "false");
+  }
+
+  /**
+   * V4.31: "Modifier": the title and the description of an item, after it was sent.
+   * @returns {Promise<{ titre: string, description: string } | null>} null when cancelled
+   */
+  async function editerDetails({ titre = "", description = "" }) {
+    const t = el("input", {
+      id: "partage-modif-titre",
+      type: "text",
+      value: titre,
+      placeholder: "Titre (facultatif)",
+      maxlength: String(TITRE_MAX),
+      autocomplete: "off",
+    });
+    const d = el("textarea", {
+      id: "partage-modif-description",
+      rows: "3",
+      placeholder: "Description (facultatif)",
+      maxlength: String(DESCRIPTION_MAX),
+    });
+    d.value = description;
+    const ok = await demander({
+      titre: "Titre et description",
+      contenu: [
+        el("div", { class: "champ" }, el("label", { for: t.id, texte: "Titre" }), t),
+        el("div", { class: "champ" }, el("label", { for: d.id, texte: "Description" }), d),
+      ],
+      boutons: [
+        { libelle: "Annuler", valeur: false },
+        { libelle: "Enregistrer", valeur: true, principal: true },
+      ],
+    });
+    return ok ? nettoyerDetails({ titre: t.value, description: d.value }) : null;
+  }
+
+  async function modifierTexte(brut, e) {
+    const auto = titreDe(e.type, e.contenu);
+    const r = await editerDetails({
+      titre: e.titre && e.titre !== auto ? e.titre : "",
+      description: e.description ?? "",
+    });
+    if (!r) return;
+    const titre = r.titre || auto;
+    if (brut.chiffre && !coffre.session.estDeverrouille()) return;
+    action(async () => {
+      const fb = await charger();
+      if (brut.chiffre) {
+        const clair = { contenu: e.contenu, titre, description: r.description };
+        const bloc = await coffre.chiffrer(brut.id, clair);
+        await fb.modifierDetailsPartage(uid(), brut.id, { contenu: bloc });
+        dechiffres.set(brut.id, { ...clair, bloc });
+      } else {
+        await fb.modifierDetailsPartage(uid(), brut.id, { titre, description: r.description });
+      }
+      rendre();
+    });
   }
 
   async function collerPressePapiers() {

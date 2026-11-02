@@ -59,6 +59,9 @@ export function creerFichiers({
   tiroirsOuverts = new Set(),
   estNouveau = () => false,
   pied = () => [],
+  details = () => ({ titre: "", description: "" }),
+  viderDetails = () => {},
+  editerDetails = async () => null,
 }) {
   const envois = []; // { cle, fichier, part, etat: "envoi"|"echec"|"interrompu", erreur, annuler }
   const cache = new Map(); // id → Blob
@@ -139,6 +142,9 @@ export function creerFichiers({
       dire("Reconnectez-vous pour envoyer.");
       return;
     }
+    // V4.31: the title and description typed before (if any) go with the files of this batch.
+    const d = details();
+    let envoye = false;
     for (const f of fichiers) {
       const r = validerFichier(f, { octetsUtilises: octets() + utilisesParLesEnvois() });
       if (!r.ok) {
@@ -165,10 +171,13 @@ export function creerFichiers({
         chiffre,
         cle: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         fichier: f,
+        details: d,
         part: 0,
         etat: "envoi",
       });
+      envoye = true;
     }
+    if (envoye && (d.titre || d.description)) viderDetails();
   }
 
   async function demarrer(envoi) {
@@ -193,6 +202,7 @@ export function creerFichiers({
               chiffrerNom: (id, e) => coffre.chiffrer(id, e),
             }
           : null,
+        envoi.details,
       );
       envoi.annuler = annuler;
       const idElement = await promesse;
@@ -487,8 +497,10 @@ export function creerFichiers({
     if (brut.chiffre) {
       const m = metas.get(brut.id);
       if (!m?.contenu) return carteVerrouillee(brut, m?.corrompu);
-      e = { ...brut, contenu: m.contenu, typeMime: m.typeMime };
+      e = { ...brut, contenu: m.contenu, typeMime: m.typeMime, titre: m.libelle, description: m.description };
     }
+    // The title written by the user (a plain file stores its name there when there is none).
+    const titreUtilisateur = e.titre && e.titre !== e.contenu ? e.titre : "";
     const famille = familleDe(e.contenu, e.typeMime);
     const cadre = tuileType(ICONE_FAMILLE[famille], "fichier");
     miniature(e, cadre);
@@ -516,6 +528,9 @@ export function creerFichiers({
       el(
         "div",
         { class: "partage-texte" },
+        titreUtilisateur
+          ? el("strong", { class: "partage-titre", texte: titreUtilisateur })
+          : null,
         el("span", {
           class: "partage-nom",
           title: nomAffiche(e.contenu),
@@ -525,6 +540,9 @@ export function creerFichiers({
           class: "partage-detail",
           texte: `${formaterTaille(e.taille)}${avertissement ? ` · ${avertissement}` : ""}`,
         }),
+        e.description
+          ? el("span", { class: "partage-detail", texte: e.description })
+          : null,
       ),
       ...pied(e),
       rangeeActions(
@@ -550,6 +568,9 @@ export function creerFichiers({
                 },
               })
             : null,
+          boutonAction("crayon", "Modifier", {
+            onclick: () => modifier(brut, e, titreUtilisateur),
+          }),
           boutonAction("poubelle", "Supprimer", {
             classe: "partage-action--danger",
             onclick: () => supprimer(e),
@@ -558,6 +579,40 @@ export function creerFichiers({
         tiroirsOuverts,
       ),
     );
+  }
+
+  /** V4.31: "Modifier": title and description of a file, after it was sent. */
+  async function modifier(brut, e, titreUtilisateur) {
+    const r = await editerDetails({ titre: titreUtilisateur, description: e.description ?? "" });
+    if (!r) return;
+    try {
+      const fb = await charger();
+      if (brut.chiffre) {
+        if (!coffre?.session.estDeverrouille()) return;
+        // The whole block is encrypted again (name and type unchanged).
+        const contenu = await coffre.chiffrer(brut.id, {
+          contenu: e.contenu,
+          titre: e.typeMime,
+          libelle: r.titre,
+          description: r.description,
+        });
+        await fb.modifierDetailsPartage(uid(), brut.id, { contenu });
+        metas.set(brut.id, {
+          ...metas.get(brut.id),
+          libelle: r.titre,
+          description: r.description,
+          bloc: contenu,
+        });
+      } else {
+        await fb.modifierDetailsPartage(uid(), brut.id, {
+          titre: r.titre || e.contenu,
+          description: r.description,
+        });
+      }
+      rendre();
+    } catch {
+      toast("Modification impossible pour l'instant.", { type: "erreur" });
+    }
   }
 
   function carteVerrouillee(e, corrompu) {
@@ -593,14 +648,23 @@ export function creerFichiers({
   /** Reads (in memory) the name and type of the encrypted files while the vault is open. */
   async function dechiffrerNoms(liste) {
     if (!coffre?.session.estDeverrouille()) return;
-    const aFaire = liste.filter((e) => e.type === "fichier" && e.chiffre && !metas.has(e.id));
+    // A block changed elsewhere ("Modifier") is read again.
+    const aFaire = liste.filter(
+      (e) => e.type === "fichier" && e.chiffre && metas.get(e.id)?.bloc !== e.contenu,
+    );
     if (!aFaire.length) return;
     for (const e of aFaire) {
       try {
         const r = await coffre.dechiffrer(e);
-        metas.set(e.id, { contenu: r.contenu, typeMime: r.titre });
+        metas.set(e.id, {
+          contenu: r.contenu,
+          typeMime: r.titre,
+          libelle: r.libelle,
+          description: r.description,
+          bloc: e.contenu,
+        });
       } catch {
-        metas.set(e.id, { corrompu: true });
+        metas.set(e.id, { corrompu: true, bloc: e.contenu });
       }
     }
     rendre();

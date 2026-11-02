@@ -955,7 +955,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
             el("p", {
               class: "reglages-note",
               texte:
-                "Les éléments sont supprimés automatiquement, fichiers compris, à l'échéance (30 jours au plus).",
+                "Les éléments sont supprimés automatiquement, fichiers compris, à l'échéance, sauf si vous choisissez « Illimité ».",
             }),
           ),
           // V4.26: the vault (end-to-end encryption of sharing-space items).

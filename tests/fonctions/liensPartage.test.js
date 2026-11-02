@@ -203,7 +203,7 @@ describe("création", () => {
   it("refuse les paramètres invalides, un jeton déjà pris, un fichier trop gros", async () => {
     const { liens } = monde();
     const { p } = await preparer();
-    expect(await code(liens.creer("u1", { ...p, dureeId: "jamais" }))).toBe("invalide");
+    expect(await code(liens.creer("u1", { ...p, dureeId: "inconnue" }))).toBe("invalide");
     expect(await code(liens.creer("u1", { ...p, ouverturesMax: 7 }))).toBe("invalide");
     expect(await code(liens.creer("u1", { ...p, type: "exe" }))).toBe("invalide");
     expect(await code(liens.creer("u1", { ...p, jeton: "court" }))).toBe("invalide");

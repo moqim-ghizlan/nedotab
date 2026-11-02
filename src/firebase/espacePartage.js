@@ -125,6 +125,14 @@ export async function epingler(uid, id, epingle) {
   await updateDoc(doc(elements(uid), id), { epingle: !!epingle });
 }
 
+/**
+ * Title and description changed afterwards ("Modifier"). For a vault item, `champs` is
+ * { contenu } (the block re-encrypted on the device); otherwise { titre, description }.
+ */
+export async function modifierDetails(uid, id, champs) {
+  await updateDoc(doc(elements(uid), id), champs);
+}
+
 /** Removes an element and decrements the counter (one batch). */
 export async function supprimer(uid, id) {
   const lot = writeBatch(db());

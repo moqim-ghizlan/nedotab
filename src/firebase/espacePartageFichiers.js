@@ -50,6 +50,7 @@ export function envoyerFichier(
   surProgres,
   expireLe = calculerExpiration(DUREE_DEFAUT),
   chiffrement = null,
+  { titre = "", description = "" } = {},
 ) {
   const reference = doc(elements(uid)); // automatic id
   // V4.26: an encrypted file keeps a neutral name in Storage; its real name and type live in the
@@ -96,11 +97,18 @@ export function envoyerFichier(
             contenu: await chiffrement.chiffrerNom(reference.id, {
               contenu: nomAffiche(fichier.name),
               titre: typeDeclare(fichier),
+              libelle: titre,
+              description,
             }),
             titre: "",
             chiffre: true,
           }
-        : { contenu: nomAffiche(fichier.name), titre: nomAffiche(fichier.name) };
+        : {
+            contenu: nomAffiche(fichier.name),
+            // The title written by the user, or the name of the file.
+            titre: titre || nomAffiche(fichier.name),
+            ...(description ? { description } : {}),
+          };
       lot.set(reference, {
         type: "fichier",
         ...bloc,
