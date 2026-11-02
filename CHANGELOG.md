@@ -2,6 +2,12 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.29.2] - 2026-11-02
+
+### Corrigé
+
+- **Espace de partage** : fermer l’aperçu d’une image ne ferme plus aussi le panneau.
+
 ## [4.29.0] - 2026-11-02
 
 ### Ajouté

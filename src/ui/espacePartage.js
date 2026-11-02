@@ -1,7 +1,10 @@
 import { libelleAppareil } from "../core/appareil.js";
 import {
+  DESCRIPTION_MAX,
   LIMITE_CARACTERES,
   LIMITE_ELEMENTS,
+  TITRE_MAX,
+  titreDe,
   PAGE_ELEMENTS,
   apercu,
   creerElement,
@@ -135,7 +138,23 @@ export function creerEspacePartage({
     "aria-label": "Texte ou lien à envoyer",
     spellcheck: "false",
   });
-  const compteurCaracteres = el("span", { class: "partage-compte", "aria-live": "polite" });
+  // Optional title and description of what is sent.
+  const champTitre = el("input", {
+    type: "text",
+    class: "partage-champ partage-champ--titre",
+    placeholder: "Titre (facultatif)",
+    "aria-label": "Titre (facultatif)",
+    maxlength: String(TITRE_MAX),
+    autocomplete: "off",
+  });
+  const champDescription = el("textarea", {
+    class: "partage-champ",
+    rows: "2",
+    placeholder: "Description (facultatif)",
+    "aria-label": "Description (facultatif)",
+    maxlength: String(DESCRIPTION_MAX),
+  });
+  const compteurCaracteres =el("span", { class: "partage-compte", "aria-live": "polite" });
   const messageAjout = el("p", {
     class: "partage-message",
     role: "status",
@@ -224,6 +243,8 @@ export function creerEspacePartage({
       "div",
       { class: "partage-ajout" },
       champ,
+      champTitre,
+      champDescription,
       el(
         "div",
         { class: "partage-ajout-actions" },
@@ -283,7 +304,9 @@ export function creerEspacePartage({
     const clair = brut.chiffre ? dechiffres.get(brut.id) : null;
     const verrouille = brut.chiffre && !clair?.contenu && !clair?.corrompu;
     const e =
-      clair?.contenu !== undefined ? { ...brut, contenu: clair.contenu, titre: clair.titre } : brut;
+      clair?.contenu !== undefined
+        ? { ...brut, contenu: clair.contenu, titre: clair.titre, description: clair.description }
+        : brut;
     const url = brut.chiffre && !clair ? null : lienDe(e);
     const texte = el("div", { class: "partage-texte" });
     if (brut.chiffre && (verrouille || clair?.corrompu)) {
@@ -311,6 +334,13 @@ export function creerEspacePartage({
       );
     } else {
       texte.append(el("span", { class: "partage-apercu", texte: apercu(e.contenu) }));
+    }
+    // A title written by the user (not the automatic one) goes first, the description last.
+    if (!(brut.chiffre && (verrouille || clair?.corrompu))) {
+      if (e.titre && e.titre !== titreDe(e.type, e.contenu))
+        texte.prepend(el("strong", { class: "partage-titre", texte: e.titre }));
+      if (e.description)
+        texte.append(el("span", { class: "partage-detail", texte: e.description }));
     }
     const copie = el("button", {
       type: "button",
@@ -557,7 +587,12 @@ export function creerEspacePartage({
     montrerErreur(validerContenu(brut));
     if (validerContenu(brut)) return;
     if (estPlein(compteur)) return rendre();
-    const r = creerElement({ contenu: brut, type });
+    const r = creerElement({
+      contenu: brut,
+      type,
+      titre: champTitre.value,
+      description: champDescription.value,
+    });
     if (!r.ok) return montrerErreur(r.erreur);
     const chiffre = coffre.veutChiffrer();
     // V4.26: the vault must be open (created or unlocked) BEFORE anything is sent.
@@ -567,7 +602,7 @@ export function creerEspacePartage({
     try {
       const fb = await charger();
       // Same content already there: it goes back to the top (not for the vault: contents are unreadable).
-      const doublon = chiffre
+      const doublon = chiffre || champTitre.value.trim() || champDescription.value.trim()
         ? null
         : trouverDoublon(
             elements.filter((x) => !x.chiffre),
@@ -581,6 +616,8 @@ export function creerEspacePartage({
           chiffre ? coffre.chiffrer : null,
         );
       champ.value = "";
+      champTitre.value = "";
+      champDescription.value = "";
       montrerErreur(null);
       if (!ouvert) toast("Envoyé");
     } catch (e) {
@@ -632,6 +669,7 @@ export function creerEspacePartage({
                           type: e.type,
                           contenu: clair.contenu,
                           titre: clair.titre,
+                          description: clair.description,
                           epingle: e.epingle,
                           appareil: e.appareil,
                           chiffre: true,
@@ -783,7 +821,7 @@ export function creerEspacePartage({
     if (
       !panneau.contains(e.target) &&
       !bouton.contains(e.target) &&
-      !e.target.closest?.(".toast, .menu, dialog")
+      !e.target.closest?.(".toast, .menu, dialog, .partage-visionneuse")
     )
       fermer();
   };
