@@ -23,7 +23,7 @@ const ITER = 310_000;
 const NOW = 5_000_000_000;
 const MDP = "une phrase de passe pour le lien";
 
-function monde({ config = { liensActifs: true, ouvertA: "tous" }, t = { v: NOW } } = {}) {
+function monde({ config = { liensActifs: true, ouvertA: "tous" }, t = { v: NOW }, alerter } = {}) {
   const db = fauxDb({ "config/partage": config });
   const stockage = fauxStockage();
   let n = 0;
@@ -36,6 +36,7 @@ function monde({ config = { liensActifs: true, ouvertA: "tous" }, t = { v: NOW }
         .toString("base64url")
         .padEnd(12, "A"),
     attendre: async () => {},
+    alerter,
   });
   return { db, stockage, liens, t };
 }
@@ -411,6 +412,36 @@ describe("signalement", () => {
     expect(await code(liens.ouvrir({ jeton, action: "ouvrir" }, "1.0.0.9"))).toBe("indisponible");
     // Unknown link: same answer, nothing written.
     expect(await liens.signaler({ jeton: genererLien().jeton }, "1.0.0.4")).toEqual({ ok: true });
+  });
+});
+
+describe("alerte de signalement", () => {
+  it("prévient à chaque signalement avec des volumes seulement, et une alerte en panne ne bloque rien", async () => {
+    const appels = [];
+    const { liens } = monde({ alerter: (i) => appels.push(i) });
+    const { p, jeton } = await preparer({ ouverturesMax: 0 });
+    await liens.creer("u1", p);
+    await liens.signaler({ jeton }, "1.0.0.1");
+    await liens.signaler({ jeton }, "1.0.0.2");
+    await liens.signaler({ jeton }, "1.0.0.3");
+    expect(appels).toEqual([
+      { nombre: 1, suspendu: false },
+      { nombre: 2, suspendu: false },
+      { nombre: 3, suspendu: true },
+    ]);
+    expect(JSON.stringify(appels)).not.toContain(jeton);
+    // Unknown link: nothing to report.
+    await liens.signaler({ jeton: genererLien().jeton }, "1.0.0.4");
+    expect(appels).toHaveLength(3);
+
+    const casse = monde({
+      alerter: () => {
+        throw new Error("panne");
+      },
+    });
+    const b = await preparer({ ouverturesMax: 0 });
+    await casse.liens.creer("u1", b.p);
+    expect(await casse.liens.signaler({ jeton: b.jeton }, "1.0.0.1")).toEqual({ ok: true });
   });
 });
 

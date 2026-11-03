@@ -61,6 +61,7 @@ const decoder = (b64u) => Buffer.from(b64u, "base64url");
  * @param {(adresse: string, maintenant: number) => string} [d.empreinteAdresse] salted, rotating hash of the address
  * @param {(ms: number) => Promise<void>} [d.attendre]
  * @param {(ms: number) => unknown} [d.horodatage] Firestore Timestamp (needed by the TTL of limitesPartage)
+ * @param {(infos: { nombre: number, suspendu: boolean }) => void} [d.alerter] called after each report: VOLUMES only (a log-based alert sends the e-mail)
  */
 export function creerLiens({
   db,
@@ -70,6 +71,7 @@ export function creerLiens({
   empreinteAdresse = (a, t) => sha256(`${a}:${Math.floor(t / 600_000)}`).toString("base64url"),
   attendre = (ms) => new Promise((ok) => setTimeout(ok, ms)),
   horodatage = (ms) => ms,
+  alerter = () => {},
 }) {
   const lien = (jeton) => db.doc(`liensPartage/${jeton}`);
   const copie = (jeton) => db.doc(`liensPartage/${jeton}/contenu/copie`);
@@ -318,9 +320,15 @@ export function creerLiens({
         motif: typeof motif === "string" ? motif.slice(0, 200) : "",
       });
     const n = (await db.collection("signalements").where("jeton", "==", jeton).get()).size;
-    if (n >= SIGNALEMENTS_POUR_SUSPENDRE && !l.suspendu) {
+    const suspension = n >= SIGNALEMENTS_POUR_SUSPENDRE && !l.suspendu;
+    if (suspension) {
       await lien(jeton).update({ suspendu: true });
       await db.doc(`users/${l.uid}/prive/partage`).set({ aExaminer: true }, { merge: true });
+    }
+    try {
+      alerter({ nombre: n, suspendu: suspension || l.suspendu === true });
+    } catch {
+      // an alert must never make a report fail
     }
     return { ok: true };
   }

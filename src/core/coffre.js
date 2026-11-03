@@ -65,7 +65,19 @@ const COURANTS = new Set(
   12341234 11111111 00000000 88888888 1234qwer qwer1234 asdfghjkl asdf1234 zxcvbnm zxcvbnm123 pokemon
   naruto batman starwars matrix freedom whatever cheese computer internet ordinateur famille
   maison amour bonheur 123abc abcdef abcd1234 abcdefgh motdepasse2024 motdepasse2025 password2024
-  password2025 azerty2024 azerty2025 france123 paris123 football1 jesuisla lolilol azertyazerty`
+  password2025 azerty2024 azerty2025 france123 paris123 football1 jesuisla lolilol azertyazerty
+  password1234 password12345 passwordpassword motdepasse1234 motdepasse12345 motdepassemotdepasse
+  123456789123 1234567890123 12345678901234 123456789101 112233445566 111111111111 000000000000
+  222222222222 999999999999 123123123123 123412341234 12345678910 1q2w3e4r5t6y 1qaz2wsx3edc
+  qwertyuiopasdf qwertyuiop123 qwertyuiop1 azertyuiop123 azertyuiop1 azertyuiopqsdf azertyuiopazerty
+  qwertyqwerty qwertyuiopqwerty asdfghjklqwerty azertyqsdfgh azertyazerty12 qazwsxedcrfv
+  abcdefghijkl abcdefghijklmnop abcdefghij123 abcabcabcabc abc123abc123 aaaaaaaaaaaa aaaaaaaaaaaaaaaa
+  iloveyou1234 iloveyou123 iloveyouiloveyou jetaime123456 jetaimejetaime welcome12345 welcome1234
+  letmein12345 letmein123456 administrator administrator1 administrateur adminadmin1234
+  bonjour12345 bonjourbonjour bonjour1234 soleil123456 doudou123456 chocolat1234 marseille1234
+  superman1234 football12345 baseball1234 changeme1234 changemechangeme secretsecret trustno1trustno1
+  nedotab1234 nedotab12345 coffrefort123 coffrefort1234 vaultvault1234 monmotdepasse monmotdepasse1
+  monmotdepasse123 mot2passe1234 motdepasse2026 password2026 azerty2026 nedotab2026`
     .split(/\s+/)
     .filter(Boolean),
 );

@@ -163,6 +163,17 @@ export async function ecranAjout({
       if (e === "erreur") {
         etatIa.textContent = "";
         dire(m);
+        // Google sign-in cannot run in this small window (it closes on the first click
+        // outside): send the user to NedoTab, where the session is then shared.
+        if (/connect/i.test(m ?? ""))
+          etatIa.append(
+            el("button", {
+              type: "button",
+              class: "lien-discret",
+              texte: "Ouvrir NedoTab pour vous connecter",
+              onclick: ouvrirNedoTab,
+            }),
+          );
       }
       if (e === "annule") etatIa.textContent = "";
     },

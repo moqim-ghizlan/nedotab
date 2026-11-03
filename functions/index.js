@@ -236,6 +236,9 @@ const liens = creerLiens({
     supprimer: (chemin) => bucketLiens().file(chemin).delete({ ignoreNotFound: true }),
   },
   horodatage: (ms) => Timestamp.fromMillis(ms),
+  // V4.31: severity ERROR on purpose, a Cloud Monitoring log-based alert e-mails the owner.
+  // Volumes only: no token, no address.
+  alerter: (infos) => logger.error("SIGNALEMENT_LIEN_PARTAGE", infos),
   // Salted and rotating (10 min): the address itself is never stored nor logged.
   empreinteAdresse: (adresse, t) =>
     createHash("sha256").update(`${adresse}:${sel}:${Math.floor(t / 600_000)}`).digest("base64url"),

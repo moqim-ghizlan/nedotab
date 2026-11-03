@@ -2,6 +2,23 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.31.0] - 2026-11-03
+
+### Ajouté
+
+- **Espace de partage** : le bouton **Prolonger** existe aussi sur les fichiers (les règles l'acceptaient déjà).
+- **Signalement d'un lien public** : chaque signalement écrit un journal d'erreur `SIGNALEMENT_LIEN_PARTAGE` (nombre de signalements et suspension, jamais le lien ni l'adresse). Une alerte Cloud Monitoring sur ce journal prévient le propriétaire par e-mail (réglage dans la console, voir `docs/decisions.md`).
+- **Fenêtre de l'extension** : quand l'IA demande de se connecter, bouton « Ouvrir NedoTab pour vous connecter ».
+
+### Modifié
+
+- **Vault** : la liste des mots de passe courants refusés passe d'environ 150 à plus de 250 entrées.
+- Les points de la V4 gardés volontairement tels quels sont documentés dans `docs/decisions.md`.
+
+### Non fait / limites connues
+
+- Les vérifications manuelles de la V4 (iPhone, iPad, déploiement, alerte e-mail) restent à faire : voir `docs/tests/v4-restant.md`.
+
 ## [4.30.0] - 2026-11-02
 
 ### Modifié

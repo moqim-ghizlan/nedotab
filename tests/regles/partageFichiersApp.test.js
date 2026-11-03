@@ -146,6 +146,8 @@ describe("envoi de fichiers (émulateurs)", () => {
     expect(await dechiffrerElement(vk, uid, id, el.contenu)).toEqual({
       contenu: "divorce-avocat.pdf",
       titre: "application/pdf",
+      libelle: "",
+      description: "",
     });
     await fb.supprimerFichierPartage(uid, el);
   });

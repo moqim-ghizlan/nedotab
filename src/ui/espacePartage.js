@@ -484,9 +484,7 @@ export function creerEspacePartage({
         !masque
           ? boutonAction("crayon", "Modifier", { onclick: () => modifierTexte(brut, e) })
           : null,
-        e.type === "fichier"
-          ? null
-          : boutonAction("horloge", "Prolonger", { onclick: () => choisirProlongation(e) }),
+        boutonAction("horloge", "Prolonger", { onclick: () => choisirProlongation(e) }),
         boutonAction("poubelle", "Supprimer", {
           classe: "partage-action--danger",
           onclick: () => supprimerAvecAnnulation(e),
