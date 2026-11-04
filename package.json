@@ -1,6 +1,6 @@
 {
   "name": "nedotab",
-  "version": "4.31.1",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "description": "Page Nouvel onglet avec grille d'icônes et dossiers imbriqués.",
@@ -14,6 +14,7 @@
     "test:cibles": "node scripts/tester-cibles.mjs",
     "test:watch": "vitest",
     "lint": "eslint .",
+    "lint:serveur": "shellcheck serveur/scripts/*.sh",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icones": "node scripts/generer-icones.js",

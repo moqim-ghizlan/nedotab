@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.0.0] - 2026-11-04
+
+### Ajouté
+
+- **Serveur VPN gratuit (V5.0)** : machine Oracle Always Free (ARM, Francfort, Ubuntu 24.04), IP réservée, domaine DuckDNS.
+- **Scripts idempotents** dans `serveur/scripts/` : base et utilisateur d'administration, SSH par clé uniquement avec fail2ban, pare-feu ufw (seul le port 22 ouvert), mises à jour de sécurité automatiques, script d'état.
+- **Documentation** `serveur/README.md` et skill `serveur-vpn` ; script `npm run lint:serveur` (shellcheck).
+
 ## [4.31.1] - 2026-11-04
 
 ### Ajouté

@@ -20,3 +20,8 @@ ui-debug.log
 !functions/.env.demo-nedotab
 functions/node_modules/
 functions/.secret.local
+
+# Serveur VPN
+id_ed25519*
+*.key
+serveur/**/*.env
