@@ -3136,8 +3136,9 @@ body.fond-clair .carte-action--principale {
     color 160ms,
     border-color 160ms;
 }
-.connexion-onglet:hover {
-  color: var(--texte);
+.connexion-onglet:hover:not([aria-selected="true"]) {
+  background: color-mix(in srgb, var(--carte-texte, var(--texte)) 8%, transparent);
+  color: var(--carte-texte, var(--texte));
 }
 .connexion-onglet[aria-selected="true"] {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
@@ -3173,6 +3174,12 @@ body.fond-clair .carte-action--principale {
     border-color 160ms,
     box-shadow 160ms,
     background-color 160ms;
+}
+body.fond-clair .connexion-formulaire .connexion-champ {
+  background: rgb(255 255 255 / 0.6);
+}
+body.fond-clair .connexion-formulaire .connexion-champ:focus-visible {
+  background: rgb(255 255 255 / 0.85);
 }
 .connexion-formulaire .connexion-champ:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--trait-fort));
@@ -3319,8 +3326,8 @@ body.fond-clair .carte-action--principale {
   cursor: pointer;
 }
 .connexion-retour:hover {
-  background: var(--survol);
-  color: var(--texte);
+  background: color-mix(in srgb, var(--carte-texte, var(--texte)) 10%, transparent);
+  color: var(--carte-texte, var(--texte));
 }
 .connexion-succes {
   display: flex;
