@@ -1,4 +1,5 @@
 import { lireAcces, messageErreurVpn } from "../../core/vpn.js";
+import { lireProfil } from "../../core/vpnWireguard.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 
 /**
@@ -15,7 +16,7 @@ export function creerServiceVpn({ chargerFb = chargerFirebase } = {}) {
       const fb = await chargerFb();
       return { ok: true, valeur: await fb.appelerVpn(nom, donnees) };
     } catch (e) {
-      return { ok: false, code: e?.code ?? null, erreur: messageErreurVpn(e) };
+      return { ok: false, code: e?.code ?? null, erreur: messageErreurVpn(e), message: e?.message };
     }
   };
   return {
@@ -34,6 +35,20 @@ export function creerServiceVpn({ chargerFb = chargerFirebase } = {}) {
       const r = await appeler("vpnObtenirAcces", {});
       return r.ok ? { ok: true, valeur: lireAcces(r.valeur) } : r;
     },
+    /** V5.8: { ok: true, valeur: { config, nomProfil, pays } }. The key is not kept here. */
+    async profil() {
+      const r = await appeler("vpnObtenirProfilWireGuard", {});
+      if (!r.ok) {
+        // "En préparation" is a message written by our own function: shown as it is.
+        const direct = r.code === "functions/failed-precondition" && r.message;
+        return direct ? { ...r, erreur: r.message } : r;
+      }
+      const profil = lireProfil(r.valeur);
+      return profil
+        ? { ok: true, valeur: profil }
+        : { ok: false, erreur: "Profil indisponible pour l'instant." };
+    },
+    recreerProfil: () => appeler("vpnRecreerProfil", {}),
     async regenerer() {
       const r = await appeler("vpnRegenererMotDePasse", {});
       return r.ok ? { ok: true, valeur: lireAcces(r.valeur) } : r;

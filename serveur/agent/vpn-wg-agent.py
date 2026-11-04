@@ -59,10 +59,11 @@ def _profils_ok(v):
         and isinstance(v["profils"], list)
         and all(
             isinstance(p, dict)
-            and set(p) == {"nomProfil", "depose"}
+            and set(p) == {"nomProfil", "depose", "recreer"}
             and isinstance(p["nomProfil"], str)
             and NOM.match(p["nomProfil"])
             and isinstance(p["depose"], bool)
+            and isinstance(p["recreer"], bool)
             for p in v["profils"]
         )
     )
@@ -87,7 +88,9 @@ def synchroniser(http, cfg, journal=lambda m: print(m, file=sys.stderr)):
     code, corps = http("GET", cfg["url_profils"], fonction)
     if code != 200:
         raise Echec(f"profils http {code}")
-    souhaites = {p["nomProfil"]: p["depose"] for p in _json(corps, _profils_ok)["profils"]}
+    profils = _json(corps, _profils_ok)["profils"]
+    souhaites = {p["nomProfil"]: p["depose"] for p in profils}
+    a_recreer = {p["nomProfil"] for p in profils if p["recreer"]}
 
     code, corps = http("GET", WG + "/api/client", wg)
     if code != 200:
@@ -95,13 +98,15 @@ def synchroniser(http, cfg, journal=lambda m: print(m, file=sys.stderr)):
     existants = {c["name"]: c["id"] for c in _json(corps, _clients_ok) if NOM.match(c["name"])}
 
     supprimes = crees = deposes = 0
-    # 1. Revocations d'abord : couper un acces est plus urgent que d'en creer un.
-    for nom, identifiant in existants.items():
-        if nom in souhaites:
+    # 1. Revocations d'abord : couper un acces est plus urgent que d'en creer un. Un profil a
+    #    recreer (V5.8) est supprime de la meme facon : l'ancienne configuration cesse de marcher.
+    for nom, identifiant in list(existants.items()):
+        if nom in souhaites and nom not in a_recreer:
             continue
         code, _ = http("DELETE", f"{WG}/api/client/{identifiant}", wg)
         if code == 200:
             supprimes += 1
+            del existants[nom]
         else:
             journal(f"suppression refusee (http {code})")
     # 2. Creations et depots.

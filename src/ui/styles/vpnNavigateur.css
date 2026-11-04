@@ -156,3 +156,31 @@
 .fuites-ligne--echec > strong {
   color: var(--danger);
 }
+
+/* V5.8 — WireGuard: QR code shown blurred until revealed. */
+.vpn-wireguard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+}
+.vpn-etapes {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: var(--taille-s);
+}
+.vpn-qr-zone {
+  display: flex;
+  justify-content: center;
+  padding: var(--espace-3);
+  background: #fff;
+  border-radius: 8px;
+  max-width: 340px;
+}
+.vpn-qr-zone--flou canvas {
+  filter: blur(14px);
+}
+.vpn-qr {
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}

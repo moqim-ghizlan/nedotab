@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.8.0] - 2026-11-05
+
+### Ajouté
+
+- **Configuration WireGuard en un clic (V5.8)** : Réglages → VPN → « VPN pour tout l'appareil (WireGuard) » (extension et web app, pour les invités). Guide en 4 étapes, **QR code généré sur l'appareil** (bibliothèque `qrcode`, aucun service en ligne), affiché flouté jusqu'à « Révéler », masqué après 60 secondes ou dès qu'on quitte l'écran.
+- Fichier `.conf` : « Télécharger le fichier de configuration » (ordinateur) ou « Ouvrir dans WireGuard » (partage système sur iPhone / iPad), nommé d'après le profil, jamais l'e-mail.
+- **Recréer mon profil** : l'ancien profil est supprimé du serveur (il cesse de marcher), un nouveau est créé.
+- Fonctions `vpnObtenirProfilWireGuard` (10 appels par jour) et `vpnRecreerProfil` ; le journal ne contient jamais la configuration. L'agent du serveur gère la recréation.
+- La configuration (qui contient une clé privée) n'existe qu'en mémoire pendant l'affichage : jamais écrite dans un stockage, une sauvegarde, un export ou un journal.
+- Dépendances : `qrcode` (génération) et `jsqr` (tests : relecture du QR).
+
+### À faire avant utilisation
+
+Déployer `vpnObtenirProfilWireGuard` et `vpnRecreerProfil`, puis mettre à jour l'agent sur le serveur (`vpn-wg-agent`). Les essais sur un vrai iPhone et un ordinateur ne sont pas faits.
+
 ## [5.7.0] - 2026-11-05
 
 ### Ajouté

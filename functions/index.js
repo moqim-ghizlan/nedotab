@@ -29,6 +29,7 @@ import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
 import { creerProfilsVpn, ErreurProfil } from "./src/vpn/agentProfils.js";
 import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
+import { creerProfilInvite } from "./src/vpn/profil.js";
 
 initializeApp();
 
@@ -364,6 +365,16 @@ export const vpnRevoquer = appelVpn((auth, donnees) => vpn.revoquer(auth, donnee
 export const vpnListeInvites = appelVpn((auth) => vpn.listeInvites(auth));
 export const vpnObtenirAcces = appelVpn((auth) => vpn.obtenirAcces(auth));
 export const vpnRegenererMotDePasse = appelVpn((auth) => vpn.regenererMotDePasse(auth));
+
+// V5.8: the guest's own WireGuard profile (a private key travels in the answer: nothing is logged).
+const profilInvite = creerProfilInvite({
+  db: getFirestore(),
+  cle: () => VPN_CLE_CHIFFREMENT.value(),
+  consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  journal: (infos) => logger.info("vpn : profil", infos),
+});
+export const vpnObtenirProfilWireGuard = appelVpn((auth) => profilInvite.obtenir(auth));
+export const vpnRecreerProfil = appelVpn((auth) => profilInvite.recreer(auth));
 
 /** The server agent: GET with "Authorization: Bearer <token>"; nothing else is accepted. */
 export const vpnAgentSynchro = onRequest(

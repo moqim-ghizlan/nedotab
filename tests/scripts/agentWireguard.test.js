@@ -21,7 +21,8 @@ function lancer(scenario) {
   expect(r.status, r.stderr).toBe(0);
   return { ...JSON.parse(r.stdout), sortie: r.stdout + r.stderr };
 }
-const profils = (...l) => l.map(([nomProfil, depose = false]) => ({ nomProfil, depose }));
+const profils = (...l) =>
+  l.map(([nomProfil, depose = false, recreer = false]) => ({ nomProfil, depose, recreer }));
 const supprimes = (r) =>
   r.appels.filter(([m]) => m === "DELETE").map(([, u]) => u.split("/").pop());
 const crees = (r) => r.appels.filter(([m, u]) => m === "POST" && u.endsWith("/api/client")).length;
@@ -60,7 +61,7 @@ describe.skipIf(!PYTHON)("agent WireGuard", () => {
     ["HTML", { profils_brut: "<html>erreur</html>" }],
     ["champ en plus", { profils_brut: '{"profils":[],"x":1}' }],
     ["nom invalide", { profils_brut: '{"profils":[{"nomProfil":"../x","depose":false}]}' }],
-    ["depose absent", { profils_brut: `{"profils":[{"nomProfil":"${A}"}]}` }],
+    ["depose absent", { profils_brut: `{"profils":[{"nomProfil":"${A}","depose":false}]}` }],
   ])("réponse des fonctions invalide (%s) : rien n'est supprimé", (_n, extra) => {
     const r = lancer({ clients: [{ id: 3, name: C }], profils: [], ...extra });
     expect(r.erreur).not.toBeNull();
@@ -93,6 +94,13 @@ describe.skipIf(!PYTHON)("agent WireGuard", () => {
     const r = lancer({ profils: profils([A]), clients: [], depot_code: 500 });
     expect(supprimes(r)).toEqual([]);
     expect(r.journal.join(" ")).toMatch(/depot refuse/);
+  });
+
+  it("profil à recréer : l'ancien client est supprimé, un nouveau est créé et déposé", () => {
+    const r = lancer({ profils: profils([A, false, true]), clients: [{ id: 5, name: A }] });
+    expect(supprimes(r)).toEqual(["5"]);
+    expect(crees(r)).toBe(1);
+    expect(r.deposes.map((d) => d.nomProfil)).toEqual([A]);
   });
 
   it("tout est à jour : aucun appel d'écriture", () => {

@@ -13,6 +13,7 @@ import { creerServiceVpn } from "../services/vpn.js";
 import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";
 import { blocVpnNavigateur } from "../vpnNavigateur.js";
+import { blocWireguard } from "../vpn/wireguard.js";
 import { blocReglesVpn } from "./reglesVpn.js";
 
 /**
@@ -372,6 +373,8 @@ export function sectionVpn({
     if (vpn && store) racine.append(blocReglesVpn({ store }).racine);
     if (etat.admin) racine.append(blocInvites());
     racine.append(blocMonAcces());
+    // V5.8: WireGuard for the whole device (guests only).
+    if (etat.acces && !etat.occupe) racine.append(blocWireguard({ service }).racine);
   }
 
   function relancer() {

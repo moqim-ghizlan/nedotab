@@ -66,8 +66,11 @@ export function creerProfilsVpn({
           await db.doc(`${acces}/${d.id}`).set({ nomProfil: nom }, { merge: true });
         }
         // `depose`: a configuration is stored, so the agent need not send it again.
-        const depose = (await db.doc(profil(d.id)).get()).exists;
-        profils.push({ nomProfil: nom, depose });
+        const stocke = await db.doc(profil(d.id)).get();
+        const donnees = stocke.exists ? stocke.data() : {};
+        const recreer = donnees.aRecreer === true; // V5.8: the guest asked for a new profile
+        const depose = !!donnees.configChiffree && !recreer;
+        profils.push({ nomProfil: nom, depose, recreer });
       }
       profils.sort((a, b) => a.nomProfil.localeCompare(b.nomProfil));
       journal({ profils: profils.length });
