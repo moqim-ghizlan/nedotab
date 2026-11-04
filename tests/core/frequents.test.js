@@ -111,10 +111,36 @@ describe("réglage reglages.frequents", () => {
   it("valeurs par défaut non stockées, migration idempotente", () => {
     expect(frequentsAStocker({})).toBeUndefined();
     const r = validerReglages({ frequents: { afficher: false, masques: ["a", "a", 3] } });
-    expect(r.frequents).toEqual({ afficher: false, titre: false, masques: ["a"] });
+    expect(r.frequents).toEqual({
+      afficher: false,
+      titre: false,
+      masques: ["a"],
+      accueil: false,
+      nombreAccueil: 6,
+    });
     expect(validerReglages(r)).toEqual(r);
     expect(validerReglages({}).frequents).toBeUndefined();
-    expect(frequentsDe({})).toEqual({ afficher: true, titre: false, masques: [] });
+    expect(frequentsDe({})).toEqual({
+      afficher: true,
+      titre: false,
+      masques: [],
+      accueil: false,
+      nombreAccueil: 6,
+    });
+  });
+  it("bloc de l'accueil (T7) : désactivé par défaut, 6 sites, valeurs permises 4/6/8/10", () => {
+    expect(frequentsDe({}).accueil).toBe(false);
+    expect(frequentsDe({}).nombreAccueil).toBe(6);
+    expect(validerFrequents({ nombreAccueil: 7 }).nombreAccueil).toBe(6);
+    expect(validerFrequents({ nombreAccueil: 10 }).nombreAccueil).toBe(10);
+    expect(validerFrequents({ accueil: "oui" }).accueil).toBe(false);
+    // Stored only when something differs from the defaults.
+    expect(frequentsAStocker({ accueil: true })).toMatchObject({ accueil: true });
+    expect(frequentsAStocker({ nombreAccueil: 8 })).toMatchObject({ nombreAccueil: 8 });
+    expect(frequentsAStocker({ accueil: false, nombreAccueil: 6 })).toBeUndefined();
+    const base = validerReglages({});
+    const ok = modifierReglages(base, { frequents: { accueil: true, nombreAccueil: 4 } });
+    expect(frequentsDe(ok)).toMatchObject({ accueil: true, nombreAccueil: 4, afficher: true });
   });
   it("REGLAGES_MODIFIER refuse plus de 200 masqués", () => {
     const base = validerReglages({});

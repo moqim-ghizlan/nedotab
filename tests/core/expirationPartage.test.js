@@ -13,6 +13,7 @@ import {
   expirationValide,
   formaterTempsRestant,
   libelleExpiration,
+  nouvelleExpiration,
   prolonger,
   sansExpiration,
   tempsRestantMs,
@@ -105,5 +106,45 @@ describe("prolongation", () => {
   });
   it("ne raccourcit jamais", () => {
     expect(prolonger(e(T0, T0 + 7 * JOUR), "1h", 0, T0).ok).toBe(false);
+  });
+});
+
+describe("nouvelleExpiration (modification d'un élément, T4)", () => {
+  const elt = (expireLe, creeLe = T0) => ({ expireLe, creeLe });
+
+  it("garder : rien ne change", () => {
+    const r = nouvelleExpiration(elt(T0 + 3 * HEURE), { mode: "garder" }, 0, T0);
+    expect(r).toEqual({ ok: true, expireLe: T0 + 3 * HEURE, change: false });
+  });
+  it("depuis maintenant : prolonge à partir de maintenant", () => {
+    const r = nouvelleExpiration(elt(T0 + HEURE), { mode: "depuis-maintenant", duree: "1j" }, 0, T0);
+    expect(r).toEqual({ ok: true, expireLe: T0 + JOUR, change: true });
+  });
+  it("depuis maintenant : refuse de raccourcir", () => {
+    const r = nouvelleExpiration(elt(T0 + 7 * JOUR), { mode: "depuis-maintenant", duree: "1h" }, 0, T0);
+    expect(r.ok).toBe(false);
+  });
+  it("ajouter : ajoute à l'échéance actuelle", () => {
+    const r = nouvelleExpiration(elt(T0 + 2 * HEURE), { mode: "ajouter", duree: "1j" }, 0, T0);
+    expect(r).toEqual({ ok: true, expireLe: T0 + 2 * HEURE + JOUR, change: true });
+  });
+  it("plafonne à 30 jours après la création, puis refuse", () => {
+    const a = nouvelleExpiration(elt(T0 + 20 * JOUR), { mode: "ajouter", duree: "30j" }, 0, T0);
+    expect(a).toEqual({ ok: true, expireLe: T0 + 30 * JOUR, change: true });
+    const b = nouvelleExpiration(elt(T0 + 30 * JOUR), { mode: "ajouter", duree: "1h" }, 0, T0);
+    expect(b.ok).toBe(false);
+  });
+  it("illimité : toujours permis (valide pour les règles), puis « déjà illimité »", () => {
+    const a = nouvelleExpiration(elt(T0 + HEURE), { mode: "ajouter", duree: "jamais" }, 0, T0);
+    expect(a).toEqual({ ok: true, expireLe: ILLIMITE, change: true });
+    expect(nouvelleExpiration(elt(ILLIMITE), { mode: "ajouter", duree: "1j" }, 0, T0).ok).toBe(false);
+  });
+  it("suit l'horloge du serveur (appareil décalé)", () => {
+    const ecart = 3 * HEURE;
+    const r = nouvelleExpiration(elt(T0 + HEURE), { mode: "depuis-maintenant", duree: "1j" }, ecart, T0);
+    expect(r.expireLe).toBe(T0 + ecart + JOUR);
+  });
+  it("durée inconnue refusée", () => {
+    expect(nouvelleExpiration(elt(T0 + HEURE), { mode: "ajouter", duree: "x" }, 0, T0).ok).toBe(false);
   });
 });

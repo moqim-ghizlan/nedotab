@@ -1,0 +1,304 @@
+/* Folder picker as a tree (T1): move dialog and add form. */
+.selecteur {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  min-width: 0;
+}
+
+.selecteur-recherche {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.arbre {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: min(46vh, 340px);
+  margin: 0;
+  padding: var(--espace-1);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon-petit);
+  background: var(--creux);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.arbre-noeud {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--espace-2) 0 0;
+  border-radius: var(--rayon-petit);
+  cursor: pointer;
+  min-width: 0;
+}
+
+@media (pointer: coarse) {
+  .arbre-noeud {
+    min-height: 44px;
+  }
+}
+
+.arbre-noeud:hover:not([aria-disabled="true"]) {
+  background: var(--survol);
+}
+
+.arbre-noeud--choisi {
+  background: var(--accent-doux);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.arbre-noeud:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.arbre-noeud[aria-disabled="true"] {
+  color: var(--texte-secondaire);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* One vertical guide per ancestor level, like a code editor tree. */
+.arbre-guide {
+  flex: none;
+  align-self: stretch;
+  width: 20px;
+  margin-left: 4px;
+  border-left: 1px solid var(--trait-fort);
+}
+
+.arbre-fleche {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  align-self: stretch;
+  min-height: 36px;
+  color: var(--texte-secondaire);
+  border-radius: var(--rayon-petit);
+}
+
+.arbre-fleche:not(.arbre-fleche--vide):hover {
+  background: var(--survol);
+  color: var(--texte);
+}
+
+@media (pointer: coarse) {
+  .arbre-fleche {
+    width: 44px;
+  }
+}
+
+.arbre-noeud .destination-icone {
+  flex: none;
+  margin-right: var(--espace-2);
+  color: var(--accent);
+}
+
+.arbre-noeud[aria-disabled="true"] .destination-icone {
+  color: inherit;
+}
+
+.arbre-titre {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.arbre-titre mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--accent-doux);
+  color: inherit;
+  font-weight: 600;
+}
+
+.arbre-noeud .destination-note {
+  flex: 1 1 0;
+  min-width: 0;
+  margin-left: var(--espace-2);
+  overflow: hidden;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--taille-xs);
+  color: var(--texte-secondaire);
+}
+
+/* Chosen destination, clickable path. */
+.selecteur-ariane {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--taille-s);
+}
+
+.selecteur-miette {
+  padding: 2px 6px;
+  border: 0;
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.selecteur-miette:last-of-type {
+  color: var(--texte);
+  font-weight: 600;
+}
+
+.selecteur-miette:hover {
+  background: var(--survol);
+}
+
+.selecteur-sep {
+  color: var(--texte-secondaire);
+}
+
+/* Preview of the folder content next to the tree (T2). */
+.dialogue.dialogue--large {
+  width: min(760px, calc(100vw - 2 * var(--espace-4)));
+}
+
+.selecteur-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--espace-3);
+  align-items: start;
+}
+
+.selecteur--apercu .arbre {
+  max-height: min(50vh, 380px);
+}
+
+.selecteur-apercu {
+  min-height: 120px;
+  max-height: min(50vh, 380px);
+  padding: var(--espace-3);
+  overflow-y: auto;
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+}
+
+.selecteur-apercu-titre {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-m);
+}
+
+.selecteur-contenu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.selecteur-site,
+.selecteur-sous {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 2px var(--espace-2);
+  border: 0;
+  border-radius: var(--rayon-petit);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--taille-s);
+  text-align: left;
+}
+
+.selecteur-sous {
+  cursor: pointer;
+}
+
+.selecteur-sous:hover,
+.selecteur-sous:focus-visible {
+  background: var(--survol);
+}
+
+.selecteur-nom {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.selecteur-nb {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.selecteur-icone {
+  flex: none;
+  display: inline-flex;
+}
+
+.selecteur-icone .tuile-icone {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  color: #fff;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  font-size: 0.6rem;
+  box-shadow: none;
+}
+
+.selecteur-icone .tuile-icone--image {
+  padding: 2px;
+}
+
+.selecteur-aide {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+/* Phone: the preview goes under the tree. */
+@media (max-width: 640px) {
+  .selecteur-corps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .selecteur--apercu .arbre {
+    max-height: 30vh;
+  }
+
+  .selecteur-apercu {
+    max-height: 24vh;
+  }
+}
+
+/* Popup: always a single column (the window is narrow), preview under the tree. */
+
+/* The popup does not load the grid styles: keep every icon small, whatever its kind. */
+.selecteur-icone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* "Emplacement" of the add form: a roomy picker. */
+.ajout-lieu-panneau .arbre,
+.ajout-lieu-panneau .selecteur-apercu {
+  max-height: 300px;
+}

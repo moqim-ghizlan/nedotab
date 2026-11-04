@@ -2,7 +2,9 @@
  * AI settings (V4.1): pure rules, shared by the reducer, the loader and the settings screen.
  *
  * reglages.ia = { actif: boolean, questionBarre?: "sites"|"chat" }   (off by default; V4.13:
- * where a question asked in the search bar goes, absent = automatic; V4.14: sitesChat
+ * where a question asked in the search bar goes, absent = automatic; T9: sansBoutonAccueil,
+ * sansRechercheIa, sansBoutonNavigateur, each stored only when true = one place where the
+ * chatbot is switched off; V4.14: sitesChat
  * "toujours"|"jamais", whether the chat may read the user's sites, absent = when useful)
  * The provider (Gemini) and the model are imposed by the server (config/ia): the user only
  * switches the assistant on and gives their key. Fields left by older versions (usages,
@@ -22,6 +24,36 @@ export const FOURNISSEURS = ["gemini"];
 
 export const iaParDefaut = () => ({ actif: false });
 
+/**
+ * T9: the chatbot is one big switch (`actif`) and three places it can appear. A place is ON
+ * unless its "sans…" flag is stored (the defaults keep today's behaviour).
+ */
+export const OPTIONS_CHATBOT = ["boutonAccueil", "rechercheIa", "boutonNavigateur"];
+const CLES_SANS = ["sansBoutonAccueil", "sansRechercheIa", "sansBoutonNavigateur"];
+const cleSans = (option) => `sans${option[0].toUpperCase()}${option.slice(1)}`;
+
+/**
+ * What is on: with the main switch off nothing is (the three places are ignored).
+ * @returns {{ chatbot: boolean, boutonAccueil: boolean, rechercheIa: boolean, boutonNavigateur: boolean }}
+ */
+export function optionsChatbot(ia) {
+  const v = validerIa(ia);
+  return {
+    chatbot: v.actif,
+    boutonAccueil: v.actif && !v.sansBoutonAccueil,
+    rechercheIa: v.actif && !v.sansRechercheIa,
+    boutonNavigateur: v.actif && !v.sansBoutonNavigateur,
+  };
+}
+
+/** Switches one place on or off (the default, on, removes the stored flag). */
+export const avecOptionChatbot = (ia, option, active) => {
+  if (!OPTIONS_CHATBOT.includes(option)) return ia;
+  const reste = { ...ia };
+  delete reste[cleSans(option)];
+  return active ? reste : { ...reste, [cleSans(option)]: true };
+};
+
 /** Valid, complete settings (anything wrong falls back to the default). */
 export function validerIa(ia) {
   const resultat = { actif: ia?.actif === true };
@@ -31,6 +63,7 @@ export function validerIa(ia) {
   if (confidentialite) resultat.confidentialite = confidentialite;
   const limites = validerLimites(ia?.limites); // V4.19: personal limits (day / month)
   if (limites) resultat.limites = limites;
+  for (const cle of CLES_SANS) if (ia?.[cle] === true) resultat[cle] = true;
   const sitesChat = validerModeSitesChat(ia?.sitesChat);
   if (sitesChat !== "auto") resultat.sitesChat = sitesChat;
   // V4.6: light lock of the catch-up between devices (who, last progress).
@@ -43,7 +76,15 @@ export function validerIa(ia) {
 /** True when the settings are the default: nothing needs to be stored. */
 export const estIaParDefaut = (ia) => {
   const v = validerIa(ia);
-  return !v.actif && !v.rattrapage && !v.questionBarre && !v.sitesChat && !v.limites && !v.confidentialite;
+  return (
+    !v.actif &&
+    !v.rattrapage &&
+    !v.questionBarre &&
+    !v.sitesChat &&
+    !v.limites &&
+    !v.confidentialite &&
+    !CLES_SANS.some((c) => v[c])
+  );
 };
 
 /** What is stored: nothing for the default settings. */

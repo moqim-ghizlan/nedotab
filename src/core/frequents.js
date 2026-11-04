@@ -12,7 +12,15 @@ export const SCORE_MIN = 0.1;
 export const MASQUES_MAX = 200;
 
 /** Settings of the row: shown, small title, ids hidden from it. Stored only when changed. */
-export const FREQUENTS_PAR_DEFAUT = Object.freeze({ afficher: true, titre: false, masques: [] });
+export const FREQUENTS_PAR_DEFAUT = Object.freeze({
+  afficher: true,
+  titre: false,
+  masques: [],
+  accueil: false,
+  nombreAccueil: 6,
+});
+/** Sites shown in the block of the home page (T7). */
+export const NOMBRES_ACCUEIL = [4, 6, 8, 10];
 
 /** `reglages.frequents` made valid (unknown keys dropped, ids unique and bounded). */
 export function validerFrequents(f) {
@@ -29,13 +37,18 @@ export function validerFrequents(f) {
     afficher: brut.afficher !== false,
     titre: brut.titre === true,
     masques,
+    // T7: the block above the search bar, off by default.
+    accueil: brut.accueil === true,
+    nombreAccueil: NOMBRES_ACCUEIL.includes(brut.nombreAccueil) ? brut.nombreAccueil : 6,
   };
 }
 
 /** Same as validerFrequents, but undefined when everything is at its default (not stored). */
 export function frequentsAStocker(f) {
   const v = validerFrequents(f);
-  return v.afficher && !v.titre && v.masques.length === 0 ? undefined : v;
+  return v.afficher && !v.titre && v.masques.length === 0 && !v.accueil && v.nombreAccueil === 6
+    ? undefined
+    : v;
 }
 
 export const frequentsDe = (reglages) => validerFrequents(reglages?.frequents);

@@ -248,12 +248,19 @@ export async function ouvrirMesLiens({ charger }) {
       }
     }, 5000);
   }
-  try {
-    liens = await (await charger()).listerLiens();
-  } catch (e) {
-    return toast(erreurLisible(e), { type: "erreur" });
-  }
-  rendre();
+  // The dialog opens at once with skeleton cards; the Firebase module and the list load behind it.
+  for (let i = 0; i < 3; i++)
+    liste.append(el("li", { class: "partage-carte partage-squelette", "aria-hidden": "true" }));
+  liste.setAttribute("aria-busy", "true");
+  (async () => {
+    try {
+      liens = await (await charger()).listerLiens();
+      rendre();
+    } catch (e) {
+      liste.replaceChildren(el("li", { class: "partage-vide", texte: erreurLisible(e) }));
+    }
+    liste.removeAttribute("aria-busy");
+  })();
   await demander({
     titre: "Mes liens actifs",
     contenu: [liste],

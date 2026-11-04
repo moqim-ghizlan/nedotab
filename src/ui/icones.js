@@ -123,7 +123,8 @@ export function icone(nom, { taille = 18 } = {}) {
     class: "icone",
   }))
     svg.setAttribute(k, v);
-  for (const d of TRACES[nom]) {
+  // An unknown name draws an empty icon instead of breaking the whole panel.
+  for (const d of TRACES[nom] ?? []) {
     const p = document.createElementNS(ns, "path");
     p.setAttribute("d", d);
     svg.append(p);

@@ -104,12 +104,13 @@ describe("fenêtre de la barre d'outils", () => {
       bouton(racine, "Ajouter ce site").click();
       await attendre(() => racine.querySelector("#p-lieu"));
       const lieu = racine.querySelector("#p-lieu");
-      expect([...lieu.options].map((o) => o.textContent.trim())).toEqual([
-        "Accueil",
-        "Travail",
-        "Travail › Clients",
-      ]);
-      lieu.value = "d2";
+      lieu.click();
+      const lignes = () => [...racine.querySelectorAll(".arbre-noeud")];
+      expect(lignes().map((l) => l.textContent.trim())).toEqual(["⌂Accueil", "▸▣Travail"]);
+      racine.querySelector('[data-id="d1"] .arbre-fleche').click();
+      expect(lignes().map((l) => l.dataset.id)).toEqual(["", "d1", "d2"]);
+      racine.querySelector('[data-id="d2"]').click();
+      expect(lieu.textContent).toContain("Travail › Clients");
       bouton(racine, "Ajouter").click();
       await attendre(() => racine.textContent.includes("Ajouté à Travail › Clients"));
       const apres = await st.lire();
@@ -141,8 +142,8 @@ describe("fenêtre de la barre d'outils", () => {
     const racine = document.getElementById("popup");
     await demarrerPopup(racine);
     bouton(racine, "Ajouter ce site").click();
-    await attendre(() => racine.querySelector(".popup-bandeau"));
-    expect(racine.textContent).toContain("Déjà dans Accueil");
+    await attendre(() => racine.querySelector(".ajout-alerte"));
+    expect(racine.querySelector(".ajout-alerte").textContent).toContain("déjà dans Accueil");
     expect(bouton(racine, "Ajouter").disabled).toBe(true);
     bouton(racine, "Ajouter quand même").click();
     expect(bouton(racine, "Ajouter").disabled).toBe(false);

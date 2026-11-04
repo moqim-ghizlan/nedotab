@@ -27,6 +27,7 @@ export function creerVueGrille({
   lectureSeule = () => false,
   annoncer = () => {},
   ouvrirDossier,
+  ouvrirAuSurvol = ouvrirDossier,
   apresFusion,
   ajouter,
   libelleAjout,
@@ -101,7 +102,11 @@ export function creerVueGrille({
       : { ok: false, raison: "PROFONDEUR" };
   };
   // Pages: the edge zones have priority, no folder is made under them.
-  const intention = creerIntentionDepot({ evaluer, exclure: pagination?.dansZoneBord });
+  const intention = creerIntentionDepot({
+    evaluer,
+    exclure: pagination?.dansZoneBord,
+    ouvrirAuSurvol: lectureSeule() ? null : (id) => ouvrirAuSurvol?.(id),
+  });
   const intentionAvecSource = {
     ...intention,
     demarrer: (id) => {

@@ -10,7 +10,13 @@ import {
 } from "../../src/core/couleurs.js";
 import { migrer } from "../../src/core/migration.js";
 import { etatInitial } from "../../src/core/modele.js";
-import { affichageAccueilDe, fondEffectif, validerFond } from "../../src/core/reglages.js";
+import {
+  affichageAccueilDe,
+  fondEffectif,
+  modifierReglages,
+  validerFond,
+  validerReglages,
+} from "../../src/core/reglages.js";
 import { DEGRADES } from "../../src/ui/fonds.js";
 
 describe("luminance et choix du texte", () => {
@@ -328,5 +334,14 @@ describe("réglages propres à l'appareil (V2.9)", () => {
         reglagesAppareil: { colonnes: 99, debug: "oui" },
       }).etat.reglagesAppareil,
     ).toEqual({});
+  });
+});
+
+describe("sansEspacePartage (T8)", () => {
+  it("actif par défaut, stocké seulement quand il est désactivé", () => {
+    expect(validerReglages({}).sansEspacePartage).toBeUndefined();
+    const r = modifierReglages(validerReglages({}), { sansEspacePartage: true });
+    expect(r.sansEspacePartage).toBe(true);
+    expect(modifierReglages(r, { sansEspacePartage: false }).sansEspacePartage).toBeUndefined();
   });
 });

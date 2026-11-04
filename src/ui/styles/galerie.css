@@ -1,0 +1,553 @@
+/*
+ * Gallery of the sharing space (T6): a full-screen library grouped by date, and a viewer with
+ * the preview on the left (about 85 %) and the details on the right (about 15 %).
+ * Phone: the preview on top, the details as a sheet below.
+ */
+.pgal {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: flex;
+  flex-direction: column;
+  background: var(--fond);
+  color: var(--texte);
+  font-size: 0.875rem;
+  animation: pgal-entree 220ms var(--glisse);
+}
+
+@keyframes pgal-entree {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+.pgal-entete {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2) var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
+  border-bottom: 1px solid var(--trait);
+  background: var(--surface);
+}
+
+.pgal-titre {
+  margin: 0;
+  font-size: var(--taille-l);
+  font-weight: 700;
+}
+
+.pgal-compte {
+  margin-left: 4px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-size: var(--taille-s);
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.pgal-recherche {
+  flex: 1 1 200px;
+  max-width: 360px;
+  height: 36px;
+  padding: 0 var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  background: var(--fond);
+  color: inherit;
+  font: inherit;
+}
+
+.pgal-recherche:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+
+.pgal-filtres {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pgal-puce {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms,
+    border-color 160ms;
+}
+
+.pgal-puce:hover {
+  color: var(--texte);
+  border-color: var(--trait-fort);
+}
+
+.pgal-puce[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-doux);
+  color: var(--texte);
+}
+
+.pgal-puce-nb {
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.pgal-bouton {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.pgal-bouton:hover {
+  background: var(--survol);
+}
+
+.pgal-bouton:focus-visible,
+.pgal-tuile:focus-visible,
+.pgal-puce:focus-visible,
+.pgal-nav:focus-visible,
+.pgal-apercu:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pgal-plus {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.pgal-selection {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-2) var(--espace-4);
+  background: var(--accent-doux);
+  border-bottom: 1px solid var(--trait);
+}
+
+.pgal-selection[hidden],
+.pgal [hidden] {
+  display: none;
+}
+
+.pgal-corps {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* --- library ----------------------------------------------------------------------------- */
+.pgal-grille-vue {
+  flex: 1;
+  min-width: 0;
+  padding: var(--espace-3) var(--espace-4) var(--espace-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pgal-groupe {
+  margin-bottom: var(--espace-4);
+}
+
+.pgal-groupe-entete {
+  position: sticky;
+  top: calc(var(--espace-3) * -1);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin: 0 calc(var(--espace-4) * -1) var(--espace-2);
+  padding: var(--espace-2) var(--espace-4);
+  background: color-mix(in srgb, var(--fond) 92%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+.pgal-groupe-entete h3 {
+  margin: 0;
+  font-size: var(--taille-m);
+  font-weight: 650;
+}
+
+.pgal-groupe-nb {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.pgal-tuiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgal-case {
+  position: relative;
+}
+
+.pgal-tuile {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms,
+    transform 160ms var(--ressort);
+}
+
+.pgal-tuile:hover {
+  border-color: var(--trait-fort);
+  transform: translateY(-1px);
+}
+
+.pgal-tuile--choisie {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-doux);
+}
+
+.pgal-vignette {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+}
+
+.pgal-miniature {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pgal-emoji {
+  font-size: 2rem;
+}
+
+.pgal-emoji--grand {
+  font-size: 4.5rem;
+}
+
+.pgal-extrait {
+  align-self: stretch;
+  display: -webkit-box;
+  padding: var(--espace-2) var(--espace-3);
+  overflow: hidden;
+  color: var(--texte);
+  font-size: var(--taille-s);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-align: left;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.pgal-legende {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px var(--espace-2);
+  color: var(--texte-secondaire);
+}
+
+.pgal-legende-texte {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--texte);
+  font-size: var(--taille-s);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pgal-coche {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.pgal-case .pgal-coche {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.pgal-case:hover .pgal-coche,
+.pgal-case:focus-within .pgal-coche,
+.pgal-coche:checked {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .pgal-case .pgal-coche {
+    opacity: 0.85;
+  }
+}
+
+.pgal-vide {
+  margin: var(--espace-6) 0;
+  color: var(--texte-secondaire);
+  text-align: center;
+}
+
+.pgal-suite {
+  height: 1px;
+}
+
+/* --- viewer ------------------------------------------------------------------------------ */
+.pgal-visionneuse {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(240px, 15%, 340px);
+}
+
+.pgal-scene {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  background: color-mix(in srgb, var(--fond) 80%, #000);
+}
+
+.pgal-apercu {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espace-4);
+  padding: var(--espace-4);
+  overflow: auto;
+}
+
+.pgal-apercu--image {
+  padding: var(--espace-3);
+}
+
+.pgal-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--rayon-petit);
+  cursor: zoom-in;
+  animation: pgal-fondu 240ms ease both;
+}
+
+.pgal-apercu--zoom {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.pgal-apercu--zoom .pgal-image {
+  max-width: none;
+  max-height: none;
+  width: 200%;
+  cursor: zoom-out;
+}
+
+@keyframes pgal-fondu {
+  from {
+    opacity: 0;
+  }
+}
+
+.pgal-attente {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--trait-fort);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ajout-tour 800ms linear infinite;
+}
+
+.pgal-texte {
+  align-self: stretch;
+  max-width: 80ch;
+  margin: 0 auto;
+  padding: var(--espace-4);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.55;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pgal-sans-apercu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espace-2);
+  max-width: 90%;
+  color: var(--texte-secondaire);
+  text-align: center;
+}
+
+.pgal-sans-apercu-nom {
+  margin: 0;
+  color: var(--texte);
+  font-size: var(--taille-l);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.pgal-sans-apercu-sous {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pgal-nav {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  color: inherit;
+  box-shadow: var(--ombre);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.pgal-nav--prec {
+  left: var(--espace-3);
+}
+
+.pgal-nav--suiv {
+  right: var(--espace-3);
+}
+
+.pgal-infos {
+  min-width: 0;
+  padding: var(--espace-3) var(--espace-4);
+  overflow-y: auto;
+  border-left: 1px solid var(--trait);
+  background: var(--surface);
+}
+
+.pgal-infos-entete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--espace-2);
+}
+
+.pgal-infos-position {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.pgal-infos-titre {
+  margin: 0 0 var(--espace-3);
+  font-size: var(--taille-m);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.pgal-infos-liste {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.pgal-infos-liste dt {
+  margin-top: var(--espace-2);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.pgal-infos-liste dd {
+  margin: 0;
+  font-size: var(--taille-s);
+  overflow-wrap: anywhere;
+}
+
+/* --- phone: preview on top, details as a sheet below ------------------------------------- */
+@media (max-width: 899px) {
+  .pgal-entete {
+    padding: var(--espace-2) var(--espace-3);
+  }
+
+  .pgal-recherche {
+    max-width: none;
+    order: 5;
+    flex-basis: 100%;
+  }
+
+  .pgal-visionneuse {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .pgal-infos {
+    max-height: 42vh;
+    border-top: 1px solid var(--trait);
+    border-left: 0;
+    border-radius: var(--panneau-rayon) var(--panneau-rayon) 0 0;
+    padding-bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px));
+  }
+
+  .pgal-tuiles {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pgal,
+  .pgal-image,
+  .pgal-attente {
+    animation: none;
+  }
+}

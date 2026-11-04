@@ -53,6 +53,8 @@ export const INTERVALLE_RENDU_MS = 50;
  */
 export function creerChat({
   contexteIa,
+  // T9: the robot button of the home page (the chat itself stays reachable from the search bar).
+  boutonAutorise = () => true,
   appeler,
   flux = async function* (messages) {
     const r = await appeler(messages);
@@ -234,8 +236,9 @@ export function creerChat({
     } catch {
       modes = etatModes(null);
     }
-    bouton.hidden = !modes.afficher || ouvert;
-    document.body.classList.toggle("avec-robot", modes.afficher && !ouvert);
+    const robot = modes.afficher && boutonAutorise();
+    bouton.hidden = !robot || ouvert;
+    document.body.classList.toggle("avec-robot", robot && !ouvert);
     if (!modes.afficher && ouvert) fermer({ rendreLeFocus: false });
     rendre();
   }
@@ -262,9 +265,10 @@ export function creerChat({
     ouvert = false;
     panneau.hidden = true;
     document.documentElement.classList.remove("chat-ouvert");
-    bouton.hidden = !modes.afficher;
-    document.body.classList.toggle("avec-robot", modes.afficher);
-    if (rendreLeFocus && modes.afficher) bouton.focus();
+    const robot = modes.afficher && boutonAutorise();
+    bouton.hidden = !robot;
+    document.body.classList.toggle("avec-robot", robot);
+    if (rendreLeFocus && robot) bouton.focus();
   }
 
   const basculer = () => (ouvert ? fermer() : ouvrir());

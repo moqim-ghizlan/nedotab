@@ -88,3 +88,39 @@ describe("questionBarre (V4.13)", () => {
     expect(avecQuestionBarre(ia, "auto")).toEqual({ actif: true });
   });
 });
+
+describe("options du chatbot (T9)", () => {
+  it("valeurs par défaut : le comportement actuel, rien n'est stocké", async () => {
+    const { optionsChatbot, validerIa, iaAStocker, iaParDefaut } = await import("../../src/core/ia.js");
+    expect(optionsChatbot({ actif: true })).toEqual({
+      chatbot: true,
+      boutonAccueil: true,
+      rechercheIa: true,
+      boutonNavigateur: true,
+    });
+    expect(iaAStocker(iaParDefaut())).toBeUndefined();
+    // Settings saved before T9 stay valid and unchanged.
+    expect(validerIa({ actif: true, questionBarre: "chat" })).toEqual({ actif: true, questionBarre: "chat" });
+  });
+  it("interrupteur principal désactivé : les trois emplacements sont ignorés", async () => {
+    const { optionsChatbot } = await import("../../src/core/ia.js");
+    expect(optionsChatbot({ actif: false })).toEqual({
+      chatbot: false,
+      boutonAccueil: false,
+      rechercheIa: false,
+      boutonNavigateur: false,
+    });
+    expect(optionsChatbot({ actif: false, sansBoutonAccueil: true }).boutonAccueil).toBe(false);
+  });
+  it("chaque emplacement se coupe seul ; le défaut retire le drapeau", async () => {
+    const { avecOptionChatbot, optionsChatbot, validerIa } = await import("../../src/core/ia.js");
+    let ia = avecOptionChatbot({ actif: true }, "rechercheIa", false);
+    expect(ia).toEqual({ actif: true, sansRechercheIa: true });
+    expect(optionsChatbot(ia)).toMatchObject({ boutonAccueil: true, rechercheIa: false, boutonNavigateur: true });
+    expect(validerIa(ia).sansRechercheIa).toBe(true);
+    ia = avecOptionChatbot(ia, "rechercheIa", true);
+    expect(ia).toEqual({ actif: true });
+    expect(avecOptionChatbot({ actif: true }, "inconnue", false)).toEqual({ actif: true });
+    expect(validerIa({ actif: true, sansBoutonNavigateur: "oui" }).sansBoutonNavigateur).toBeUndefined();
+  });
+});

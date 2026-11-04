@@ -423,6 +423,41 @@ export function creerFichiers({
     }
   }
 
+  /** blob: URL of a picture (thumbnail or preview), kept for the session; null if not an image. */
+  async function urlApercu(e) {
+    if (!apercuPossible(e.contenu, e.typeMime) || e.taille > MINIATURE_MAX) return null;
+    if (!miniatures.has(e.id)) {
+      const blob = await obtenirBlob(e);
+      if (!miniatures.has(e.id)) miniatures.set(e.id, URL.createObjectURL(blob));
+    }
+    return miniatures.get(e.id);
+  }
+
+  /** "Créer un lien" of a file (5 MB at most), shared by the card and the gallery. */
+  async function lienFichier(e) {
+    try {
+      const blob = await obtenirBlob(e);
+      creerLien(e, new Uint8Array(await blob.arrayBuffer()));
+    } catch {
+      toast("Lien impossible pour l'instant.", { type: "erreur" });
+    }
+  }
+
+  /** The element as the gallery reads it: decrypted when the vault is open, else locked. */
+  function vue(brut) {
+    if (!brut.chiffre) return { ...brut, verrouille: false };
+    const m = metas.get(brut.id);
+    if (!m?.contenu) return { ...brut, contenu: "", titre: "", description: "", verrouille: true };
+    return {
+      ...brut,
+      contenu: m.contenu,
+      typeMime: m.typeMime,
+      titre: m.libelle,
+      description: m.description,
+      verrouille: false,
+    };
+  }
+
   async function ouvrirVisionneuse(e) {
     const images = elementsVus.filter(
       (x) => x.type === "fichier" && apercuPossible(x.contenu, x.typeMime),
@@ -529,19 +564,22 @@ export function creerFichiers({
         "div",
         { class: "partage-texte" },
         titreUtilisateur
-          ? el("strong", { class: "partage-titre", texte: titreUtilisateur })
+          ? el("strong", { class: "partage-titre", title: titreUtilisateur, texte: titreUtilisateur })
           : null,
-        el("span", {
-          class: "partage-nom",
-          title: nomAffiche(e.contenu),
-          texte: tronquerMilieu(e.contenu),
-        }),
-        el("span", {
-          class: "partage-detail",
-          texte: `${formaterTaille(e.taille)}${avertissement ? ` · ${avertissement}` : ""}`,
-        }),
+        // The file name is the title when the user gave none; otherwise it is the quiet line.
+        el(
+          "span",
+          { class: "partage-fichier-ligne" },
+          el("span", {
+            class: `partage-nom${titreUtilisateur ? " partage-nom--discret" : ""}`,
+            title: nomAffiche(e.contenu),
+            texte: tronquerMilieu(e.contenu),
+          }),
+          el("span", { class: "partage-taille", texte: formaterTaille(e.taille) }),
+          avertissement ? el("span", { class: "partage-alerte", texte: avertissement }) : null,
+        ),
         e.description
-          ? el("span", { class: "partage-detail", texte: e.description })
+          ? el("span", { class: "partage-detail partage-description", texte: e.description })
           : null,
       ),
       ...pied(e),
@@ -583,7 +621,11 @@ export function creerFichiers({
 
   /** V4.31: "Modifier": title and description of a file, after it was sent. */
   async function modifier(brut, e, titreUtilisateur) {
-    const r = await editerDetails({ titre: titreUtilisateur, description: e.description ?? "" });
+    const r = await editerDetails({
+      titre: titreUtilisateur,
+      description: e.description ?? "",
+      element: brut,
+    });
     if (!r) return;
     try {
       const fb = await charger();
@@ -609,6 +651,7 @@ export function creerFichiers({
           description: r.description,
         });
       }
+      if (r.expireLe) await fb.prolongerPartage(uid(), brut.id, r.expireLe);
       rendre();
     } catch {
       toast("Modification impossible pour l'instant.", { type: "erreur" });
@@ -721,6 +764,13 @@ export function creerFichiers({
     cadreDepot,
     brancherZone,
     carte,
+    vue,
+    urlApercu,
+    lienFichier,
+    telecharger,
+    partager,
+    supprimer,
+    modifier,
     cartesEnvoi: () => envois.map(carteEnvoi),
     nbEnvois: () => envois.length,
     ajouter,

@@ -54,16 +54,25 @@ export function creerFrequents({
   afficherDansGrille,
   modifierSite,
   lectureSeule = () => false,
+  // T7: the same row can also be the block of the home page (above the search bar):
+  // its own on/off setting, its own number of sites, and it follows the visits live.
+  accueil = false,
+  lireAffichage = (r) => frequentsDe(r).afficher,
+  maximum = null,
 }) {
   const liste = el("ul", { class: "frequents-liste" });
   const titre = el("p", { class: "frequents-titre", texte: "Les plus utilisés", hidden: true });
   const racine = el(
     "nav",
-    { class: "frequents", "aria-label": "Les plus utilisés", hidden: true },
+    {
+      class: `frequents${accueil ? " frequents--accueil" : ""}`,
+      "aria-label": "Les plus utilisés",
+      hidden: true,
+    },
     titre,
     liste,
   );
-  if (lireVu()) {
+  if (!accueil && lireVu()) {
     // Seen last time: the room is kept from the start, no jump when the row appears.
     racine.hidden = false;
     racine.classList.add("frequents--reserve");
@@ -88,7 +97,7 @@ export function creerFrequents({
       }
     };
     visiter(store.lire().grille);
-    return JSON.stringify([afficher, masques, epingles.sort(), suiviActif()]);
+    return JSON.stringify([afficher, masques, epingles.sort(), suiviActif(), maximum?.() ?? 8]);
   };
 
   const calculer = () =>
@@ -97,7 +106,7 @@ export function creerFrequents({
       classement: usage.classement(),
       reglages: reglages(),
       suiviActif: suiviActif(),
-      max: 8,
+      max: maximum?.() ?? 8,
     });
 
   const trouver = (id) => {
@@ -191,20 +200,20 @@ export function creerFrequents({
       })
       .filter(Boolean)
       .slice(0, capacite);
-    const afficher = frequentsDe(reglages()).afficher && sites.length > 0;
+    const afficher = lireAffichage(reglages()) && sites.length > 0;
     liste.replaceChildren(...sites.map(creerElement));
-    titre.hidden = !frequentsDe(reglages()).titre;
+    titre.hidden = accueil || !frequentsDe(reglages()).titre;
     racine.hidden = !afficher;
     racine.classList.remove("frequents--reserve");
     racine.style.minHeight = "";
-    if (ordre !== null) ecrireVu(afficher);
+    if (ordre !== null && !accueil) ecrireVu(afficher);
     racine.dispatchEvent(new CustomEvent("frequents:change", { bubbles: true, detail: { afficher } }));
   }
 
   /** First computation (or immediate update): the order is then frozen. */
   function recalculer() {
     signature = signatureDe();
-    ordre = frequentsDe(reglages()).afficher ? calculer().map((r) => r.site.id) : [];
+    ordre = lireAffichage(reglages()) ? calculer().map((r) => r.site.id) : [];
     rendre();
   }
 
@@ -215,7 +224,11 @@ export function creerFrequents({
     initialise = true;
     recalculer();
   };
-  usage.abonner(premierCalcul);
+  usage.abonner(() => {
+    // The home block follows every visit; the row under the search bar stays still.
+    if (accueil && initialise) recalculer();
+    else premierCalcul();
+  });
   if (usage.charge()) premierCalcul();
   // A site of the row deleted, renamed, re-iconed, or a pin / hidden change: immediate update.
   store.abonner(() => {
@@ -228,7 +241,8 @@ export function creerFrequents({
   let minuteur = null;
   const mesurer = () => {
     const largeur = racine.parentElement?.clientWidth ?? racine.clientWidth;
-    const n = nombreIcones(largeur) || 8;
+    // Home block: as many as chosen (the row then scrolls sideways when it is too narrow).
+    const n = maximum ? maximum() : nombreIcones(largeur) || 8;
     if (n !== capacite) {
       capacite = n;
       rendre();

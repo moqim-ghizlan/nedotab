@@ -12,6 +12,9 @@
  *   (the user is aiming), the grid stops reordering: otherwise the target would move away
  *   before the delay ends. Passing over tiles quickly still reorders.
  * - Hovering a breadcrumb segment for DELAI_ARIANE_MS makes that level the target.
+ * - Holding it over a FOLDER tile for DELAI_OUVERTURE_MS opens that folder (window), so the
+ *   icon can be dropped in a sub-folder without letting go (`ouvrirAuSurvol`). A window opened
+ *   that way closes when the pointer leaves it, unless the icon was dropped in it.
  * Leaving the zone cancels the target and the timer. The state is never changed here: the
  * caller acts on the target returned by terminer(), checked at the exact drop position.
  */
@@ -22,6 +25,23 @@ export const SEUIL_RECOUVREMENT = 0.3;
 export const SEUIL_MAINTIEN = 0.15;
 export const SEUIL_RETENUE = 0.5;
 export const DELAI_RETENUE_MS = 200;
+export const DELAI_OUVERTURE_MS = 600;
+export const DELAI_FERMETURE_MS = 300;
+
+/**
+ * What holding an icon over a tile means: "ouvrir" (a folder that accepts it: opens after the
+ * delay), "creer" (a site over a site: a folder is created on drop), "refuser" (not allowed).
+ * @param {{ dossier: boolean, ok: boolean }} o dossier: the target tile is a folder
+ */
+export function decisionSurvol({ dossier, ok }) {
+  if (!ok) return "refuser";
+  return dossier ? "ouvrir" : "creer";
+}
+
+/** True when (x, y) lies inside `rect`. */
+export function dansRect(rect, x, y) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
 
 /** Capture zone of an icon: its rectangle grown by `marge` of its size on each side. */
 export function zoneCapture(rect, marge = MARGE_CAPTURE) {
@@ -62,6 +82,7 @@ export function creerIntentionDepot({
   racine = document,
   horloge = () => Date.now(),
   exclure = () => false,
+  ouvrirAuSurvol = null,
 }) {
   let sourceId = null;
   let candidat = null; // { type, id, el }
@@ -70,15 +91,32 @@ export function creerIntentionDepot({
   let minuteur = null;
   let dernier = null;
   let sousLePointeur = null; // target computed at the last pointer move
+  let minuteurOuverture = null;
+  let minuteurFermeture = null;
+  let ouvertAuSurvol = null; // { dialogue, fermer } of a window this drag opened
 
   const effacer = () => {
     clearTimeout(minuteur);
+    clearTimeout(minuteurOuverture);
     minuteur = null;
+    minuteurOuverture = null;
+    if (candidat) candidat.el.classList.remove("cible--ouverture");
     candidat = null;
     if (active) {
       active.el.classList.remove("cible--fusion", "cible--refusee", "cible--niveau");
       active = null;
     }
+  };
+  const fenetreVivante = () => (ouvertAuSurvol?.dialogue?.isConnected ? ouvertAuSurvol : null);
+  const fermerFenetre = () => {
+    clearTimeout(minuteurFermeture);
+    minuteurFermeture = null;
+    if (fenetreVivante()) ouvertAuSurvol.fermer();
+    ouvertAuSurvol = null;
+  };
+  const dansFenetre = (x, y) => {
+    const f = fenetreVivante();
+    return !!f && dansRect(f.dialogue.getBoundingClientRect(), x, y);
   };
 
   const ignore = (noeud) => noeud.closest?.(".case--glissee, .sortable-fallback");
@@ -104,6 +142,7 @@ export function creerIntentionDepot({
         type: "fusion",
         id: meilleure.tuile.dataset.id,
         el: meilleure.tuile,
+        dossier: meilleure.tuile.classList.contains("tuile--dossier"),
         part: meilleure.part,
       }
     );
@@ -127,7 +166,12 @@ export function creerIntentionDepot({
         if (tuile.dataset.id === sourceId) return null;
         const icone = tuile.querySelector(".tuile-icone") ?? tuile;
         if (!dansZoneCentrale(icone.getBoundingClientRect(), x, y)) return null;
-        return { type: "fusion", id: tuile.dataset.id, el: tuile };
+        return {
+          type: "fusion",
+          id: tuile.dataset.id,
+          el: tuile,
+          dossier: tuile.classList.contains("tuile--dossier"),
+        };
       }
     }
     return null;
@@ -146,6 +190,7 @@ export function creerIntentionDepot({
 
   return {
     demarrer(id) {
+      ouvertAuSurvol = null;
       sourceId = id;
       effacer();
     },
@@ -153,6 +198,12 @@ export function creerIntentionDepot({
     suivre(x, y) {
       if (sourceId == null) return;
       dernier = { x, y };
+      if (fenetreVivante()) {
+        if (dansFenetre(x, y)) {
+          clearTimeout(minuteurFermeture);
+          minuteurFermeture = null;
+        } else minuteurFermeture ??= setTimeout(fermerFenetre, DELAI_FERMETURE_MS);
+      }
       // A page edge zone (V2.11) has priority over the tiles under it.
       const c = exclure(x, y) ? null : cibleSous(x, y);
       sousLePointeur = c;
@@ -168,6 +219,20 @@ export function creerIntentionDepot({
         },
         c.type === "niveau" ? DELAI_ARIANE_MS : DELAI_FUSION_MS,
       );
+      // A folder that accepts the icon opens when held long enough.
+      if (ouvrirAuSurvol && c.type === "fusion" && c.dossier) {
+        const v = evaluer(c);
+        if (!v.ignorer && decisionSurvol({ dossier: true, ok: v.ok }) === "ouvrir") {
+          c.el.classList.add("cible--ouverture");
+          minuteurOuverture = setTimeout(() => {
+            minuteurOuverture = null;
+            if (!meme(candidat, c) && !meme(active, c)) return;
+            c.el.classList.remove("cible--ouverture");
+            const f = ouvrirAuSurvol(c.id);
+            if (f?.dialogue) ouvertAuSurvol = f;
+          }, DELAI_OUVERTURE_MS);
+        }
+      }
     },
     /** A drop target is active: SortableJS must not reorder meanwhile. */
     actif: () => !!active,
@@ -186,6 +251,16 @@ export function creerIntentionDepot({
         if (meme(sousLePointeur, active))
           resultat = { type: active.type, id: active.id, ok: active.ok, raison: active.raison };
       }
+      // Released inside a window opened by this drag, on no tile: it goes into that folder.
+      if (!resultat && dernier && dansFenetre(dernier.x, dernier.y)) {
+        const id = ouvertAuSurvol.dialogue.dataset.dossier || null;
+        const v = id ? evaluer({ type: "niveau", id }) : { ignorer: true };
+        if (!v.ignorer) resultat = { type: "niveau", id, ok: v.ok, raison: v.raison };
+      }
+      if (resultat && dansFenetre(dernier.x, dernier.y)) {
+        clearTimeout(minuteurFermeture);
+        ouvertAuSurvol = null; // dropped in it: it stays open
+      } else fermerFenetre();
       effacer();
       sourceId = null;
       dernier = null;

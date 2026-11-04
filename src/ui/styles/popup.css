@@ -1,6 +1,6 @@
-/* V4.29 — toolbar window: 360 px wide, 600 px high at most (Chrome's limit). */
+/* V4.29 — toolbar window: 480 px wide, 600 px high at most (Chrome's limit). */
 body.popup {
-  width: 360px;
+  width: 480px;
   max-height: 600px;
   margin: 0;
   overflow: hidden;
@@ -61,6 +61,7 @@ body.popup {
 }
 /* Only the form scrolls, never the action bar. */
 .popup-corps {
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 0.75rem 1rem;
   display: grid;

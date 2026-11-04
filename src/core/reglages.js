@@ -157,6 +157,8 @@ export const INTERRUPTEURS = [
   // V4.21: tracking of the opened sites is ON by default; these store the opt-out.
   "sansSuiviUsage",
   "sansUsagePourIa",
+  // T8: the sharing space is ON by default; this stores the opt-out.
+  "sansEspacePartage",
 ];
 
 /**

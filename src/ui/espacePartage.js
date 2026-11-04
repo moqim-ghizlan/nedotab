@@ -33,9 +33,12 @@ import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
 import { creerCoffreUI } from "./coffre/coffre.js";
 import { demander } from "./dialogues/commun.js";
+import { creerSelecteurDuree } from "./selecteurDuree.js";
+import { creerGalerie } from "./galeriePartage.js";
 import { creerLienPourElement, ouvrirMesLiens } from "./liensPartage.js";
 import {
   DUREES,
+  nouvelleExpiration,
   DUREE_DEFAUT,
   MIGRATION_JOURS,
   calculerExpiration,
@@ -70,18 +73,23 @@ const lireDuree = () => {
  * @param {object} d
  * @param {import("../core/store.js").Store} d.store
  * @param {() => boolean} d.disponible signed in and synchronised (account mode)
+ * @param {() => boolean} [d.actif] the setting "Activer l'espace de partage" (T8): off, nothing is
+ *   shown and no request is made
  * @param {() => Promise<object>} d.charger loads the Firebase module
  * @param {() => string|null} d.uid
  * @param {(texte: string) => Promise<void>} [d.copier]
  */
 export function creerEspacePartage({
   store,
-  disponible,
+  disponible: disponibleCompte,
+  actif = () => true,
   charger,
   uid,
   copier = copierTexte,
   coffre = creerCoffreUI({ charger, uid }),
 }) {
+  // Usable: signed in AND turned on in the settings. Every check goes through here.
+  const disponible = () => disponibleCompte() && actif();
   let ouvert = false;
   let elements = [];
   let compteur = 0;
@@ -237,25 +245,14 @@ export function creerEspacePartage({
     onclick: () => envoyerContenu("lien"),
   });
   const bandeau = el("p", { class: "partage-bandeau", role: "status", hidden: true });
-  const selecteurDuree = el(
-    "div",
-    {
-      class: "partage-durees",
-      role: "radiogroup",
-      "aria-label": "Durée avant suppression",
-      "aria-describedby": "partage-durees-libelle",
-    },
-    DUREES.map((d) =>
-      el("button", {
-        type: "button",
-        role: "radio",
-        class: "partage-duree",
-        dataset: { duree: d.id },
-        texte: d.libelle,
-        onclick: () => choisirDuree(d.id),
-      }),
-    ),
-  );
+  const selecteurDureeComposant = creerSelecteurDuree({
+    options: DUREES.map((d) => ({ id: d.id, libelle: d.libelle })),
+    valeur: dureeId,
+    onChoix: (id) => choisirDuree(id),
+    libelle: "Durée avant suppression",
+    decritPar: "partage-durees-libelle",
+  });
+  const selecteurDuree = selecteurDureeComposant.racine;
   const migration = el("div", { class: "partage-migration", role: "status", hidden: true });
   const liste = el("ul", { class: "partage-liste", "aria-live": "polite" });
   const plus = el("button", {
@@ -370,8 +367,7 @@ export function creerEspacePartage({
     majSelecteur();
   }
   function majSelecteur() {
-    for (const b of selecteurDuree.children)
-      b.setAttribute("aria-checked", String(b.dataset.duree === dureeId));
+    selecteurDureeComposant.definir(dureeId);
   }
   majSelecteur();
 
@@ -440,7 +436,9 @@ export function creerEspacePartage({
       if (e.titre && e.titre !== titreDe(e.type, e.contenu))
         texte.prepend(el("strong", { class: "partage-titre", texte: e.titre }));
       if (e.description)
-        texte.append(el("span", { class: "partage-detail", texte: e.description }));
+        texte.append(
+          el("span", { class: "partage-detail partage-description", texte: e.description }),
+        );
     }
     const masque = brut.chiffre && (verrouille || clair?.corrompu);
     const copie = boutonAction("copier", "Copier", {
@@ -510,6 +508,9 @@ export function creerEspacePartage({
   /** When and where it was sent, and when it goes (texts, links and files alike). */
   function pied(e) {
     const expire = libelleExpiration(e, ecart);
+    const restant = tempsRestantMs(e, ecart);
+    // Under an hour the pill takes the warning colour (under 15 min it is the urgent one).
+    const bientot = restant !== null && restant < 60 * 60_000 && !expire.urgent;
     return [
       el(
         "div",
@@ -525,7 +526,7 @@ export function creerEspacePartage({
         expire.texte
           ? el(
               "span",
-              { class: `partage-expire${expire.urgent ? " partage-expire--urgent" : ""}` },
+              { class: `partage-expire${expire.urgent ? " partage-expire--urgent" : bientot ? " partage-expire--bientot" : ""}` },
               icone("horloge", { taille: 12 }),
               expire.texte,
             )
@@ -634,6 +635,9 @@ export function creerEspacePartage({
     if (statut === "ok") premierRendu = false;
     dechiffrerVisibles();
     fichiers.elementsVus(elements);
+    boutonGalerie.querySelector(".partage-galerie-nb").textContent = String(visibles.length);
+    boutonGalerie.disabled = visibles.length === 0;
+    for (const f of ecouteursGalerie) f();
     plus.hidden = !peutPlus;
     compteurCaracteres.textContent =
       longueur(champ.value) > LIMITE_CARACTERES * 0.8
@@ -756,9 +760,12 @@ export function creerEspacePartage({
 
   /**
    * V4.31: "Modifier": the title and the description of an item, after it was sent.
-   * @returns {Promise<{ titre: string, description: string } | null>} null when cancelled
+   * T4: with `element`, the window also shows when it expires and lets the user extend it
+   * (add a duration, or a new one counted from now). Only later dates are offered.
+   * @returns {Promise<{ titre: string, description: string, expireLe?: number } | null>}
+   *   null when cancelled; `expireLe` only when the user changed it
    */
-  async function editerDetails({ titre = "", description = "" }) {
+  async function editerDetails({ titre = "", description = "", element = null }) {
     const t = el("input", {
       id: "partage-modif-titre",
       type: "text",
@@ -774,18 +781,98 @@ export function creerEspacePartage({
       maxlength: String(DESCRIPTION_MAX),
     });
     d.value = description;
+    // --- expiry -------------------------------------------------------------------------
+    let choix = { mode: "garder" };
+    const avecDuree = Number.isFinite(element?.expireLe);
+    const maintenant = Date.now();
+    const options = (mode, liste) =>
+      liste.map(([id, libelle]) => {
+        const r = nouvelleExpiration(element, { mode, duree: id }, ecart, maintenant);
+        return { id, libelle, desactive: !r.ok, raison: r.ok ? "" : r.erreur };
+      });
+    let ajout = null;
+    let neuf = null;
+    let resume = null;
+    const majResume = () => {
+      if (!resume) return;
+      const r = nouvelleExpiration(element, choix, ecart, maintenant);
+      const apres = r.ok && r.change ? { ...element, expireLe: r.expireLe } : null;
+      resume.replaceChildren(
+        el("span", { texte: libelleExpiration(element, ecart, maintenant).texte || "illimité" }),
+        ...(apres
+          ? [
+              el("span", { "aria-hidden": "true", texte: " → " }),
+              el("strong", { texte: libelleExpiration(apres, ecart, maintenant).texte }),
+            ]
+          : []),
+      );
+    };
+    if (avecDuree) {
+      resume = el("p", { class: "partage-modif-resume", "aria-live": "polite" });
+      ajout = creerSelecteurDuree({
+        options: [
+          { id: "garder", libelle: "Garder" },
+          ...options("ajouter", [
+            ["1h", "+ 1 h"],
+            ["1j", "+ 1 j"],
+            ["7j", "+ 7 j"],
+            ["30j", "+ 30 j"],
+            ["jamais", "Illimité"],
+          ]),
+        ],
+        valeur: "garder",
+        libelle: "Prolonger de",
+        onChoix: (id) => {
+          choix = id === "garder" ? { mode: "garder" } : { mode: "ajouter", duree: id };
+          neuf.definir(null);
+          majResume();
+        },
+      });
+      neuf = creerSelecteurDuree({
+        options: options(
+          "depuis-maintenant",
+          DUREES.map((x) => [x.id, x.libelle]),
+        ),
+        valeur: null,
+        libelle: "Nouvelle durée à partir de maintenant",
+        onChoix: (id) => {
+          choix = { mode: "depuis-maintenant", duree: id };
+          ajout.definir(null);
+          majResume();
+        },
+      });
+      majResume();
+    }
     const ok = await demander({
       titre: "Titre et description",
       contenu: [
         el("div", { class: "champ" }, el("label", { for: t.id, texte: "Titre" }), t),
         el("div", { class: "champ" }, el("label", { for: d.id, texte: "Description" }), d),
+        avecDuree
+          ? el(
+              "section",
+              { class: "partage-modif-duree" },
+              el("h3", { class: "partage-modif-titre", texte: "Durée de conservation" }),
+              resume,
+              el("p", { class: "partage-modif-libelle", texte: "Prolonger de…" }),
+              ajout.racine,
+              el("p", {
+                class: "partage-modif-libelle",
+                texte: "Ou nouvelle durée à partir de maintenant",
+              }),
+              neuf.racine,
+            )
+          : null,
       ],
       boutons: [
         { libelle: "Annuler", valeur: false },
         { libelle: "Enregistrer", valeur: true, principal: true },
       ],
     });
-    return ok ? nettoyerDetails({ titre: t.value, description: d.value }) : null;
+    if (!ok) return null;
+    const r = nettoyerDetails({ titre: t.value, description: d.value });
+    const exp = avecDuree ? nouvelleExpiration(element, choix, ecart, maintenant) : null;
+    return exp?.ok && exp.change ? { ...r, expireLe: exp.expireLe } : r;
   }
 
   async function modifierTexte(brut, e) {
@@ -793,6 +880,7 @@ export function creerEspacePartage({
     const r = await editerDetails({
       titre: e.titre && e.titre !== auto ? e.titre : "",
       description: e.description ?? "",
+      element: brut,
     });
     if (!r) return;
     const titre = r.titre || auto;
@@ -807,6 +895,7 @@ export function creerEspacePartage({
       } else {
         await fb.modifierDetailsPartage(uid(), brut.id, { titre, description: r.description });
       }
+      if (r.expireLe) await fb.prolongerPartage(uid(), brut.id, r.expireLe);
       rendre();
     });
   }
@@ -999,10 +1088,153 @@ export function creerEspacePartage({
     if (
       !panneau.contains(e.target) &&
       !bouton.contains(e.target) &&
-      !e.target.closest?.(".toast, .menu, dialog, .partage-visionneuse")
+      !e.target.closest?.(".toast, .menu, dialog, .partage-visionneuse, .pgal")
     )
       fermer();
   };
+
+  // --- Gallery (T6): full-screen library and viewer, fed by the same data and actions ----------
+  const vues = () =>
+    trier(elements.filter((e) => !estExpire(e, ecart))).map((brut) => {
+      if (brut.type === "fichier") return { ...fichiers.vue(brut), brut };
+      const clair = brut.chiffre ? dechiffres.get(brut.id) : null;
+      if (brut.chiffre && !clair?.contenu)
+        return { ...brut, contenu: "", titre: "", description: "", verrouille: true, brut };
+      const e =
+        clair?.contenu !== undefined
+          ? { ...brut, contenu: clair.contenu, titre: clair.titre, description: clair.description }
+          : brut;
+      return { ...e, verrouille: false, brut };
+    });
+  const ecouteursGalerie = new Set();
+  const actionsGalerie = (item) => {
+    const { brut } = item;
+    const liste = [];
+    const ajouter = (id, libelle, onChoix, extra = {}) =>
+      liste.push({ id, libelle, onChoix, ...extra });
+    if (!item.verrouille) {
+      if (item.type === "fichier") {
+        ajouter("telecharger", "Télécharger", () => fichiers.telecharger(item));
+        if (typeof navigator.share === "function" && matchMedia("(pointer: coarse)").matches)
+          ajouter("partager", "Partager", () => fichiers.partager(item));
+        if (item.taille <= 5 * 1024 * 1024)
+          ajouter("lien", "Créer un lien de partage", () => fichiers.lienFichier(item));
+      } else {
+        ajouter("copier", "Copier", () =>
+          copier(item.contenu).then(
+            () => toast("Copié"),
+            () => toast("Copie impossible", { type: "erreur" }),
+          ),
+        );
+        const url = item.type === "lien" ? urlSure(item.contenu) : null;
+        if (url)
+          ajouter("ouvrir", "Ouvrir le lien", () =>
+            window.open(url, "_blank", "noopener,noreferrer"),
+          );
+        ajouter("lien", "Créer un lien de partage", () =>
+          creerLienPourElement({
+            charger,
+            copier,
+            element: { type: item.type, contenu: item.contenu },
+            dureeId,
+          }),
+        );
+      }
+      ajouter("modifier", "Modifier le titre et la description", () =>
+        item.type === "fichier"
+          ? fichiers.modifier(brut, item, item.titre && item.titre !== item.contenu ? item.titre : "")
+          : modifierTexte(brut, item),
+      );
+    } else {
+      ajouter("deverrouiller", "Déverrouiller le coffre", () => coffre.assurerDeverrouille());
+    }
+    ajouter("epingler", item.epingle ? "Désépingler" : "Épingler", () =>
+      action(() => charger().then((fb) => fb.epinglerPartage(uid(), item.id, !item.epingle))),
+    );
+    ajouter("prolonger", "Prolonger la durée", () => choisirProlongation(item));
+    liste.push("-");
+    ajouter(
+      "supprimer",
+      "Supprimer",
+      () =>
+        item.type === "fichier"
+          ? fichiers.supprimer(brut)
+          : charger().then((fb) => fb.supprimerDuPartage(uid(), item.id)),
+      { danger: true },
+    );
+    return liste;
+  };
+  const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
+  const galerie = creerGalerie({
+    vues,
+    abonner: (f) => {
+      ecouteursGalerie.add(f);
+      return () => ecouteursGalerie.delete(f);
+    },
+    urlApercu: (item) =>
+      item.type === "fichier" && !item.verrouille ? fichiers.urlApercu(item) : Promise.resolve(null),
+    deverrouiller: () => coffre.assurerDeverrouille(),
+    actions: actionsGalerie,
+    ecart: () => ecart,
+    appareil: (a) => libelleAppareil(a),
+    lot: {
+      async supprimer(liste) {
+        try {
+          const fb = await charger();
+          for (const i of liste)
+            await (i.type === "fichier"
+              ? fb.supprimerFichierPartage(uid(), i.brut)
+              : fb.supprimerDuPartage(uid(), i.id));
+          toast(`${pluriel(liste.length, "élément")} supprimé${liste.length > 1 ? "s" : ""}`);
+        } catch {
+          toast("Suppression impossible pour l'instant.", { type: "erreur" });
+        }
+      },
+      async prolonger(liste) {
+        const choix = await demander({
+          titre: `Prolonger ${pluriel(liste.length, "élément")}`,
+          message:
+            "Nouvelle durée à partir de maintenant (30 jours au plus depuis l'envoi, ou illimité).",
+          boutons: [
+            { libelle: "Annuler", valeur: null },
+            ...DUREES.map((d) => ({ libelle: d.libelle, valeur: d.id })),
+          ],
+        });
+        if (!choix) return;
+        let faits = 0;
+        const fb = await charger().catch(() => null);
+        for (const i of liste) {
+          const r = prolonger(i, choix, ecart);
+          if (!r.ok || !fb) continue;
+          try {
+            await fb.prolongerPartage(uid(), i.id, r.expireLe);
+            faits++;
+          } catch {
+            /* counted as unchanged */
+          }
+        }
+        toast(
+          faits
+            ? `${faits} prolongé${faits > 1 ? "s" : ""}${faits < liste.length ? `, ${liste.length - faits} inchangé${liste.length - faits > 1 ? "s" : ""}` : ""}`
+            : "Rien à prolonger avec cette durée",
+        );
+      },
+      async telecharger(liste) {
+        for (const i of liste) {
+          await fichiers.telecharger(i);
+          await new Promise((ok) => setTimeout(ok, 300));
+        }
+      },
+    },
+  });
+  const boutonGalerie = el(
+    "button",
+    { type: "button", class: "partage-galerie-bouton", onclick: () => galerie.ouvrir() },
+    icone("grille", { taille: 18 }),
+    el("span", { texte: "Ouvrir la galerie" }),
+    el("span", { class: "partage-galerie-nb", texte: "0" }),
+  );
+  panneau.append(el("div", { class: "partage-galerie-pied" }, boutonGalerie));
 
   fichiers.brancherZone(panneau);
 
@@ -1036,6 +1268,7 @@ export function creerEspacePartage({
       coffre.session.verrouiller(); // signing out locks the vault
       arreterEcoute();
       if (ouvert) fermer();
+      galerie.fermer();
       elements = [];
       compteur = 0;
       octets = 0;

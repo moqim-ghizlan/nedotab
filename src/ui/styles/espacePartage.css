@@ -1135,3 +1135,184 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
     animation: none;
   }
 }
+
+/* "Modifier" window (T4): expiry and its extension. */
+.partage-duree:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.partage-duree:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.partage-modif-duree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--creux);
+}
+.partage-modif-titre {
+  margin: 0;
+  font-size: var(--taille-m);
+}
+.partage-modif-resume {
+  margin: 0;
+  font-size: var(--taille-s);
+  color: var(--texte-secondaire);
+}
+.partage-modif-resume strong {
+  color: var(--accent);
+}
+.partage-modif-libelle {
+  margin: var(--espace-1) 0 0;
+  font-size: var(--taille-xs);
+  color: var(--texte-secondaire);
+}
+
+/* --- T5: clearer cards: title, file line, description, then when/where/expiry ---------------- */
+.partage-carte {
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 4px 14px;
+}
+.partage-vignette {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+}
+.partage-carte--fichier {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+.partage-carte--fichier .partage-vignette,
+.partage-carte--fichier .partage-vignette-bouton {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+}
+.partage-texte {
+  gap: 3px;
+}
+/* The title: bold, bigger, alone on one line. */
+.partage-titre {
+  display: block;
+  overflow: hidden;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
+/* The file line: name in small mono, size in a pill. */
+.partage-fichier-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.partage-fichier-ligne .partage-nom {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.partage-nom--discret {
+  color: var(--texte-secondaire);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.partage-taille {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.partage-alerte {
+  flex: none;
+  color: var(--attention);
+  font-size: 0.6875rem;
+}
+/* The description: ordinary text, faded, two lines at most, set apart from the title. */
+.partage-description {
+  margin-top: 2px;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+.partage-expire--bientot {
+  background: color-mix(in srgb, var(--attention) 12%, transparent);
+  color: var(--attention);
+}
+/* Mouse: the actions stay quiet (icons only) until the card is hovered or focused. */
+@media (hover: hover) and (pointer: fine) {
+  .partage-carte:not(:hover):not(:focus-within) .partage-actions-ligne {
+    opacity: 0.6;
+  }
+  .partage-carte:not(:hover):not(:focus-within) .partage-actions-ligne .partage-action-libelle {
+    max-width: 0;
+    margin-left: -6px;
+    overflow: hidden;
+    opacity: 0;
+  }
+  .partage-action-libelle {
+    max-width: 12em;
+    white-space: nowrap;
+    transition:
+      max-width 180ms,
+      opacity 180ms,
+      margin 180ms;
+  }
+}
+
+/* --- T6: sticky "gallery" button at the foot of the panel ----------------------------------- */
+.partage-galerie-pied {
+  flex: none;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--trait);
+  background: var(--verre);
+}
+.partage-galerie-bouton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--trait-fort);
+  border-radius: 12px;
+  background: var(--creux);
+  color: var(--texte);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    border-color 160ms;
+}
+.partage-galerie-bouton:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-doux);
+}
+.partage-galerie-bouton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.partage-galerie-bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.partage-galerie-nb {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}

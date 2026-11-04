@@ -1,0 +1,417 @@
+/*
+ * "Ajouter un site" (T3), shared by the page dialog and the toolbar popup.
+ * Idea: the tile you are about to create is the hero. It is drawn large at the top and follows
+ * what you type; the fields below are grouped in three quiet cards (address, place, details).
+ * Only the tokens of the app are used (accent, surfaces, radius): no new colour.
+ */
+.ajout {
+  --ajout-duree: calc(var(--duree) * 1.5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+}
+
+/* --- the tile, large --------------------------------------------------------------------- */
+.ajout-apercu {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-4);
+  min-width: 0;
+}
+
+.ajout-apercu-icone {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: var(--creux);
+  box-shadow: inset 0 0 0 1px var(--trait);
+  animation: ajout-apparition var(--ajout-duree) var(--ressort);
+}
+
+.ajout-apercu-icone .tuile-icone {
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 700;
+  box-shadow: var(--ombre);
+}
+
+.ajout-apercu-icone .tuile-icone--image {
+  padding: 6px;
+  background: #fff;
+}
+
+.ajout-apercu-icone img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ajout-apercu-attente {
+  position: absolute;
+  inset: -3px;
+  border-radius: 23px;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: ajout-tour 800ms linear infinite;
+}
+
+.ajout-apercu-texte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ajout-apercu-titre {
+  overflow: hidden;
+  font-size: var(--taille-l);
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ajout-apercu-domaine {
+  overflow: hidden;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ajout-apercu--vide .ajout-apercu-titre {
+  color: var(--texte-secondaire);
+  font-weight: 500;
+}
+
+@keyframes ajout-apparition {
+  from {
+    opacity: 0.4;
+    transform: scale(0.88);
+  }
+}
+
+@keyframes ajout-tour {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- cards -------------------------------------------------------------------------------- */
+.ajout-carte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--creux);
+}
+
+.ajout-carte-titre {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  font-weight: 600;
+}
+
+/* --- floating label fields ---------------------------------------------------------------- */
+.champ-flottant {
+  position: relative;
+}
+
+.champ-flottant input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  padding: 20px var(--espace-3) 6px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte);
+  font: inherit;
+  transition:
+    border-color var(--ajout-duree),
+    box-shadow var(--ajout-duree);
+}
+
+.champ-flottant input:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+
+.champ-flottant input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.champ-flottant input[readonly] {
+  color: var(--texte-secondaire);
+}
+
+.champ-flottant label {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--espace-3) + 1px);
+  right: var(--espace-3);
+  overflow: hidden;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-m);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    top var(--ajout-duree),
+    font-size var(--ajout-duree),
+    transform var(--ajout-duree);
+}
+
+.champ-flottant input:focus + label,
+.champ-flottant input:not(:placeholder-shown) + label {
+  top: 9px;
+  font-size: var(--taille-xs);
+  transform: none;
+}
+
+.champ-flottant input:focus + label {
+  color: var(--accent);
+}
+
+/* --- place button (opens the folder tree) -------------------------------------------------- */
+.ajout-lieu {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  width: 100%;
+  min-height: 54px;
+  padding: 0 var(--espace-4);
+  font-size: var(--taille-m);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--ajout-duree),
+    box-shadow var(--ajout-duree);
+}
+
+.ajout-lieu:hover {
+  border-color: var(--trait-fort);
+}
+
+.ajout-lieu:focus-visible,
+.ajout-lieu[aria-expanded="true"] {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+
+.ajout-lieu-texte {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ajout-lieu-fleche {
+  color: var(--texte-secondaire);
+  transition: transform var(--ajout-duree);
+}
+
+.ajout-lieu[aria-expanded="true"] .ajout-lieu-fleche {
+  transform: rotate(180deg);
+}
+
+.ajout-lieu-panneau {
+  margin-top: var(--espace-2);
+}
+
+/* --- details (description) ----------------------------------------------------------------- */
+.ajout-repliable > summary {
+  cursor: pointer;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  font-weight: 600;
+}
+
+.ajout-repliable[open] > summary {
+  margin-bottom: var(--espace-2);
+}
+
+.ajout-repliable textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface);
+  color: var(--texte);
+  font: inherit;
+  resize: vertical;
+}
+
+.ajout-repliable textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-doux);
+}
+
+/* --- "already in your grid" -------------------------------------------------------------- */
+.ajout-alerte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border: 1px solid color-mix(in srgb, var(--attention) 45%, transparent);
+  border-left-width: 4px;
+  border-radius: var(--rayon-petit);
+  background: color-mix(in srgb, var(--attention) 10%, transparent);
+  font-size: var(--taille-s);
+}
+
+.ajout-alerte p {
+  margin: 0;
+}
+
+.ajout-alerte strong {
+  font-weight: 650;
+}
+
+.ajout-alerte-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}
+
+.ajout-alerte[hidden] {
+  display: none;
+}
+
+/* --- AI button ----------------------------------------------------------------------------- */
+.bouton-ia {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espace-2);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--bordure));
+  color: var(--accent);
+}
+
+.bouton-ia::before {
+  content: "✦";
+  font-size: 1.05em;
+}
+
+.bouton-ia[aria-busy="true"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ajout-tour 700ms linear infinite;
+}
+
+/* --- sticky footer -------------------------------------------------------------------------- */
+.ajout-pied {
+  position: sticky;
+  bottom: calc(var(--espace-5) * -1);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-2);
+  margin: 0 calc(var(--espace-5) * -1) calc(var(--espace-5) * -1);
+  padding: var(--espace-3) var(--espace-5);
+  border-top: 1px solid var(--trait);
+  background: var(--surface);
+  border-radius: 0 0 var(--rayon-grand) var(--rayon-grand);
+}
+
+.ajout-pied-droite {
+  display: flex;
+  gap: var(--espace-2);
+  margin-left: auto;
+}
+
+.ajout-pied .bouton--principal {
+  border: 0;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 88%, #fff),
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 80%, #000)
+  );
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition:
+    filter var(--ajout-duree),
+    box-shadow var(--ajout-duree);
+}
+
+.ajout-pied .bouton--principal:disabled {
+  box-shadow: none;
+}
+
+.ajout-pied .bouton:focus-visible,
+.ajout .bouton:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Page dialog: wider, scrolls inside, footer always visible. */
+.dialogue.dialogue--ajout {
+  width: min(480px, calc(100vw - 2 * var(--espace-4)));
+  max-height: calc(100vh - 2 * var(--espace-4));
+  overflow-y: auto;
+}
+
+/* Popup: the footer is the popup's own bar. */
+.popup-corps .ajout {
+  gap: var(--espace-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ajout-apercu-icone,
+  .ajout-apercu-attente,
+  .bouton-ia[aria-busy="true"]::before {
+    animation: none;
+  }
+}
+
+/* The place is the choice that matters most: its card is the roomiest. */
+.ajout-carte:has(.ajout-lieu) {
+  padding: var(--espace-4);
+  gap: var(--espace-3);
+}
+
+.ajout-carte:has(.ajout-lieu) .ajout-carte-titre {
+  font-size: var(--taille-m);
+  color: var(--texte);
+}
+
+/* The popup shows the tile centred, as a title. */
+.popup-corps .ajout-apercu {
+  flex-direction: column;
+  text-align: center;
+  gap: var(--espace-2);
+}
+
+.popup-corps .ajout-apercu-texte {
+  align-items: center;
+  max-width: 100%;
+}

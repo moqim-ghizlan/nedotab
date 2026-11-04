@@ -2,6 +2,30 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [4.31.1] - 2026-11-04
+
+### Ajouté
+
+- **Sélecteur de dossier en arbre** (T1) : « Déplacer vers… » et l'emplacement du popup d'ajout affichent l'arbre des dossiers (chevrons, guides, recherche avec surlignage, fil d'Ariane, clavier, dossiers interdits grisés avec la raison).
+- **Aperçu du contenu des dossiers** (T2) : dans « Déplacer vers… », un panneau montre le contenu du dossier choisi. En glissant une icône, un dossier s'ouvre après 600 ms de survol (anneau de progression) pour la déposer dans un sous-dossier sans lâcher ; la fenêtre ouverte ainsi se ferme si on en sort.
+- **Galerie de l'espace de partage** (T6) : bouton « Ouvrir la galerie » au pied du panneau, galerie plein écran groupée par date (filtres, recherche, sélection multiple avec suppression, prolongation et téléchargement en lot) et visionneuse avec panneau de détails et menu « ⋯ ».
+- **Les plus utilisés sur l'accueil** (T7) : bande de pastilles rondes au-dessus de la barre de recherche (le nom apparaît au survol), à activer dans les réglages (4, 6, 8 ou 10 sites).
+- **Réglage « Activer l'espace de partage »** (T8) : désactivé, le bouton, le panneau et la galerie disparaissent et plus aucune requête n'est faite.
+- **Chatbot : un interrupteur et trois emplacements** (T9) : bouton de l'accueil, recherche améliorée par l'IA, bouton de la fenêtre de l'extension.
+
+### Modifié
+
+- **Formulaire « Ajouter un site »** (T3) : aperçu de la tuile en direct, cartes, labels flottants, alerte de doublon avec deux actions, bouton IA, pied collant ; popup de l'extension plus large (480 px).
+- **Espace de partage** : on peut prolonger la durée d'un élément depuis « Modifier » (T4, jamais plus court que l'actuelle) ; cartes plus lisibles, titre, ligne du fichier, description et pastille d'expiration (T5).
+
+### Corrigé
+
+- Une collision de noms de classes CSS étirait la galerie de fonds d'écran des Réglages.
+
+### Non fait / limites connues
+
+- T11 (tokens CSS communs, tests visuels complets) non fait. Le raccourcissement d'une durée de partage reste refusé par les règles Firestore.
+
 ## [4.31.0] - 2026-11-03
 
 ### Ajouté

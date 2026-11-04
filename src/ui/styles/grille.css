@@ -771,3 +771,42 @@
     gap: calc(var(--espace-2) * var(--espacement, 1)) calc(var(--espace-2) * var(--espacement, 1));
   }
 }
+
+/* A folder held under the dragged icon: a ring fills up, then the folder opens. */
+@property --avance {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.tuile.cible--ouverture {
+  position: relative;
+}
+
+.tuile.cible--ouverture::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: var(--rayon);
+  padding: 3px;
+  background: conic-gradient(var(--accent) var(--avance), transparent 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: avance-ouverture 600ms linear forwards;
+  pointer-events: none;
+}
+
+@keyframes avance-ouverture {
+  to {
+    --avance: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tuile.cible--ouverture::after {
+    --avance: 360deg;
+    animation: none;
+  }
+}

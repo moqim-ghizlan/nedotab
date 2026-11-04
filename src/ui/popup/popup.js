@@ -29,6 +29,9 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
   } catch {
     /* no tab readable: the add screen explains */
   }
+  // T9: "Bouton robot dans le navigateur" (kept by the page as a small device preference).
+  const boutonChat =
+    (await plateforme.preferences.lire("boutonChatNavigateur").catch(() => true)) !== false;
   const stockage = plateforme.stockage();
   // The state is only read when "Ajouter ce site" is clicked: the window shows up at once
   // instead of waiting for the whole storage (the slowness reported in V4.30).
@@ -120,7 +123,7 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
             ? null
             : el("p", { class: "popup-bandeau", role: "status", texte: onglet.raison }),
           ajouter,
-          chat,
+          boutonChat ? chat : null,
         ),
         el(
           "p",
@@ -134,7 +137,7 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
         ),
       ),
     );
-    (onglet.ok ? ajouter : chat).focus();
+    (onglet.ok || !boutonChat ? ajouter : chat).focus();
   }
   racine.addEventListener("keydown", (e) => {
     const suivant = { ArrowDown: true, ArrowRight: true, ArrowUp: false, ArrowLeft: false }[e.key];

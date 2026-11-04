@@ -18,14 +18,14 @@ import { petitCote, suivreClavier } from "./ecran.js";
 import { chargerFirebase } from "../firebase/charger.js";
 import { creerStore } from "../core/store.js";
 import { plateforme } from "../platform/index.js";
-import { iaDe } from "../core/ia.js";
+import { iaDe, optionsChatbot } from "../core/ia.js";
 import { creerEnrichissement, installerEnrichissement } from "./services/enrichissement.js";
 import { creerRattrapage } from "./services/rattrapage.js";
 import { creerServiceIa } from "./services/ia.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirAjoutSite, ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
-import { ouvrirFenetreDossier } from "./fenetreDossier.js";
+import { fenetreOuverte, ouvrirFenetreDossier } from "./fenetreDossier.js";
 import { ouvrirMenu } from "./menuContextuel.js";
 import { appliquerReglages, configurerFondsCompte } from "./apparence.js";
 import { creerHorloge } from "./horloge.js";
@@ -57,6 +57,7 @@ import {
 } from "./tuile.js";
 import { creerServiceVisites } from "./services/visites.js";
 import { creerServiceUsage } from "./services/usage.js";
+import { frequentsDe } from "../core/frequents.js";
 import { creerFrequents } from "./frequents.js";
 import { creerEspacePartage } from "./espacePartage.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
@@ -538,7 +539,18 @@ export async function demarrerApp(racine) {
     if (u) await (await chargerFirebase()).effacerVisites(u);
     await usage.actualiser();
   };
-  definirSurVisite((id) => visites.enregistrerAvantNavigation(id));
+  // T7: a site opened in another tab changes the ranking: it is read again, once, when this
+  // page is shown again (never on every click).
+  let visiteAFaire = false;
+  definirSurVisite((id) => {
+    visiteAFaire = true;
+    return visites.enregistrerAvantNavigation(id);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || !visiteAFaire) return;
+    visiteAFaire = false;
+    usage.actualiser();
+  });
   suivreOuverturesTuiles(document);
   visites.demarrer();
   usage.actualiser();
@@ -579,12 +591,34 @@ export async function demarrerApp(racine) {
     },
   });
 
+  // T7: block "Les plus utilisés" above the search bar (off by default, see the settings).
+  const frequentsAccueil = creerFrequents({
+    store,
+    usage,
+    suiviActif,
+    lectureSeule,
+    afficherDansGrille: (id) => afficherSite(id),
+    modifierSite: (id) => {
+      const r = trouverElement(store.lire().grille, id);
+      if (r?.element.type === "site") ouvrirEditionSite(store, r.element, {});
+    },
+    accueil: true,
+    lireAffichage: (r) => frequentsDe(r).accueil,
+    maximum: () => frequentsDe(store.lire().reglages).nombreAccueil,
+  });
+
   // Search bar above the grid; a folder found opens directly at its level.
   const recherche = creerRecherche(store, {
     frequents,
     lireClassementUsage: () => usage.classement(),
     ouvrirDossier: (id) => ouvrirDossier(id),
-    contexteIa,
+    // T9: "Recherche améliorée par l'IA" off, the bar stays 100 % local (no mode, no call).
+    contexteIa: async () => {
+      const contexte = await contexteIa();
+      return optionsChatbot(contexte.ia).rechercheIa
+        ? contexte
+        : { ...contexte, ia: { ...contexte.ia, actif: false } };
+    },
     demanderIa: async (question) =>
       (await chargerFirebase()).appelerIa("iaRechercher", { question }),
     // V4.13: a question of the bar goes to the chat (the chat is created just below).
@@ -657,6 +691,7 @@ export async function demarrerApp(racine) {
   // V4.11: the assistant, opened by the robot button (hidden while the AI is unusable).
   const chat = creerChat({
     contexteIa,
+    boutonAutorise: () => optionsChatbot(iaDe(store.lire().reglages)).boutonAccueil,
     appeler: async (conversation) => {
       const fb = await chargerFirebase();
       return fb.appelerIa("iaChat", fb.donneesChat(conversation));
@@ -700,10 +735,19 @@ export async function demarrerApp(racine) {
   const partage = creerEspacePartage({
     store,
     disponible: () => uidConnecte() !== null,
+    // T8: turned off in the settings, the button, the panel, the gallery and every request go.
+    actif: () => !store.lire().reglages.sansEspacePartage,
     charger: chargerFirebase,
     uid: uidConnecte,
   });
   session.partage = partage;
+  let partageActifAvant = !store.lire().reglages.sansEspacePartage;
+  store.abonner(() => {
+    const actif = !store.lire().reglages.sansEspacePartage;
+    if (actif === partageActifAvant) return;
+    partageActifAvant = actif;
+    partage.actualiser();
+  });
   document.body.append(partage.bouton, partage.panneau);
   synchro.abonner(() => partage.actualiser());
   compte.abonner(() => partage.actualiser());
@@ -716,7 +760,18 @@ export async function demarrerApp(racine) {
     if (vus === reglagesIaVus) return;
     reglagesIaVus = vus;
     chat.actualiser();
+    ecrireBoutonNavigateur();
   });
+  // T9 (extension): the toolbar window shows its robot button according to this setting. It
+  // reads a small device preference (fast, no flicker), kept up to date from here.
+  let boutonNavigateurEcrit;
+  function ecrireBoutonNavigateur() {
+    const v = optionsChatbot(iaDe(store.lire().reglages)).boutonNavigateur;
+    if (v === boutonNavigateurEcrit) return;
+    boutonNavigateurEcrit = v;
+    plateforme.preferences.ecrire("boutonChatNavigateur", v).catch(() => {});
+  }
+  if (import.meta.env.VITE_TARGET === "extension") ecrireBoutonNavigateur();
   addEventListener("focus", () => chat.actualiser());
   // The account is connected a moment after the page opens (the robot stayed hidden until
   // the first question): the chat reads the AI state again when the synchronisation mode changes.
@@ -747,6 +802,7 @@ export async function demarrerApp(racine) {
   page.insertBefore(ligneRecherche, vide);
   ligneRecherche.after(frequents.racine);
   page.insertBefore(creerHorloge(store).racine, ligneRecherche);
+  page.insertBefore(frequentsAccueil.racine, ligneRecherche);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
   // The "?focus=1" marker is then removed from the address shown by Chrome.
   if (new URLSearchParams(location.search).has("focus")) {
@@ -816,6 +872,15 @@ export async function demarrerApp(racine) {
       lectureSeule: () => lectureSeule,
       annoncer,
       ouvrirDossier,
+      // Held over a folder while dragging: a window opens; once open, it goes deeper in place.
+      ouvrirAuSurvol: (id) => {
+        const f = fenetreOuverte();
+        if (f) {
+          f.aller(id, { sens: 1 });
+          return null;
+        }
+        return ouvrirDossier(id);
+      },
       apresFusion: (id) =>
         ouvrirFenetreDossier(store, id, {
           lectureSeule: () => lectureSeule,

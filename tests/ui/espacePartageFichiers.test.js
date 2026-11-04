@@ -168,7 +168,10 @@ describe("fichiers du partage (V4.25)", () => {
     [...c.querySelectorAll("button")].find((b) => b.textContent === "Modifier").click();
     await attendre();
     await attendre();
-    expect(editerDetails).toHaveBeenCalledWith({ titre: "Vacances", description: "plage" });
+    expect(editerDetails).toHaveBeenCalledWith(
+      expect.objectContaining({ titre: "Vacances", description: "plage" }),
+    );
+    expect(editerDetails.mock.calls[0][0].element.id).toBe("5");
     // An empty title: the name of the file again.
     expect(fb.modifierDetailsPartage).toHaveBeenCalledWith("u1", "5", { titre: "a.pdf", description: "nouvelle" });
     const sans = f.carte({ id: "6", type: "fichier", contenu: "b.pdf", titre: "b.pdf", typeMime: "application/pdf", taille: 10, chemin: "partages/u1/6/b.pdf" });

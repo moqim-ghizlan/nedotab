@@ -1,5 +1,5 @@
 import { A } from "../../core/actions.js";
-import { dossiersCibles, emplacementValide, siteExistant } from "../../core/ajoutRapide.js";
+import { emplacementValide, siteExistant } from "../../core/ajoutRapide.js";
 import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { ajouter as ajouterOperation } from "../../core/fileOperations.js";
 import { creerSite } from "../../core/modele.js";
@@ -10,6 +10,7 @@ import { plateforme } from "../../platform/index.js";
 import { creerChampTags } from "../champTags.js";
 import { creerEditeurIcone } from "../dialogues/editerIcone.js";
 import { el } from "../dom.js";
+import { champFlottant, creerApercuAjout, creerChampLieu } from "../ajoutPieces.js";
 import { trouverIconeEtTitre } from "../services/icones.js";
 import { creerRemplissageIa } from "./remplirIa.js";
 
@@ -34,7 +35,6 @@ export async function ecranAjout({
   let propositionIa = null; // { tags, description } while the user has not changed them
 
   const dernier = await plateforme.preferences.lire("dernierDossierAjout").catch(() => null);
-  const cibles = dossiersCibles(grille());
   const champNom = el("input", {
     id: "p-nom",
     type: "text",
@@ -42,27 +42,23 @@ export async function ecranAjout({
     value: onglet.titre || domaine(onglet.url),
   });
   const champUrl = el("input", { id: "p-url", type: "text", value: onglet.url, readonly: true });
-  const lieu = el(
-    "select",
-    { id: "p-lieu" },
-    cibles.map((c) =>
-      el("option", {
-        value: c.id ?? "",
-        texte: `${"  ".repeat(Math.max(0, c.niveau - 1))}${c.chemin}`,
-      }),
-    ),
-  );
-  lieu.value = emplacementValide(grille(), dernier) ?? "";
-  const recherche = el("input", {
-    type: "search",
-    placeholder: "Chercher un dossier",
-    "aria-label": "Chercher un dossier",
-    hidden: cibles.length < 9,
+  // Place: a button showing the path opens the shared folder tree (T1).
+  const champLieu = creerChampLieu({
+    grille: grille(),
+    selection: dernier,
+    id: "p-lieu",
+    onChoix: () => touches.add("dossier"),
   });
-  recherche.addEventListener("input", () => {
-    const q = recherche.value.toLowerCase();
-    for (const o of lieu.options) o.hidden = q !== "" && !o.textContent.toLowerCase().includes(q);
-  });
+  // Same small API as the old <select>.
+  const lieu = {
+    get value() {
+      return champLieu.lire() ?? "";
+    },
+    set value(id) {
+      champLieu.definir(id || null);
+    },
+  };
+  const apercu = creerApercuAjout(() => ({ titre: champNom.value.trim(), url: onglet.url }));
   const champTags = creerChampTags({
     suggestions: () => tagsUtilises(grille()),
     onChange: () => {
@@ -82,12 +78,14 @@ export async function ecranAjout({
     hidden: true,
   });
   const etatIa = el("span", { class: "popup-ia-propose", "aria-live": "polite" });
-  champNom.addEventListener("input", () => touches.add("titre"));
+  champNom.addEventListener("input", () => {
+    touches.add("titre");
+    majApercu();
+  });
   description.addEventListener("input", () => {
     touches.add("description");
     propositionIa = null;
   });
-  lieu.addEventListener("change", () => touches.add("dossier"));
   const dire = (texte) => {
     message.hidden = !texte;
     message.textContent = texte ?? "";
@@ -105,15 +103,22 @@ export async function ecranAjout({
   const editeurIcone = creerEditeurIcone({
     iconeInitiale: { type: "lettre", couleur: couleurDepuisTexte(onglet.url) },
     lireSite: () => ({ titre: champNom.value, url: onglet.url }),
-    onChange: () => {},
+    onChange: () => majApercu(),
     modeInitial: "auto",
   });
+  function majApercu(enCours = false) {
+    apercu.maj(editeurIcone.lire(), enCours);
+  }
   // Automatic by default: the detection runs now; the letter stays the fallback.
-  const detectee = editeurIcone.redetecter().catch(() => {});
+  majApercu(true);
+  const detectee = editeurIcone
+    .redetecter()
+    .catch(() => {})
+    .then(() => majApercu());
   const hors = typeof navigator !== "undefined" && navigator.onLine === false;
   const boutonIa = el("button", {
     type: "button",
-    class: "bouton",
+    class: "bouton bouton-ia",
     texte: "Remplir avec l'IA",
     disabled: hors,
     title: hors ? "Hors ligne : l'IA est indisponible" : "",
@@ -157,6 +162,7 @@ export async function ecranAjout({
     },
     surEtat: (e, m) => {
       boutonIa.disabled = e === "attente" || hors;
+      boutonIa.setAttribute("aria-busy", String(e === "attente"));
       annulerIa.hidden = e !== "attente";
       boutonIa.textContent = e === "ok" ? "Régénérer" : "Remplir avec l'IA";
       if (e === "attente") etatIa.textContent = "L'IA réfléchit…";
@@ -244,7 +250,7 @@ export async function ecranAjout({
     } catch (e) {
       return dire(`Enregistrement impossible : ${e?.message ?? "réessayez"}.`);
     }
-    const chemin = cibles.find((c) => c.id === parentId)?.chemin ?? "Accueil";
+    const chemin = champLieu.chemin(parentId);
     racine.replaceChildren(
       el("div", { class: "popup-choix" }, el("p", { role: "status", texte: `Ajouté à ${chemin}` })),
     );
@@ -261,23 +267,27 @@ export async function ecranAjout({
   const bandeauDoublon = existant
     ? el(
         "div",
-        { class: "popup-bandeau", role: "status" },
-        el("span", { texte: `Déjà dans ${existant.chemin}. ` }),
-        el("button", {
-          type: "button",
-          class: "lien-discret",
-          texte: "Modifier",
-          onclick: ouvrirNedoTab,
-        }),
-        el("button", {
-          type: "button",
-          class: "lien-discret",
-          texte: "Ajouter quand même",
-          onclick: (e) => {
-            e.target.parentElement.hidden = true;
-            ajouter.disabled = false;
-          },
-        }),
+        { class: "ajout-alerte", role: "status" },
+        el("p", {}, "Ce site est déjà dans ", el("strong", { texte: existant.chemin }), "."),
+        el(
+          "div",
+          { class: "ajout-alerte-actions" },
+          el("button", {
+            type: "button",
+            class: "bouton",
+            texte: "Modifier l'existant",
+            onclick: ouvrirNedoTab,
+          }),
+          el("button", {
+            type: "button",
+            class: "bouton",
+            texte: "Ajouter quand même",
+            onclick: (e) => {
+              e.target.closest(".ajout-alerte").hidden = true;
+              ajouter.disabled = false;
+            },
+          }),
+        ),
       )
     : null;
   racine.replaceChildren(
@@ -287,30 +297,42 @@ export async function ecranAjout({
       el(
         "div",
         { class: "popup-corps" },
-        bandeauDoublon,
-        el("div", { class: "popup-ligne" }, boutonIa, annulerIa, etatIa),
-        message,
-        el("div", { class: "champ" }, el("label", { for: "p-nom", texte: "Nom" }), champNom),
-        el("div", { class: "champ" }, el("label", { for: "p-url", texte: "Adresse" }), champUrl),
         el(
           "div",
-          { class: "champ" },
-          el("label", { for: "p-lieu", texte: "Emplacement" }),
-          recherche,
-          lieu,
-        ),
-        el(
-          "details",
-          { class: "popup-icone" },
-          el("summary", { texte: "Icône" }),
-          editeurIcone.racine,
-        ),
-        champTags.racine,
-        el(
-          "div",
-          { class: "champ" },
-          el("label", { for: "p-desc", texte: "Description" }),
-          description,
+          { class: "ajout" },
+          apercu.racine,
+          bandeauDoublon,
+          message,
+          el(
+            "section",
+            { class: "ajout-carte" },
+            champFlottant(champUrl, "Adresse"),
+            champFlottant(champNom, "Nom"),
+          ),
+          el(
+            "section",
+            { class: "ajout-carte" },
+            el("label", { class: "ajout-carte-titre", for: "p-lieu", texte: "Emplacement" }),
+            champLieu.racine,
+          ),
+          el(
+            "section",
+            { class: "ajout-carte" },
+            el("div", { class: "popup-ligne" }, boutonIa, annulerIa, etatIa),
+            el(
+              "details",
+              { class: "popup-icone ajout-repliable" },
+              el("summary", { texte: "Icône" }),
+              editeurIcone.racine,
+            ),
+            champTags.racine,
+            el(
+              "details",
+              { class: "ajout-repliable" },
+              el("summary", { texte: "Description" }),
+              description,
+            ),
+          ),
         ),
       ),
       el(
@@ -319,7 +341,7 @@ export async function ecranAjout({
         el("button", { type: "button", class: "bouton", texte: "Retour", onclick: retour }),
         el(
           "div",
-          { class: "droite" },
+          { class: "droite ajout-pied-droite" },
           el("button", {
             type: "button",
             class: "bouton",

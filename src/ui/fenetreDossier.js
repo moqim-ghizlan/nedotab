@@ -13,6 +13,9 @@ import { creerVueGrille } from "./vueGrille.js";
 
 let ouverte = null;
 
+/** The folder window currently open, or null. */
+export const fenetreOuverte = () => ouverte;
+
 /** Time out of the window (or over its header) before the folder lets the icon go. */
 export const DELAI_SORTIE_MS = 400;
 
@@ -293,6 +296,7 @@ export function ouvrirFenetreDossier(
       courant = ancetre;
       dossier = lire(courant);
     }
+    dialogue.dataset.dossier = courant; // read by the drag (drop in the open window)
     const chemin = cheminVers(grille(), courant);
     cheminConnu = chemin.map((d) => d.id);
     rendreFilAriane(

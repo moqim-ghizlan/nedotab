@@ -92,6 +92,37 @@ export function prolonger(element, dureeId, ecart = 0, maintenant = Date.now()) 
   return { ok: true, expireLe: nouveau };
 }
 
+/**
+ * New expiry chosen when an item is edited (T4). Only ever LATER than the current one (the
+ * Firestore rule refuses a shorter life), never past 30 days after the creation unless
+ * unlimited, and always valid for the rules.
+ * choix: { mode: "garder" } | { mode: "depuis-maintenant", duree } (a fresh duration counted
+ * from now) | { mode: "ajouter", duree } (the current expiry plus that duration).
+ * @returns {{ ok: true, expireLe: number, change: boolean } | { ok: false, erreur: string }}
+ */
+export function nouvelleExpiration(element, choix, ecart = 0, maintenant = Date.now()) {
+  const actuel = element?.expireLe;
+  if (!choix || choix.mode === "garder") return { ok: true, expireLe: actuel, change: false };
+  if (estIllimite(actuel)) return { ok: false, erreur: "Déjà illimité" };
+  const maintenantServeur = maintenantCorrige(ecart, maintenant);
+  const duree = DUREES.find((d) => d.id === choix.duree);
+  if (!duree) return { ok: false, erreur: "Durée inconnue" };
+  const plafond = (element.creeLe ?? maintenantServeur) + VIE_MAX_MS;
+  let voulu;
+  if (duree.ms === null) voulu = ILLIMITE;
+  else if (choix.mode === "ajouter") {
+    voulu = (Number.isFinite(actuel) ? actuel : maintenantServeur) + duree.ms;
+  } else if (choix.mode === "depuis-maintenant") voulu = maintenantServeur + duree.ms;
+  else return { ok: false, erreur: "Choix inconnu" };
+  const nouveau = estIllimite(voulu) ? voulu : Math.min(voulu, plafond);
+  if (Number.isFinite(actuel) && nouveau < actuel)
+    return { ok: false, erreur: "Une durée plus courte ne peut pas être appliquée" };
+  if (Number.isFinite(actuel) && nouveau === actuel)
+    return { ok: false, erreur: "Durée maximale atteinte" };
+  if (!expirationValide(nouveau, maintenantServeur)) return { ok: false, erreur: "Durée invalide" };
+  return { ok: true, expireLe: nouveau, change: true };
+}
+
 /** Durations that would still extend the item (to disable the others in the mini-selector). */
 export const dureesProlongeables = (element, ecart = 0, maintenant = Date.now()) =>
   DUREES.filter((d) => prolonger(element, d.id, ecart, maintenant).ok);

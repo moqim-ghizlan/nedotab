@@ -1,11 +1,13 @@
 import { A } from "../../core/actions.js";
 import {
   avecActif,
+  avecOptionChatbot,
   avecQuestionBarre,
   avecSitesChat,
   EXPLICATIONS_IA,
   FOURNISSEURS,
   iaDe,
+  optionsChatbot,
 } from "../../core/ia.js";
 import { LIBELLES_MODES_SITES_CHAT, MODES_SITES_CHAT } from "../../core/besoinContexteSites.js";
 import { LIBELLES_PREFERENCES, PREFERENCES_QUESTION } from "../../core/routageQuestion.js";
@@ -179,28 +181,6 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     }
     const prete = !!config && !!cles;
     const inactif = !reglages.actif;
-
-    const interrupteur = el("input", {
-      type: "checkbox",
-      role: "switch",
-      class: "interrupteur-bouton",
-      checked: reglages.actif,
-      onchange: (e) => changer(avecActif(ia(), e.currentTarget.checked)),
-    });
-    const activation = el(
-      "label",
-      { class: "interrupteur" },
-      el(
-        "span",
-        { class: "interrupteur-texte" },
-        el("span", { texte: "Activer l'assistant" }),
-        el("span", {
-          class: "reglages-note",
-          texte: "Propose des tags et une description pour vos sites.",
-        }),
-      ),
-      interrupteur,
-    );
 
     // V4.13: where a question asked in the search bar goes.
     const choixQuestion = el(
@@ -436,7 +416,6 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
       : null;
     racine.replaceChildren(
       ...[
-        activation,
         questionBarre,
         sitesChat,
         consommation,
@@ -469,4 +448,110 @@ export function sectionIa({ store, session, service = creerServiceIa() }) {
     else rendre();
   });
   return { section };
+}
+
+/**
+ * "Chatbot" section of the Features tab (T10): the main switch and the three places where the
+ * assistant appears (home button, search bar, browser button). Same switch as everywhere.
+ */
+export function creerSectionChatbot({ store }) {
+  let animerSous = false; // the group unfolds once, when the main switch is turned on
+  const racine = el("div", { class: "ia-reglages" });
+  const section = el(
+    "section",
+    { class: "reglages-section", "aria-labelledby": "titre-chatbot" },
+    el("h3", { id: "titre-chatbot", texte: "Chatbot" }),
+    racine,
+  );
+  const ia = () => iaDe(store.lire().reglages);
+  const changer = (suivante) =>
+    store.envoyer({ type: A.REGLAGES_MODIFIER, changements: { ia: suivante } });
+  function rendre() {
+    const reglages = ia();
+    const inactif = !reglages.actif;
+    const interrupteur = el("input", {
+      type: "checkbox",
+      role: "switch",
+      class: "interrupteur-bouton",
+      checked: reglages.actif,
+      onchange: (e) => {
+        animerSous = e.currentTarget.checked;
+        changer(avecActif(ia(), e.currentTarget.checked));
+      },
+    });
+    const activation = el(
+      "label",
+      { class: "interrupteur" },
+      el(
+        "span",
+        { class: "interrupteur-texte" },
+        el("span", { texte: "Activer le chatbot" }),
+        el("span", {
+          class: "reglages-note",
+          texte:
+            "L'assistant : tags et descriptions de vos sites, discussion, recherche. Désactivé, il disparaît partout et aucun appel n'est fait.",
+        }),
+      ),
+      interrupteur,
+    );
+
+    // T9: the three places of the chatbot, under the main switch (greyed while it is off).
+    const options = optionsChatbot(reglages);
+    const lignesSous = [
+      [
+        "boutonAccueil",
+        "Bouton robot sur la page d'accueil",
+        "Affiche ou masque le bouton du chatbot sur l'accueil.",
+      ],
+      [
+        "rechercheIa",
+        "Recherche améliorée par l'IA",
+        "Questions et suggestions de l'assistant dans la barre de recherche. Désactivé, la recherche reste 100 % locale.",
+      ],
+      ...(import.meta.env.VITE_TARGET === "pwa"
+        ? []
+        : [
+            [
+              "boutonNavigateur",
+              "Bouton robot dans le navigateur (toutes les pages)",
+              "Affiche ou masque le bouton robot de la fenêtre de l'extension, y compris sur les pages qui ne peuvent pas être ajoutées.",
+            ],
+          ]),
+    ].map(([cle, libelle, texte]) => {
+      const bouton = el("input", {
+        type: "checkbox",
+        role: "switch",
+        class: "interrupteur-bouton",
+        checked: options[cle],
+        disabled: inactif || null,
+        dataset: { chatbot: cle },
+        onchange: (e) => changer(avecOptionChatbot(ia(), cle, e.currentTarget.checked)),
+      });
+      return el(
+        "label",
+        { class: "interrupteur" },
+        el(
+          "span",
+          { class: "interrupteur-texte" },
+          el("span", { texte: libelle }),
+          el("span", { class: "reglages-note", texte }),
+        ),
+        bouton,
+      );
+    });
+    const sousOptions = el(
+      "div",
+      {
+        class: `ia-sous-options${inactif ? " ia-sous-options--inactif" : ""}${animerSous ? " ia-sous-options--deplie" : ""}`,
+        role: "group",
+        "aria-label": "Où apparaît le chatbot",
+        "aria-disabled": inactif ? "true" : null,
+      },
+      lignesSous,
+    );
+    animerSous = false;
+    racine.replaceChildren(activation, sousOptions);
+  }
+  rendre();
+  return { section, maj: rendre };
 }

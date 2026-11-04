@@ -5,6 +5,7 @@ import { estimerTaille, niveauTaille } from "../../core/taille.js";
 import { DESCRIPTION_MAX, normaliserDescription, tagsUtilises } from "../../core/tags.js";
 import { cleUrl, domaine, normaliserUrl } from "../../core/url.js";
 import { plateforme } from "../../platform/index.js";
+import { champFlottant, creerApercuAjout, creerChampLieu } from "../ajoutPieces.js";
 import { creerChampTags } from "../champTags.js";
 import { el } from "../dom.js";
 import { creerEditeurIcone } from "./editerIcone.js";
@@ -81,7 +82,23 @@ function blocPermission({ onAccordee }) {
   return [bloc, lien];
 }
 
-/** "Ajouter un site" dialog (native <dialog>, focus and Escape handled by the browser). */
+/** The site of the grid with this address key, or null. */
+function siteParCle(elements, cle) {
+  for (const e of elements) {
+    if (e.type === "site" && cleUrl(e.url) === cle) return e;
+    if (e.items) {
+      const r = siteParCle(e.items, cle);
+      if (r) return r;
+    }
+  }
+  return null;
+}
+
+/**
+ * "Ajouter un site" dialog (native <dialog>, focus and Escape handled by the browser).
+ * The tile to create is drawn large at the top and follows the address and the name; the place
+ * is chosen with the folder tree; a duplicate is shown as an alert with two actions (T3).
+ */
 export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
   const champUrl = el("input", {
     id: "ajout-url",
@@ -93,7 +110,6 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     enterkeyhint: "done",
     autocomplete: "off",
     spellcheck: "false",
-    placeholder: "exemple.com",
     "aria-describedby": "ajout-url-erreur",
     required: true,
   });
@@ -105,24 +121,26 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     autocomplete: "off",
     maxlength: "60",
   });
-  const apercu = el("div", { class: "apercu", "aria-hidden": "true" });
-  const avertissement = el("p", { class: "champ-avertissement", hidden: true });
+  const apercu = creerApercuAjout(() => {
+    const r = normaliserUrl(champUrl.value);
+    return { titre: champTitre.value.trim(), url: r.ok ? r.url : "" };
+  });
+  const champLieu = creerChampLieu({ grille: store.lire().grille, selection: parentId });
   const boutonAjouter = el("button", {
     type: "submit",
     class: "bouton bouton--principal",
     texte: "Ajouter",
+    disabled: true,
   });
 
   // --- automatic title and icon -------------------------------------------------------
   let titreModifie = false;
   let recherche = null; // { url, controleur, promesse }
+  let iconeCourante = { type: "lettre", couleur: couleurDepuisTexte("") };
   const lettre = (url) => ({ type: "lettre", couleur: couleurDepuisTexte(url) });
-  const montrerApercu = (url, icone, enCours) => {
-    apercu.replaceChildren(
-      creerIcone({ titre: champTitre.value || domaine(url), url, icone }),
-      ...(enCours ? [el("span", { class: "apercu-attente" })] : []),
-    );
-    apercu.classList.toggle("apercu--vide", !url);
+  const montrerApercu = (icone, enCours) => {
+    iconeCourante = icone;
+    apercu.maj(icone, enCours);
   };
   const lancerRecherche = () => {
     const r = normaliserUrl(champUrl.value);
@@ -130,13 +148,13 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     if (recherche?.url === r.url) return;
     recherche?.controleur.abort();
     const controleur = new AbortController();
-    montrerApercu(r.url, lettre(r.url), true);
+    montrerApercu(lettre(r.url), true);
     const promesse = trouverIconeEtTitre(r.url, { signal: controleur.signal });
     recherche = { url: r.url, controleur, promesse };
     promesse.then((res) => {
       if (recherche?.url !== r.url || controleur.signal.aborted) return;
       if (!titreModifie) champTitre.value = res.titre;
-      montrerApercu(r.url, res.icone, false);
+      montrerApercu(res.icone, false);
     });
   };
   let minuteur;
@@ -148,6 +166,7 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
   champUrl.addEventListener("paste", () => setTimeout(lancerRecherche, 0));
   champTitre.addEventListener("input", () => {
     titreModifie = champTitre.value.trim() !== "";
+    apercu.maj(iconeCourante, false);
   });
   const [permission, lienPermission] = blocPermission({
     onAccordee: () => {
@@ -156,59 +175,98 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     },
   });
 
+  // --- duplicate alert ------------------------------------------------------------------
+  let doublonAccepte = null;
+  const nomDoublon = el("strong");
+  const alerte = el(
+    "div",
+    { class: "ajout-alerte", role: "status", hidden: true },
+    el("p", {}, "Ce site est déjà dans votre grille : ", nomDoublon, "."),
+    el(
+      "div",
+      { class: "ajout-alerte-actions" },
+      el("button", {
+        type: "button",
+        class: "bouton",
+        texte: "Modifier l'existant",
+        onclick: () => {
+          const existant = siteParCle(
+            store.lire().grille,
+            cleUrl(normaliserUrl(champUrl.value).url),
+          );
+          dialogue.close();
+          if (existant) ouvrirEditionSite(store, existant, {});
+        },
+      }),
+      el("button", {
+        type: "button",
+        class: "bouton",
+        texte: "Ajouter quand même",
+        onclick: () => {
+          doublonAccepte = cleUrl(normaliserUrl(champUrl.value).url);
+          alerte.hidden = true;
+          boutonAjouter.focus();
+        },
+      }),
+    ),
+  );
+  const verifierDoublon = () => {
+    const r = normaliserUrl(champUrl.value);
+    const existant = r.ok ? siteParCle(store.lire().grille, cleUrl(r.url)) : null;
+    alerte.hidden = !existant || doublonAccepte === cleUrl(r.url);
+    if (existant) nomDoublon.textContent = existant.titre;
+  };
+
   const dialogue = el(
     "dialog",
-    { class: "dialogue", "aria-labelledby": "ajout-titre-dialogue" },
+    { class: "dialogue dialogue--ajout", "aria-labelledby": "ajout-titre-dialogue" },
     el(
       "form",
-      { method: "dialog", novalidate: true, class: "formulaire" },
+      { method: "dialog", novalidate: true, class: "formulaire ajout" },
+      el("h2", { id: "ajout-titre-dialogue", class: "dialogue-titre", texte: "Ajouter un site" }),
+      apercu.racine,
+      alerte,
       el(
-        "div",
-        { class: "dialogue-entete" },
-        apercu,
-        el("h2", { id: "ajout-titre-dialogue", class: "dialogue-titre", texte: "Ajouter un site" }),
-      ),
-      el(
-        "div",
-        { class: "champ" },
-        el("label", { for: "ajout-url", texte: "Adresse" }),
-        champUrl,
+        "section",
+        { class: "ajout-carte" },
+        champFlottant(champUrl, "Adresse du site"),
         erreurUrl,
+        champFlottant(champTitre, "Nom (rempli automatiquement)"),
       ),
       el(
-        "div",
-        { class: "champ" },
-        el("label", { for: "ajout-titre", texte: "Nom (facultatif)" }),
-        champTitre,
+        "section",
+        { class: "ajout-carte" },
+        el("label", { class: "ajout-carte-titre", for: "ajout-lieu", texte: "Emplacement" }),
+        champLieu.racine,
       ),
       permission,
-      avertissement,
       el(
         "div",
-        { class: "dialogue-actions" },
+        { class: "ajout-pied" },
         lienPermission,
-        el("button", {
-          type: "button",
-          class: "bouton",
-          texte: "Annuler",
-          onclick: () => dialogue.close(),
-        }),
-        boutonAjouter,
+        el(
+          "div",
+          { class: "ajout-pied-droite" },
+          el("button", {
+            type: "button",
+            class: "bouton",
+            texte: "Annuler",
+            onclick: () => dialogue.close(),
+          }),
+          boutonAjouter,
+        ),
       ),
     ),
   );
-  montrerApercu("", lettre(""), false);
+  apercu.maj(iconeCourante, false);
 
-  let doublonAccepte = null;
   champUrl.addEventListener("input", () => {
     const r = normaliserUrl(champUrl.value);
-    champTitre.placeholder = r.ok ? domaine(r.url) : "";
     erreurUrl.textContent = "";
     champUrl.removeAttribute("aria-invalid");
-    if (doublonAccepte !== cleUrl(r.url)) {
-      avertissement.hidden = true;
-      boutonAjouter.textContent = "Ajouter";
-    }
+    boutonAjouter.disabled = !r.ok;
+    apercu.maj(iconeCourante, false);
+    verifierDoublon();
   });
 
   dialogue.querySelector("form").addEventListener("submit", (e) => {
@@ -222,11 +280,8 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     }
     const cle = cleUrl(r.url);
     if (urlsDe(store.lire().grille).has(cle) && doublonAccepte !== cle) {
-      doublonAccepte = cle;
-      avertissement.textContent = "Ce site est déjà dans votre grille. Ajouter quand même ?";
-      avertissement.hidden = false;
-      boutonAjouter.textContent = "Ajouter quand même";
-      boutonAjouter.focus();
+      verifierDoublon();
+      alerte.querySelector("button")?.focus();
       return;
     }
     // Adding never waits for the network: the search goes on and updates the tile later.
@@ -236,7 +291,7 @@ export function ouvrirAjoutSite(store, { apresAjout, parentId = null } = {}) {
     }
     const titreSaisi = champTitre.value.trim();
     const site = creerSite({ titre: titreSaisi || domaine(r.url), url: r.url });
-    store.envoyer({ type: A.SITE_AJOUTER, site, parentId });
+    store.envoyer({ type: A.SITE_AJOUTER, site, parentId: champLieu.lire() });
     enrichir(site);
     const enCours = recherche;
     enCours?.promesse.then((res) => {

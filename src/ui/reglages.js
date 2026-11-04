@@ -38,7 +38,7 @@ import { creerSectionFrequents } from "./reglages/frequents.js";
 import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
-import { sectionIa } from "./reglages/ia.js";
+import { creerSectionChatbot, sectionIa } from "./reglages/ia.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -343,6 +343,12 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       "sansSuiviUsage",
       "Mémoriser les sites que j'ouvre depuis NedoTab",
       "NedoTab compte combien de fois vous ouvrez chaque site depuis NedoTab pour trier vos résultats. Les sites que vous visitez ailleurs ne sont pas enregistrés. Désactivé, plus rien n'est enregistré et la recherche trie par pertinence seule.",
+      true,
+    ],
+    [
+      "sansEspacePartage",
+      "Activer l'espace de partage",
+      "Envoyer des textes, liens et fichiers d'un appareil à l'autre. Désactivé, le bouton, le panneau et la galerie disparaissent et rien n'est lu ni écrit ; vos éléments sont conservés et reviennent à la réactivation.",
       true,
     ],
     [
@@ -741,6 +747,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   };
 
   const sectionFrequents = creerSectionFrequents({ store });
+  const sectionChatbot = creerSectionChatbot({ store });
 
   // --- Compte (account) -----------------------------------------------------------------
   const compteUi = session ? sectionCompte(session) : null;
@@ -924,6 +931,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     ],
     partage: session?.partage
       ? [
+          section("Activation", ...ligneDes(["sansEspacePartage"])),
           section(
             "Espace de partage",
             el("p", {
@@ -1028,7 +1036,8 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     sauvegardes: session?.sauvegardes
       ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
       : null,
-    ia: session ? [sectionIa({ store, session }).section] : null,
+    // T9: the chatbot switch and its three places, then the assistant (key, limits).
+    ia: session ? [sectionChatbot.section, sectionIa({ store, session }).section] : null,
     avance: [
       // Reading other sites needs a permission in the extension only (V3.0: capabilities).
       plateforme.capacites.permissionsSites
@@ -1296,6 +1305,11 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     colonnesAccueil.maj(String(grilleActuelle().colonnes));
     montrerSelonAffichage();
     for (const i of interrupteurs) i.bouton.checked = !!r[i.cle] !== i.inverse;
+    // T8: sharing space off, only its switch stays in its tab.
+    for (const [i, s] of (
+      panneauxOnglets.partage?.querySelectorAll(":scope > section") ?? []
+    ).entries())
+      s.hidden = i > 0 && !!r.sansEspacePartage;
     formeIcones.maj(formeIconesDe(store.lire().reglagesAppareil));
     espacement.maj(espacementDe(store.lire().reglagesAppareil));
     affichageHeure.maj(affichageHeureDe(store.lire().reglagesAppareil));
@@ -1324,6 +1338,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       flou.value = String(r.fond.flou);
     }
     sectionFrequents.maj(!r.sansSuiviUsage);
+    sectionChatbot.maj();
     for (const c of curseurs) c.maj();
     majStockage();
   };

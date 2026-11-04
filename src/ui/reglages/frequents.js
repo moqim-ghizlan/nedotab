@@ -1,6 +1,6 @@
 import { A } from "../../core/actions.js";
 import { trouver } from "../../core/arbre.js";
-import { frequentsDe } from "../../core/frequents.js";
+import { NOMBRES_ACCUEIL, frequentsDe } from "../../core/frequents.js";
 import { el } from "../dom.js";
 
 /**
@@ -48,6 +48,27 @@ export function creerSectionFrequents({ store }) {
     "Afficher le petit titre au-dessus",
     "Par défaut, la rangée parle d'elle-même.",
   );
+  const accueil = interrupteur(
+    "accueil",
+    "Afficher les sites les plus utilisés sur l'accueil",
+    "Une bande de raccourcis au-dessus de la barre de recherche, mise à jour après chaque site ouvert.",
+  );
+  const nombre = el(
+    "select",
+    {
+      class: "reglages-select",
+      "aria-label": "Nombre de sites sur l'accueil",
+      dataset: { reglage: "frequents-nombreAccueil" },
+      onchange: (e) => modifier({ nombreAccueil: Number(e.currentTarget.value) }),
+    },
+    NOMBRES_ACCUEIL.map((n) => el("option", { value: String(n), texte: `${n} sites` })),
+  );
+  const ligneNombre = el(
+    "label",
+    { class: "reglages-ligne" },
+    el("span", { texte: "Nombre de sites sur l'accueil" }),
+    nombre,
+  );
   const note = el("p", { class: "reglages-note", hidden: true });
   const masques = el("ul", { class: "reglages-liste" });
   const entete = el("p", { class: "reglages-libelle", texte: "Sites masqués de la rangée" });
@@ -56,6 +77,9 @@ export function creerSectionFrequents({ store }) {
     const f = frequentsDe(store.lire().reglages);
     afficher.bouton.checked = f.afficher;
     titre.bouton.checked = f.titre;
+    accueil.bouton.checked = f.accueil;
+    nombre.value = String(f.nombreAccueil);
+    ligneNombre.hidden = !f.accueil;
     note.hidden = suiviActif;
     note.textContent =
       "« Mémoriser les sites que j'ouvre » est désactivé : la rangée n'affiche que les sites épinglés (au moins 3).";
@@ -86,6 +110,8 @@ export function creerSectionFrequents({ store }) {
       "section",
       { class: "reglages-section" },
       el("h3", { texte: "Les plus utilisés" }),
+      accueil.ligne,
+      ligneNombre,
       afficher.ligne,
       titre.ligne,
       note,

@@ -3,7 +3,7 @@ import { reduire } from "../../src/core/actions.js";
 import { iaDe } from "../../src/core/ia.js";
 import { etatInitial } from "../../src/core/modele.js";
 import { creerStore } from "../../src/core/store.js";
-import { sectionIa } from "../../src/ui/reglages/ia.js";
+import { creerSectionChatbot, sectionIa } from "../../src/ui/reglages/ia.js";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -26,8 +26,11 @@ function monter({ mode = "compte", cles = [] } = {}) {
     tester: vi.fn(async () => ({ ok: true, valeur: { ok: true, latenceMs: 820, modele: "m" } })),
   };
   const { section } = sectionIa({ store, session, service });
-  document.body.append(section);
-  return { store, section, service };
+  // T10: the main switch is in the Features tab, with the three places of the chatbot.
+  const { section: chatbot, maj } = creerSectionChatbot({ store });
+  store.abonner(maj); // the settings panel does the same
+  document.body.append(section, chatbot);
+  return { store, section, chatbot, service };
 }
 
 describe("Réglages → Assistant IA", () => {
@@ -47,10 +50,10 @@ describe("Réglages → Assistant IA", () => {
   });
 
   it("désactivé par défaut ; l'interrupteur active et synchronise le réglage", async () => {
-    const { store, section } = monter();
+    const { store, section, chatbot } = monter();
     await attendre();
     await attendre();
-    const interrupteur = section.querySelector("input[type=checkbox]");
+    const interrupteur = chatbot.querySelector("input[type=checkbox]");
     expect(interrupteur.checked).toBe(false);
     // Tout est grisé tant que l'assistant est désactivé.
     for (const b of section.querySelectorAll(".ia-cle button.bouton"))
@@ -59,6 +62,21 @@ describe("Réglages → Assistant IA", () => {
     interrupteur.dispatchEvent(new Event("change"));
     expect(iaDe(store.lire().reglages).actif).toBe(true);
     expect(section.querySelector(".ia-cle button.bouton").disabled).toBe(false);
+  });
+
+  it("section Chatbot (T10) : interrupteur principal, trois emplacements grisés puis actifs", async () => {
+    const { store, chatbot } = monter();
+    const sous = () => [...chatbot.querySelectorAll(".ia-sous-options input")];
+    expect(sous().length).toBeGreaterThanOrEqual(2);
+    expect(sous().every((i) => i.disabled)).toBe(true);
+    const principal = chatbot.querySelector("input[type=checkbox]");
+    principal.checked = true;
+    principal.dispatchEvent(new Event("change"));
+    expect(sous().every((i) => !i.disabled && i.checked)).toBe(true);
+    const recherche = chatbot.querySelector('[data-chatbot="rechercheIa"]');
+    recherche.checked = false;
+    recherche.dispatchEvent(new Event("change"));
+    expect(iaDe(store.lire().reglages)).toMatchObject({ actif: true, sansRechercheIa: true });
   });
 
   it("Gemini seul : sans clé, puis avec clé (fin affichée, jamais la clé)", async () => {
@@ -94,13 +112,13 @@ describe("Réglages → Assistant IA", () => {
   });
 
   it("aucun choix de modèle, aucune vérification de modèles, aucun appel automatique", async () => {
-    const { section, service } = monter({
+    const { section, chatbot, service } = monter({
       cles: [{ fournisseur: "gemini", fin: "ppzA", ajouteLe: 1, valide: true }],
     });
     await attendre();
     await attendre();
     await attendre();
-    const check = section.querySelector("input[type=checkbox]");
+    const check = chatbot.querySelector("input[type=checkbox]");
     check.checked = true;
     check.dispatchEvent(new Event("change"));
     expect(section.querySelector("select:not(#ia-question-barre):not(#ia-sites-chat)")).toBeNull();
@@ -126,11 +144,11 @@ describe("Réglages → Assistant IA", () => {
   });
 
   it("guide en deux étapes quand l'assistant est activé sans aucune clé", async () => {
-    const { section } = monter();
+    const { section, chatbot } = monter();
     await attendre();
     await attendre();
     expect(section.querySelector(".ia-guide")).toBeNull();
-    const check = section.querySelector("input[type=checkbox]");
+    const check = chatbot.querySelector("input[type=checkbox]");
     check.checked = true;
     check.dispatchEvent(new Event("change"));
     expect(section.querySelectorAll(".ia-guide li")).toHaveLength(2);

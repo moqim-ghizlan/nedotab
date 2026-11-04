@@ -3494,3 +3494,35 @@ body.fond-clair .connexion-formulaire .connexion-champ:focus-visible {
   align-items: center;
   gap: 8px 12px;
 }
+
+/* T9: the three places of the chatbot, indented under the main switch. */
+.ia-sous-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-1);
+  margin: 0 0 var(--espace-2) var(--espace-4);
+  padding-left: var(--espace-3);
+  border-left: 2px solid var(--accent-doux);
+  transition: opacity 200ms;
+}
+
+.ia-sous-options--inactif {
+  opacity: 0.45;
+}
+
+.ia-sous-options--deplie {
+  animation: ia-sous-deplie 260ms var(--glisse);
+}
+
+@keyframes ia-sous-deplie {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ia-sous-options--deplie {
+    animation: none;
+  }
+}

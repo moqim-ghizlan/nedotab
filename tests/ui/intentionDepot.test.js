@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  dansRect,
   dansZoneCentrale,
+  decisionSurvol,
   recouvrement,
   SEUIL_RECOUVREMENT,
   zoneCapture,
@@ -70,5 +72,23 @@ describe("zone de capture (icône + 25 % de marge)", () => {
   it("icône glissée dans l'espace entre deux tuiles (64 px) : pas captée", () => {
     const glissee = boite(156 + 32 - 28, 100, 56); // centred in the gap after the target
     expect(recouvrement(zoneCapture(cible), glissee)).toBeLessThan(SEUIL_RECOUVREMENT);
+  });
+});
+
+describe("décision au survol (T2)", () => {
+  it("ouvre un dossier qui accepte l'icône", () => {
+    expect(decisionSurvol({ dossier: true, ok: true })).toBe("ouvrir");
+  });
+  it("crée un dossier quand un site est tenu sur un site", () => {
+    expect(decisionSurvol({ dossier: false, ok: true })).toBe("creer");
+  });
+  it("refuse quand le dépôt n'est pas permis (boucle, profondeur)", () => {
+    expect(decisionSurvol({ dossier: true, ok: false })).toBe("refuser");
+    expect(decisionSurvol({ dossier: false, ok: false })).toBe("refuser");
+  });
+  it("dansRect borne incluse", () => {
+    const r = { left: 0, top: 0, right: 10, bottom: 10 };
+    expect(dansRect(r, 10, 0)).toBe(true);
+    expect(dansRect(r, 11, 5)).toBe(false);
   });
 });

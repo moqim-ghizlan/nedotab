@@ -8,7 +8,7 @@ afterEach(() => document.body.replaceChildren());
 
 const attendre = () => new Promise((r) => setTimeout(r, 0));
 
-function monter({ elements = [], compteur = 0, disponible = true } = {}) {
+function monter({ elements = [], compteur = 0, disponible = true, actif = () => true } = {}) {
   const store = creerStore(etatInitial(), reduire);
   let rappelElements = null;
   const appels = { ajout: [], remonter: [], supprimer: [], epingler: [] };
@@ -33,7 +33,8 @@ function monter({ elements = [], compteur = 0, disponible = true } = {}) {
   const p = creerEspacePartage({
     store,
     disponible: () => disponible,
-    charger: async () => fb,
+    actif,
+    charger: vi.fn(async () => fb),
     uid: () => "u1",
     copier: vi.fn(async () => {}),
   });
@@ -65,6 +66,66 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     expect(p.bouton.hidden).toBe(true);
     const { p: p2 } = monter();
     expect(p2.bouton.hidden).toBe(false);
+  });
+
+  it("réglage désactivé (T8) : bouton caché, aucune écoute, réapparaît à la réactivation", async () => {
+    let actif = false;
+    const ecoute = vi.fn();
+    const store = creerStore(etatInitial(), reduire);
+    const charger = vi.fn(async () => ({
+      ecouterEspacePartage: (...a) => {
+        ecoute(...a);
+        return () => {};
+      },
+      ecouterCompteurPartage: () => () => {},
+    }));
+    const p = creerEspacePartage({
+      store,
+      disponible: () => true,
+      actif: () => actif,
+      charger,
+      uid: () => "u1",
+      copier: vi.fn(async () => {}),
+    });
+    document.body.append(p.bouton, p.panneau);
+    p.actualiser();
+    await attendre();
+    expect(p.bouton.hidden).toBe(true);
+    expect(charger).not.toHaveBeenCalled(); // no Firestore / Storage request while off
+    p.ouvrir();
+    expect(p.estOuvert()).toBe(false);
+    actif = true;
+    p.actualiser();
+    await attendre();
+    expect(p.bouton.hidden).toBe(false);
+    expect(ecoute).toHaveBeenCalled();
+  });
+
+  it("réglage désactivé pendant que le panneau est ouvert : il se ferme et l'écoute s'arrête", async () => {
+    let actif = true;
+    const arret = vi.fn();
+    const store = creerStore(etatInitial(), reduire);
+    const p = creerEspacePartage({
+      store,
+      disponible: () => true,
+      actif: () => actif,
+      charger: async () => ({
+        ecouterEspacePartage: () => arret,
+        ecouterCompteurPartage: () => arret,
+      }),
+      uid: () => "u1",
+      copier: vi.fn(async () => {}),
+    });
+    document.body.append(p.bouton, p.panneau);
+    p.actualiser();
+    await attendre();
+    p.ouvrir();
+    expect(p.estOuvert()).toBe(true);
+    actif = false;
+    p.actualiser();
+    expect(p.estOuvert()).toBe(false);
+    expect(p.bouton.hidden).toBe(true);
+    expect(arret).toHaveBeenCalled();
   });
 
   it("état vide : message d'invitation", async () => {
