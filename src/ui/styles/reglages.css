@@ -348,8 +348,7 @@ body.fond-sombre {
   overflow: hidden;
   color: var(--texte-secondaire);
   font-size: 0.75rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .reglages-resume-compte[data-synchro="oui"] .reglages-resume-texte span::before,
