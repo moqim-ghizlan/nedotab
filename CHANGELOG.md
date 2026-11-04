@@ -2,6 +2,17 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.2.1] - 2026-11-04
+
+### Corrigé
+
+- **Réglages → VPN** : après s'être invité soi-même (ou s'être retiré l'accès), « Mon accès » est relu au lieu de rester sur l'ancien état.
+- **Nouveau mot de passe** : un message « Génération… » s'affiche tout de suite (le premier appel peut prendre plusieurs secondes), puis le nouveau mot de passe apparaît sans recharger la page ; en cas d'erreur l'écran est rétabli.
+
+### Ajouté
+
+- Icône de l'onglet VPN dans les réglages.
+
 ## [5.2.0] - 2026-11-04
 
 ### Ajouté

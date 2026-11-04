@@ -33,6 +33,7 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     invites: null,
     erreurInvites: null,
     visible: false, // the password is shown
+    occupe: false, // a new password is being generated (the first call can take a few seconds)
   };
   let minuterie = null;
   const racine = el("div", { class: "vpn-reglages" });
@@ -64,6 +65,16 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     etat.chargement = true;
     dessiner();
     etat.admin = await service.estAdmin();
+    await chargerAcces();
+    if (etat.admin) await chargerInvites();
+    etat.chargement = false;
+    etat.charge = true;
+    dessiner();
+  }
+
+  /** My own access: read again after an invitation or a removal (it may have changed). */
+  async function chargerAcces() {
+    masquer();
     const a = await service.acces();
     if (a.ok) {
       etat.acces = a.valeur;
@@ -74,10 +85,6 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     } else {
       etat.erreurAcces = a.erreur;
     }
-    if (etat.admin) await chargerInvites();
-    etat.chargement = false;
-    etat.charge = true;
-    dessiner();
   }
 
   async function chargerInvites() {
@@ -106,6 +113,8 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     });
     champ.value = "";
     await chargerInvites();
+    // The invited address may be mine: my own access can now exist.
+    if (!etat.acces) await chargerAcces();
     dessiner();
   }
 
@@ -126,6 +135,8 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     }
     toast("Accès retiré.", { duree: 3000, cle: "vpn" });
     await chargerInvites();
+    // I may have removed my own access.
+    if (etat.acces) await chargerAcces();
     dessiner();
   }
 
@@ -140,9 +151,15 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
       ],
     });
     if (!ok) return;
+    // Feedback at once: the first call (cold start of the function) can take several seconds.
+    masquer();
+    etat.occupe = true;
+    dessiner();
     const r = await service.regenerer();
+    etat.occupe = false;
     if (!r.ok || !r.valeur) {
       toast(r.erreur ?? "Le VPN est indisponible pour l'instant.", { type: "erreur", duree: 6000, cle: "vpn" });
+      dessiner();
       return;
     }
     etat.acces = r.valeur;
@@ -178,6 +195,16 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
 
   function blocMonAcces() {
     const bloc = el("div", { class: "vpn-acces" }, el("h4", { texte: "Mon accès" }));
+    if (etat.occupe) {
+      bloc.append(
+        el("p", {
+          class: "reglages-note",
+          role: "status",
+          texte: "Génération du nouveau mot de passe… Quelques secondes.",
+        }),
+      );
+      return bloc;
+    }
     if (etat.erreurAcces) {
       bloc.append(
         note(etat.erreurAcces),

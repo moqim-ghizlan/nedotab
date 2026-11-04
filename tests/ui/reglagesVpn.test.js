@@ -92,6 +92,35 @@ describe("réglages VPN — invité", () => {
     expect(service.regenerer).toHaveBeenCalledOnce();
   });
 
+  it("pendant la génération, un message s'affiche tout de suite puis le nouveau mot de passe", async () => {
+    const service = faux();
+    let finir;
+    service.regenerer = vi.fn(
+      () => new Promise((resolve) => (finir = () => resolve({ ok: true, valeur: { ...ACCES, motDePasse: "NouveauMotDePasse0123456789abcdefg" } }))),
+    );
+    await monter(service);
+    bouton("Afficher mes identifiants").click();
+    demander.mockResolvedValue(true);
+    bouton("Nouveau mot de passe").click();
+    await vi.waitFor(() => expect(texte()).toContain("Génération du nouveau mot de passe"));
+    expect(texte()).not.toContain(ACCES.motDePasse);
+    finir();
+    await vi.waitFor(() => expect(texte()).toContain("NouveauMotDePasse0123456789abcdefg"));
+    expect(texte()).not.toContain("Génération du nouveau mot de passe");
+  });
+
+  it("une erreur pendant la génération rétablit l'écran", async () => {
+    const service = faux();
+    service.regenerer = vi.fn(async () => ({ ok: false, code: "functions/unavailable", erreur: "Service indisponible." }));
+    await monter(service);
+    bouton("Afficher mes identifiants").click();
+    demander.mockResolvedValue(true);
+    bouton("Nouveau mot de passe").click();
+    await vi.waitFor(() => expect(service.regenerer).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(bouton("Afficher mes identifiants")).toBeDefined());
+    expect(texte()).not.toContain("Génération du nouveau mot de passe");
+  });
+
   it("refuser la confirmation ne change rien", async () => {
     const service = faux();
     await monter(service);
@@ -143,6 +172,29 @@ describe("réglages VPN — propriétaire", () => {
     await vi.waitFor(() => expect(service.inviter).toHaveBeenCalledWith("nouveau@ex.org"));
     await vi.waitFor(() => expect(service.invites).toHaveBeenCalledTimes(2));
     expect(champ.value).toBe("");
+  });
+
+  it("s'inviter soi-même : « Mon accès » est relu et affiche l'accès accordé", async () => {
+    const service = faux({ admin: true, acces: refuse, invites });
+    await monter(service);
+    expect(texte()).toContain("invitez votre propre adresse");
+    service.acces.mockResolvedValue({ ok: true, valeur: ACCES });
+    document.querySelector("#vpn-email").value = "moi@ex.org";
+    bouton("Inviter").click();
+    await vi.waitFor(() => expect(bouton("Afficher mes identifiants")).toBeDefined());
+    expect(texte()).not.toContain("invitez votre propre adresse");
+    expect(texte()).not.toContain(ACCES.motDePasse);
+  });
+
+  it("se retirer soi-même : « Mon accès » est relu et redevient réservé", async () => {
+    const service = faux({ admin: true, invites });
+    await monter(service);
+    expect(bouton("Afficher mes identifiants")).toBeDefined();
+    service.acces.mockResolvedValue(refuse);
+    demander.mockResolvedValue(true);
+    document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
+    await vi.waitFor(() => expect(bouton("Afficher mes identifiants")).toBeUndefined());
+    expect(texte()).toContain(LIBELLE_RESERVE);
   });
 
   it("une adresse invalide n'appelle pas le serveur", async () => {
