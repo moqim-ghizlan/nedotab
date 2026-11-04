@@ -27,6 +27,7 @@ import { nettoyerEspacePartage } from "./src/espacePartage/nettoyer.js";
 import { ErreurLien, creerLiens } from "./src/espacePartage/liens/liens.js";
 import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
+import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
 
 initializeApp();
 
@@ -55,6 +56,8 @@ export const supprimerMonCompte = onCall(
     await db.recursiveDelete(db.doc(`users/${uid}`));
     // V4.28: the share links of the account (documents and encrypted copies).
     await liens.supprimerLiensDe(uid);
+    // V5.2: no VPN access may outlive its account (the agent drops it within a minute).
+    await vpn.retirerAccesDe(uid);
     // Backgrounds (users/{uid}/) and files of the sharing space (partages/{uid}/, V4.25).
     for (const prefix of [`users/${uid}/`, `partages/${uid}/`]) {
       try {
@@ -307,3 +310,80 @@ const publique = (f) =>
   );
 export const ouvrirLienPartage = publique((corps, adresse) => liens.ouvrir(corps, adresse));
 export const signalerLienPartage = publique((corps, adresse) => liens.signaler(corps, adresse));
+
+// --- V5.2: private VPN (guests only) ----------------------------------------------------------
+// The owner (custom claim admin) invites by e-mail; a guest receives his own proxy identifiers;
+// the server of the VPN reads the active accounts through vpnAgentSynchro with a secret token
+// (it never holds a Firebase service account). See docs/vpn.md and serveur/agent/.
+const VPN_CLE_CHIFFREMENT = defineSecret("VPN_CLE_CHIFFREMENT");
+const VPN_JETON_AGENT = defineSecret("VPN_JETON_AGENT");
+
+const vpn = creerFonctionsVpn({
+  db: getFirestore(),
+  cle: () => VPN_CLE_CHIFFREMENT.value(),
+  jetonAgent: () => VPN_JETON_AGENT.value(),
+  utilisateurParEmail: async (email) => {
+    try {
+      const u = await getAuth().getUserByEmail(email);
+      return { uid: u.uid, emailVerified: u.emailVerified };
+    } catch (e) {
+      if (e?.code === "auth/user-not-found") return null;
+      throw e;
+    }
+  },
+  consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  // Only a number of accounts: never an e-mail, a login or a destination.
+  journal: (infos) => logger.info("vpn : synchro", infos),
+});
+
+const OPTIONS_VPN = {
+  region: "europe-west1",
+  secrets: [VPN_CLE_CHIFFREMENT, VPN_JETON_AGENT],
+  maxInstances: 5,
+  timeoutSeconds: 30,
+  memory: "256MiB",
+  enforceAppCheck: false,
+};
+
+/** onCall around one VPN function: signed-in user required, errors turned into callable errors. */
+const appelVpn = (fonction) =>
+  onCall(OPTIONS_VPN, async (requete) => {
+    if (!requete.auth) throw new HttpsError("unauthenticated", "Connectez-vous pour utiliser le VPN.");
+    try {
+      return await fonction(requete.auth, requete.data ?? {});
+    } catch (e) {
+      if (e instanceof ErreurVpn) throw new HttpsError(e.code, e.message);
+      logger.error("vpn : erreur interne", { nom: e?.name });
+      throw new HttpsError("internal", "Erreur interne.");
+    }
+  });
+
+export const vpnInviter = appelVpn((auth, donnees) => vpn.inviter(auth, donnees));
+export const vpnRevoquer = appelVpn((auth, donnees) => vpn.revoquer(auth, donnees));
+export const vpnListeInvites = appelVpn((auth) => vpn.listeInvites(auth));
+export const vpnObtenirAcces = appelVpn((auth) => vpn.obtenirAcces(auth));
+export const vpnRegenererMotDePasse = appelVpn((auth) => vpn.regenererMotDePasse(auth));
+
+/** The server agent: GET with "Authorization: Bearer <token>"; nothing else is accepted. */
+export const vpnAgentSynchro = onRequest(
+  { region: "europe-west1", secrets: [VPN_JETON_AGENT], maxInstances: 2, timeoutSeconds: 30, memory: "256MiB", cors: false },
+  async (req, res) => {
+    res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Type": "application/json" });
+    const jeton = /^Bearer (.+)$/.exec(req.get("authorization") ?? "")?.[1];
+    if (req.method !== "GET") {
+      res.status(404).send(JSON.stringify({ erreur: "indisponible" }));
+      return;
+    }
+    try {
+      const reponse = await vpn.synchro(jeton);
+      if (!reponse) {
+        res.status(401).send(JSON.stringify({ erreur: "non autorisé" }));
+        return;
+      }
+      res.status(200).send(JSON.stringify(reponse));
+    } catch (e) {
+      logger.error("vpn : synchro en erreur", { nom: e?.name });
+      res.status(500).send(JSON.stringify({ erreur: "interne" }));
+    }
+  },
+);

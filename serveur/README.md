@@ -39,9 +39,19 @@ ssh -i ~/.ssh/vpn-nedotab admin-vpn@<domaine>
 | `etat.sh` | charge, mémoire, disque, services, bannissements |
 | `10-proxy.sh` | V5.1 : Squid (HTTPS 443), certificat, service durci. Variables `DOMAINE`, `IP_PUBLIQUE`, `EMAIL` |
 | `compte-ajouter.sh <nom>` | V5.1 : crée un compte, mot de passe de 32 caractères affiché **une seule fois**, empreinte bcrypt enregistrée |
-| `compte-retirer.sh <nom>` | V5.1 : retire un compte (effet immédiat, sans coupure) |
+| `compte-retirer.sh <nom>` | V5.1 : retire un compte (effet immédiat, sans coupure). Depuis la V5.2, les comptes viennent de Firebase : ces deux scripts ne servent plus qu'au dépannage (l'agent écrase le fichier à chaque changement) |
+| `20-agent.sh` | V5.2 : agent de synchronisation (utilisateur `vpn-agent`, timer d'une minute). Variable `VPN_AGENT_URL` ; le jeton est demandé en saisie masquée |
 
 Copier les scripts : `scp -r serveur/scripts serveur/proxy admin-vpn@<domaine>:~/` (ou `ubuntu@` avant `01`).
+
+## Agent de synchronisation (V5.2)
+Le serveur n'a **aucune clé de compte de service Firebase** : il appelle la fonction HTTP `vpnAgentSynchro` avec un jeton secret (`VPN_JETON_AGENT`, aussi dans Secret Manager). Compromis, il ne donne pas accès à Firestore.
+- Chaque minute (`vpn-agent.timer`), `/usr/local/sbin/vpn-agent` lit la liste des comptes actifs. Si la **version** a changé, il écrit le fichier des comptes et recharge Squid à chaud (`vpn-agent-appliquer`, seule commande autorisée par `sudoers`).
+- **En cas de panne, de réponse invalide ou de doute, la liste actuelle est conservée** : une panne de Firebase ne coupe personne. La réponse doit correspondre exactement au format attendu (liste blanche), sinon elle est ignorée.
+- Journal : `journalctl -u vpn-agent -n 20` (« synchro, N comptes » seulement : jamais un compte ni une empreinte).
+- Fichiers : `/etc/vpn-agent/env` (URL + jeton, droits 640, groupe `vpn-agent`), `/var/lib/vpn-agent/version`.
+- Retrait d'un invité : effectif en 2 minutes au plus (1 minute de synchro + 30 secondes de cache d'authentification de Squid). Une connexion déjà ouverte n'est pas coupée avant sa fin.
+- **Rotation du jeton** : générer un nouveau jeton (`openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 48`), `firebase functions:secrets:set VPN_JETON_AGENT`, redéployer `vpnAgentSynchro`, puis sur le serveur `sudo CHANGER_JETON=1 VPN_AGENT_URL=<url> bash ~/scripts/20-agent.sh`.
 
 ## Proxy (V5.1)
 - Squid, `https_port 443`, comptes dans `/etc/squid/comptes` (bcrypt, droits 600). Choix expliqué dans `docs/decisions.md`.

@@ -259,6 +259,10 @@ service cloud.firestore {
     match /signalements/{tout=**} { allow read, write: if false; }
     match /limitesPartage/{tout=**} { allow read, write: if false; }
 
+    // V5.2: private VPN (config, invitations, accesses, version). The functions only (Admin SDK):
+    // not even the owner reads it from the browser. Here the wildcard serves to DENY everything.
+    match /vpn/{tout=**} { allow read, write: if false; }
+
     // Everything else (including users/{uid}/prive/**) is denied by default.
   }
 }

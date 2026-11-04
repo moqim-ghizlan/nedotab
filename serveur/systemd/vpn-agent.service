@@ -1,0 +1,19 @@
+[Unit]
+Description=Synchronisation des comptes du VPN (V5.2)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vpn-agent
+Group=vpn-agent
+ExecStart=/usr/local/sbin/vpn-agent
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+# NoNewPrivileges et ProtectSystem sont absents exprès : l'agent appelle sudo vers un assistant
+# limité à une seule commande (vpn-agent-appliquer), qui écrit dans /etc/squid.

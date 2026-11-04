@@ -9,7 +9,7 @@ http_port 127.0.0.1:3128
 auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/comptes
 auth_param basic children 10
 auth_param basic realm Acces
-auth_param basic credentialsttl 2 hours
+auth_param basic credentialsttl 30 seconds
 acl authentifie proxy_auth REQUIRED
 
 # --- Destinations et ports

@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.2.0] - 2026-11-04
+
+### Ajouté
+
+- **Accès VPN réservé aux invités (V5.2)** : le propriétaire (rôle `admin`) invite par adresse e-mail dans Réglages → VPN ; chaque invité reçoit ses propres identifiants proxy (compte et mot de passe de 32 caractères) à sa connexion, avec un e-mail **vérifié** obligatoire.
+- **Fonctions** `vpnInviter`, `vpnRevoquer`, `vpnListeInvites`, `vpnObtenirAcces`, `vpnRegenererMotDePasse` et `vpnAgentSynchro` ; données dans `vpn/**` (aucun accès depuis le navigateur), mots de passe chiffrés et empreintes bcrypt, 30 demandes par jour et par utilisateur.
+- **Agent du serveur** (`serveur/agent/`, timer d'une minute) : lit la liste des comptes actifs avec un jeton secret, sans clé Firebase sur le serveur ; la liste actuelle est conservée en cas de panne ou de réponse invalide. Retrait d'un invité effectif en 2 minutes au plus.
+- **Écran Réglages → VPN** : l'invité voit « Accès accordé » et affiche ses identifiants (masqués après une minute) ; le propriétaire gère la liste.
+- Scripts `functions/scripts/definir-admin.js`, `initialiser-config-vpn.js` et `serveur/scripts/20-agent.sh`.
+
+### Modifié
+
+- La suppression d'un compte retire aussi son accès VPN.
+- Squid : cache d'authentification ramené à 30 secondes (retrait d'accès rapide).
+
 ## [5.1.0] - 2026-11-04
 
 ### Ajouté

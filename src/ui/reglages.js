@@ -39,6 +39,7 @@ import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
 import { creerSectionChatbot, sectionIa } from "./reglages/ia.js";
+import { sectionVpn } from "./reglages/vpn.js";
 import { COULEURS_FOND, cssDegrade, DEGRADES } from "./fonds.js";
 import { preparerImageFond } from "./services/imageFond.js";
 import { poidsDataUrl } from "./services/imageIcone.js";
@@ -54,6 +55,7 @@ const ONGLETS = [
   ["partage", "Partage", "Durée de conservation, vault"],
   ["sauvegardes", "Sauvegardes", "Copies datées et restauration"],
   ["ia", "IA", "Assistant, clé, confidentialité"],
+  ["vpn", "VPN", "Accès réservé aux invités"],
   ["avance", "Avancé", "Stockage, diagnostic, à propos"],
 ];
 /** Below this width the sections are a list, and one opens over it (phone, small tablet). */
@@ -1038,6 +1040,8 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       : null,
     // T9: the chatbot switch and its three places, then the assistant (key, limits).
     ia: session ? [sectionChatbot.section, sectionIa({ store, session }).section] : null,
+    // V5.2: private VPN, for signed-in accounts (guests see their identifiers, the owner the list).
+    vpn: session ? [sectionVpn({}).section] : null,
     avance: [
       // Reading other sites needs a permission in the extension only (V3.0: capabilities).
       plateforme.capacites.permissionsSites

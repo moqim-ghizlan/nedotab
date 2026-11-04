@@ -3526,3 +3526,102 @@ body.fond-clair .connexion-formulaire .connexion-champ:focus-visible {
     animation: none;
   }
 }
+
+/* --- VPN settings (V5.2) ----------------------------------------------------------------- */
+
+.vpn-reglages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-5);
+}
+
+.vpn-reglages h4 {
+  margin: 0 0 var(--espace-2);
+  font-size: var(--taille-s);
+}
+
+.vpn-acces,
+.vpn-invites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  align-items: flex-start;
+}
+
+.vpn-accorde {
+  color: var(--texte);
+  font-weight: 600;
+}
+
+.vpn-inviter {
+  display: flex;
+  gap: var(--espace-2);
+  width: 100%;
+}
+
+.vpn-inviter input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.vpn-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vpn-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+  padding: var(--espace-3) var(--espace-4);
+  border: 1px solid color-mix(in srgb, var(--bordure) 80%, transparent);
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+}
+
+.vpn-invite-texte {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.vpn-donnees {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  width: 100%;
+}
+
+.vpn-donnee {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.vpn-donnee-libelle {
+  flex: 0 0 8.5rem;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.vpn-donnee-valeur {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.vpn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+}

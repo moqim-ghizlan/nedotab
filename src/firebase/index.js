@@ -48,6 +48,7 @@ export {
   supprimerSauvegarde,
 } from "./sauvegardes.js";
 export { appelerIa, lireConfigIa } from "./ia.js";
+export { appelerVpn, estAdminVpn } from "./vpn.js";
 export {
   chargerMessagesAvant,
   creerConversation,

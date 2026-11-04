@@ -1,0 +1,180 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// Les dialogues natifs (<dialog>) ne sont pas fiables dans happy-dom : on les remplace.
+const demander = vi.fn();
+vi.mock("../../src/ui/dialogues/commun.js", () => ({ demander: (...a) => demander(...a) }));
+vi.mock("../../src/ui/toast.js", () => ({ toast: vi.fn() }));
+
+import { sectionVpn } from "../../src/ui/reglages/vpn.js";
+import { LIBELLE_RESERVE } from "../../src/core/vpn.js";
+
+const ACCES = {
+  domaine: "vpn.exemple.org",
+  port: 443,
+  compte: "u_abcdefghij",
+  motDePasse: "MotDePasseTresSecret0123456789abcd",
+  pays: "Allemagne",
+};
+
+function faux({ admin = false, acces = { ok: true, valeur: ACCES }, invites = [] } = {}) {
+  return {
+    estAdmin: vi.fn(async () => admin),
+    acces: vi.fn(async () => acces),
+    regenerer: vi.fn(async () => ({ ok: true, valeur: { ...ACCES, motDePasse: "NouveauMotDePasse0123456789abcdefg" } })),
+    inviter: vi.fn(async () => ({ ok: true, valeur: { statut: "en_attente" } })),
+    revoquer: vi.fn(async () => ({ ok: true, valeur: { ok: true } })),
+    invites: vi.fn(async () => ({ ok: true, valeur: { invites } })),
+  };
+}
+const refuse = { ok: false, code: "functions/permission-denied", erreur: LIBELLE_RESERVE };
+
+async function monter(service) {
+  const v = sectionVpn({ service });
+  document.body.append(v.section);
+  await v.charger();
+  return v;
+}
+const texte = () => document.body.textContent;
+const bouton = (libelle) => [...document.querySelectorAll("button")].find((b) => b.textContent === libelle);
+
+beforeEach(() => demander.mockReset());
+afterEach(() => {
+  document.body.replaceChildren();
+  vi.useRealTimers();
+});
+
+describe("réglages VPN — non invité", () => {
+  it("ne voit qu'une phrase, sans serveur, sans identifiants ni liste", async () => {
+    await monter(faux({ acces: refuse }));
+    expect(texte()).toContain(LIBELLE_RESERVE);
+    expect(texte()).not.toMatch(/vpn\.exemple\.org|Invités|Afficher mes identifiants|u_/);
+    expect(bouton("Inviter")).toBeUndefined();
+  });
+});
+
+describe("réglages VPN — invité", () => {
+  it("« Accès accordé », mot de passe caché tant qu'on ne le demande pas", async () => {
+    await monter(faux());
+    expect(texte()).toContain("Accès accordé");
+    expect(texte()).not.toContain(ACCES.motDePasse);
+    expect(texte()).not.toContain(ACCES.compte);
+    expect(bouton("Inviter")).toBeUndefined();
+  });
+
+  it("« Afficher mes identifiants » montre tout, « Masquer » le cache", async () => {
+    await monter(faux());
+    bouton("Afficher mes identifiants").click();
+    expect(texte()).toContain("vpn.exemple.org:443");
+    expect(texte()).toContain("Allemagne");
+    expect(texte()).toContain(ACCES.compte);
+    expect(texte()).toContain(ACCES.motDePasse);
+    bouton("Masquer").click();
+    expect(texte()).not.toContain(ACCES.motDePasse);
+  });
+
+  it("le mot de passe se masque seul après une minute", async () => {
+    vi.useFakeTimers();
+    await monter(faux());
+    bouton("Afficher mes identifiants").click();
+    expect(texte()).toContain(ACCES.motDePasse);
+    vi.advanceTimersByTime(60_001);
+    expect(texte()).not.toContain(ACCES.motDePasse);
+  });
+
+  it("un nouveau mot de passe remplace l'ancien après confirmation", async () => {
+    const service = faux();
+    await monter(service);
+    bouton("Afficher mes identifiants").click();
+    demander.mockResolvedValue(true);
+    bouton("Nouveau mot de passe").click();
+    await vi.waitFor(() => expect(texte()).toContain("NouveauMotDePasse0123456789abcdefg"));
+    expect(texte()).not.toContain(ACCES.motDePasse);
+    expect(service.regenerer).toHaveBeenCalledOnce();
+  });
+
+  it("refuser la confirmation ne change rien", async () => {
+    const service = faux();
+    await monter(service);
+    bouton("Afficher mes identifiants").click();
+    demander.mockResolvedValue(false);
+    bouton("Nouveau mot de passe").click();
+    await Promise.resolve();
+    expect(service.regenerer).not.toHaveBeenCalled();
+  });
+
+  it("le mot de passe n'est écrit nulle part dans la page (pas d'attribut, pas de stockage)", async () => {
+    await monter(faux());
+    bouton("Afficher mes identifiants").click();
+    expect(document.body.innerHTML.split(ACCES.motDePasse).length - 1).toBe(1); // une fois, en texte
+    expect(JSON.stringify({ ...localStorage })).not.toContain(ACCES.motDePasse);
+  });
+
+  it("une erreur du service s'affiche avec « Réessayer »", async () => {
+    await monter(faux({ acces: { ok: false, code: "functions/unavailable", erreur: "Service indisponible : vérifiez votre connexion." } }));
+    expect(texte()).toContain("Service indisponible");
+    expect(bouton("Réessayer")).toBeDefined();
+  });
+});
+
+describe("réglages VPN — propriétaire", () => {
+  const invites = [
+    { email: "a@ex.org", statut: "acceptee", acces: true, invitationLe: 2 },
+    { email: "b@ex.org", statut: "en_attente", acces: false, invitationLe: 1 },
+    { email: "c@ex.org", statut: "revoquee", acces: false, invitationLe: 0 },
+  ];
+
+  it("voit la liste (sans les accès retirés), l'avertissement et son propre état", async () => {
+    await monter(faux({ admin: true, acces: refuse, invites }));
+    expect(texte()).toContain("a@ex.org");
+    expect(texte()).toContain("b@ex.org");
+    expect(texte()).not.toContain("c@ex.org");
+    expect(texte()).toContain("Accès accordé");
+    expect(texte()).toContain("En attente de connexion");
+    expect(texte()).toContain("N'invitez que des personnes de confiance");
+    expect(texte()).toContain("invitez votre propre adresse");
+  });
+
+  it("inviter envoie l'adresse normalisée et recharge la liste", async () => {
+    const service = faux({ admin: true, acces: refuse, invites });
+    await monter(service);
+    const champ = document.querySelector("#vpn-email");
+    champ.value = "  Nouveau@Ex.ORG ";
+    bouton("Inviter").click();
+    await vi.waitFor(() => expect(service.inviter).toHaveBeenCalledWith("nouveau@ex.org"));
+    await vi.waitFor(() => expect(service.invites).toHaveBeenCalledTimes(2));
+    expect(champ.value).toBe("");
+  });
+
+  it("une adresse invalide n'appelle pas le serveur", async () => {
+    const service = faux({ admin: true, acces: refuse });
+    await monter(service);
+    document.querySelector("#vpn-email").value = "pas-un-email";
+    bouton("Inviter").click();
+    await Promise.resolve();
+    expect(service.inviter).not.toHaveBeenCalled();
+  });
+
+  it("retirer l'accès demande confirmation, puis révoque", async () => {
+    const service = faux({ admin: true, acces: refuse, invites });
+    await monter(service);
+    demander.mockResolvedValue(true);
+    document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
+    await vi.waitFor(() => expect(service.revoquer).toHaveBeenCalledWith("a@ex.org"));
+  });
+
+  it("annuler la confirmation ne révoque rien", async () => {
+    const service = faux({ admin: true, acces: refuse, invites });
+    await monter(service);
+    demander.mockResolvedValue(false);
+    document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
+    await Promise.resolve();
+    expect(service.revoquer).not.toHaveBeenCalled();
+  });
+
+  it("un non-administrateur n'a pas le formulaire, même si le service l'appelle", async () => {
+    const service = faux({ admin: false, acces: refuse });
+    await monter(service);
+    expect(service.invites).not.toHaveBeenCalled();
+    expect(document.querySelector("#vpn-email")).toBeNull();
+  });
+});
