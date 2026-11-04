@@ -22,7 +22,12 @@ function lancer(scenario) {
   return { ...JSON.parse(r.stdout), sortie: r.stdout + r.stderr };
 }
 const profils = (...l) =>
-  l.map(([nomProfil, depose = false, recreer = false]) => ({ nomProfil, depose, recreer }));
+  l.map(([nomProfil, depose = false, recreer = false, actif = true]) => ({
+    nomProfil,
+    depose,
+    recreer,
+    actif,
+  }));
 const supprimes = (r) =>
   r.appels.filter(([m]) => m === "DELETE").map(([, u]) => u.split("/").pop());
 const crees = (r) => r.appels.filter(([m, u]) => m === "POST" && u.endsWith("/api/client")).length;
@@ -61,7 +66,7 @@ describe.skipIf(!PYTHON)("agent WireGuard", () => {
     ["HTML", { profils_brut: "<html>erreur</html>" }],
     ["champ en plus", { profils_brut: '{"profils":[],"x":1}' }],
     ["nom invalide", { profils_brut: '{"profils":[{"nomProfil":"../x","depose":false}]}' }],
-    ["depose absent", { profils_brut: `{"profils":[{"nomProfil":"${A}","depose":false}]}` }],
+    ["depose absent", { profils_brut: `{"profils":[{"nomProfil":"${A}","depose":false,"recreer":false}]}` }],
   ])("réponse des fonctions invalide (%s) : rien n'est supprimé", (_n, extra) => {
     const r = lancer({ clients: [{ id: 3, name: C }], profils: [], ...extra });
     expect(r.erreur).not.toBeNull();
@@ -101,6 +106,20 @@ describe.skipIf(!PYTHON)("agent WireGuard", () => {
     expect(supprimes(r)).toEqual(["5"]);
     expect(crees(r)).toBe(1);
     expect(r.deposes.map((d) => d.nomProfil)).toEqual([A]);
+  });
+
+  it("invité suspendu : client désactivé, pas supprimé ; réactivé quand la coupure est levée", () => {
+    const coupe = lancer({
+      profils: profils([A, true, false, false]),
+      clients: [{ id: 5, name: A, enabled: true }],
+    });
+    expect(supprimes(coupe)).toEqual([]);
+    expect(coupe.appels).toContainEqual(["POST", expect.stringMatching(/\/api\/client\/5\/disable$/)]);
+    const leve = lancer({
+      profils: profils([A, true, false, true]),
+      clients: [{ id: 5, name: A, enabled: false }],
+    });
+    expect(leve.appels).toContainEqual(["POST", expect.stringMatching(/\/api\/client\/5\/enable$/)]);
   });
 
   it("tout est à jour : aucun appel d'écriture", () => {

@@ -36,5 +36,6 @@ via off
 httpd_suppress_version_string on
 cache deny all
 access_log none
+# V5.9 : 21-rapport.sh ajoute un journal de VOLUMES (compte + octets, jamais une adresse de site).
 cache_store_log none
 strip_query_terms on

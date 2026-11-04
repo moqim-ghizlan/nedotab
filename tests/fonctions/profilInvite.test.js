@@ -83,7 +83,7 @@ describe("profil WireGuard de l'invité", () => {
     await m.f.recreer(moi);
     await expect(m.f.obtenir(moi)).rejects.toMatchObject({ code: "failed-precondition" });
     const [p] = (await m.agent.lister(JETON)).profils;
-    expect(p).toEqual({ nomProfil: "p_aaaaaaaaaa", depose: false, recreer: true });
+    expect(p).toEqual({ nomProfil: "p_aaaaaaaaaa", depose: false, recreer: true, actif: true });
   });
 
   it("le nouveau dépôt de l'agent efface le marquage", async () => {
@@ -91,7 +91,7 @@ describe("profil WireGuard de l'invité", () => {
     await m.f.recreer(moi);
     await m.agent.deposer(JETON, { nomProfil: "p_aaaaaaaaaa", configuration: CONF });
     const [p] = (await m.agent.lister(JETON)).profils;
-    expect(p).toEqual({ nomProfil: "p_aaaaaaaaaa", depose: true, recreer: false });
+    expect(p).toEqual({ nomProfil: "p_aaaaaaaaaa", depose: true, recreer: false, actif: true });
     expect((await m.f.obtenir(moi)).config).toBe(CONF);
   });
 

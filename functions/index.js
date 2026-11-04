@@ -29,7 +29,10 @@ import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
 import { creerProfilsVpn, ErreurProfil } from "./src/vpn/agentProfils.js";
 import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
+import { creerConsommationVpn } from "./src/vpn/consommation.js";
 import { creerProfilInvite } from "./src/vpn/profil.js";
+import { tacheQuotidienne } from "./src/vpn/planifie.js";
+import { creerRapportVpn, ErreurRapport } from "./src/vpn/rapport.js";
 
 initializeApp();
 
@@ -445,3 +448,51 @@ const pointAgent = (methode, traiter) =>
 
 export const vpnAgentProfils = pointAgent("GET", (jeton) => profilsVpn.lister(jeton));
 export const vpnAgentDeposerProfil = pointAgent("POST", (jeton, corps) => profilsVpn.deposer(jeton, corps));
+
+// --- V5.9: traffic volumes (never a destination), limits, owner's table ----------------------
+const rapportVpn = creerRapportVpn({
+  db: getFirestore(),
+  jetonAgent: () => VPN_JETON_AGENT.value(),
+  journal: (infos) => logger.info("vpn : rapport", infos), // counts only
+});
+const consommationVpn = creerConsommationVpn({ db: getFirestore() });
+
+export const vpnAgentRapport = onRequest(OPTIONS_AGENT, async (req, res) => {
+  res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Type": "application/json" });
+  const jeton = /^Bearer (.+)$/.exec(req.get("authorization") ?? "")?.[1];
+  if (req.method !== "POST") {
+    res.status(404).send(JSON.stringify({ erreur: "indisponible" }));
+    return;
+  }
+  try {
+    const reponse = await rapportVpn.enregistrer(jeton, req.body ?? {});
+    if (!reponse) {
+      res.status(401).send(JSON.stringify({ erreur: "non autorisé" }));
+      return;
+    }
+    res.status(200).send(JSON.stringify(reponse));
+  } catch (e) {
+    if (e instanceof ErreurRapport) {
+      res.status(400).send(JSON.stringify({ erreur: e.code }));
+      return;
+    }
+    logger.error("vpn : rapport en erreur", { nom: e?.name });
+    res.status(500).send(JSON.stringify({ erreur: "interne" }));
+  }
+});
+
+export const vpnMaConsommation = appelVpn((auth) => consommationVpn.maConsommation(auth));
+export const vpnTableauConsommation = appelVpn((auth) => consommationVpn.tableau(auth));
+export const vpnDefinirLimite = appelVpn((auth, donnees) => consommationVpn.definirLimite(auth, donnees));
+export const vpnCouper = appelVpn((auth, donnees) => consommationVpn.couper(auth, donnees));
+export const vpnRetablir = appelVpn((auth, donnees) => consommationVpn.retablir(auth, donnees));
+export const vpnCoupureSecurite = appelVpn((auth, donnees) => consommationVpn.definirCoupureSecurite(auth, donnees));
+
+/** Every day at 00:10 (Paris): lifts the cuts that no longer apply, deletes figures older than 12 months. */
+export const vpnTacheQuotidienne = onSchedule(
+  { schedule: "10 0 * * *", timeZone: "Europe/Paris", region: "europe-west1", timeoutSeconds: 120, memory: "256MiB" },
+  async () => {
+    const r = await tacheQuotidienne(getFirestore());
+    logger.info("vpn : tâche quotidienne", r);
+  },
+);

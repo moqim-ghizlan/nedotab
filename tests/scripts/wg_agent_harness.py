@@ -39,6 +39,8 @@ def http(methode, url, entetes, corps=None):
         suivant[0] += 1
         clients.append({"id": suivant[0], "name": nom})
         return 200, json.dumps({"success": True, "clientId": suivant[0]}).encode()
+    if methode == "POST" and (url.endswith("/enable") or url.endswith("/disable")):
+        return 200, b'{"success":true}'
     if methode == "DELETE":
         return 200, b'{"success":true}'
     if url.endswith("/configuration"):

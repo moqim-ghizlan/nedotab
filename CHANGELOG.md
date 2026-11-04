@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.9.0] - 2026-11-05
+
+### Ajouté
+
+- **Suivi du trafic par ami (V5.9)** : le propriétaire voit, dans Réglages → VPN, le volume du mois de chaque invité (proxy et WireGuard), sa limite, son état, son dernier jour d'activité, et le total du serveur avec une barre vers la limite gratuite d'Oracle (10 To par mois) et un graphique par jour. **Des volumes seulement : jamais un site visité.**
+- **Limites mensuelles par invité** (50 Go par défaut, modifiable, ou illimité) : à 80 % l'invité est prévenu, à 100 % son accès est coupé jusqu'au 1er du mois suivant ; le client WireGuard est **désactivé**, pas supprimé.
+- **Couper maintenant / Rétablir** (effet en moins de 2 minutes) et **coupure de sécurité** du serveur à 95 % du trafic gratuit (invités suspendus, propriétaire épargné ; désactivable).
+- L'invité voit « Ce mois-ci : 12,4 Go sur 50 Go » et ce que le propriétaire peut voir.
+- Serveur : journal Squid réduit à « compte octets » (aucune destination), agent de rapport toutes les 15 minutes, tâche quotidienne (remise à zéro mensuelle, suppression des chiffres de plus de 12 mois). Jours et mois en heure de Paris.
+
+### À faire avant utilisation
+
+Déployer les nouvelles fonctions, lancer `21-rapport.sh` sur le serveur et mettre à jour `vpn-wg-agent` (champ `actif`), avec votre accord. Les vérifications manuelles du plan ne sont pas faites.
+
 ## [5.8.0] - 2026-11-05
 
 ### Ajouté

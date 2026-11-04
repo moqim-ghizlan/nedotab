@@ -11,6 +11,12 @@ export const FONCTIONS_VPN = [
   "vpnRegenererMotDePasse",
   "vpnObtenirProfilWireGuard",
   "vpnRecreerProfil",
+  "vpnMaConsommation",
+  "vpnTableauConsommation",
+  "vpnDefinirLimite",
+  "vpnCouper",
+  "vpnRetablir",
+  "vpnCoupureSecurite",
 ];
 
 /** Calls a VPN function of the server and returns its answer (errors keep their callable code). */

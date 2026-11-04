@@ -1,0 +1,18 @@
+[Unit]
+Description=Rapport de trafic du VPN, volumes seulement (V5.9)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vpn-agent
+Group=vpn-agent
+ExecStart=/usr/local/sbin/vpn-rapport
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+# NoNewPrivileges est absent exprès : sudo vers l'assistant de lecture des compteurs.

@@ -184,3 +184,41 @@
   height: auto;
   image-rendering: pixelated;
 }
+
+/* V5.9 — traffic: bar, per-friend cards (readable on a phone), daily chart. */
+.vpn-barre {
+  width: 100%;
+  height: 10px;
+}
+.vpn-cartes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vpn-carte {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-left-width: 4px;
+  border-radius: 8px;
+}
+.vpn-carte--coupe {
+  border-left-color: #c77700;
+}
+.vpn-carte--revoque {
+  opacity: 0.6;
+}
+.vpn-carte input[type="number"] {
+  width: 6em;
+}
+.vpn-graphique {
+  width: 100%;
+  max-width: 420px;
+  height: 60px;
+  fill: var(--accent);
+}

@@ -157,7 +157,9 @@ export function creerFonctionsVpn({
       if (h && (await lire(CHEMIN.invitation(h))))
         await db.doc(CHEMIN.invitation(h)).set({ statut: "revoquee" }, { merge: true });
       if (uid && (await lire(CHEMIN.acces(uid)))) {
-        await db.doc(CHEMIN.acces(uid)).set({ actif: false, revoqueLe: maintenant() }, { merge: true });
+        await db
+          .doc(CHEMIN.acces(uid))
+          .set({ actif: false, revoqueLe: maintenant() }, { merge: true });
         await db.doc(CHEMIN.profil(uid)).delete(); // V5.7: the WireGuard profile goes too
         await monterVersion();
       }
@@ -222,7 +224,13 @@ export function creerFonctionsVpn({
       const c = await config();
       await limiter(consommer, uid);
       const motDePasse = await creerAcces(uid, acces.emailHash);
-      return { domaine: c.domaineProxy, port: c.portProxy ?? 443, compte: acces.compte, motDePasse, pays: c.pays ?? null };
+      return {
+        domaine: c.domaineProxy,
+        port: c.portProxy ?? 443,
+        compte: acces.compte,
+        motDePasse,
+        pays: c.pays ?? null,
+      };
     },
 
     /** Account deleted: its access disappears (no VPN account may outlive its owner). */
@@ -232,7 +240,9 @@ export function creerFonctionsVpn({
       await db.doc(CHEMIN.acces(uid)).delete();
       await db.doc(CHEMIN.profil(uid)).delete(); // V5.7
       if (acces.emailHash)
-        await db.doc(CHEMIN.invitation(acces.emailHash)).set({ statut: "revoquee" }, { merge: true });
+        await db
+          .doc(CHEMIN.invitation(acces.emailHash))
+          .set({ statut: "revoquee" }, { merge: true });
       await monterVersion();
     },
 
@@ -242,8 +252,13 @@ export function creerFonctionsVpn({
      */
     async synchro(jeton) {
       if (!secretsEgaux(jeton, jetonAgent())) return null;
-      const [etat, acces] = await Promise.all([lire(CHEMIN.etat), db.collection(CHEMIN.listeAcces).where("actif", "==", true).get()]);
+      const [etat, acces] = await Promise.all([
+        lire(CHEMIN.etat),
+        db.collection(CHEMIN.listeAcces).where("actif", "==", true).get(),
+      ]);
+      // V5.9: a suspended guest (limit reached, safety cut, owner's decision) is left out.
       const comptes = acces.docs
+        .filter((d) => !d.data().suspendu)
         .map((d) => ({ compte: d.data().compte, empreinte: d.data().empreinte }))
         .sort((a, b) => a.compte.localeCompare(b.compte));
       journal({ comptes: comptes.length });

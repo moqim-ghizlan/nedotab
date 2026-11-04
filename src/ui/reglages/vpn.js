@@ -14,6 +14,8 @@ import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";
 import { blocVpnNavigateur } from "../vpnNavigateur.js";
 import { blocWireguard } from "../vpn/wireguard.js";
+import { blocConsommation } from "./vpnConsommation.js";
+import { blocTableauInvites } from "./vpnInvites.js";
 import { blocReglesVpn } from "./reglesVpn.js";
 
 /**
@@ -372,7 +374,10 @@ export function sectionVpn({
     // V5.6: per-site rules (synced setting; extension only, with a state to edit).
     if (vpn && store) racine.append(blocReglesVpn({ store }).racine);
     if (etat.admin) racine.append(blocInvites());
+    // V5.9: the owner sees the volume per friend; a guest sees his own.
+    if (etat.admin) racine.append(blocTableauInvites({ service }).racine);
     racine.append(blocMonAcces());
+    if (etat.acces && !etat.occupe) racine.append(blocConsommation({ service }).racine);
     // V5.8: WireGuard for the whole device (guests only).
     if (etat.acces && !etat.occupe) racine.append(blocWireguard({ service }).racine);
   }

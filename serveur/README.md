@@ -44,6 +44,7 @@ ssh -i ~/.ssh/vpn-nedotab admin-vpn@<domaine>
 | `compte-retirer.sh <nom>` | V5.1 : retire un compte (effet immédiat, sans coupure). Depuis la V5.2, les comptes viennent de Firebase : ces deux scripts ne servent plus qu'au dépannage (l'agent écrase le fichier à chaque changement) |
 | `20-agent.sh` | V5.2 : agent de synchronisation (utilisateur `vpn-agent`, timer d'une minute). Variable `VPN_AGENT_URL` ; le jeton est demandé en saisie masquée |
 | `20-wireguard.sh` | V5.7 : Docker, wg-easy 15.5.0, isolement des clients, agent de profils. Variable `DOMAINE` ; lancer après `20-agent.sh` |
+| `21-rapport.sh` | V5.9 : journal Squid réduit (compte + octets), assistant `vpn-compteurs`, agent de rapport toutes les 15 minutes |
 | `30-dns.sh` | V5.5 : résolveur DNS du serveur (Quad9 / Cloudflare) |
 
 Copier les scripts : `scp -r serveur/scripts serveur/proxy admin-vpn@<domaine>:~/` (ou `ubuntu@` avant `01`).
@@ -87,3 +88,14 @@ Console Oracle → Instance → **Console connection** (console série) → se c
 - **Mise à jour de wg-easy** : lire les notes de version ; sauvegarder le volume (`docker run --rm -v wg-easy_etc_wireguard:/d -v $PWD:/b busybox tar czf /b/wg-easy-sauvegarde.tgz -C /d .`) ; changer le tag dans `/opt/wg-easy/docker-compose.yml` ET dans le dépôt ; `docker compose pull && docker compose up -d` ; vérifier que l'agent journalise « wg : N profils » (`journalctl -u vpn-wg-agent -n 5`), que `vpn-wg-isoler` répond « OK » et que les routes ci-dessus répondent encore.
 - Journal : `journalctl -u vpn-wg-agent -n 20` ne contient que des nombres : jamais un nom de profil, une clé ou une destination.
 - **Recréation d'un profil (V5.8)** : `vpnRecreerProfil` marque `vpn/config/profils/{uid}.aRecreer`. À la minute suivante, `vpnAgentProfils` renvoie `recreer: true`, l'agent supprime l'ancien client puis en crée un nouveau (même nom `p_…`) et dépose la nouvelle configuration, ce qui efface le marquage.
+
+## Suivi du trafic et limites (V5.9)
+- **Des volumes, jamais une destination.** Squid écrit `access_log stdio:/var/log/squid/octets.log` avec `logformat octets %un %>st %<st` : compte, octets reçus, octets envoyés. Aucune adresse, aucun nom de site. `vpn-compteurs` (root, sudoers sans argument) lit ce fichier, le vide et n'affiche que « compte total ». Contrôle : `head -3 /var/log/squid/octets.log` ne doit montrer que des nombres et un compte `u_…`.
+- **Limite connue** : Squid n'écrit une connexion CONNECT (HTTPS) qu'à sa fermeture ; un très gros téléchargement apparaît à sa fin.
+- **WireGuard** : l'agent lit `transferRx` / `transferTx` de chaque client (API de wg-easy) et envoie la **différence** ; un compteur qui diminue (redémarrage du conteneur) repart de la nouvelle valeur ; un profil neuf compte depuis zéro ; au tout premier passage, la base est posée sans compter l'historique.
+- **Serveur** : octets sortants (`tx_bytes`) de l'interface de la route par défaut, comparés à la limite d'Oracle.
+- **Rapport** : `vpn-rapport.timer` (15 min) → `vpnAgentRapport`. L'état (`/var/lib/vpn-agent/compteurs.json`, 600) n'est mis à jour **que si l'envoi a réussi** ; les octets du proxy déjà vidés du journal sont gardés en attente. Journal : `journalctl -u vpn-rapport -n 10` (nombre de comptes seulement).
+- **Limite gratuite d'Oracle** : « As part of your Always Free resources, you get 10 TB per month of outbound data » (docs.oracle.com, page *Always Free Resources*, lue le 2026-11-05). La documentation lue ne dit pas ce qui se passe au-delà pour un compte resté gratuit ; seule phrase trouvée : Oracle ne facture que « resource usage above the Always Free limits » après une mise à niveau. Les pages marketing d'Oracle étaient inaccessibles : à relire dans un navigateur. La limite utilisée (`limiteServeurGo`, 10 000 Go, décimal) se règle dans `vpn/config`.
+- **Coupure de sécurité** : à 95 % du trafic gratuit du mois, les invités (pas le propriétaire, reconnu à son invitation) passent en `suspendu: "securite"` ; désactivable (case dans Réglages → VPN). Levée au mois suivant par `vpnTacheQuotidienne` (00:10, Europe/Paris).
+- **Suspension** (limite mensuelle, sécurité, ou « Couper maintenant ») : le compte disparaît de la synchro du proxy (≤ 2 minutes) et son client WireGuard est **désactivé**, jamais supprimé (`/api/client/{id}/disable`, puis `/enable`). Une coupure manuelle n'est levée que par le propriétaire.
+- **Fuseau** : jours et mois en `Europe/Paris` partout (changement de mois à minuit, heure de Paris).

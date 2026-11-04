@@ -59,11 +59,12 @@ def _profils_ok(v):
         and isinstance(v["profils"], list)
         and all(
             isinstance(p, dict)
-            and set(p) == {"nomProfil", "depose", "recreer"}
+            and set(p) == {"nomProfil", "depose", "recreer", "actif"}
             and isinstance(p["nomProfil"], str)
             and NOM.match(p["nomProfil"])
             and isinstance(p["depose"], bool)
             and isinstance(p["recreer"], bool)
+            and isinstance(p["actif"], bool)
             for p in v["profils"]
         )
     )
@@ -91,11 +92,14 @@ def synchroniser(http, cfg, journal=lambda m: print(m, file=sys.stderr)):
     profils = _json(corps, _profils_ok)["profils"]
     souhaites = {p["nomProfil"]: p["depose"] for p in profils}
     a_recreer = {p["nomProfil"] for p in profils if p["recreer"]}
+    voulus_actifs = {p["nomProfil"]: p["actif"] for p in profils}
 
     code, corps = http("GET", WG + "/api/client", wg)
     if code != 200:
         raise Echec(f"wg-easy liste http {code}")
-    existants = {c["name"]: c["id"] for c in _json(corps, _clients_ok) if NOM.match(c["name"])}
+    liste = [c for c in _json(corps, _clients_ok) if NOM.match(c["name"])]
+    existants = {c["name"]: c["id"] for c in liste}
+    etat_wg = {c["name"]: c.get("enabled", True) is not False for c in liste}
 
     supprimes = crees = deposes = 0
     # 1. Revocations d'abord : couper un acces est plus urgent que d'en creer un. Un profil a
@@ -109,6 +113,17 @@ def synchroniser(http, cfg, journal=lambda m: print(m, file=sys.stderr)):
             del existants[nom]
         else:
             journal(f"suppression refusee (http {code})")
+    # 1b. Suspension (V5.9) : un invite coupe est DESACTIVE (pas supprime : rien a reconfigurer),
+    #     et reactive quand la coupure est levee.
+    for nom, identifiant in existants.items():
+        if nom not in voulus_actifs or nom in a_recreer:
+            continue
+        if voulus_actifs[nom] == etat_wg.get(nom, True):
+            continue
+        action = "enable" if voulus_actifs[nom] else "disable"
+        code, _ = http("POST", f"{WG}/api/client/{identifiant}/{action}", wg)
+        if code != 200:
+            journal(f"{action} refuse (http {code})")
     # 2. Creations et depots.
     for nom, depose in souhaites.items():
         if nom in existants and depose:

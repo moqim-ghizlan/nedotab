@@ -70,7 +70,8 @@ export function creerProfilsVpn({
         const donnees = stocke.exists ? stocke.data() : {};
         const recreer = donnees.aRecreer === true; // V5.8: the guest asked for a new profile
         const depose = !!donnees.configChiffree && !recreer;
-        profils.push({ nomProfil: nom, depose, recreer });
+        // V5.9: a suspended guest keeps his client, which is only disabled (no reconfiguration).
+        profils.push({ nomProfil: nom, depose, recreer, actif: !d.data().suspendu });
       }
       profils.sort((a, b) => a.nomProfil.localeCompare(b.nomProfil));
       journal({ profils: profils.length });

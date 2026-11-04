@@ -49,6 +49,14 @@ export function creerServiceVpn({ chargerFb = chargerFirebase } = {}) {
         : { ok: false, erreur: "Profil indisponible pour l'instant." };
     },
     recreerProfil: () => appeler("vpnRecreerProfil", {}),
+    /** V5.9: { ok: true, valeur: { octets, limiteGo, pourcent, alerte, suspendu, joursRestants } } */
+    consommation: () => appeler("vpnMaConsommation", {}),
+    /** Owner: { invites: [...], serveur: {...}, mois } — volumes only. */
+    tableau: () => appeler("vpnTableauConsommation", {}),
+    definirLimite: (email, limiteGo) => appeler("vpnDefinirLimite", { email, limiteGo }),
+    couper: (email) => appeler("vpnCouper", { email }),
+    retablir: (email) => appeler("vpnRetablir", { email }),
+    coupureSecurite: (active) => appeler("vpnCoupureSecurite", { active }),
     async regenerer() {
       const r = await appeler("vpnRegenererMotDePasse", {});
       return r.ok ? { ok: true, valeur: lireAcces(r.valeur) } : r;
