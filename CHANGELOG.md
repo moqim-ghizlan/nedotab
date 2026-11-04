@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.1.0] - 2026-11-04
+
+### Ajouté
+
+- **Proxy HTTPS du VPN (V5.1)** : Squid sur le port 443, certificat Let's Encrypt renouvelé automatiquement, authentification obligatoire (empreintes bcrypt).
+- **Règles** : destinations internes et privées interdites, ports 80 et 443 seulement, aucun en-tête révélant l'IP du client.
+- **Vie privée** : aucun journal d'accès (pas de destinations, pas de sites).
+- **Scripts** `10-proxy.sh`, `compte-ajouter.sh` (mot de passe de 32 caractères affiché une fois), `compte-retirer.sh`, et test `serveur/tests/tester-proxy.sh`.
+
+### Notes
+
+- Squid choisi plutôt que Caddy (module expérimental, mots de passe sans empreinte) : voir `docs/decisions.md`.
+- Limite connue : sans identifiants, le serveur répond 407 et révèle qu'il est un proxy.
+
 ## [5.0.0] - 2026-11-04
 
 ### Ajouté
