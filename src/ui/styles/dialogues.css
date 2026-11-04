@@ -513,3 +513,36 @@
   overflow: auto;
   padding-left: 1.2rem;
 }
+
+/* Stacked choices: each button says what it does, colour says how serious it is. */
+.dialogue-actions--pile {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.dialogue-actions--pile .bouton {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px var(--espace-4);
+  border-radius: 12px;
+  text-align: center;
+}
+.dialogue-actions--pile .bouton-titre {
+  font-weight: 650;
+}
+.dialogue-actions--pile .bouton-detail {
+  font-size: 0.75rem;
+  font-weight: 400;
+  opacity: 0.8;
+}
+.dialogue-actions--pile .bouton--principal {
+  color: var(--accent-texte);
+}
+.dialogue-actions--pile .bouton--danger:not(.bouton--principal) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.dialogue-actions--pile .bouton--danger:not(.bouton--principal):hover {
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
+}

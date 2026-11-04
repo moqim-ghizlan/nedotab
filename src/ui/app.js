@@ -230,10 +230,21 @@ export async function demarrerApp(racine) {
       const garder = await demander({
         titre: "Se déconnecter",
         message: "Garder une copie de vos sites sur cet appareil ?",
+        pile: true,
         boutons: [
+          {
+            libelle: "Oui, garder une copie",
+            detail: "Vos sites restent disponibles ici, même sans connexion.",
+            valeur: "oui",
+            principal: true,
+          },
+          {
+            libelle: "Non, vider cet appareil",
+            detail: "Efface vos sites de cet appareil. Ils restent sur votre compte.",
+            valeur: "non",
+            danger: true,
+          },
           { libelle: "Annuler", valeur: null },
-          { libelle: "Non, vider cet appareil", valeur: "non" },
-          { libelle: "Oui, garder une copie", valeur: "oui", principal: true },
         ],
       });
       if (!garder) return;

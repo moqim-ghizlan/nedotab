@@ -80,13 +80,40 @@ describe("formulaire de connexion (V4.23)", () => {
     await soumettre(form);
     expect(document.body.textContent).toContain("incorrect");
   });
-  it("mot de passe oublié : même message que le compte existe ou non", async () => {
-    const { reinitialiser } = monter();
+  it("mot de passe oublié : vue dédiée, même message que le compte existe ou non", async () => {
+    const { form, reinitialiser } = monter();
     document.querySelector("#connexion-email").value = "inconnu@exemple.fr";
     [...document.querySelectorAll("button")].find((b) => b.textContent === "Mot de passe oublié ?").click();
-    await new Promise((r) => setTimeout(r, 0));
+    // L'adresse déjà saisie est reprise dans la vue « mot de passe oublié ».
+    expect(document.querySelector("#connexion-email-oubli").value).toBe("inconnu@exemple.fr");
+    await soumettre(form);
     expect(reinitialiser).toHaveBeenCalledWith("inconnu@exemple.fr");
     expect(document.body.textContent).toContain("Si un compte existe");
+  });
+  it("mot de passe oublié : adresse invalide, aucun appel", async () => {
+    const { form, reinitialiser } = monter();
+    [...document.querySelectorAll("button")].find((b) => b.textContent === "Mot de passe oublié ?").click();
+    document.querySelector("#connexion-email-oubli").value = "pasunemail";
+    await soumettre(form);
+    expect(reinitialiser).not.toHaveBeenCalled();
+  });
+  it("création : les deux mots de passe doivent être identiques", async () => {
+    const { form, connecterEmail } = monter();
+    [...document.querySelectorAll("button")].find((b) => b.textContent === "Créer un compte").click();
+    remplir("a@exemple.fr", "motdepasse-long");
+    document.querySelector("#connexion-mdp2").value = "autre-mot-de-passe";
+    await soumettre(form);
+    expect(connecterEmail).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("ne sont pas identiques");
+    document.querySelector("#connexion-mdp2").value = "motdepasse-long";
+    await soumettre(form);
+    expect(connecterEmail).toHaveBeenCalledWith("a@exemple.fr", "motdepasse-long", { creer: true });
+  });
+  it("le bouton Google est affiché sous le formulaire", () => {
+    const g = document.createElement("button");
+    g.className = "bouton-google";
+    monter({ boutonGoogle: g });
+    expect(document.querySelector(".connexion-alternatives .bouton-google")).toBe(g);
   });
 });
 

@@ -251,27 +251,23 @@ export function sectionCompte(session) {
     danger.replaceChildren();
     const enCours = etat.statut === "connexion";
     contenu.replaceChildren(
-      el("p", {
-        class: "compte-invitation",
-        texte: "Connectez-vous pour retrouver vos sites sur vos autres appareils.",
-      }),
-      el(
-        "button",
-        {
-          type: "button",
-          class: "bouton-google",
-          disabled: enCours,
-          onclick: () => session.connecter(),
-        },
-        logoGoogle(),
-        el("span", { texte: enCours ? "Connexion…" : "Se connecter avec Google" }),
-      ),
       ...(etat.erreur ? [erreurAvecReessai(etat.erreur, () => session.connecter())] : []),
-      el("p", { class: "connexion-separateur", texte: "ou" }),
       creerFormulaireConnexion({
         connecterEmail: (email, mdp, options) => session.connecterEmail(email, mdp, options),
         reinitialiser: (email) => compte.reinitialiser(email),
         horsLigne: () => navigator.onLine === false,
+        boutonGoogle: el(
+          "button",
+          {
+            type: "button",
+            class: "bouton-google",
+            disabled: enCours,
+            title: enCours ? "Connexion…" : "Continuer avec Google",
+            "aria-label": enCours ? "Connexion avec Google en cours" : "Continuer avec Google",
+            onclick: () => session.connecter(),
+          },
+          logoGoogle(),
+        ),
       }),
     );
   };

@@ -5,9 +5,11 @@ let compteur = 0;
 
 /**
  * Small modal dialog resolving to the value of the chosen button (null on Escape/Cancel).
- * Buttons: { libelle, valeur, principal?, danger? }. The last button is the default one.
+ * Buttons: { libelle, valeur, principal?, danger?, detail? }. The last button is the default one.
+ * `pile`: the buttons are stacked full width, each with its small `detail` line under the
+ * label; colour tells the consequence (green: keep, red: erase, neutral: cancel).
  */
-export function demander({ titre, message, boutons, contenu = [], retourFocus }) {
+export function demander({ titre, message, boutons, contenu = [], retourFocus, pile = false }) {
   return new Promise((resolve) => {
     const id = `dialogue-${++compteur}`;
     let valeur = null;
@@ -22,20 +24,29 @@ export function demander({ titre, message, boutons, contenu = [], retourFocus })
         ...contenu,
         el(
           "div",
-          { class: "dialogue-actions dialogue-actions--empile" },
+          { class: `dialogue-actions dialogue-actions--empile${pile ? " dialogue-actions--pile" : ""}` },
           boutons.map((b) =>
-            el("button", {
-              type: b.principal ? "submit" : "button",
-              class: `bouton${b.principal ? " bouton--principal" : ""}${b.danger ? " bouton--danger" : ""}`,
-              texte: b.libelle,
-              dataset: { valeur: String(b.valeur) },
-              onclick: b.principal
-                ? null
-                : () => {
-                    valeur = b.valeur;
-                    dialogue.close();
-                  },
-            }),
+            el(
+              "button",
+              {
+                type: b.principal ? "submit" : "button",
+                class: `bouton${b.principal ? " bouton--principal" : ""}${b.danger ? " bouton--danger" : ""}`,
+                texte: b.detail ? undefined : b.libelle,
+                dataset: { valeur: String(b.valeur) },
+                onclick: b.principal
+                  ? null
+                  : () => {
+                      valeur = b.valeur;
+                      dialogue.close();
+                    },
+              },
+              ...(b.detail
+                ? [
+                    el("span", { class: "bouton-titre", texte: b.libelle }),
+                    el("span", { class: "bouton-detail", texte: b.detail }),
+                  ]
+                : []),
+            ),
           ),
         ),
       ),

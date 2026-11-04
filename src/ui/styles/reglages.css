@@ -1242,6 +1242,47 @@ body.fond-clair .carte-action--principale {
   }
 }
 
+/* Google sign-in: a round icon under the form (white surface, official "G"). */
+.bouton-google {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid #747775;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  transition:
+    transform 140ms,
+    box-shadow 140ms;
+}
+
+.bouton-google:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.28);
+}
+
+.bouton-google:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.bouton-google:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.compte-erreur {
+  margin-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compte-statut[data-statut="en-cours"] .compte-statut-point {
+    animation: none;
+  }
+}
+
 /* Google sign-in button: white surface, official "G", standard wording. */
 .bouton-google {
   display: inline-flex;
@@ -3031,31 +3072,108 @@ body.fond-clair .carte-action--principale {
 }
 
 /* --- Connexion par e-mail et mot de passe (V4.23) -------------------------------------------- */
-.connexion-separateur {
-  display: flex;
-  align-items: center;
-  gap: var(--espace-3);
-  margin: var(--espace-3) 0;
-  color: var(--texte-discret, #8a8a8a);
-  font-size: 12px;
-}
-.connexion-separateur::before,
-.connexion-separateur::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.25;
-}
 .connexion-formulaire {
   display: grid;
-  gap: var(--espace-3);
+  align-self: stretch;
+  gap: 18px;
+  width: 100%;
+  max-width: 420px;
   text-align: left;
 }
-.connexion-champ {
+.connexion-formulaire [hidden] {
+  display: none !important;
+}
+.connexion-bloc {
+  display: grid;
+  gap: 14px;
+}
+.connexion-entete {
+  display: grid;
+  gap: 4px;
+}
+.connexion-titre {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.connexion-sous-titre {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Sign in / sign up: a two-position switch, not a link. */
+.connexion-onglets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--texte) 7%, transparent);
+}
+.connexion-onglet {
+  min-height: 38px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition:
+    background-color 160ms,
+    color 160ms,
+    border-color 160ms;
+}
+.connexion-onglet:hover {
+  color: var(--texte);
+}
+.connexion-onglet[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent-doux);
+  color: var(--accent);
+}
+.connexion-onglet:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.connexion-formulaire .champ {
+  display: grid;
+  gap: 6px;
+}
+.connexion-formulaire .champ label {
+  color: var(--texte-secondaire);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.connexion-formulaire .connexion-champ {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid var(--trait-fort);
+  border-radius: 12px;
+  background: color-mix(in srgb, #000 22%, transparent);
+  color: var(--texte);
+  font: inherit;
+  font-size: 0.9375rem;
+  transition:
+    border-color 160ms,
+    box-shadow 160ms,
+    background-color 160ms;
+}
+.connexion-formulaire .connexion-champ:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--trait-fort));
+}
+.connexion-formulaire .connexion-champ:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  background: color-mix(in srgb, #000 32%, transparent);
+  box-shadow: 0 0 0 3px var(--accent-doux);
 }
 .connexion-mdp {
   position: relative;
@@ -3067,29 +3185,159 @@ body.fond-clair .carte-action--principale {
   position: absolute;
   top: 0;
   right: 0;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
   border: 0;
+  border-radius: 0 12px 12px 0;
   background: none;
-  color: inherit;
+  color: var(--texte-secondaire);
   cursor: pointer;
 }
+.connexion-oeil:hover,
+.connexion-oeil[aria-pressed="true"] {
+  color: var(--accent);
+}
+.connexion-oeil:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
 .connexion-erreur {
-  margin: 4px 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 0.8125rem;
   color: var(--danger, #d64545);
 }
 .connexion-statut {
   margin: 0;
   font-size: 13px;
 }
-.connexion-liens {
+.connexion-oubli {
+  justify-self: end;
+  margin: -6px 0 0;
+  font-size: 0.8125rem;
+}
+
+/* Rules of the password, ticked live while typing. */
+.connexion-regles {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--texte-secondaire);
+  font-size: 0.8125rem;
+}
+.connexion-regles li {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  transition: color 160ms;
+}
+.connexion-regles li::before {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1.5px solid var(--trait-fort);
+  border-radius: 50%;
+  transition:
+    background 160ms,
+    border-color 160ms;
+}
+.connexion-regles li[data-ok="true"] {
+  color: var(--texte);
+}
+.connexion-regles li[data-ok="true"]::before {
+  border-color: var(--accent);
+  background:
+    var(--accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.4l2.4 2.4 4.6-5' fill='none' stroke='%23102018' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 100% no-repeat;
+}
+
+.connexion-formulaire .bouton--principal {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 0.9375rem;
+}
+
+/* Google comes last, as a round icon. */
+.connexion-alternatives {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.connexion-separateur {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
   gap: var(--espace-3);
-  flex-wrap: wrap;
+  width: 100%;
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: 0.78rem;
+}
+.connexion-separateur::before,
+.connexion-separateur::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+/* "Forgotten password": its own view in the same card. */
+.connexion-retour {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  min-height: 32px;
+  margin-left: -6px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.connexion-retour:hover {
+  background: var(--survol);
+  color: var(--texte);
+}
+.connexion-succes {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 12px;
+  background: var(--accent-doux);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.connexion-succes strong {
+  font-size: 0.875rem;
+}
+.connexion-succes-texte {
+  margin: 4px 0 0;
+  color: var(--texte-secondaire);
+}
+.connexion-succes-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #102018;
 }
 .connexion-verification h4 {
   margin: 0 0 var(--espace-2);
