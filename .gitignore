@@ -25,3 +25,5 @@ functions/.secret.local
 id_ed25519*
 *.key
 serveur/**/*.env
+
+__pycache__/

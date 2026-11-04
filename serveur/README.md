@@ -23,6 +23,8 @@ Il y a **deux** pare-feu : la liste de sécurité Oracle **et** `ufw`. Ouvrir un
 | 22 | TCP | SSH (clé uniquement) | V5.0 | oui | oui |
 | 80 | TCP | Certificat Let's Encrypt seulement (rien n'écoute hors renouvellement) | V5.1 | oui | oui |
 | 443 | TCP | Proxy HTTPS (Squid, authentification obligatoire) | V5.1 | oui | oui |
+| 51820 | UDP | WireGuard (wg-easy) | V5.7 | **à ouvrir** | oui |
+| 51821 | TCP | Interface wg-easy : **127.0.0.1 seulement**, jamais ouvert (tunnel SSH) | V5.7 | non | non |
 
 ## Se connecter
 ```bash
@@ -41,6 +43,8 @@ ssh -i ~/.ssh/vpn-nedotab admin-vpn@<domaine>
 | `compte-ajouter.sh <nom>` | V5.1 : crée un compte, mot de passe de 32 caractères affiché **une seule fois**, empreinte bcrypt enregistrée |
 | `compte-retirer.sh <nom>` | V5.1 : retire un compte (effet immédiat, sans coupure). Depuis la V5.2, les comptes viennent de Firebase : ces deux scripts ne servent plus qu'au dépannage (l'agent écrase le fichier à chaque changement) |
 | `20-agent.sh` | V5.2 : agent de synchronisation (utilisateur `vpn-agent`, timer d'une minute). Variable `VPN_AGENT_URL` ; le jeton est demandé en saisie masquée |
+| `20-wireguard.sh` | V5.7 : Docker, wg-easy 15.5.0, isolement des clients, agent de profils. Variable `DOMAINE` ; lancer après `20-agent.sh` |
+| `30-dns.sh` | V5.5 : résolveur DNS du serveur (Quad9 / Cloudflare) |
 
 Copier les scripts : `scp -r serveur/scripts serveur/proxy admin-vpn@<domaine>:~/` (ou `ubuntu@` avant `01`).
 
@@ -71,3 +75,14 @@ documentation Oracle. Le trafic des utilisateurs (dès la V5.3) maintient normal
 ## « Je me suis bloqué dehors »
 Console Oracle → Instance → **Console connection** (console série) → se connecter, puis supprimer
 `/etc/ssh/sshd_config.d/10-durcissement.conf` et `sudo systemctl reload ssh`.
+
+## WireGuard (V5.7)
+- **wg-easy `15.5.0`** (image `ghcr.io/wg-easy/wg-easy:15.5.0`, jamais `latest`) dans `/opt/wg-easy` ; modèle : `serveur/wireguard/docker-compose.yml`. Volume Docker `wg-easy_etc_wireguard` (clés du serveur et clients : **à sauvegarder**, jamais dans le dépôt).
+- **Interface et API** : publiées sur `127.0.0.1:51821` de l'hôte seulement. Accès : `ssh -L 51821:127.0.0.1:51821 admin-vpn@<domaine>` puis `http://127.0.0.1:51821`. Identifiant `admin-wg` ; mot de passe affiché une fois par `20-wireguard.sh`, copie pour l'agent dans `/etc/vpn-agent/wg-easy` (640). Vérification : `https://<domaine>:51821` doit être fermé.
+- **Clients** : `Endpoint` = le domaine, routage complet (`0.0.0.0/0, ::/0`), DNS poussé = Quad9 (`9.9.9.9`, `149.112.112.112`), valeurs posées au premier démarrage par `INIT_*` (`init.env`, vidé ensuite).
+- **Profils automatiques** : `vpn-wg-agent.timer` (chaque minute, utilisateur `vpn-agent`). Un client `p_xxxxxxxxxx` par invité actif ; création, suppression (la connexion est coupée) et dépôt de la configuration chiffrée dans Firebase (`vpnAgentProfils`, `vpnAgentDeposerProfil`, même jeton que la synchro des comptes). Les clients dont le nom n'est pas de cette forme ne sont jamais touchés. **Aucune création manuelle** de profil d'invité.
+- **Isolement** : `vpn-wg-isoler` (sudoers, sans argument) pose dans le conteneur, en tête de `FORWARD`, des `DROP` pour `wg0 → wg0` (client → client) et vers `10/8`, `172.16/12`, `192.168/16`, `100.64/10`, `169.254/16`, `fc00::/7`, `fe80::/10` (réseau interne d'Oracle, serveur et son réseau Docker). Relancé après chaque synchro.
+- **API de wg-easy** : le projet la dit « not yet stable » et non documentée. Les routes utilisées ont été lues dans le code du tag v15.5.0 : `GET /api/client` (liste `id`, `name`), `POST /api/client` (`{name, expiresAt}` → `{success, clientId}`), `DELETE /api/client/{id}`, `GET /api/client/{id}/configuration` (texte `.conf`), authentification HTTP Basic (impossible si le 2FA est activé sur ce compte : **ne pas l'activer**). À relire à chaque changement de version.
+- **Docker et pare-feu** : Docker écrit ses propres règles `iptables` (publication de 51820/udp) et peut contourner `ufw`. Après démarrage, vérifier : `sudo iptables -S`, `sudo iptables -t nat -S`, `sudo docker exec wg-easy iptables -S FORWARD`.
+- **Mise à jour de wg-easy** : lire les notes de version ; sauvegarder le volume (`docker run --rm -v wg-easy_etc_wireguard:/d -v $PWD:/b busybox tar czf /b/wg-easy-sauvegarde.tgz -C /d .`) ; changer le tag dans `/opt/wg-easy/docker-compose.yml` ET dans le dépôt ; `docker compose pull && docker compose up -d` ; vérifier que l'agent journalise « wg : N profils » (`journalctl -u vpn-wg-agent -n 5`), que `vpn-wg-isoler` répond « OK » et que les routes ci-dessus répondent encore.
+- Journal : `journalctl -u vpn-wg-agent -n 20` ne contient que des nombres : jamais un nom de profil, une clé ou une destination.

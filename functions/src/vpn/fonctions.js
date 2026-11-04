@@ -30,6 +30,7 @@ const CHEMIN = {
   invitation: (h) => `vpn/config/invitations/${h}`,
   invitations: "vpn/config/invitations",
   acces: (uid) => `vpn/config/acces/${uid}`,
+  profil: (uid) => `vpn/config/profils/${uid}`,
   listeAcces: "vpn/config/acces",
 };
 
@@ -157,6 +158,7 @@ export function creerFonctionsVpn({
         await db.doc(CHEMIN.invitation(h)).set({ statut: "revoquee" }, { merge: true });
       if (uid && (await lire(CHEMIN.acces(uid)))) {
         await db.doc(CHEMIN.acces(uid)).set({ actif: false, revoqueLe: maintenant() }, { merge: true });
+        await db.doc(CHEMIN.profil(uid)).delete(); // V5.7: the WireGuard profile goes too
         await monterVersion();
       }
       return { ok: true };
@@ -228,6 +230,7 @@ export function creerFonctionsVpn({
       const acces = await lire(CHEMIN.acces(uid));
       if (!acces) return;
       await db.doc(CHEMIN.acces(uid)).delete();
+      await db.doc(CHEMIN.profil(uid)).delete(); // V5.7
       if (acces.emailHash)
         await db.doc(CHEMIN.invitation(acces.emailHash)).set({ statut: "revoquee" }, { merge: true });
       await monterVersion();

@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.7.0] - 2026-11-05
+
+### Ajouté
+
+- **WireGuard sur le serveur (V5.7)** : wg-easy 15.5.0 (Docker, image épinglée), interface d'administration et API sur `127.0.0.1` seulement (tunnel SSH), UDP 51820, DNS Quad9, routage complet, `Endpoint` = le domaine.
+- **Un profil par invité, automatique** : l'agent `vpn-wg-agent` crée le profil à l'invitation, le supprime (connexion coupée) au retrait, et dépose la configuration **chiffrée** dans Firebase (`vpn/config/profils/{uid}`), prête pour la récupération par l'invité (V5.8). Nom de profil neutre, jamais l'e-mail.
+- **Isolement** : un invité ne peut joindre ni les autres invités, ni le réseau interne d'Oracle, ni le serveur.
+- Fonctions `vpnAgentProfils` et `vpnAgentDeposerProfil` (même jeton que la synchro des comptes) ; `vpnAgentSynchro` est inchangée.
+
+### À faire avant utilisation
+
+Déploiement des fonctions, ouverture d'UDP 51820 chez Oracle et lancement de `20-wireguard.sh` : avec votre accord. Les vérifications manuelles du plan (profil, iPhone, isolement, interface fermée) ne sont pas faites.
+
 ## [5.6.0] - 2026-11-05
 
 ### Ajouté

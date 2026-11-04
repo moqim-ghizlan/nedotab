@@ -27,6 +27,7 @@ import { nettoyerEspacePartage } from "./src/espacePartage/nettoyer.js";
 import { ErreurLien, creerLiens } from "./src/espacePartage/liens/liens.js";
 import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
+import { creerProfilsVpn, ErreurProfil } from "./src/vpn/agentProfils.js";
 import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
 
 initializeApp();
@@ -387,3 +388,49 @@ export const vpnAgentSynchro = onRequest(
     }
   },
 );
+
+// --- V5.7: WireGuard profiles. Same token as the sync agent; the server sees profile names only.
+const profilsVpn = creerProfilsVpn({
+  db: getFirestore(),
+  cle: () => VPN_CLE_CHIFFREMENT.value(),
+  jetonAgent: () => VPN_JETON_AGENT.value(),
+  journal: (infos) => logger.info("vpn : profils", infos), // counts only, never a key
+});
+const OPTIONS_AGENT = {
+  region: "europe-west1",
+  secrets: [VPN_CLE_CHIFFREMENT, VPN_JETON_AGENT],
+  maxInstances: 2,
+  timeoutSeconds: 30,
+  memory: "256MiB",
+  cors: false,
+};
+const STATUTS_PROFIL = { "invalid-argument": 400, "not-found": 404 };
+
+/** Wrapper of the two agent endpoints: bearer token, JSON, nothing else accepted. */
+const pointAgent = (methode, traiter) =>
+  onRequest(OPTIONS_AGENT, async (req, res) => {
+    res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Type": "application/json" });
+    const jeton = /^Bearer (.+)$/.exec(req.get("authorization") ?? "")?.[1];
+    if (req.method !== methode) {
+      res.status(404).send(JSON.stringify({ erreur: "indisponible" }));
+      return;
+    }
+    try {
+      const reponse = await traiter(jeton, req.body ?? {});
+      if (!reponse) {
+        res.status(401).send(JSON.stringify({ erreur: "non autorisé" }));
+        return;
+      }
+      res.status(200).send(JSON.stringify(reponse));
+    } catch (e) {
+      if (e instanceof ErreurProfil) {
+        res.status(STATUTS_PROFIL[e.code] ?? 400).send(JSON.stringify({ erreur: e.code }));
+        return;
+      }
+      logger.error("vpn : profils en erreur", { nom: e?.name });
+      res.status(500).send(JSON.stringify({ erreur: "interne" }));
+    }
+  });
+
+export const vpnAgentProfils = pointAgent("GET", (jeton) => profilsVpn.lister(jeton));
+export const vpnAgentDeposerProfil = pointAgent("POST", (jeton, corps) => profilsVpn.deposer(jeton, corps));

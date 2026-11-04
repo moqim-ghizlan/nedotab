@@ -1,0 +1,51 @@
+# V5.7 — wg-easy (WireGuard + interface d'administration). Modèle versionné, SANS secret.
+# Installé dans /opt/wg-easy par 20-wireguard.sh. Image épinglée : jamais « latest ».
+# Mise à jour : voir serveur/README.md (changer le tag, sauvegarder le volume, relancer, vérifier).
+#
+# - L'interface d'administration et l'API ne sont publiées QUE sur 127.0.0.1 de l'hôte :
+#   accès par tunnel SSH (ssh -L 51821:127.0.0.1:51821 admin-vpn@<domaine>).
+# - INSECURE=true : l'interface est servie en HTTP, sans TLS, uniquement sur la boucle locale.
+# - init.env (droits 600, hors dépôt) ne sert qu'au PREMIER démarrage (INIT_*) ; le script le vide ensuite.
+
+volumes:
+  etc_wireguard:
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:15.5.0
+    container_name: wg-easy
+    env_file:
+      - ./init.env
+    environment:
+      - INSECURE=true
+      - DISABLE_VERSION_CHECK=true
+    networks:
+      wg:
+        ipv4_address: 10.42.42.42
+        ipv6_address: fdcc:ad94:bacf:61a3::2a
+    volumes:
+      - etc_wireguard:/etc/wireguard
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+      - "127.0.0.1:51821:51821/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
+
+networks:
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.42.0/24
+        - subnet: fdcc:ad94:bacf:61a3::/64

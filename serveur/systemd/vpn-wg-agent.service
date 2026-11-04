@@ -1,0 +1,20 @@
+[Unit]
+Description=Profils WireGuard du VPN (V5.7)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vpn-agent
+Group=vpn-agent
+ExecStart=/usr/local/sbin/vpn-wg-agent
+# Isolement des clients : une seule commande root autorisée par sudoers (sans argument).
+ExecStartPost=-/usr/bin/sudo /usr/local/sbin/vpn-wg-isoler
+PrivateTmp=yes
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+# NoNewPrivileges est absent exprès : sudo vers l'assistant d'isolement.
