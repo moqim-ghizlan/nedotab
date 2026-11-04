@@ -20,6 +20,8 @@ export const MESSAGES = {
     "Sans l'accès aux sites, NedoTab ne peut pas fournir automatiquement le mot de passe au serveur : le VPN reste désactivé.",
   incognito:
     "Pour la navigation privée, autorisez d'abord NedoTab dans les paramètres de l'extension (« Autoriser en navigation privée »).",
+  trafic:
+    "Attention, votre trafic ne passe pas par le VPN. Une autre extension ou un réglage a peut-être pris le contrôle.",
   pasAcces: "Aucun accès VPN sur cet ordinateur. Connectez-vous avec un compte invité.",
 };
 

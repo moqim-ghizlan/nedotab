@@ -159,6 +159,19 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
   }
 
   /**
+   * V5.4: the check found (or no longer finds) that the sites do not see the server's address.
+   * Red "!" and a message until a later check says otherwise.
+   */
+  async function signalerTrafic(probleme) {
+    const e = await lire();
+    if (!e.actif) return;
+    if (probleme && e.erreur !== "trafic") {
+      await ecrire({ erreur: "trafic", erreurLe: maintenant() });
+      await afficherBadge({ ...e, erreur: "trafic" });
+    } else if (!probleme && e.erreur === "trafic") await effacerErreur();
+  }
+
+  /**
    * webRequest.onCompleted listener: a page came back through the proxy, so the server answers
    * again. The red "!" goes away by itself (checked at most every 3 s, it is cheap).
    */
@@ -221,6 +234,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     memoriserAcces,
     oublier,
     signalerErreurServeur,
+    signalerTrafic,
     effacerErreur,
     reappliquer,
     surAuth,

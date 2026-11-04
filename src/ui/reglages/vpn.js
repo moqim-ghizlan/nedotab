@@ -357,7 +357,15 @@ export function sectionVpn({
       return;
     }
     // V5.3: the switch of the extension (nothing in the web app: no browser proxy there).
-    if (vpn) racine.append(blocVpnNavigateur({ vpn, service, options: true }).racine);
+    if (vpn)
+      racine.append(
+        blocVpnNavigateur({
+          vpn,
+          service,
+          verification: plateforme.verificationVpn?.() ?? null,
+          options: true,
+        }).racine,
+      );
     if (etat.admin) racine.append(blocInvites());
     racine.append(blocMonAcces());
   }

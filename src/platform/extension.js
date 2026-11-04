@@ -3,6 +3,7 @@ import { partagerFichier as partager } from "./partage.js";
 import { lireExtrait as lireExtraitPage } from "./extrait.js";
 import { lireJson, lirePage } from "./reseau.js";
 import { creerVpn } from "./extension/vpn.js";
+import { creerVerificationVpn } from "./extension/verificationVpn.js";
 import { creerServicesStockage } from "./servicesStockage.js";
 import {
   creerNonce,
@@ -17,6 +18,10 @@ export { lireJson, lirePage };
 /** V5.3: the browser VPN (chrome.proxy), created on first use. */
 let vpnCourant;
 export const vpnNavigateur = () => (vpnCourant ??= creerVpn());
+/** V5.4: the connection check (address and country seen by the sites). */
+let verifCourante;
+export const verificationVpn = () =>
+  (verifCourante ??= creerVerificationVpn({ vpn: vpnNavigateur() }));
 
 /** What this platform can do: the interface adapts to it (see docs/plateformes.md). */
 export const capacites = {
@@ -91,7 +96,11 @@ const CLE_BARRE_CHROME = "nedotab:barre-chrome";
  */
 export function prendreLeCurseur() {
   const url = new URL(location.href);
-  if (url.searchParams.has("focus") || url.searchParams.has("panneau") || !globalThis.chrome?.tabs?.getCurrent)
+  if (
+    url.searchParams.has("focus") ||
+    url.searchParams.has("panneau") ||
+    !globalThis.chrome?.tabs?.getCurrent
+  )
     return Promise.resolve(false);
   try {
     if (localStorage.getItem(CLE_BARRE_CHROME) === "1") return Promise.resolve(false);

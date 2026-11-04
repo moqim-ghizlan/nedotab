@@ -65,3 +65,64 @@
   padding: var(--espace-3) var(--espace-4);
   border-top: 1px solid #8884;
 }
+
+/* V5.4 — connection check: what the sites really see. */
+.vpn-verif {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  padding: var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-left-width: 4px;
+  border-radius: 8px;
+  --verif: var(--texte-secondaire);
+  border-left-color: var(--verif);
+}
+.vpn-verif[hidden] {
+  display: none;
+}
+.vpn-verif--ok {
+  --verif: #2e7d32;
+}
+.vpn-verif--attente {
+  --verif: #c77700;
+}
+.vpn-verif--echec {
+  --verif: var(--danger);
+}
+.vpn-verif-tete {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+}
+.vpn-verif-pastille {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--verif);
+}
+.vpn-verif-message {
+  margin: 0;
+  font-size: var(--taille-s);
+}
+.vpn-verif-donnees {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--taille-s);
+}
+.vpn-verif-etapes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--taille-s);
+}
+.vpn-verif-etape--ok > span:first-child {
+  color: #2e7d32;
+}
+.vpn-verif-etape--echec > span:first-child {
+  color: var(--danger);
+}
+.vpn-verif-historique {
+  font-size: var(--taille-s);
+}

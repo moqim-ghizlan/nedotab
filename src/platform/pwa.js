@@ -40,6 +40,7 @@ export const capacites = {
 
 /** V5.3: no browser VPN in the web app. */
 export const vpnNavigateur = () => null;
+export const verificationVpn = () => null;
 
 /** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */
 export const estInstallee = () =>

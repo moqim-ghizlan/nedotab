@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.4.0] - 2026-11-05
+
+### Ajouté
+
+- **Indicateur de connexion VPN (V5.4)** : la fenêtre de la barre d'outils et Réglages → VPN affichent ce que les sites voient vraiment : pays (nom + drapeau), adresse IP, votre adresse habituelle (masquée par défaut, gardée **sur cet ordinateur** seulement), latence moyenne de 3 requêtes et date de la dernière vérification. Pastille verte (vérifié), orange (non confirmé / ancien), rouge (échec).
+- Bouton **Tester** : étapes ✓ / ✗ (serveur, connexion chiffrée, identifiants, site public, adresse vue) avec une explication et une action (Réessayer, Rafraîchir mes identifiants, Désactiver). Test automatique à l'activation ; vérification légère toutes les 15 minutes et au changement de réseau, **seulement** tant qu'une page de l'extension est ouverte (aucun minuteur dans le service worker).
+- **Alerte « votre trafic ne passe pas par le VPN »** (badge rouge « ! ») quand les sites voient votre adresse habituelle alors que le VPN est actif.
+- Réglages → VPN : historique des 10 derniers tests (local seulement).
+- Services d'écho publics sans clé ni traceur : Cloudflare (`/cdn-cgi/trace`), repli `api.country.is`.
+
 ## [5.3.0] - 2026-11-04
 
 ### Ajouté

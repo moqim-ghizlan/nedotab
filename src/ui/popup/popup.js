@@ -131,8 +131,11 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
           ? el(
               "div",
               { class: "popup-vpn" },
-              blocVpnNavigateur({ vpn: plateforme.vpnNavigateur(), service: creerServiceVpn() })
-                .racine,
+              blocVpnNavigateur({
+                vpn: plateforme.vpnNavigateur(),
+                service: creerServiceVpn(),
+                verification: plateforme.verificationVpn(),
+              }).racine,
             )
           : null,
         el(

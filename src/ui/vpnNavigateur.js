@@ -1,5 +1,6 @@
 import { LIBELLE_RESERVE } from "../core/vpn.js";
 import { MESSAGES } from "../core/vpnProxy.js";
+import { blocConnexionVpn } from "./connexionVpn.js";
 import { el } from "./dom.js";
 
 /**
@@ -9,9 +10,16 @@ import { el } from "./dom.js";
  *
  * @param {{ vpn: ReturnType<import("../platform/extension/vpn.js").creerVpn>,
  *   service: ReturnType<import("./services/vpn.js").creerServiceVpn>,
+ *   verification?: ReturnType<import("../platform/extension/verificationVpn.js").creerVerificationVpn>|null,
  *   options?: boolean, apres?: () => void }} p
  */
-export function blocVpnNavigateur({ vpn, service, options = false, apres = () => {} }) {
+export function blocVpnNavigateur({
+  vpn,
+  service,
+  verification = null,
+  options = false,
+  apres = () => {},
+}) {
   const racine = el("div", { class: "vpn-nav" });
   let occupe = false;
   let message = null;
@@ -27,6 +35,10 @@ export function blocVpnNavigateur({ vpn, service, options = false, apres = () =>
   const alerte = el("p", { class: "vpn-nav-alerte", role: "alert" });
   const actionsErreur = el("div", { class: "vpn-actions" });
   const zoneOptions = el("div", { class: "vpn-nav-options" });
+  // V5.4: what the sites really see (only where a check exists).
+  const connexion = verification
+    ? blocConnexionVpn({ verification, vpn, historique: options, apres: () => rafraichir() })
+    : null;
   racine.append(
     el(
       "label",
@@ -38,6 +50,7 @@ export function blocVpnNavigateur({ vpn, service, options = false, apres = () =>
     detail,
     alerte,
     actionsErreur,
+    connexion?.racine,
     zoneOptions,
   );
 
@@ -72,6 +85,22 @@ export function blocVpnNavigateur({ vpn, service, options = false, apres = () =>
             await vpn.effacerErreur();
             await rafraichir();
           },
+        }),
+        el("button", {
+          type: "button",
+          class: "bouton",
+          texte: "Désactiver le VPN",
+          onclick: () => arreter(),
+        }),
+      );
+    }
+    if (e.erreur === "trafic") {
+      actionsErreur.append(
+        el("button", {
+          type: "button",
+          class: "bouton",
+          texte: "Tester à nouveau",
+          onclick: () => connexion?.lancer(true),
         }),
         el("button", {
           type: "button",
@@ -202,6 +231,8 @@ export function blocVpnNavigateur({ vpn, service, options = false, apres = () =>
     occupe = false;
     await rafraichir();
     apres();
+    // V5.4: automatic test on activation.
+    if (!message) connexion?.lancer(true);
   });
 
   rafraichir();
