@@ -334,11 +334,20 @@ export async function demarrerApp(racine) {
         return false;
       }
       // Deleted on the server: forget everything tied to the account on this device.
-      await synchro.quitter({ garderCopie: garder.checked, envoyer: false });
-      await compte.oublier();
-      await plateforme.copies.effacerTout().catch(() => {});
-      await (await chargerFirebase()).effacerCache?.().catch(() => {});
-      await stockage.sauvegarder(store.lire());
+      // Each step is independent: the account no longer exists, so a failing step (the session
+      // is already gone on the server) must never keep the page from reloading.
+      const essayer = async (etape) => {
+        try {
+          await etape();
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      await essayer(() => synchro.quitter({ garderCopie: garder.checked, envoyer: false }));
+      await essayer(() => compte.oublier());
+      await essayer(() => plateforme.copies.effacerTout());
+      await essayer(async () => (await chargerFirebase()).effacerCache?.());
+      await essayer(() => stockage.sauvegarder(store.lire()));
       try {
         localStorage.setItem(
           "nedotab:annonce",
