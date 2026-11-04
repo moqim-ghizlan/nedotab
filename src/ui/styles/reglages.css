@@ -3099,6 +3099,8 @@ body.fond-clair .carte-action--principale {
    message and the link come after it, so the bar keeps its own space. */
 .connexion-verification .compte-actions {
   margin-bottom: 0;
+  gap: var(--espace-2);
+  padding: var(--espace-2) 18px;
 }
 .connexion-verification .connexion-statut:not(:empty) {
   margin-top: 12px;
