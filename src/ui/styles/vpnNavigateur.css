@@ -126,3 +126,33 @@
 .vpn-verif-historique {
   font-size: var(--taille-s);
 }
+
+/* V5.5 — honesty text and leak test page. */
+.vpn-honnete {
+  font-size: var(--taille-s);
+}
+.vpn-honnete-liste,
+.fuites-liste {
+  margin: var(--espace-2) 0;
+  padding-left: 0;
+  list-style: none;
+}
+.fuites-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  max-width: 640px;
+}
+#test-fuites {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--espace-4);
+}
+.fuites-ligne {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fuites-ligne--echec > strong {
+  color: var(--danger);
+}

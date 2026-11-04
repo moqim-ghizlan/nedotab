@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.5.0] - 2026-11-05
+
+### Ajouté
+
+- **Protection contre les fuites (V5.5)** : quand le VPN est actif, WebRTC n'utilise plus de connexion directe (`disable_non_proxied_udp`) et la prédiction réseau de Chrome est coupée ; les deux réglages sont **rendus** à la désactivation, à l'oubli des identifiants et à la déconnexion. Si une autre extension contrôle WebRTC, rien n'est forcé et un avertissement s'affiche.
+- Exclusions du VPN limitées au réseau local : noms sans point, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `127.0.0.1`, `[::1]` (la box et les appareils du domicile restent accessibles).
+- Page **Tester les fuites** (Réglages → VPN) : adresse vue par les sites, candidats WebRTC, politique WebRTC et contrôle du proxy lus dans Chrome, lien vers un test DNS public.
+- Texte « Ce que le VPN fait et ne fait pas » (non anonyme, Chrome seulement, visioconférences possiblement dégradées).
+- Serveur : script `serveur/scripts/30-dns.sh` (résolveur Quad9 / Cloudflare via systemd-resolved), **à lancer avec votre accord**.
+- Nouvelle permission `privacy` (avertissement de Chrome à la mise à jour).
+
+### À vérifier à la main
+
+Les tests réels (WebRTC, DNS, QUIC, box, visioconférence) ne sont pas encore faits : voir `docs/tests/fuites-vpn.md`.
+
 ## [5.4.0] - 2026-11-05
 
 ### Ajouté

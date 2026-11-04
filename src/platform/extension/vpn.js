@@ -11,7 +11,9 @@ import {
   estDemandeDuProxy,
   estReellementActif,
   MESSAGES,
+  POLITIQUE_WEBRTC,
   raisonNonControlable,
+  reglageControlable,
   suivreDemande,
 } from "../../core/vpnProxy.js";
 import { lireAcces } from "../../core/vpn.js";
@@ -56,6 +58,43 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     return estReellementActif(r, acces);
   }
 
+  /**
+   * V5.5: WebRTC without UDP outside the proxy, and no network prediction (it could resolve
+   * names locally). Only what this extension may set is touched, and it is given back by
+   * `rendreProtections`. Returns what is really protected.
+   */
+  async function poserProtections() {
+    const res = { webrtc: false, prediction: false };
+    const r = chromeApi.privacy?.network;
+    if (!r) return res;
+    try {
+      const w = await r.webRTCIPHandlingPolicy.get({});
+      if (reglageControlable(w.levelOfControl)) {
+        await r.webRTCIPHandlingPolicy.set({ value: POLITIQUE_WEBRTC });
+        res.webrtc = true;
+      }
+      const n = await r.networkPredictionEnabled.get({});
+      if (reglageControlable(n.levelOfControl)) {
+        await r.networkPredictionEnabled.set({ value: false });
+        res.prediction = true;
+      }
+    } catch {
+      /* unavailable: shown as "not protected" */
+    }
+    await ecrire({ protections: res });
+    return res;
+  }
+
+  async function rendreProtections() {
+    const r = chromeApi.privacy?.network;
+    try {
+      await r?.webRTCIPHandlingPolicy.clear({});
+      await r?.networkPredictionEnabled.clear({});
+    } catch {
+      /* nothing to give back */
+    }
+  }
+
   /** Everything the interface shows, in one read. */
   async function etat() {
     let e = await lire();
@@ -73,6 +112,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
       aAcces: !!e.acces,
       domaine: e.acces?.domaine ?? null,
       pays: e.acces?.pays ?? null,
+      protections: (await stock().get(CLE_VPN))[CLE_VPN]?.protections ?? null,
     };
   }
 
@@ -111,6 +151,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     if (avecIncognito) await chromeApi.proxy.settings.set({ value, scope: "incognito_persistent" });
     else await chromeApi.proxy.settings.clear({ scope: "incognito_persistent" }).catch(() => {});
     repondus.clear();
+    await poserProtections();
     await ecrire({ actif: true, incognito: avecIncognito, erreur: null });
     await afficherBadge({ actif: true, erreur: null });
     return { ok: true };
@@ -120,7 +161,8 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     await chromeApi.proxy.settings.clear({ scope: "regular" });
     await chromeApi.proxy.settings.clear({ scope: "incognito_persistent" }).catch(() => {});
     repondus.clear();
-    await ecrire({ actif: false, erreur });
+    await rendreProtections();
+    await ecrire({ actif: false, erreur, protections: null });
     await afficherBadge({ actif: false, erreur });
   }
 
@@ -137,6 +179,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     await chromeApi.proxy.settings.clear({ scope: "regular" }).catch(() => {});
     await chromeApi.proxy.settings.clear({ scope: "incognito_persistent" }).catch(() => {});
     repondus.clear();
+    await rendreProtections();
     await stock().remove(CLE_VPN);
     await badge("");
   }
@@ -187,7 +230,11 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
   /** Service worker start: the wanted state is applied again if Chrome lost it. */
   async function reappliquer() {
     const e = await lire();
-    if (!e.actif || (await reel(e.acces))) return afficherBadge(e);
+    if (!e.actif) return afficherBadge(e);
+    if (await reel(e.acces)) {
+      await poserProtections();
+      return afficherBadge(e);
+    }
     await activer({ demanderPermission: false });
   }
 

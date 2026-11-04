@@ -1,6 +1,7 @@
 import { LIBELLE_RESERVE } from "../core/vpn.js";
 import { MESSAGES } from "../core/vpnProxy.js";
 import { blocConnexionVpn } from "./connexionVpn.js";
+import { NOTE_WEBRTC, VPN_FAIT, VPN_NE_FAIT_PAS } from "../core/vpnHonnetete.js";
 import { el } from "./dom.js";
 
 /**
@@ -159,6 +160,25 @@ export function blocVpnNavigateur({
           texte: "Oublier mes identifiants sur cet ordinateur",
           onclick: () => oublier(),
         }),
+      ),
+      el("button", {
+        type: "button",
+        class: "bouton",
+        texte: "Tester les fuites",
+        onclick: () => window.open(globalThis.chrome.runtime.getURL("testFuites.html")),
+      }),
+      e.protections && !e.protections.webrtc
+        ? el("p", { class: "vpn-nav-alerte", role: "alert", texte: MESSAGES.webrtcAutre })
+        : null,
+      el(
+        "details",
+        { class: "vpn-honnete" },
+        el("summary", { texte: "Ce que le VPN fait et ne fait pas" }),
+        el("ul", { class: "vpn-honnete-liste" }, [
+          ...VPN_FAIT.map((t) => el("li", { texte: `✅ ${t}` })),
+          ...VPN_NE_FAIT_PAS.map((t) => el("li", { texte: `❌ ${t}` })),
+        ]),
+        el("p", { class: "reglages-note", texte: NOTE_WEBRTC }),
       ),
       el("p", {
         class: "reglages-note",

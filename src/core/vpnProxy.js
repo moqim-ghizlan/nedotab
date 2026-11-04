@@ -22,6 +22,8 @@ export const MESSAGES = {
     "Pour la navigation privée, autorisez d'abord NedoTab dans les paramètres de l'extension (« Autoriser en navigation privée »).",
   trafic:
     "Attention, votre trafic ne passe pas par le VPN. Une autre extension ou un réglage a peut-être pris le contrôle.",
+  webrtcAutre:
+    "Une autre extension contrôle WebRTC : une visioconférence pourrait révéler votre vraie adresse.",
   pasAcces: "Aucun accès VPN sur cet ordinateur. Connectez-vous avec un compte invité.",
 };
 
@@ -41,13 +43,33 @@ export const estPanneServeur = (details) =>
   details?.fatal !== false &&
   ERREURS_SERVEUR.some((nom) => String(details?.error ?? "").includes(nom));
 
+/**
+ * V5.5: addresses that never go through the VPN, so that the box and the devices at home keep
+ * working. Nothing else is excluded by default (site exclusions come in V5.6, on request).
+ */
+export const BYPASS_LOCAL = [
+  "<local>",
+  "10.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "127.0.0.1",
+  "[::1]",
+];
+
+/** WebRTC may not use UDP outside the proxy while the VPN is on. */
+export const POLITIQUE_WEBRTC = "disable_non_proxied_udp";
+
+/** Can this extension set a privacy setting? (levelOfControl of chrome.privacy). */
+export const reglageControlable = (niveau) =>
+  niveau === "controllable_by_this_extension" || niveau === "controlled_by_this_extension";
+
 /** chrome.proxy value: HTTPS proxy of the project, local addresses stay direct. */
 export function configProxy({ domaine, port }) {
   return {
     mode: "fixed_servers",
     rules: {
       singleProxy: { scheme: "https", host: domaine, port: port ?? 443 },
-      bypassList: ["<local>"],
+      bypassList: [...BYPASS_LOCAL],
     },
   };
 }

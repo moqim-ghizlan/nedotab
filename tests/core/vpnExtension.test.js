@@ -52,7 +52,14 @@ describe("activer / désactiver", () => {
         mode: "fixed_servers",
         rules: {
           singleProxy: { scheme: "https", host: "vpn.exemple.org", port: 443 },
-          bypassList: ["<local>"],
+          bypassList: [
+            "<local>",
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "127.0.0.1",
+            "[::1]",
+          ],
         },
       },
       scope: "regular",
@@ -191,5 +198,46 @@ describe("pannes et démarrage", () => {
     await vpn.oublier();
     expect(donnees[CLE_VPN]).toBeUndefined();
     expect((await vpn.etat()).aAcces).toBe(false);
+  });
+});
+
+function fauxPrivacy(niveau = "controllable_by_this_extension") {
+  const reglage = () => ({
+    get: vi.fn(async () => ({ levelOfControl: niveau })),
+    set: vi.fn(async () => {}),
+    clear: vi.fn(async () => {}),
+  });
+  return { network: { webRTCIPHandlingPolicy: reglage(), networkPredictionEnabled: reglage() } };
+}
+
+describe("protections contre les fuites (V5.5)", () => {
+  it("activer pose WebRTC et prédiction ; désactiver les rend", async () => {
+    const { chromeApi } = fauxChrome({ stock: avecAcces });
+    chromeApi.privacy = fauxPrivacy();
+    const vpn = creerVpn({ chromeApi });
+    await vpn.activer();
+    const n = chromeApi.privacy.network;
+    expect(n.webRTCIPHandlingPolicy.set).toHaveBeenCalledWith({ value: "disable_non_proxied_udp" });
+    expect(n.networkPredictionEnabled.set).toHaveBeenCalledWith({ value: false });
+    expect((await vpn.etat()).protections).toEqual({ webrtc: true, prediction: true });
+    await vpn.desactiver();
+    expect(n.webRTCIPHandlingPolicy.clear).toHaveBeenCalled();
+    expect(n.networkPredictionEnabled.clear).toHaveBeenCalled();
+  });
+  it("une autre extension contrôle WebRTC : rien n'est forcé, c'est signalé", async () => {
+    const { chromeApi } = fauxChrome({ stock: avecAcces });
+    chromeApi.privacy = fauxPrivacy("controlled_by_other_extensions");
+    const vpn = creerVpn({ chromeApi });
+    await vpn.activer();
+    expect(chromeApi.privacy.network.webRTCIPHandlingPolicy.set).not.toHaveBeenCalled();
+    expect((await vpn.etat()).protections.webrtc).toBe(false);
+  });
+  it("oublier rend aussi les réglages", async () => {
+    const { chromeApi } = fauxChrome({ stock: avecAcces });
+    chromeApi.privacy = fauxPrivacy();
+    const vpn = creerVpn({ chromeApi });
+    await vpn.activer();
+    await vpn.oublier();
+    expect(chromeApi.privacy.network.webRTCIPHandlingPolicy.clear).toHaveBeenCalled();
   });
 });
