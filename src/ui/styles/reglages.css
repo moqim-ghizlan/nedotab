@@ -3083,6 +3083,14 @@ body.fond-clair .carte-action--principale {
 .connexion-formulaire [hidden] {
   display: none !important;
 }
+/* On the user's own wallpaper the top of the card was almost unveiled: with a form on it,
+   the veil is even and strong enough to read the labels on any picture. */
+.carte-compte:has(.connexion-formulaire)::after {
+  background: rgb(var(--carte-scrim, 0 0 0) / 0.58);
+}
+.connexion-formulaire {
+  --connexion-texte-2: var(--carte-texte-2, var(--texte-secondaire));
+}
 .connexion-bloc {
   display: grid;
   gap: 14px;
@@ -3099,7 +3107,7 @@ body.fond-clair .carte-action--principale {
 }
 .connexion-sous-titre {
   margin: 0;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font-size: 0.8125rem;
   line-height: 1.4;
 }
@@ -3118,7 +3126,7 @@ body.fond-clair .carte-action--principale {
   border: 1px solid transparent;
   border-radius: 9px;
   background: none;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 550;
@@ -3132,9 +3140,9 @@ body.fond-clair .carte-action--principale {
   color: var(--texte);
 }
 .connexion-onglet[aria-selected="true"] {
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-  background: var(--accent-doux);
-  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: var(--carte-texte, var(--texte));
 }
 .connexion-onglet:focus-visible {
   outline: 2px solid var(--accent);
@@ -3146,7 +3154,7 @@ body.fond-clair .carte-action--principale {
   gap: 6px;
 }
 .connexion-formulaire .champ label {
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -3158,7 +3166,7 @@ body.fond-clair .carte-action--principale {
   border: 1px solid var(--trait-fort);
   border-radius: 12px;
   background: color-mix(in srgb, #000 22%, transparent);
-  color: var(--texte);
+  color: var(--carte-texte, var(--texte));
   font: inherit;
   font-size: 0.9375rem;
   transition:
@@ -3192,7 +3200,7 @@ body.fond-clair .carte-action--principale {
   border: 0;
   border-radius: 0 12px 12px 0;
   background: none;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   cursor: pointer;
 }
 .connexion-oeil:hover,
@@ -3212,6 +3220,9 @@ body.fond-clair .carte-action--principale {
   margin: 0;
   font-size: 13px;
 }
+.connexion-formulaire .lien-discret {
+  color: var(--connexion-texte-2);
+}
 .connexion-oubli {
   justify-self: end;
   margin: -6px 0 0;
@@ -3225,7 +3236,7 @@ body.fond-clair .carte-action--principale {
   margin: 0;
   padding: 0;
   list-style: none;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font-size: 0.8125rem;
 }
 .connexion-regles li {
@@ -3278,7 +3289,7 @@ body.fond-clair .carte-action--principale {
   gap: var(--espace-3);
   width: 100%;
   margin: 0;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font-size: 0.78rem;
 }
 .connexion-separateur::before,
@@ -3302,7 +3313,7 @@ body.fond-clair .carte-action--principale {
   border: 0;
   border-radius: 999px;
   background: none;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -3327,7 +3338,7 @@ body.fond-clair .carte-action--principale {
 }
 .connexion-succes-texte {
   margin: 4px 0 0;
-  color: var(--texte-secondaire);
+  color: var(--connexion-texte-2);
 }
 .connexion-succes-icone {
   display: grid;
