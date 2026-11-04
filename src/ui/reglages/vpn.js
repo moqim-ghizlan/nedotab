@@ -10,7 +10,9 @@ import {
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { creerServiceVpn } from "../services/vpn.js";
+import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";
+import { blocVpnNavigateur } from "../vpnNavigateur.js";
 
 /**
  * Settings → VPN (V5.2). The VPN is private: a guest sees "Accès accordé" and his own proxy
@@ -23,7 +25,10 @@ import { toast } from "../toast.js";
  *
  * Loaded when the section becomes visible, not every time the settings open.
  */
-export function sectionVpn({ service = creerServiceVpn() } = {}) {
+export function sectionVpn({
+  service = creerServiceVpn(),
+  vpn = plateforme.capacites.vpnNavigateur ? plateforme.vpnNavigateur() : null,
+} = {}) {
   const etat = {
     charge: false,
     chargement: false,
@@ -158,7 +163,11 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     const r = await service.regenerer();
     etat.occupe = false;
     if (!r.ok || !r.valeur) {
-      toast(r.erreur ?? "Le VPN est indisponible pour l'instant.", { type: "erreur", duree: 6000, cle: "vpn" });
+      toast(r.erreur ?? "Le VPN est indisponible pour l'instant.", {
+        type: "erreur",
+        duree: 6000,
+        cle: "vpn",
+      });
       dessiner();
       return;
     }
@@ -208,7 +217,12 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
     if (etat.erreurAcces) {
       bloc.append(
         note(etat.erreurAcces),
-        el("button", { type: "button", class: "bouton", texte: "Réessayer", onclick: () => relancer() }),
+        el("button", {
+          type: "button",
+          class: "bouton",
+          texte: "Réessayer",
+          onclick: () => relancer(),
+        }),
       );
       return bloc;
     }
@@ -261,7 +275,12 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
             dessiner();
           },
         }),
-        el("button", { type: "button", class: "bouton", texte: "Nouveau mot de passe", onclick: regenerer }),
+        el("button", {
+          type: "button",
+          class: "bouton",
+          texte: "Nouveau mot de passe",
+          onclick: regenerer,
+        }),
       ),
     );
     return bloc;
@@ -332,9 +351,13 @@ export function sectionVpn({ service = creerServiceVpn() } = {}) {
   function dessiner() {
     racine.replaceChildren();
     if (!etat.charge) {
-      racine.append(note(etat.chargement ? "Chargement…" : "Ouvrez cet onglet pour vérifier votre accès."));
+      racine.append(
+        note(etat.chargement ? "Chargement…" : "Ouvrez cet onglet pour vérifier votre accès."),
+      );
       return;
     }
+    // V5.3: the switch of the extension (nothing in the web app: no browser proxy there).
+    if (vpn) racine.append(blocVpnNavigateur({ vpn, service, options: true }).racine);
     if (etat.admin) racine.append(blocInvites());
     racine.append(blocMonAcces());
   }

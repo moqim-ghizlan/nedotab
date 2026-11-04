@@ -99,7 +99,18 @@ export default defineConfig(({ mode }) => {
     build: {
       ...build,
       outDir: "dist/extension",
-      rollupOptions: { input: { newtab: "newtab.html", popup: "popup.html" } },
+      // V5.3: the background worker (sw-extension) keeps a fixed name: the manifest points to it.
+      rollupOptions: {
+        input: {
+          newtab: "newtab.html",
+          popup: "popup.html",
+          "sw-extension": "src/platform/extension/sw.js",
+        },
+        output: {
+          entryFileNames: (c) =>
+            c.name === "sw-extension" ? "sw-extension.js" : "assets/[name]-[hash].js",
+        },
+      },
     },
     plugins: [manifestExtension(env)],
   };

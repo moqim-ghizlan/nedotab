@@ -21,7 +21,7 @@ export default [
     },
   },
   {
-    files: ["src/platform/extension.js"],
+    files: ["src/platform/extension.js", "src/platform/extension/**"],
     languageOptions: { globals: { chrome: "readonly" } },
     rules: { "no-restricted-globals": "off" },
   },

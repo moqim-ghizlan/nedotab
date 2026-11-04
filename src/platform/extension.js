@@ -2,6 +2,7 @@
 import { partagerFichier as partager } from "./partage.js";
 import { lireExtrait as lireExtraitPage } from "./extrait.js";
 import { lireJson, lirePage } from "./reseau.js";
+import { creerVpn } from "./extension/vpn.js";
 import { creerServicesStockage } from "./servicesStockage.js";
 import {
   creerNonce,
@@ -12,6 +13,10 @@ import {
 } from "./fluxGoogle.js";
 
 export { lireJson, lirePage };
+
+/** V5.3: the browser VPN (chrome.proxy), created on first use. */
+let vpnCourant;
+export const vpnNavigateur = () => (vpnCourant ??= creerVpn());
 
 /** What this platform can do: the interface adapts to it (see docs/plateformes.md). */
 export const capacites = {
@@ -27,6 +32,8 @@ export const capacites = {
   /** Google sign-in: a token from Chrome ("jeton") or a redirect to Google (V3.2). */
   connexion: "jeton",
   choixNavigateur: false,
+  /** Proxy of the browser (chrome.proxy): the VPN switch of the extension (V5.3). */
+  vpnNavigateur: true,
 };
 
 /** An extension is not added to a home screen. */

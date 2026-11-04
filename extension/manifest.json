@@ -6,7 +6,8 @@
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage", "favicon", "search", "identity", "activeTab", "sidePanel"],
+  "permissions": ["storage", "favicon", "search", "identity", "activeTab", "sidePanel", "proxy", "webRequest", "webRequestAuthProvider"],
+  "background": { "service_worker": "sw-extension.js", "type": "module" },
   "optional_host_permissions": ["https://*/*", "http://*/*"],
   "icons": {
     "16": "icons/16.png",

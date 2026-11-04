@@ -175,6 +175,7 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
     async deconnecter() {
       const fb = await charger();
       await fb.deconnecter(jetons);
+      await plat.vpnNavigateur?.()?.oublier().catch(() => {});
       await ecrireIndicateur(null);
       changer({ statut: "deconnecte", profil: null, erreur: null });
     },
@@ -266,6 +267,7 @@ export function creerCompte({ charger = chargerFirebase, plat = plateforme } = {
     async oublier() {
       const fb = await charger();
       await fb.deconnecter(jetons).catch(() => {});
+      await plat.vpnNavigateur?.()?.oublier().catch(() => {});
       await ecrireIndicateur(null);
       changer({ statut: "deconnecte", profil: null, erreur: null });
     },

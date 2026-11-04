@@ -9,6 +9,8 @@ import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirChat } from "./chatLateral.js";
 import { ecranAjout } from "./ecranAjout.js";
+import { creerServiceVpn } from "../services/vpn.js";
+import { blocVpnNavigateur } from "../vpnNavigateur.js";
 
 /**
  * Toolbar window (V4.29): two choices. The active tab is read ONCE, when the window opens
@@ -125,6 +127,14 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
           ajouter,
           boutonChat ? chat : null,
         ),
+        plateforme.capacites.vpnNavigateur
+          ? el(
+              "div",
+              { class: "popup-vpn" },
+              blocVpnNavigateur({ vpn: plateforme.vpnNavigateur(), service: creerServiceVpn() })
+                .racine,
+            )
+          : null,
         el(
           "p",
           { class: "popup-pied" },

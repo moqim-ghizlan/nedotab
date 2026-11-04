@@ -5,6 +5,7 @@ import "./ui/styles/menus.css";
 import "./ui/styles/selecteurDossier.css";
 import "./ui/styles/ajout.css";
 import "./ui/styles/popup.css";
+import "./ui/styles/vpnNavigateur.css";
 import { appliquerCacheDemarrage } from "./ui/apparence.js";
 import { demarrerPopup } from "./ui/popup/popup.js";
 

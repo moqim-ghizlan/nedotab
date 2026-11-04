@@ -19,7 +19,8 @@ acl methode_connect method CONNECT
 acl interne dst 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16
 acl interne dst ::1 fc00::/7 fe80::/10
 acl serveur dst @IP_PUBLIQUE@
-acl limite_connexions maxconn 60
+# Per client address. 60 refused (403) bursts of parallel tunnels from a single browser (V5.3).
+acl limite_connexions maxconn 400
 
 http_access deny !ports_ok
 http_access deny methode_connect !ports_tls

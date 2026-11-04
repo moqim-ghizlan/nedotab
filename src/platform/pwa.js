@@ -34,7 +34,12 @@ export const capacites = {
   connexion: "redirection",
   /** Choose the browser that opens the sites: iOS always opens them in Safari otherwise. */
   choixNavigateur: navigateurIos(globalThis.navigator).ios,
+  /** No browser proxy on the web: WireGuard later (V5.7). */
+  vpnNavigateur: false,
 };
+
+/** V5.3: no browser VPN in the web app. */
+export const vpnNavigateur = () => null;
 
 /** Opened from the home screen icon (full screen), not in a browser tab (V3.1). */
 export const estInstallee = () =>

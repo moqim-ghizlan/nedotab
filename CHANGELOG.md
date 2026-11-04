@@ -2,6 +2,18 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.3.0] - 2026-11-04
+
+### Ajouté
+
+- **VPN dans l'extension (V5.3)** : un interrupteur Activer / Désactiver dans la fenêtre de la barre d'outils et dans Réglages → VPN fait passer tout Chrome par le serveur. Le mot de passe du proxy est fourni automatiquement, sans fenêtre de connexion, et seulement au serveur du projet.
+- Service worker d'extension : l'authentification et la reprise de l'état fonctionnent même sans page NedoTab ouverte, y compris après un redémarrage de Chrome.
+- Badge de l'icône : « ON » (actif), « ! » (serveur injoignable). En cas de panne, Chrome n'ouvre **aucune** page en direct et le VPN n'est jamais désactivé automatiquement ; identifiants refusés plusieurs fois : le VPN s'arrête avec un message.
+- Options : « Aussi en navigation privée », « Rafraîchir mes identifiants », « Oublier mes identifiants sur cet ordinateur ». La déconnexion et la suppression du compte arrêtent le VPN et effacent les identifiants locaux.
+- Si une autre extension ou une politique contrôle déjà le proxy, le VPN ne s'active pas et l'explique.
+- **Nouvelles permissions** (avertissement de Chrome à la mise à jour) : `proxy`, `webRequest`, `webRequestAuthProvider`, plus l'accès aux sites demandé à la première activation. Expliquées dans la page Installation du site.
+- Aucun VPN dans l'application web (capacité `vpnNavigateur: false`).
+
 ## [5.2.1] - 2026-11-04
 
 ### Corrigé

@@ -14,6 +14,8 @@ export const FONCTIONS_VPN = [
 /** Calls a VPN function of the server and returns its answer (errors keep their callable code). */
 export async function appelerVpn(nom, donnees = {}) {
   if (!FONCTIONS_VPN.includes(nom)) throw new Error(`Fonction VPN inconnue : ${nom}`);
+  // The toolbar window starts cold: wait until the saved sign-in is restored (else "unauthenticated").
+  await obtenirAuth().authStateReady?.();
   const r = await httpsCallable(obtenirFonctions(), nom)(donnees);
   return r.data;
 }
