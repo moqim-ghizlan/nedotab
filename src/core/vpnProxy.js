@@ -84,6 +84,9 @@ export function raisonNonControlable(niveau) {
 /** Is the proxy really set by us, for this access? The interface shows the real state. */
 export function estReellementActif(reglage, acces) {
   if (!acces || reglage?.levelOfControl !== "controlled_by_this_extension") return false;
+  // V5.6: with per-site rules the proxy is a script naming the server.
+  if (reglage.value?.mode === "pac_script")
+    return String(reglage.value.pacScript?.data ?? "").includes(`HTTPS ${acces.domaine}:`);
   const p = reglage.value?.rules?.singleProxy;
   return reglage.value?.mode === "fixed_servers" && p?.host === acces.domaine;
 }

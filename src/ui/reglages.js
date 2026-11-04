@@ -1041,7 +1041,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     // T9: the chatbot switch and its three places, then the assistant (key, limits).
     ia: session ? [sectionChatbot.section, sectionIa({ store, session }).section] : null,
     // V5.2: private VPN, for signed-in accounts (guests see their identifiers, the owner the list).
-    vpn: session ? [sectionVpn({}).section] : null,
+    vpn: session ? [sectionVpn({ store }).section] : null,
     avance: [
       // Reading other sites needs a permission in the extension only (V3.0: capabilities).
       plateforme.capacites.permissionsSites

@@ -1,4 +1,5 @@
 import { A, reduire } from "../core/actions.js";
+import { suivreReglesVpn } from "./vpnRegles.js";
 import { listerDossiers, trouver as trouverElement } from "../core/arbre.js";
 import { NOM_APP, URL_SITE } from "../core/constantes.js";
 import { migrer } from "../core/migration.js";
@@ -110,6 +111,8 @@ export async function demarrerApp(racine) {
   // Never overwrite the storage with an empty state when the load failed.
   const lectureSeule = versionFuture || chargementRate;
   const store = creerStore(etat, reduire);
+  // V5.6: per-site VPN rules follow the synced settings (extension only).
+  if (plateforme.capacites.vpnNavigateur) suivreReglesVpn(store, plateforme.vpnNavigateur());
 
   // Home grid: pages (V2.11, default) or one scrolling grid, rebuilt when the setting changes.
   const zoneAccueil = el("div", { class: "accueil" });

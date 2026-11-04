@@ -14,6 +14,7 @@ import {
   INTERVALLE_AUTO_MS,
   SERVICES,
 } from "../../core/diagnosticVpn.js";
+import { routeDe } from "../../core/domainesVpn.js";
 
 const DELAI_MS = 8000;
 const ORIGINES = { origins: ["https://*/*", "http://*/*"] };
@@ -112,8 +113,15 @@ export function creerVerificationVpn({
       const d = diagnostiquer({ actif: false, voulu: e.voulu, echo: null });
       return enregistrer(d, { manuel });
     }
-    const acces = (await vpn.lire()).acces;
-    const premier = await echo();
+    const { acces, regles } = await vpn.lire();
+    // V5.6: only services that travel through the VPN can tell anything about it.
+    const services = SERVICES.filter((sv) => routeDe(regles, new URL(sv.url).hostname) === "vpn");
+    if (!services.length)
+      return enregistrer(
+        diagnostiquer({ actif: true, voulu: true, echo: null, echoEnDirect: true }),
+        { manuel },
+      );
+    const premier = await echo(services);
     const latences = premier ? [premier.ms] : [];
     if (premier) {
       for (let i = 0; i < 2; i += 1) {

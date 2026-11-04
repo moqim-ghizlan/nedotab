@@ -241,3 +241,27 @@ describe("protections contre les fuites (V5.5)", () => {
     expect(chromeApi.privacy.network.webRTCIPHandlingPolicy.clear).toHaveBeenCalled();
   });
 });
+
+describe("règles par site (V5.6)", () => {
+  it("sans règle : proxy simple ; avec règles : script, puis retour au proxy simple", async () => {
+    const { chromeApi } = fauxChrome({ stock: avecAcces });
+    const vpn = creerVpn({ chromeApi });
+    await vpn.activer();
+    const dernier = () => chromeApi.proxy.settings.set.mock.calls.at(-1)[0].value;
+    expect(dernier().mode).toBe("fixed_servers");
+    await vpn.definirRegles({ mode: "tout_sauf", exceptions: ["banque.fr"] });
+    expect(dernier().mode).toBe("pac_script");
+    expect(dernier().pacScript.data).toContain("banque.fr");
+    expect((await vpn.etat()).actif).toBe(true);
+    await vpn.definirRegles({});
+    expect(dernier().mode).toBe("fixed_servers");
+  });
+  it("VPN éteint : les règles sont gardées, le proxy n'est pas touché", async () => {
+    const { chromeApi } = fauxChrome({ stock: avecAcces });
+    const vpn = creerVpn({ chromeApi });
+    await vpn.definirRegles({ mode: "seulement", liste: ["tv.fr"] });
+    expect(chromeApi.proxy.settings.set).not.toHaveBeenCalled();
+    await vpn.activer();
+    expect(chromeApi.proxy.settings.set.mock.calls.at(-1)[0].value.mode).toBe("pac_script");
+  });
+});

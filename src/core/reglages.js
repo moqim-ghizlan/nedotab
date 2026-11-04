@@ -10,6 +10,7 @@
  *     | { type: "aleatoire", categorie, frequence: "onglet"|"jour"|"clic", choix?, voile, flou }
  */
 import { estCategorie, estIdPhoto, FREQUENCES } from "./galerie.js";
+import { reglesAStocker } from "./domainesVpn.js";
 import { frequentsAStocker } from "./frequents.js";
 import { iaAStocker, validerIa } from "./ia.js";
 import { NAVIGATEURS } from "./navigateurs.js";
@@ -169,7 +170,7 @@ export const INTERRUPTEURS = [
 export function modifierReglages(reglages, changements) {
   if (!changements || typeof changements !== "object") return reglages;
   const cles = Object.keys(changements);
-  const permises = ["theme", "fond", "grilleAccueil", "ia", "frequents", ...INTERRUPTEURS];
+  const permises = ["theme", "fond", "grilleAccueil", "ia", "frequents", "vpn", ...INTERRUPTEURS];
   if (cles.length === 0 || cles.some((c) => !permises.includes(c))) return reglages;
   const suivant = { ...reglages };
   if ("theme" in changements) {
@@ -204,7 +205,20 @@ export function modifierReglages(reglages, changements) {
     const stocke = frequentsAStocker(f);
     if (stocke) suivant.frequents = stocke;
     else delete suivant.frequents;
-    if (JSON.stringify(suivant.frequents) === JSON.stringify(reglages.frequents) && cles.length === 1)
+    if (
+      JSON.stringify(suivant.frequents) === JSON.stringify(reglages.frequents) &&
+      cles.length === 1
+    )
+      return reglages;
+  }
+  if ("vpn" in changements) {
+    // V5.6: per-site rules of the VPN (mode and two lists, 200 each), synced. No identifier.
+    const v = changements.vpn;
+    if (!v || typeof v !== "object") return reglages;
+    const stocke = reglesAStocker(v);
+    if (stocke) suivant.vpn = stocke;
+    else delete suivant.vpn;
+    if (JSON.stringify(suivant.vpn) === JSON.stringify(reglages.vpn) && cles.length === 1)
       return reglages;
   }
   for (const cle of INTERRUPTEURS.filter((c) => c in changements)) {
@@ -238,6 +252,9 @@ export function validerReglages(reglages) {
   const frequents = frequentsAStocker(r.frequents);
   if (frequents) resultat.frequents = frequents;
   else delete resultat.frequents;
+  const vpn = reglesAStocker(r.vpn);
+  if (vpn) resultat.vpn = vpn;
+  else delete resultat.vpn;
   const grille = validerGrilleAccueil(r.grilleAccueil);
   if (grille) resultat.grilleAccueil = grille;
   else delete resultat.grilleAccueil;
@@ -339,7 +356,8 @@ export function affichageHeureDe(reglagesAppareil) {
 export const TAILLETITRES_MIN = 80;
 export const TAILLETITRES_MAX = 160;
 export const TAILLETITRES_DEFAUT = 100;
-const tailleTitresValide = (n) => Number.isInteger(n) && n >= TAILLETITRES_MIN && n <= TAILLETITRES_MAX;
+const tailleTitresValide = (n) =>
+  Number.isInteger(n) && n >= TAILLETITRES_MIN && n <= TAILLETITRES_MAX;
 
 /** Ombre sous les icônes (V4.5.11): "legere" by default, then not stored. */
 export const OMBRES_ICONES = ["aucune", "legere", "forte"];
@@ -361,7 +379,8 @@ export function styleDossierDe(reglagesAppareil) {
 export const OPACITEDOSSIER_MIN = 60;
 export const OPACITEDOSSIER_MAX = 100;
 export const OPACITEDOSSIER_DEFAUT = 100;
-const opaciteDossierValide = (n) => Number.isInteger(n) && n >= OPACITEDOSSIER_MIN && n <= OPACITEDOSSIER_MAX;
+const opaciteDossierValide = (n) =>
+  Number.isInteger(n) && n >= OPACITEDOSSIER_MIN && n <= OPACITEDOSSIER_MAX;
 
 /** Below this shorter screen side (CSS px), the device is a phone (V3.4). */
 export const COTE_TELEPHONE = 600;
@@ -393,12 +412,14 @@ export function validerReglagesAppareil(r) {
     resultat.espacement = r.espacement;
   if (AFFICHAGES_HEURE.includes(r?.affichageHeure) && r.affichageHeure !== "aucun")
     resultat.affichageHeure = r.affichageHeure;
-  if (tailleTitresValide(r?.tailleTitres) && r.tailleTitres !== TAILLETITRES_DEFAUT) resultat.tailleTitres = r.tailleTitres;
+  if (tailleTitresValide(r?.tailleTitres) && r.tailleTitres !== TAILLETITRES_DEFAUT)
+    resultat.tailleTitres = r.tailleTitres;
   if (OMBRES_ICONES.includes(r?.ombreIcones) && r.ombreIcones !== "legere")
     resultat.ombreIcones = r.ombreIcones;
   if (STYLES_DOSSIER.includes(r?.styleDossier) && r.styleDossier !== "apercu")
     resultat.styleDossier = r.styleDossier;
-  if (opaciteDossierValide(r?.opaciteDossier) && r.opaciteDossier !== OPACITEDOSSIER_DEFAUT) resultat.opaciteDossier = r.opaciteDossier;
+  if (opaciteDossierValide(r?.opaciteDossier) && r.opaciteDossier !== OPACITEDOSSIER_DEFAUT)
+    resultat.opaciteDossier = r.opaciteDossier;
   if (r?.debug === true) resultat.debug = true;
   if (r?.barreChrome === true) resultat.barreChrome = true;
   if (AFFICHAGES_ACCUEIL.includes(r?.affichageAccueil))

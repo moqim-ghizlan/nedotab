@@ -71,7 +71,7 @@ const ETAPES = [
  * @param {{ actif: boolean, voulu: boolean,
  *   echo: { ip: string, pays: string|null } | null, latences?: number[],
  *   erreurVpn?: "serveur"|"identifiants"|null,
- *   ipServeur?: string|null, ipNormale?: string|null }} m  measures
+ *   ipServeur?: string|null, ipNormale?: string|null, echoEnDirect?: boolean }} m  measures
  * @returns {{ global: "ok"|"incertain"|"fuite"|"echec"|"inactif",
  *   etapes: {id: string, libelle: string, statut: "ok"|"echec"|"inconnu"}[],
  *   message: string, action: "reessayer"|"identifiants"|"desactiver"|null,
@@ -97,6 +97,14 @@ export function diagnostiquer(m) {
         "desactiver",
       );
     return fin("inactif", "Le VPN est désactivé : le test n'a rien à vérifier.");
+  }
+  if (m.echoEnDirect) {
+    // V5.6: the rules send every test service direct, so the test would measure the normal address.
+    statuts.domaine = statuts.connexion = statuts.auth = "inconnu";
+    return fin(
+      "incertain",
+      "Vos règles par site envoient les services de test en direct : le test ne peut pas vérifier le VPN. Retirez www.cloudflare.com des exceptions (ou ajoutez-le en mode « seulement »).",
+    );
   }
   if (!m.echo) {
     if (m.erreurVpn === "serveur") {

@@ -11,6 +11,7 @@ import { ouvrirChat } from "./chatLateral.js";
 import { ecranAjout } from "./ecranAjout.js";
 import { creerServiceVpn } from "../services/vpn.js";
 import { blocVpnNavigateur } from "../vpnNavigateur.js";
+import { blocRegleSite } from "./regleSite.js";
 
 /**
  * Toolbar window (V4.29): two choices. The active tab is read ONCE, when the window opens
@@ -151,6 +152,18 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
       ),
     );
     (onglet.ok || !boutonChat ? ajouter : chat).focus();
+    // V5.6: the rule of this site, once the state is read (the window is already shown).
+    if (plateforme.capacites.vpnNavigateur) {
+      blocRegleSite({
+        onglet,
+        charger,
+        stockage,
+        vpn: plateforme.vpnNavigateur(),
+        chromeApi,
+      })
+        .then((bloc) => bloc && racine.querySelector(".popup-vpn")?.append(bloc))
+        .catch(() => {});
+    }
   }
   racine.addEventListener("keydown", (e) => {
     const suivant = { ArrowDown: true, ArrowRight: true, ArrowUp: false, ArrowLeft: false }[e.key];

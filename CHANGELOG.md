@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.6.0] - 2026-11-05
+
+### Ajouté
+
+- **Règles par site (V5.6)** : Réglages → VPN → « Règles par site ». Deux modes : « tout par le VPN, sauf ces sites (en direct) » ou « seulement ces sites par le VPN ». Liste éditable, ajout depuis les sites de la grille, un domaine couvre ses sous-domaines (200 par liste au plus).
+- Fenêtre de la barre d'outils : « Ce site passe par le VPN / est en direct (règle) » et boutons **Toujours en direct** / **Toujours par le VPN** pour l'onglet actif (l'onglet est rechargé).
+- Les règles sont synchronisées entre vos ordinateurs (`reglages.vpn`, exportées avec les réglages) ; l'état actif et les identifiants restent propres à chaque appareil. Une règle modifiée ailleurs réapplique le proxy.
+- Script de proxy (PAC) généré par l'extension : domaines validés strictement puis insérés en JSON, aucune fonction qui résout un nom (pas de fuite DNS), pas de connexion directe de secours. Sans règle utile, le proxy simple est conservé.
+- Le test de connexion ignore les services mis en direct par vos règles et le dit, au lieu de mesurer votre adresse normale.
+
 ## [5.5.0] - 2026-11-05
 
 ### Ajouté

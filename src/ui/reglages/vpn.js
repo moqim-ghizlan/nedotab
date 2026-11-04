@@ -13,6 +13,7 @@ import { creerServiceVpn } from "../services/vpn.js";
 import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";
 import { blocVpnNavigateur } from "../vpnNavigateur.js";
+import { blocReglesVpn } from "./reglesVpn.js";
 
 /**
  * Settings → VPN (V5.2). The VPN is private: a guest sees "Accès accordé" and his own proxy
@@ -26,6 +27,7 @@ import { blocVpnNavigateur } from "../vpnNavigateur.js";
  * Loaded when the section becomes visible, not every time the settings open.
  */
 export function sectionVpn({
+  store = null,
   service = creerServiceVpn(),
   vpn = plateforme.capacites.vpnNavigateur ? plateforme.vpnNavigateur() : null,
 } = {}) {
@@ -366,6 +368,8 @@ export function sectionVpn({
           options: true,
         }).racine,
       );
+    // V5.6: per-site rules (synced setting; extension only, with a state to edit).
+    if (vpn && store) racine.append(blocReglesVpn({ store }).racine);
     if (etat.admin) racine.append(blocInvites());
     racine.append(blocMonAcces());
   }

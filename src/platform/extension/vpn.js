@@ -17,6 +17,8 @@ import {
   suivreDemande,
 } from "../../core/vpnProxy.js";
 import { lireAcces } from "../../core/vpn.js";
+import { validerReglesVpn } from "../../core/domainesVpn.js";
+import { valeurProxy } from "../../core/pac.js";
 
 const EXPIRATION_ERREUR_MS = 60_000;
 const ORIGINES = { origins: ["https://*/*", "http://*/*"] };
@@ -35,6 +37,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
       erreur: typeof brut.erreur === "string" ? brut.erreur : null,
       erreurLe: Number(brut.erreurLe) || 0,
       acces: lireAcces(brut.acces),
+      regles: validerReglesVpn(brut.regles), // copy of reglages.vpn (synced), kept for the worker
     };
   }
   async function ecrire(changements) {
@@ -146,7 +149,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     const avecIncognito = incognito ?? e.incognito;
     if (avecIncognito && !(await incognitoAutorise()))
       return { ok: false, raison: MESSAGES.incognito };
-    const value = configProxy(e.acces);
+    const value = valeurProxy(e.regles, e.acces, configProxy);
     await chromeApi.proxy.settings.set({ value, scope: "regular" });
     if (avecIncognito) await chromeApi.proxy.settings.set({ value, scope: "incognito_persistent" });
     else await chromeApi.proxy.settings.clear({ scope: "incognito_persistent" }).catch(() => {});
@@ -164,6 +167,18 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     await rendreProtections();
     await ecrire({ actif: false, erreur, protections: null });
     await afficherBadge({ actif: false, erreur });
+  }
+
+  /**
+   * V5.6: the rules (synced settings) changed, here or on another computer. Kept locally for the
+   * worker; when the VPN is on, the proxy is set again (Chrome caches the script).
+   */
+  async function definirRegles(regles) {
+    const v = validerReglesVpn(regles);
+    const avant = await lire();
+    if (JSON.stringify(avant.regles) === JSON.stringify(v)) return;
+    await ecrire({ regles: v });
+    if (avant.actif && (await reel(avant.acces))) await activer({ demanderPermission: false });
   }
 
   /** Keeps the identifiers received from the server (local only). */
@@ -279,6 +294,7 @@ export function creerVpn({ chromeApi = globalThis.chrome, maintenant = Date.now 
     activer,
     desactiver,
     memoriserAcces,
+    definirRegles,
     oublier,
     signalerErreurServeur,
     signalerTrafic,
