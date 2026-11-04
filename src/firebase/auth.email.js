@@ -82,6 +82,9 @@ export function creerAuthEmail({ auth = obtenirAuth, sdk = outilsEmail, versProf
       await sdk.updatePassword(u, mdp);
     }
     await u.reload();
+    // Linking can leave the address unverified: the verification screen then shows up, so the
+    // e-mail it announces must really be sent.
+    if (!u.emailVerified) await sdk.sendEmailVerification(u).catch(() => {});
     return versProfil(u);
   }
 

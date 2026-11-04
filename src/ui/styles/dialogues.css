@@ -117,7 +117,12 @@
 /* Main action that destroys something: solid red, readable in both themes. */
 .bouton--principal.bouton--danger {
   background: var(--danger);
-  color: var(--surface);
+  color: #fff;
+}
+
+/* Disabled, the red button stays readable (it was dark text on a faded red). */
+.bouton--principal.bouton--danger:disabled {
+  opacity: 0.6;
 }
 
 .bouton:disabled {

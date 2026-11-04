@@ -3095,6 +3095,18 @@ body.fond-clair .carte-action--principale {
 .connexion-verification h4 {
   margin: 0 0 var(--espace-2);
 }
+/* The button bar of the card pulls what follows it up (negative bottom margin): here the
+   message and the link come after it, so the bar keeps its own space. */
+.connexion-verification .compte-actions {
+  margin-bottom: 0;
+}
+.connexion-verification .connexion-statut:not(:empty) {
+  margin-top: 12px;
+}
+.connexion-verification .lien-discret {
+  display: block;
+  margin-top: 12px;
+}
 .compte-methode {
   font-size: 12px;
   opacity: 0.8;
