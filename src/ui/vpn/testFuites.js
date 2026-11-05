@@ -1,4 +1,3 @@
-import { analyserCandidats } from "../../core/analyseIce.js";
 import { POLITIQUE_WEBRTC } from "../../core/vpnProxy.js";
 import { plateforme } from "../../platform/index.js";
 import { el } from "../dom.js";
@@ -7,6 +6,8 @@ import { el } from "../dom.js";
 export const STUN = "stun:stun.l.google.com:19302";
 /** DNS leak test opened by the user in a new tab (the result is read by the user). */
 export const URL_TEST_DNS = "https://www.dnsleaktest.com/";
+/** WebRTC leak test opened by the user on a real site. */
+export const URL_TEST_WEBRTC = "https://browserleaks.com/webrtc";
 
 /** Collects the ICE candidates of a throw-away connection (5 s at most). */
 export function collecterCandidats({ Rtc = globalThis.RTCPeerConnection, delaiMs = 5000 } = {}) {
@@ -88,20 +89,27 @@ export async function demarrerTestFuites(
   else
     ajouter(verif.global === "ok" ? "ok" : "inconnu", "Adresse vue par les sites", verif.message);
 
-  // 2. WebRTC
-  const { candidats, disponible } = await collecterCandidats();
-  if (!disponible) ajouter("inconnu", "WebRTC", "WebRTC n'est pas disponible dans ce contexte.");
-  else {
-    const a = analyserCandidats(candidats, { ipVue: verif?.ip });
-    if (a.fuite) ajouter("echec", "WebRTC", a.problemes.join(" "));
-    else if (a.locales.length) ajouter("inconnu", "WebRTC", a.problemes.join(" "));
-    else
-      ajouter(
-        "ok",
-        "WebRTC",
-        `Aucune adresse réelle exposée (${candidats.length} candidat${candidats.length > 1 ? "s" : ""}).`,
-      );
-  }
+  // 2. WebRTC: NOT measured from this page. Seen on 2026-11-05: this extension page exposes the
+  // real address even with the policy set, while a real site (browserleaks.com/webrtc) sees none.
+  // A measure that disagrees with what sites see would be misleading, so the user checks on a site.
+  liste.append(
+    el(
+      "li",
+      { class: "fuites-ligne fuites-ligne--inconnu" },
+      el("strong", { texte: "– WebRTC (à vérifier sur un vrai site)" }),
+      el("span", {
+        class: "reglages-note",
+        texte:
+          "Cette page n'est pas un site : elle ne représente pas ce que les sites voient. Ouvrez le test ci-dessous : « Public IP Address » doit afficher un tiret, ou l'adresse du serveur.",
+      }),
+      el("a", {
+        href: URL_TEST_WEBRTC,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        texte: "Ouvrir le test WebRTC",
+      }),
+    ),
+  );
 
   // 3. Policies as Chrome reports them
   try {
