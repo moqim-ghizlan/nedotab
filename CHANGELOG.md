@@ -2,6 +2,26 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.9.0] - 2026-11-05
+
+Les todos dans la PWA (iPhone, iPad). **Code écrit et testé en simulation seulement : rien n'a été essayé sur un appareil iOS** (`docs/tests/checklist-v6-ios.md`). Le plan demandait la validation « extension à 100 % » avant cette version : elle a été enchaînée à la demande de l'utilisateur, sans cette validation manuelle.
+
+### Ajouté
+
+- **Gestes tactiles** : balayage vers la gauche pour supprimer (avec « Annuler » 5 s, axe verrouillé pour ne jamais gêner le défilement), appui long de 0,5 s pour ouvrir le menu d'une ligne ou d'un sujet.
+- **Clavier iOS** : la feuille et l'éditeur suivent le clavier, barre de mise en forme collée au-dessus de lui, champ d'ajout fixe en haut de la liste, panneau de 420 px sur iPad en paysage, date iOS lisible.
+- **Images** : « Photothèque » et « Prendre une photo » sur écran tactile ; une photo de plus de 6 Mo est réduite pendant son décodage (mémoire) ; envoi toujours une image à la fois.
+- Export : la feuille de partage existante est utilisée, avec le bouton « Partager » si le geste a expiré.
+- `docs/tests/checklist-v6-ios.md`, section « Todos sur iPhone et iPad » dans `docs/plateformes.md`.
+
+### Non fait (voir `docs/tests/v6-restant.md`)
+
+Visionneuse tactile (pincer pour zoomer, balayer pour changer, glisser vers le bas pour fermer) : seules les flèches, Échap et les boutons existent. Bouton d'ajout flottant « à portée du pouce » : le champ d'ajout reste en haut de la liste.
+
+### À déployer (avec accord)
+
+`npm run deployer:pwa`. Extension : aucun changement de comportement.
+
 ## [6.8.0] - 2026-11-05
 
 Finitions et stabilisation de la partie **extension** des todos. Aucune fonctionnalité nouvelle.

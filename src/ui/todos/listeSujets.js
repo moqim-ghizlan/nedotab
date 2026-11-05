@@ -6,6 +6,7 @@ import {
   estPleinSujets,
 } from "../../core/sujets.js";
 import { demander } from "../dialogues/commun.js";
+import { brancherGestes } from "./balayage.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirMenu } from "../menuContextuel.js";
@@ -259,6 +260,11 @@ export function creerListeSujets({ donnees, onOuvrir }) {
     if (!r.ok) dire(r.erreur, true);
   }
 
+  // Touch (V6.9): a long press opens the menu of the subject.
+  const gestes = brancherGestes(liste, {
+    surAppuiLong: (id, x, y) => lignes.get(id) && menu(lignes.get(id), null, { clientX: x, clientY: y }),
+  });
+
   const tri = Sortable.create(liste, {
     handle: ".todos-poignee",
     animation: REDUIT() ? 0 : 150,
@@ -317,6 +323,7 @@ export function creerListeSujets({ donnees, onOuvrir }) {
     /** Focus on the field "Nouveau sujet" (on a wide screen only: no keyboard on a phone). */
     focusAjout: () => champ.focus(),
     liberer() {
+      gestes();
       tri.destroy();
     },
   };

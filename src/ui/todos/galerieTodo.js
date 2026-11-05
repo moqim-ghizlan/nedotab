@@ -57,6 +57,21 @@ export function creerGalerieTodo({ donnees, preparer = preparerImage }) {
       champFichier.value = "";
     },
   });
+  // iPhone / iPad: the camera has its own field (`capture`), the library keeps the normal one.
+  // HEIC photos are converted to JPEG by Safari because only JPEG / PNG / WebP are accepted.
+  const champPhoto = el("input", {
+    type: "file",
+    accept: "image/jpeg,image/png,image/webp",
+    capture: "environment",
+    hidden: true,
+    "aria-hidden": "true",
+    tabindex: "-1",
+    onchange: () => {
+      ajouterFichiers([...champPhoto.files]);
+      champPhoto.value = "";
+    },
+  });
+  const tactile = () => !!globalThis.matchMedia?.("(pointer: coarse)").matches;
   const bouton = el(
     "button",
     {
@@ -64,11 +79,25 @@ export function creerGalerieTodo({ donnees, preparer = preparerImage }) {
       class: "todos-fermer",
       "aria-label": "Ajouter une image",
       title: "Ajouter une image",
-      onclick: () => champFichier.click(),
+      "aria-haspopup": "menu",
+      onclick: () => {
+        if (!tactile()) return champFichier.click();
+        const r = bouton.getBoundingClientRect();
+        ouvrirMenu({
+          x: r.left,
+          y: r.bottom + 4,
+          libelle: "Ajouter une image",
+          retourFocus: bouton,
+          entrees: [
+            { libelle: "Photothèque", onChoix: () => champFichier.click() },
+            { libelle: "Prendre une photo", onChoix: () => champPhoto.click() },
+          ],
+        });
+      },
     },
     icone("image", { taille: 18 }),
   );
-  racine.append(champFichier);
+  racine.append(champFichier, champPhoto);
 
   function dire(texte, erreur = true) {
     message.textContent = texte ?? "";

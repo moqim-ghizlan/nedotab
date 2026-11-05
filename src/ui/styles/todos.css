@@ -761,3 +761,48 @@ body:has(.partage-bouton[hidden]) .todos-bouton {
   .todo-case[aria-checked="true"]::before { background: Highlight; border-color: Highlight; }
   .todo-date { border: 1px solid CanvasText; }
 }
+
+/* --- iPhone and iPad (V6.9) ---------------------------------------------------------------------------- */
+/* Swipe to delete: vertical scroll stays native, the horizontal gesture is ours. */
+.todo-ligne,
+.todos-sujet { touch-action: pan-y; }
+.todo-ligne--balayee,
+.todos-sujet--balayee {
+  transition: none;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  box-shadow: inset -4px 0 0 var(--danger);
+}
+.todo-ligne[data-balayage="pret"] { background: color-mix(in srgb, var(--danger) 30%, transparent); }
+/* Date field of iOS: it needs a real height and the page font. */
+input[type="date"].todos-champ {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 9.5em;
+  min-height: 40px;
+  font-family: inherit;
+}
+/* iPad in landscape: a wider side panel. */
+@media (min-width: 900px) and (pointer: coarse) {
+  .todos { width: min(420px, calc(100vw - 2 * var(--panneau-marge))); }
+}
+@media (max-width: 899px) {
+  /* The sheet and the editor follow the keyboard (--clavier is kept by ecran.js). */
+  .todos { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--clavier, 0px)); }
+  .todo-editeur { height: calc(100dvh - var(--clavier, 0px)); max-height: calc(100dvh - var(--clavier, 0px)); }
+  /* The toolbar sits last and sticks to the bottom: just above the keyboard. */
+  .todo-editeur-outils {
+    order: 20;
+    position: sticky;
+    bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--surface);
+    border-top: 1px solid var(--trait);
+  }
+  .todo-editeur-cadre { scroll-padding-bottom: 80px; }
+  /* The add field stays in view while the list scrolls. */
+  .todos-vue--sujet > .todos-ajout { position: sticky; top: 0; z-index: 2; padding: 4px 0; background: var(--surface); }
+}
+@media (hover: none) {
+  /* No hover on a touch screen: the grip and the "..." stay visible. */
+  .todos-vue--libre .todo-poignee { visibility: hidden; }
+}

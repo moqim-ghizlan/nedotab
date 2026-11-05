@@ -6,6 +6,7 @@ import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirMenu } from "../menuContextuel.js";
 import { toast } from "../toast.js";
+import { brancherGestes } from "./balayage.js";
 import { creerBarreFiltres } from "./barreFiltres.js";
 import { ouvrirEditeur } from "./fenetreTodo.js";
 import { creerLigneTodo } from "./ligneTodo.js";
@@ -228,6 +229,14 @@ export function creerListeTodos({ donnees, sujetId, store, memoriser = false }) 
     },
   });
 
+  // Touch (V6.9): swipe to the left deletes (with "Annuler"), a long press opens the menu.
+  const gestes = [listeAFaire, listeFaits, listeTous].map((ul) =>
+    brancherGestes(ul, {
+      surBalayage: (id) => supprimer(id),
+      surAppuiLong: (id, x, y) => menu(id, null, { clientX: x, clientY: y }),
+    }),
+  );
+
   // Keyboard: ↑ ↓ move the focus between lines; on the grip they move the todo itself.
   racine.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
@@ -337,6 +346,7 @@ export function creerListeTodos({ donnees, sujetId, store, memoriser = false }) 
     /** The shortcut "/" of the panel. */
     focusRecherche: () => barre.focus(),
     liberer() {
+      gestes.forEach((f) => f());
       tri.destroy();
       barre.liberer();
       donnees.viderCochages();

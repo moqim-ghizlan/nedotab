@@ -1,5 +1,10 @@
 import { COTE_MAX, COTE_MINI, dimensionsCible, extensionPour } from "../../core/imagesTodo.js";
 
+/** Above this weight the photo is reduced while it is decoded (V6.9). */
+export const GROS_FICHIER = 6 * 1024 * 1024;
+/** Width asked for that first reduction: still more than the 1 920 px kept in the end. */
+export const LARGEUR_PREREDUCTION = 2560;
+
 /** Error shown to the user when a file cannot be read as a picture. */
 export class ErreurImage extends Error {
   constructor(message, code = "illisible") {
@@ -48,9 +53,18 @@ export async function preparerImage(
     creerCanvas = (l, h) => Object.assign(document.createElement("canvas"), { width: l, height: h }),
   } = {},
 ) {
-  let bitmap;
+  let bitmap = null;
   try {
-    bitmap = await creerBitmap(fichier, { imageOrientation: "from-image" });
+    // Memory (iPhone): a 12 megapixel photo decoded in full takes ~48 MB. A heavy file is reduced
+    // WHILE it is decoded; if the browser refuses the option, it is decoded normally.
+    if (fichier.size > GROS_FICHIER) {
+      bitmap = await creerBitmap(fichier, {
+        imageOrientation: "from-image",
+        resizeWidth: LARGEUR_PREREDUCTION,
+        resizeQuality: "high",
+      }).catch(() => null);
+    }
+    bitmap ??= await creerBitmap(fichier, { imageOrientation: "from-image" });
   } catch {
     throw new ErreurImage(
       "Cette image ne peut pas être lue. Choisissez une photo JPEG, PNG ou WebP.",
