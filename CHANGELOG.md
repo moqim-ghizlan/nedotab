@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.3.0] - 2026-11-05
+
+### Ajouté
+
+- **Éditeur de todo « façon fichier .md »** : grande fenêtre avec titre, description en Markdown, échéance, sujet, case « fait », dates. On remplit dans l'ordre qu'on veut ; **le todo n'existe en base qu'à la première saisie utile** (titre, description ou échéance) : ouvrir puis fermer l'éditeur ne crée rien. Bouton « crayon » à côté de l'ajout rapide pour un nouveau todo détaillé.
+- Bascule Écrire / Aperçu (le rendu n'est calculé qu'à la demande), quatre boutons (gras, italique, liste, case), `Ctrl+B`, `Ctrl+I`, `Ctrl+Entrée` (ferme et enregistre), `Échap` (envoie avant de fermer). Compteur à partir de 18 000 caractères.
+- Indicateur « Enregistrement… / Enregistré ✓ / Hors ligne » ; les écritures partent dans l'ordre, sans attendre la confirmation du serveur (utile hors ligne).
+- Modifié sur un autre appareil : le champ en cours (focus, composition IME, saisie non envoyée) n'est jamais remplacé ; un bandeau propose « Recharger ». Todo supprimé ailleurs : proposition de le recréer. Todo vidé de tout contenu : « Supprimer ce todo vide ? ».
+- `src/core/markdown.js` : rendu sécurisé (liste blanche DOMPurify, aucune image distante, liens http/https seulement) et 53 tests dont une liste de charges XSS.
+
+### Corrigé
+
+- `fenetreTodo.js` délègue à l'éditeur.
+
 ## [6.2.0] - 2026-11-05
 
 ### Ajouté

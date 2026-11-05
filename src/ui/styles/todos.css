@@ -447,3 +447,128 @@ body:has(.partage-bouton[hidden]) .todos-bouton {
 .todo-editeur-pied { display: flex; flex-wrap: wrap; gap: var(--espace-4); align-items: center; }
 .todo-editeur-label { display: inline-flex; align-items: center; gap: var(--espace-2); }
 .todo-editeur-dates { margin: 0; font-size: 0.8125rem; color: var(--texte-secondaire); }
+
+/* --- Editor (V6.3): a calm sheet of notes, not a form --------------------------------------------- */
+.todos-bouton-ajout--editeur {
+  background: var(--creux);
+  color: var(--texte-secondaire);
+  box-shadow: inset 0 0 0 1px var(--trait);
+}
+.todo-editeur {
+  width: min(760px, calc(100vw - 24px));
+  max-height: min(90vh, 900px);
+  padding: 0;
+}
+.todo-editeur::backdrop { background: var(--voile); }
+.todo-editeur-cadre {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+  max-height: inherit;
+  margin: 0 auto;
+  padding: var(--espace-4) var(--espace-5) var(--espace-5);
+  overflow-y: auto;
+}
+.todo-editeur-haut { display: flex; align-items: center; gap: var(--espace-1); }
+.todo-editeur-espace { flex: 1; }
+.todo-editeur-statut { font-size: 0.8125rem; color: var(--texte-secondaire); }
+.todo-editeur-titre {
+  min-height: 52px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 1.5rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+.todo-editeur-titre:focus-visible { outline: none; }
+.todo-editeur-description {
+  flex: 1;
+  min-height: 260px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texte);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+}
+.todo-editeur-description:focus-visible { outline: none; }
+.todo-editeur-description[hidden],
+.todo-editeur-apercu[hidden],
+.todo-editeur-outils[hidden] { display: none; }
+.todo-editeur-apercu { min-height: 260px; line-height: 1.6; overflow-wrap: anywhere; }
+.todo-editeur-apercu :where(h1, h2, h3, h4) { margin: 1em 0 0.4em; line-height: 1.25; }
+.todo-editeur-apercu :where(p, ul, ol, blockquote, pre) { margin: 0.5em 0; }
+.todo-editeur-apercu blockquote { padding-left: 12px; border-left: 3px solid var(--trait-fort); color: var(--texte-secondaire); }
+.todo-editeur-apercu :where(code, pre) { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.9em; }
+.todo-editeur-apercu pre { padding: 10px 12px; border-radius: var(--rayon-petit); background: var(--creux); overflow-x: auto; }
+.todo-editeur-apercu a { color: var(--accent); }
+.todo-editeur-apercu li:has(> input[type="checkbox"]) { list-style: none; margin-left: -1.2em; }
+.todo-editeur-outils { display: flex; gap: var(--espace-1); }
+.todo-outil {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--rayon-petit);
+  background: none;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.todo-outil:hover { background: var(--survol); color: var(--texte); }
+.todo-outil:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.todo-editeur-compteur { align-self: flex-end; font-size: 0.75rem; color: var(--attention); }
+.todo-editeur-pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2) var(--espace-3);
+  padding-top: var(--espace-3);
+  border-top: 1px solid var(--trait);
+}
+.todo-editeur-pied .todos-champ { flex: 0 1 auto; min-height: 40px; font-size: 1rem; }
+.todo-editeur-label { color: var(--texte-secondaire); font-size: 0.8125rem; }
+.todo-editeur-fait { display: inline-flex; align-items: center; gap: var(--espace-2); margin-left: auto; color: var(--texte); }
+.todo-editeur-fait input { width: 20px; height: 20px; }
+.todo-editeur-bandeau {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  padding: 8px 12px;
+  border-radius: var(--rayon-petit);
+  background: color-mix(in srgb, var(--attention) 14%, transparent);
+  font-size: 0.8125rem;
+}
+.todo-editeur-bandeau[hidden] { display: none; }
+/* Drop area of the images (V6.4): the whole sheet, dashed frame while a file is over it. */
+.todo-editeur-depot {
+  position: absolute;
+  inset: 4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--rayon);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-weight: 600;
+  pointer-events: none;
+}
+.todo-editeur-depot[hidden] { display: none; }
+@media (max-width: 899px) {
+  .todo-editeur {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .todo-editeur-cadre { min-height: 100%; padding-bottom: calc(var(--espace-5) + env(safe-area-inset-bottom, 0px)); }
+}

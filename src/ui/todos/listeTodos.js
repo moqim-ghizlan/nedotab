@@ -45,7 +45,18 @@ export function creerListeTodos({ donnees, sujetId, store }) {
     { type: "submit", class: "todos-bouton-ajout", "aria-label": "Ajouter le todo", title: "Ajouter le todo" },
     icone("ajouter", { taille: 20 }),
   );
-  const formulaire = el("form", { class: "todos-ajout", novalidate: true }, champ, ajouter);
+  const nouveau = el(
+    "button",
+    {
+      type: "button",
+      class: "todos-bouton-ajout todos-bouton-ajout--editeur",
+      "aria-label": "Nouveau todo détaillé",
+      title: "Nouveau todo détaillé (titre, description, échéance)",
+      onclick: () => ouvrirEditeur({ donnees, todoId: null, sujetId, store, retourFocus: nouveau }),
+    },
+    icone("crayon", { taille: 18 }),
+  );
+  const formulaire = el("form", { class: "todos-ajout", novalidate: true }, champ, ajouter, nouveau);
   const listeAFaire = el("ul", { class: "todos-liste", "aria-label": "À faire" });
   const listeFaits = el("ul", { class: "todos-liste todos-liste--faits", "aria-label": "Faits", hidden: true });
   const boutonFaits = el("button", {
@@ -226,6 +237,7 @@ export function creerListeTodos({ donnees, sujetId, store }) {
     const plein = e.compteurs.nbTodos >= LIMITE_TODOS;
     champ.disabled = plein;
     ajouter.disabled = plein;
+    nouveau.disabled = plein;
     champ.placeholder = plein ? `${LIMITE_TODOS} todos maximum` : "Ajouter un todo";
     const charge = e.todosStatut === "chargement" && e.todos.length === 0;
     chargement.hidden = !charge;
