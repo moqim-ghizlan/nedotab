@@ -810,3 +810,4 @@ input[type="date"].todos-champ {
 .todos-retour[hidden],
 .todos-etat[hidden],
 .todos-vue [hidden] { display: none; }
+.todos-bouton[hidden] { display: none; }

@@ -30,6 +30,7 @@ const ID_TITRE = "todos-titre";
  */
 export function creerPanneauTodos({
   disponible,
+  actif = () => true,
   charger,
   uid,
   connecter = async () => {},
@@ -357,6 +358,13 @@ export function creerPanneauTodos({
 
   /** Called when the account changes: the button is always there, the data follow the sign-in. */
   function actualiser() {
+    bouton.hidden = !actif();
+    if (!actif()) {
+      // Turned off in the settings: nothing is shown, read or written.
+      if (ouvert) fermer();
+      donnees.reinitialiser();
+      return;
+    }
     if (!disponible()) {
       memoireSession.vider(); // nothing the user wrote survives a sign-out, not even in memory
       donnees.reinitialiser();

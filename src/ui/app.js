@@ -806,6 +806,7 @@ export async function demarrerApp(racine) {
   // sign in when there is no account. One panel at a time: opening one closes the other.
   const todos = creerPanneauTodos({
     disponible: () => uidConnecte() !== null,
+    actif: () => !store.lire().reglages.sansTodos,
     charger: chargerFirebase,
     uid: uidConnecte,
     connecter: () => session.connecter(),
@@ -820,6 +821,13 @@ export async function demarrerApp(racine) {
   new MutationObserver(() => {
     if (partage.bouton.getAttribute("aria-expanded") === "true") todos.fermer();
   }).observe(partage.bouton, { attributes: true, attributeFilter: ["aria-expanded"] });
+  let todosActifAvant = !store.lire().reglages.sansTodos;
+  store.abonner(() => {
+    const actif = !store.lire().reglages.sansTodos;
+    if (actif === todosActifAvant) return;
+    todosActifAvant = actif;
+    todos.actualiser();
+  });
   todos.actualiser();
   // The settings arrive after the first render and change in the settings panel: the robot
   // follows them (the search bar does the same on focus).

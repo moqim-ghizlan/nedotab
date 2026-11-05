@@ -364,6 +364,12 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       true,
     ],
     [
+      "sansTodos",
+      "Activer les todos",
+      "Sujets et todos synchronisés avec votre compte. Désactivé, le bouton et le panneau disparaissent et rien n'est lu ni écrit ; vos todos sont conservés et reviennent à la réactivation.",
+      true,
+    ],
+    [
       "sansUsagePourIa",
       "Partager ma fréquence d'utilisation avec l'assistant IA",
       "L'assistant reçoit, pour chaque site, « fort / moyen / faible / jamais » (jamais le nombre de visites). N'a d'effet que si l'IA est active.",
@@ -832,6 +838,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 store,
               }).section
             : null,
+          section("Todos : activation", ...ligneDes(["sansTodos"])),
           session.todos ? sectionTodos({ donnees: session.todos.donnees }).section : null,
           compteUi.confidentialite,
           compteUi.danger,

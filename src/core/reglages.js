@@ -160,6 +160,8 @@ export const INTERRUPTEURS = [
   "sansUsagePourIa",
   // T8: the sharing space is ON by default; this stores the opt-out.
   "sansEspacePartage",
+  // V6: the todos are ON by default; this stores the opt-out.
+  "sansTodos",
 ];
 
 /**
