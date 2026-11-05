@@ -14,6 +14,7 @@ function raison(etat, action) {
     case A.SITE_MODIFIER:
     case A.SITE_DEFINIR_IA:
     case A.DOSSIER_RENOMMER:
+    case A.DOSSIER_ICONE:
       return existe(action.id) ? null : "INTROUVABLE";
     case A.ELEMENT_DEPLACER:
       if (!existe(action.id)) return "INTROUVABLE";
@@ -84,6 +85,8 @@ export function decrire(etat, action) {
       return { libelle: `Tags de ${guillemets(titre(action.id))}`, nature: "site" };
     case A.DOSSIER_RENOMMER:
       return { libelle: `Renommer ${guillemets(titre(action.id))}`, nature: "dossier" };
+    case A.DOSSIER_ICONE:
+      return { libelle: `Icône de ${guillemets(titre(action.id))}`, nature: "dossier" };
     case A.ELEMENT_SUPPRIMER:
     case A.DOSSIER_SUPPRIMER:
       return { libelle: `Supprimer ${guillemets(titre(action.id))}`, nature: nature(action.id) };

@@ -1,16 +1,19 @@
 import { PALETTE, couleurDepuisTexte, lettrePourSite } from "../../core/couleurs.js";
 import { el } from "../dom.js";
+import { IDS_GLYPHES, creerGlyphe, libelleGlyphe } from "../glyphes.js";
 import { trouverIconeEtTitre } from "../services/icones.js";
 import { compterGraphemes, importerImage, verifierUrlImage } from "../services/imageIcone.js";
 
 const MODES = [
   ["auto", "Automatique"],
+  ["glyphe", "Icône"],
   ["lettre", "Lettre"],
   ["url", "Adresse d'image"],
   ["import", "Importer"],
 ];
 
 function modeDe(icone) {
+  if (icone?.type === "glyphe") return "glyphe";
   if (icone?.type === "lettre") return "lettre";
   if (icone?.type === "image") return "import";
   if (icone?.type === "url" && icone.source === "perso") return "url";
@@ -28,6 +31,8 @@ export function creerEditeurIcone({
   onChange,
   importBloque = () => false,
   modeInitial = null,
+  // Modes offered, in order. A folder has no favicon ("auto") but built-in glyphs ("glyphe").
+  modes = ["auto", "lettre", "url", "import"],
 }) {
   let icone = { ...iconeInitiale };
   let mode = modeInitial ?? modeDe(icone);
@@ -160,19 +165,86 @@ export function creerEditeurIcone({
     etatFichier,
   );
 
+  // --- built-in glyphs (folders) -------------------------------------------------------
+  const nuancierGlyphe = el("div", {
+    class: "nuancier",
+    role: "radiogroup",
+    "aria-label": "Couleur de l'icône",
+  });
+  const grilleGlyphes = el("div", {
+    class: "glyphes-grille",
+    role: "radiogroup",
+    "aria-label": "Icône",
+  });
+  let glypheId = icone.type === "glyphe" ? icone.id : "dossier";
+  let glypheCouleur = icone.type === "glyphe" ? icone.couleur : PALETTE[0];
+  const appliquerGlyphe = () => {
+    definir({ type: "glyphe", id: glypheId, couleur: glypheCouleur });
+    for (const b of grilleGlyphes.children)
+      b.setAttribute("aria-checked", String(b.dataset.id === glypheId));
+    for (const b of nuancierGlyphe.children)
+      b.setAttribute("aria-checked", String(b.dataset.couleur === glypheCouleur));
+    grilleGlyphes.style.setProperty("--glyphe-couleur", glypheCouleur);
+  };
+  for (const id of IDS_GLYPHES) {
+    grilleGlyphes.append(
+      el(
+        "button",
+        {
+          type: "button",
+          class: "glyphe-choix",
+          role: "radio",
+          "aria-label": libelleGlyphe(id),
+          title: libelleGlyphe(id),
+          "aria-checked": String(id === glypheId),
+          dataset: { id },
+          onclick: () => {
+            glypheId = id;
+            appliquerGlyphe();
+          },
+        },
+        creerGlyphe(id, 22),
+      ),
+    );
+  }
+  for (const couleur of PALETTE) {
+    nuancierGlyphe.append(
+      el("button", {
+        type: "button",
+        class: "nuance",
+        role: "radio",
+        style: `background:${couleur}`,
+        "aria-label": couleur,
+        "aria-checked": String(couleur === glypheCouleur),
+        dataset: { couleur },
+        onclick: () => {
+          glypheCouleur = couleur;
+          appliquerGlyphe();
+        },
+      }),
+    );
+  }
+  grilleGlyphes.style.setProperty("--glyphe-couleur", glypheCouleur);
+  const panneauGlyphe = el(
+    "div",
+    { class: "icone-panneau", dataset: { mode: "glyphe" } },
+    grilleGlyphes,
+    nuancierGlyphe,
+  );
+
   // --- mode switch -------------------------------------------------------------------
   const onglets = el("div", {
     class: "segments",
     role: "radiogroup",
     "aria-label": "Type d'icône",
   });
-  const panneaux = [panneauAuto, panneauLettre, panneauUrl, panneauImport];
+  const panneaux = [panneauAuto, panneauGlyphe, panneauLettre, panneauUrl, panneauImport];
   const afficherMode = (m) => {
     mode = m;
     for (const b of onglets.children) b.setAttribute("aria-checked", String(b.dataset.mode === m));
     for (const p of panneaux) p.hidden = p.dataset.mode !== m;
   };
-  for (const [m, libelle] of MODES) {
+  for (const [m, libelle] of MODES.filter(([m]) => modes.includes(m))) {
     onglets.append(
       el("button", {
         type: "button",
@@ -188,6 +260,7 @@ export function creerEditeurIcone({
             appliquerLettre();
           }
           if (m === "auto" && icone.type !== "url") redetecter();
+          if (m === "glyphe") appliquerGlyphe();
         },
       }),
     );

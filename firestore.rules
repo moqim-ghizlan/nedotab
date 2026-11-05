@@ -36,7 +36,7 @@ service cloud.firestore {
     match /users/{uid}/sauvegardes/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['creeLe', 'type', 'nom', 'appareil', 'versionSchema', 'nbSites', 'nbDossiers', 'grille', 'reglages'])
+        && request.resource.data.keys().hasOnly(['creeLe', 'type', 'nom', 'appareil', 'appareilId', 'versionSchema', 'nbSites', 'nbDossiers', 'grille', 'reglages'])
         && request.resource.data.type in ['auto', 'manuelle', 'avant-restauration']
         && request.resource.data.creeLe == request.time
         && (request.resource.data.nom == null
@@ -44,6 +44,9 @@ service cloud.firestore {
                 && request.resource.data.nom.size() >= 1
                 && request.resource.data.nom.size() <= 60))
         && request.resource.data.appareil in ['extension', 'pwa', 'iphone', 'ipad', 'navigateur']
+        && (!('appareilId' in request.resource.data)
+            || (request.resource.data.appareilId is string
+                && request.resource.data.appareilId.size() <= 40))
         && request.resource.data.nbSites is int
         && request.resource.data.nbDossiers is int
         && request.resource.data.grille is list
@@ -118,13 +121,35 @@ service cloud.firestore {
         && request.resource.data.majLe == request.time;
     }
 
+    // T12: named devices of the account. The limit of 20 is kept by the app (a rule cannot count).
+    // Only the owner; closed fields; the name is a short plain text. Removing an entry deletes
+    // no data.
+    match /users/{uid}/appareils/{id} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && id.size() >= 8 && id.size() <= 40
+        && request.resource.data.keys().hasOnly(['nom', 'type', 'creeLe', 'vuLe'])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 1
+        && request.resource.data.nom.size() <= 30
+        && request.resource.data.type in ['extension', 'pwa', 'iphone', 'ipad', 'navigateur']
+        && request.resource.data.creeLe == request.time
+        && request.resource.data.vuLe == request.time;
+      allow update: if proprietaire(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'vuLe'])
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 1
+        && request.resource.data.nom.size() <= 30
+        && (request.resource.data.vuLe == resource.data.vuLe || request.resource.data.vuLe == request.time);
+    }
+
     // V4.24: sharing space (texts and links). The rules cannot count a collection: the counter
     // espacePartageMeta/usage is changed in the same batch as each element (getAfter), so a 201st
     // element, or an add that does not increment the counter by exactly 1, is refused.
     match /users/{uid}/espacePartage/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre', 'expireLe', 'description'])
+        && request.resource.data.keys().hasOnly(['type', 'contenu', 'titre', 'creeLe', 'appareil', 'appareilId', 'epingle', 'taille', 'typeMime', 'chemin', 'chiffre', 'expireLe', 'description'])
         && (!('description' in request.resource.data)
             || (request.resource.data.description is string
                 && request.resource.data.description.size() <= 2000))
@@ -142,15 +167,18 @@ service cloud.firestore {
         && expirationValide(request.resource.data.get('expireLe', null))
         && request.resource.data.appareil is string
         && request.resource.data.appareil.size() <= 64
+        && (!('appareilId' in request.resource.data)
+            || (request.resource.data.appareilId is string
+                && request.resource.data.appareilId.size() <= 40))
         && request.resource.data.epingle is bool
         && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb <= 200
         && getAfter(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb
           == (exists(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage)
               ? get(/databases/$(db)/documents/users/$(uid)/espacePartageMeta/usage).data.nb : 0) + 1;
       // Pin / unpin, or bring an element back to the top (same content sent again).
-      // V4.27: also an extension of the expiry (or its first value, for an item created before
-      // V4.27): within [now + 55 min, now + 31 days], later than the old one, and at most 31 days
-      // after the creation. There is NO read rule based on request.time (a rule is not a filter).
+      // V4.27: also a change of the expiry (or its first value, for an item created before
+      // V4.27): any valid value, longer OR shorter (within [now + 55 min, now + 31 days], or
+      // unlimited), whatever the old one. There is NO read rule based on request.time.
       allow update: if proprietaire(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe', 'titre', 'description', 'contenu'])
         && request.resource.data.epingle is bool
@@ -169,11 +197,7 @@ service cloud.firestore {
         && (request.resource.data.creeLe == resource.data.creeLe
             || request.resource.data.creeLe == request.time)
         && (request.resource.data.get('expireLe', null) == resource.data.get('expireLe', null)
-            || (expirationValide(request.resource.data.get('expireLe', null))
-                && (!('expireLe' in resource.data)
-                    || (request.resource.data.expireLe > resource.data.expireLe
-                        && (request.resource.data.expireLe == timestamp.date(9999, 12, 31)
-                            || request.resource.data.expireLe <= resource.data.creeLe + duration.value(31, 'd'))))));
+            || expirationValide(request.resource.data.get('expireLe', null)));
     }
 
     // V4.27: every item expires: a timestamp (or 9999-12-31 = kept for ever) between 55 minutes and 31 days from now (margins

@@ -1,4 +1,4 @@
-import { libelleAppareil } from "../../core/appareil.js";
+import { libelleAppareilAffiche } from "../../core/appareils.js";
 import { dateHeure, dateRelative, NOM_MAX } from "../../core/sauvegardes.js";
 import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
@@ -47,7 +47,10 @@ const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? "s" : ""}`;
  * maintenant", filter All / Automatic / Manual, pages of 20, deletion of manual backups.
  * The list is only loaded when the section is opened (each backup is a full document).
  */
-export function sectionSauvegardes(service, restauration) {
+export function sectionSauvegardes(service, restauration, appareils = null) {
+  /** T12: "work-pc" (current name by id) or the kind of device for older copies. */
+  const nomAppareil = (s) =>
+    libelleAppareilAffiche({ appareilId: s.appareilId, type: s.appareil }, appareils?.liste() ?? []);
   const contenu = el("div", { class: "sauvegardes" });
   const section = el(
     "section",
@@ -126,7 +129,7 @@ export function sectionSauvegardes(service, restauration) {
 
   const ligne = (s) => {
     const t = TYPES[s.type] ?? TYPES.auto;
-    const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}`;
+    const sous = `${s.creeLe ? dateHeure(s.creeLe) : "En cours…"}, ${nomAppareil(s)}`;
     return el(
       "li",
       {
@@ -144,7 +147,7 @@ export function sectionSauvegardes(service, restauration) {
         { class: "sauvegarde-texte" },
         el("strong", { texte: s.nom || t.libelle }),
         el("span", {
-          texte: `${s.creeLe ? dateRelative(s.creeLe) : "En cours…"}, ${libelleAppareil(s.appareil)}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
+          texte: `${s.creeLe ? dateRelative(s.creeLe) : "En cours…"}, ${nomAppareil(s)}, ${pluriel(s.nbSites ?? 0, "site")} et ${pluriel(s.nbDossiers ?? 0, "dossier")}`,
         }),
       ),
       restauration ? boutonApercu(s.nom || t.libelle, sous, s, () => charger(true)) : null,

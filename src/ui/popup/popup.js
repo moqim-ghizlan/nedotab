@@ -1,5 +1,5 @@
 import { reduire } from "../../core/actions.js";
-import { lireOnglet } from "../../core/ajoutRapide.js";
+import { dimensionsFenetreAjout, lireOnglet } from "../../core/ajoutRapide.js";
 import { migrer } from "../../core/migration.js";
 import { creerStore } from "../../core/store.js";
 import { domaine } from "../../core/url.js";
@@ -58,6 +58,28 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
     window.close();
   };
 
+  /** Opens the add window at 75 % of the screen. @returns {Promise<boolean>} true when it opened */
+  async function ouvrirFenetreAjout() {
+    if (!onglet.ok || !chromeApi?.windows?.create) return false;
+    try {
+      const e = globalThis.screen ?? {};
+      const dims = dimensionsFenetreAjout({
+        largeur: e.availWidth,
+        hauteur: e.availHeight,
+        gauche: e.availLeft,
+        haut: e.availTop,
+      });
+      const adresse = new URL(chromeApi.runtime.getURL("ajout.html"));
+      adresse.searchParams.set("u", onglet.url);
+      adresse.searchParams.set("t", onglet.titre ?? "");
+      await chromeApi.windows.create({ url: adresse.href, type: "popup", focused: true, ...dims });
+      window.close();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function accueil() {
     // V4.30: icons only; the label stays the button's name (read, shown as a tooltip).
     const libelle = (texte) => el("span", { class: "visuellement-cache", texte });
@@ -70,6 +92,9 @@ export async function demarrerPopup(racine, { chromeApi = globalThis.chrome } = 
         disabled: !onglet.ok,
         onclick: async () => {
           ajouter.disabled = true;
+          // T4: a large window, centred, independent of the button (a popup is capped at
+          // 800 x 600 and always hangs under the button). Fallback: the small form below.
+          if (await ouvrirFenetreAjout()) return;
           try {
             const { store, peutEcrire } = await charger();
             await ecranAjout({

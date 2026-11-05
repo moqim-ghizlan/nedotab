@@ -6,6 +6,12 @@ import { creerEspacePartage } from "../../src/ui/espacePartage.js";
 
 afterEach(() => document.body.replaceChildren());
 
+/** Opens the "⋯" menu of the first card inside `racine`, then clicks the entry `nom`. */
+function choisirDansMenu(racine, nom) {
+  racine.querySelector(".partage-action--plus").click();
+  [...document.querySelectorAll(".menu-entree")].find((b) => b.textContent === nom).click();
+}
+
 const attendre = () => new Promise((r) => setTimeout(r, 0));
 
 function monter({ elements = [], compteur = 0, disponible = true, actif = () => true } = {}) {
@@ -229,7 +235,7 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     const { p, appels, fb } = monter({ elements: [el_()] });
     p.ouvrir();
     await attendre();
-    [...p.panneau.querySelectorAll("button")].find((x) => x.textContent === "Supprimer").click();
+    choisirDansMenu(p.panneau, "Supprimer");
     await attendre();
     await attendre();
     expect(appels.supprimer).toEqual(["1"]);
@@ -246,7 +252,7 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     const { p, appels } = monter({ elements: [el_()] });
     p.ouvrir();
     await attendre();
-    [...p.panneau.querySelectorAll("button")].find((x) => x.textContent === "Épingler").click();
+    choisirDansMenu(p.panneau, "Épingler");
     await attendre();
     await attendre();
     expect(appels.epingler).toEqual([["1", true]]);

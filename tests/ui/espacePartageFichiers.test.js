@@ -5,6 +5,12 @@ import { creerStore } from "../../src/core/store.js";
 import { creerFichiers } from "../../src/ui/espacePartageFichiers.js";
 
 afterEach(() => document.body.replaceChildren());
+/** Opens the "⋯" menu of the first card inside `racine`, then clicks the entry `nom`. */
+function choisirDansMenu(racine, nom) {
+  racine.querySelector(".partage-action--plus").click();
+  [...document.querySelectorAll(".menu-entree")].find((b) => b.textContent === nom).click();
+}
+
 const attendre = () => new Promise((r) => setTimeout(r, 0));
 const MO = 1024 * 1024;
 const fichier = (nom, taille = 100, type = "application/pdf") => ({ name: nom, size: taille, type });
@@ -165,7 +171,7 @@ describe("fichiers du partage (V4.25)", () => {
     const c = f.carte({ id: "5", type: "fichier", contenu: "a.pdf", titre: "Vacances", description: "plage", typeMime: "application/pdf", taille: 10, chemin: "partages/u1/5/a.pdf" });
     expect(c.querySelector(".partage-titre").textContent).toBe("Vacances");
     expect(c.textContent).toContain("plage");
-    [...c.querySelectorAll("button")].find((b) => b.textContent === "Modifier").click();
+    choisirDansMenu(c, "Modifier");
     await attendre();
     await attendre();
     expect(editerDetails).toHaveBeenCalledWith(

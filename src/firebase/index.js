@@ -73,6 +73,14 @@ export {
   retirerEntrees,
 } from "./visites.js";
 export {
+  definirIdentiteAppareil,
+  ecouterAppareils,
+  enregistrerAppareil,
+  renommerAppareilDistant,
+  retirerAppareilDistant,
+  toucherAppareil,
+} from "./appareils.js";
+export {
   ajouter as ajouterAuPartage,
   ecouterCompteur as ecouterCompteurPartage,
   ecouterEspacePartage,

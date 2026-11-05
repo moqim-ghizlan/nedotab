@@ -19,6 +19,7 @@ import {
 import { lireElement } from "../core/espacePartage.js";
 import { DUREE_DEFAUT, calculerExpiration } from "../core/expirationPartage.js";
 import { obtenirApp } from "./app.js";
+import { marqueAppareil } from "./appareils.js";
 import { appareilCourant } from "./sauvegardes.js";
 
 /**
@@ -112,7 +113,7 @@ export function envoyerFichier(
       lot.set(reference, {
         type: "fichier",
         ...bloc,
-        appareil: appareilCourant(),
+        ...marqueAppareil(appareilCourant()),
         epingle: false,
         creeLe: serverTimestamp(),
         expireLe: Timestamp.fromMillis(expireLe),

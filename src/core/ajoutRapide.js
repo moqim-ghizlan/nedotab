@@ -100,3 +100,26 @@ export function fusionnerPropositionIa(formulaire, proposition, champsTouches, g
   }
   return { formulaire: sortie, remplis };
 }
+
+/** Size limits of the add window (T4), in px. */
+export const FENETRE_AJOUT = { largeurMin: 640, largeurMax: 1100, hauteurMin: 480, hauteurMax: 800 };
+
+/**
+ * Size and place of the add window: 75 % of the usable screen, within the limits above (and
+ * never larger than the screen), centred. `ecran` = { largeur, hauteur, gauche?, haut? }.
+ */
+export function dimensionsFenetreAjout(ecran, part = 0.75) {
+  const L = Number.isFinite(ecran?.largeur) && ecran.largeur > 0 ? ecran.largeur : 1280;
+  const H = Number.isFinite(ecran?.hauteur) && ecran.hauteur > 0 ? ecran.hauteur : 800;
+  const borne = (v, min, max, plafond) => Math.min(plafond, Math.max(min, Math.min(max, v)));
+  const width = Math.round(borne(L * part, FENETRE_AJOUT.largeurMin, FENETRE_AJOUT.largeurMax, L));
+  const height = Math.round(
+    borne(H * part, FENETRE_AJOUT.hauteurMin, FENETRE_AJOUT.hauteurMax, H),
+  );
+  return {
+    width,
+    height,
+    left: Math.round((ecran?.gauche ?? 0) + (L - width) / 2),
+    top: Math.round((ecran?.haut ?? 0) + (H - height) / 2),
+  };
+}

@@ -28,10 +28,16 @@ function faux({ admin = false, acces = { ok: true, valeur: ACCES }, invites = []
 }
 const refuse = { ok: false, code: "functions/permission-denied", erreur: LIBELLE_RESERVE };
 
-async function monter(service) {
+/** Opens a sub-tab of the section (the panels are built one at a time). */
+function onglet(nom) {
+  [...document.querySelectorAll(".vpn-onglet")].find((b) => b.textContent === nom)?.click();
+}
+
+async function monter(service, { ouvrir = "Mon accès" } = {}) {
   const v = sectionVpn({ service });
   document.body.append(v.section);
   await v.charger();
+  if (ouvrir) onglet(ouvrir);
   return v;
 }
 const texte = () => document.body.textContent;
@@ -153,19 +159,20 @@ describe("réglages VPN — propriétaire", () => {
   ];
 
   it("voit la liste (sans les accès retirés), l'avertissement et son propre état", async () => {
-    await monter(faux({ admin: true, acces: refuse, invites }));
+    await monter(faux({ admin: true, acces: refuse, invites }), { ouvrir: "Administration" });
     expect(texte()).toContain("a@ex.org");
     expect(texte()).toContain("b@ex.org");
     expect(texte()).not.toContain("c@ex.org");
     expect(texte()).toContain("Accès accordé");
     expect(texte()).toContain("En attente de connexion");
     expect(texte()).toContain("N'invitez que des personnes de confiance");
+    onglet("Mon accès");
     expect(texte()).toContain("invitez votre propre adresse");
   });
 
   it("inviter envoie l'adresse normalisée et recharge la liste", async () => {
     const service = faux({ admin: true, acces: refuse, invites });
-    await monter(service);
+    await monter(service, { ouvrir: "Administration" });
     const champ = document.querySelector("#vpn-email");
     champ.value = "  Nouveau@Ex.ORG ";
     bouton("Inviter").click();
@@ -178,9 +185,12 @@ describe("réglages VPN — propriétaire", () => {
     const service = faux({ admin: true, acces: refuse, invites });
     await monter(service);
     expect(texte()).toContain("invitez votre propre adresse");
+    onglet("Administration");
     service.acces.mockResolvedValue({ ok: true, valeur: ACCES });
     document.querySelector("#vpn-email").value = "moi@ex.org";
     bouton("Inviter").click();
+    await vi.waitFor(() => expect(service.acces).toHaveBeenCalledTimes(2));
+    onglet("Mon accès");
     await vi.waitFor(() => expect(bouton("Afficher mes identifiants")).toBeDefined());
     expect(texte()).not.toContain("invitez votre propre adresse");
     expect(texte()).not.toContain(ACCES.motDePasse);
@@ -190,16 +200,19 @@ describe("réglages VPN — propriétaire", () => {
     const service = faux({ admin: true, invites });
     await monter(service);
     expect(bouton("Afficher mes identifiants")).toBeDefined();
+    onglet("Administration");
     service.acces.mockResolvedValue(refuse);
     demander.mockResolvedValue(true);
     document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
+    await vi.waitFor(() => expect(service.acces).toHaveBeenCalledTimes(2));
+    onglet("Mon accès");
     await vi.waitFor(() => expect(bouton("Afficher mes identifiants")).toBeUndefined());
     expect(texte()).toContain(LIBELLE_RESERVE);
   });
 
   it("une adresse invalide n'appelle pas le serveur", async () => {
     const service = faux({ admin: true, acces: refuse });
-    await monter(service);
+    await monter(service, { ouvrir: "Administration" });
     document.querySelector("#vpn-email").value = "pas-un-email";
     bouton("Inviter").click();
     await Promise.resolve();
@@ -208,7 +221,7 @@ describe("réglages VPN — propriétaire", () => {
 
   it("retirer l'accès demande confirmation, puis révoque", async () => {
     const service = faux({ admin: true, acces: refuse, invites });
-    await monter(service);
+    await monter(service, { ouvrir: "Administration" });
     demander.mockResolvedValue(true);
     document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
     await vi.waitFor(() => expect(service.revoquer).toHaveBeenCalledWith("a@ex.org"));
@@ -216,7 +229,7 @@ describe("réglages VPN — propriétaire", () => {
 
   it("annuler la confirmation ne révoque rien", async () => {
     const service = faux({ admin: true, acces: refuse, invites });
-    await monter(service);
+    await monter(service, { ouvrir: "Administration" });
     demander.mockResolvedValue(false);
     document.querySelector('button[aria-label="Retirer l\'accès de a@ex.org"]').click();
     await Promise.resolve();

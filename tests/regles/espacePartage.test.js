@@ -166,11 +166,16 @@ describe("expiration (V4.27)", () => {
     await assertSucceeds(ajouter(db("alice"), "e6", { expireLe: dans(30 * 86_400_000) }));
   });
 
-  it("prolongation : plus tard seulement, bornée ; jamais raccourcie", async () => {
+  it("changement d'échéance : plus long, plus court, illimité, bornes", async () => {
+    const ILLIMITE = Timestamp.fromMillis(Date.UTC(9999, 11, 31));
     await assertSucceeds(ajouter(db("alice"), "e1", { expireLe: dans(2 * 3_600_000) }));
-    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: dans(86_400_000) }));
-    await assertFails(updateDoc(el(db("alice"), "e1"), { expireLe: dans(3_600_000 + 600_000) })); // plus tôt
+    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: dans(86_400_000) })); // plus long
+    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: dans(3_600_000 + 600_000) })); // plus court
+    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: ILLIMITE })); // fini -> illimité
+    await assertSucceeds(updateDoc(el(db("alice"), "e1"), { expireLe: dans(7 * 86_400_000) })); // illimité -> fini
     await assertFails(updateDoc(el(db("alice"), "e1"), { expireLe: dans(40 * 86_400_000) })); // trop loin
+    await assertFails(updateDoc(el(db("alice"), "e1"), { expireLe: dans(10 * 60_000) })); // trop proche
+    await assertFails(updateDoc(el(db("bob"), "e1"), { expireLe: dans(86_400_000) })); // autre utilisateur
   });
 
   it("un élément d'avant la V4.27 reçoit sa première échéance", async () => {

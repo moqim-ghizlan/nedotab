@@ -97,6 +97,7 @@ describe("options du chatbot (T9)", () => {
       boutonAccueil: true,
       rechercheIa: true,
       boutonNavigateur: true,
+      heureMessages: true,
     });
     expect(iaAStocker(iaParDefaut())).toBeUndefined();
     // Settings saved before T9 stay valid and unchanged.
@@ -109,6 +110,7 @@ describe("options du chatbot (T9)", () => {
       boutonAccueil: false,
       rechercheIa: false,
       boutonNavigateur: false,
+      heureMessages: true,
     });
     expect(optionsChatbot({ actif: false, sansBoutonAccueil: true }).boutonAccueil).toBe(false);
   });

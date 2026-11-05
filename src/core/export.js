@@ -20,7 +20,7 @@ export function nomFichierExport(date = new Date()) {
  */
 export function creerExport(
   etat,
-  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats, espacePartage },
+  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats, espacePartage, appareils },
 ) {
   const resultat = {
     format: FORMAT_EXPORT,
@@ -35,6 +35,15 @@ export function creerExport(
   if (stats) resultat.stats = stats;
   // V4.24: texts and links of the sharing space (account only). Backups never include it.
   if (espacePartage) resultat.espacePartage = exporterElements(espacePartage);
+  // T12: the names of the devices (no technical identifier beyond the random id of the list).
+  if (Array.isArray(appareils) && appareils.length)
+    resultat.appareils = appareils.map(({ id, nom, type, creeLe, vuLe }) => ({
+      id,
+      nom,
+      type,
+      creeLe: creeLe ?? null,
+      vuLe: vuLe ?? null,
+    }));
   if (sauvegardes) {
     resultat.sauvegardes = sauvegardes.map((s) => ({
       id: s.id,

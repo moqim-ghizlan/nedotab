@@ -1,0 +1,982 @@
+/*
+ * Shared form components (T1): text field, field + button group, buttons in three weights,
+ * cards, progress bar, key/value table, status pill, segmented control, stepper.
+ * Used by every settings section (Advanced, VPN, devices…). Tokens only: no colour, radius or
+ * spacing written in hard.
+ */
+:root {
+  --champ-hauteur: 40px;
+  --focus-anneau: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+  --carte-fond: color-mix(in srgb, var(--texte) 3.5%, var(--surface));
+  --carte-rayon: var(--rayon);
+  --duree-focus: 150ms;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --champ-hauteur: 44px;
+  }
+}
+
+/* --- Text field --------------------------------------------------------------------------- */
+.reglages input[type="text"],
+.reglages input[type="url"],
+.reglages input[type="search"],
+.reglages input[type="email"],
+.reglages input[type="number"],
+.reglages input[type="password"],
+.reglages select,
+.reglages textarea,
+.champ-texte {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--champ-hauteur);
+  padding: 0 var(--espace-3);
+  border: 1px solid var(--trait-fort);
+  border-radius: 10px;
+  background: var(--creux);
+  color: var(--texte);
+  font: inherit;
+  transition:
+    border-color var(--duree-focus),
+    box-shadow var(--duree-focus),
+    background-color var(--duree-focus);
+}
+
+.reglages textarea {
+  padding-block: var(--espace-2);
+}
+
+.reglages input::placeholder,
+.champ-texte::placeholder {
+  color: color-mix(in srgb, var(--texte-secondaire) 85%, transparent);
+  opacity: 1;
+}
+
+.reglages input[type="text"]:focus-visible,
+.reglages input[type="url"]:focus-visible,
+.reglages input[type="search"]:focus-visible,
+.reglages input[type="email"]:focus-visible,
+.reglages input[type="number"]:focus-visible,
+.reglages select:focus-visible,
+.reglages textarea:focus-visible,
+.champ-texte:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-anneau);
+  background: var(--surface);
+}
+
+.reglages input[aria-invalid="true"],
+.champ-texte[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+/* Field + button, welded: same height, shared corners. */
+.groupe-champ {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.groupe-champ > input,
+.groupe-champ > .champ-suffixe {
+  flex: 1 1 auto;
+  min-width: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.groupe-champ > .bouton {
+  flex: none;
+  min-height: var(--champ-hauteur);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+
+/* A unit written inside the field ("Go"). */
+.champ-suffixe {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.champ-suffixe > input {
+  padding-right: 3rem;
+}
+
+.champ-suffixe > .suffixe {
+  position: absolute;
+  right: var(--espace-3);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  pointer-events: none;
+}
+
+/* --- Buttons: primary, secondary (outline), danger --------------------------------------------- */
+.reglages .bouton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espace-2);
+  min-height: var(--champ-hauteur);
+  padding: 0 var(--espace-4);
+  border-radius: 10px;
+  font: inherit;
+  font-size: var(--taille-s);
+  font-weight: 560;
+}
+
+.reglages .bouton .icone {
+  flex: none;
+  opacity: 0.85;
+}
+
+.reglages .bouton--danger:not(.bouton--principal) {
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
+  background: color-mix(in srgb, var(--danger) 9%, transparent);
+  color: var(--danger);
+}
+
+.reglages .bouton--danger:not(.bouton--principal):hover {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.reglages .bouton--petit {
+  min-height: 34px;
+  padding: 0 var(--espace-3);
+}
+
+.reglages .bouton:focus-visible,
+.reglages .segment:focus-visible,
+.reglages .interrupteur-bouton:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-anneau);
+}
+
+/* A grid of regular buttons (two columns, folding to one on a narrow screen). */
+.grille-boutons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
+  gap: var(--espace-2);
+}
+
+.grille-boutons > .bouton {
+  width: 100%;
+}
+
+/* --- Cards -------------------------------------------------------------------------------- */
+.carte-reglage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  padding: var(--espace-4);
+  border: 1px solid var(--trait);
+  border-radius: var(--carte-rayon);
+  background: var(--carte-fond);
+}
+
+.carte-reglage-titre {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-2);
+  margin: 0;
+  font-size: var(--taille-m);
+  font-weight: 650;
+}
+
+.carte-reglage-titre .icone {
+  color: var(--accent);
+}
+
+.carte-reglage .reglages-note {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+/* The settings sections drawn as cards are not separated by a rule any more. */
+.onglet-panneau .carte-reglage + .carte-reglage {
+  margin-top: var(--espace-3);
+}
+
+.onglet-panneau .carte-reglage.reglages-section + .reglages-section,
+.onglet-panneau .reglages-section + .carte-reglage.reglages-section {
+  padding-top: var(--espace-4);
+  border-top: 1px solid var(--trait);
+}
+
+/* A status line: dot or text on the left, the action on the right. */
+.ligne-statut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espace-3);
+}
+
+.ligne-statut > .texte {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-size: var(--taille-s);
+  color: var(--texte-secondaire);
+}
+
+/* --- Progress bar (storage, consumption) --------------------------------------------------- */
+.barre {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--texte) 10%, transparent);
+  overflow: hidden;
+}
+
+.barre > span {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 260ms var(--glisse), background-color 200ms;
+}
+
+.barre[data-niveau="attention"] > span {
+  background: var(--attention);
+}
+
+.barre[data-niveau="alerte"] > span {
+  background: var(--danger);
+}
+
+.barre--fine {
+  height: 4px;
+}
+
+.barre-legende {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espace-2);
+  margin: 0;
+  font-size: var(--taille-s);
+  font-variant-numeric: tabular-nums;
+  color: var(--texte-secondaire);
+}
+
+.barre-legende strong {
+  color: var(--texte);
+  font-weight: 650;
+}
+
+/* --- Key / value table (diagnostic) ---------------------------------------------------------- */
+.table-cles {
+  position: relative;
+  display: grid;
+  margin: 0;
+  border: 1px solid var(--trait);
+  border-radius: 10px;
+  background: var(--creux);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: var(--taille-xs);
+  overflow: hidden;
+  resize: vertical;
+  max-height: 28rem;
+  overflow-y: auto;
+}
+
+.table-cles-ligne {
+  display: grid;
+  grid-template-columns: minmax(7rem, 11rem) minmax(0, 1fr);
+  gap: var(--espace-3);
+  padding: 7px var(--espace-3);
+}
+
+.table-cles-ligne + .table-cles-ligne {
+  border-top: 1px solid var(--trait);
+}
+
+.table-cles dt {
+  color: var(--texte-secondaire);
+}
+
+.table-cles dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.table-cles dd.replie {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.table-cles .voir-plus {
+  margin-left: var(--espace-2);
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.outil-coin {
+  position: sticky;
+  top: var(--espace-2);
+  float: right;
+  margin: var(--espace-2);
+}
+
+/* --- Status pill ---------------------------------------------------------------------------- */
+.pastille-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--texte-secondaire) 14%, transparent);
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+  white-space: nowrap;
+}
+
+.pastille-etat::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pastille-etat[data-etat="ok"] {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+}
+
+.pastille-etat[data-etat="attention"] {
+  background: color-mix(in srgb, var(--attention) 16%, transparent);
+  color: var(--attention);
+}
+
+.pastille-etat[data-etat="erreur"] {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+/* --- Big version, link buttons ----------------------------------------------------------------- */
+.version-grande {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espace-2);
+  font-size: var(--taille-l);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.version-grande small {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+  font-weight: 400;
+}
+
+.liens-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: 0;
+}
+
+.liens-boutons a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 var(--espace-3);
+  border: 1px solid var(--trait-fort);
+  border-radius: 999px;
+  color: var(--texte);
+  font-size: var(--taille-s);
+  text-decoration: none;
+  transition: background-color var(--duree-focus);
+}
+
+.liens-boutons a:hover {
+  background: var(--survol);
+}
+
+.liens-boutons a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-anneau);
+}
+
+/* --- Toggle row with its tag ---------------------------------------------------------------------- */
+.interrupteur-texte .titre-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barre > span,
+  .reglages input,
+  .reglages .bouton,
+  .liens-boutons a {
+    transition: none;
+  }
+}
+
+/* Result areas of the diagnostic: taller than before, and the user can stretch them. */
+.diagnostic-texte {
+  max-height: 22rem;
+  resize: vertical;
+}
+
+.diagnostic-texte--haut {
+  min-height: 8rem;
+  max-height: 32rem;
+}
+
+/* --- Checkboxes and radios: never the browser's own (T1) ------------------------------------- */
+.reglages input[type="checkbox"]:not(.interrupteur-bouton),
+.reglages input[type="radio"],
+.dialogue input[type="checkbox"]:not(.interrupteur-bouton),
+.dialogue input[type="radio"] {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid var(--trait-fort);
+  border-radius: 6px;
+  background: var(--creux);
+  appearance: none;
+  cursor: pointer;
+  transition:
+    background-color var(--duree-focus),
+    border-color var(--duree-focus),
+    box-shadow var(--duree-focus);
+}
+
+.reglages input[type="radio"],
+.dialogue input[type="radio"] {
+  border-radius: 50%;
+}
+
+.reglages input[type="checkbox"]:not(.interrupteur-bouton):checked,
+.reglages input[type="radio"]:checked,
+.dialogue input[type="checkbox"]:not(.interrupteur-bouton):checked,
+.dialogue input[type="radio"]:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.reglages input[type="checkbox"]:not(.interrupteur-bouton):checked::after,
+.dialogue input[type="checkbox"]:not(.interrupteur-bouton):checked::after {
+  content: "";
+  position: absolute;
+  left: 5.5px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid var(--accent-texte);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.reglages input[type="radio"]:checked::after,
+.dialogue input[type="radio"]:checked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--accent-texte);
+}
+
+.reglages input[type="checkbox"]:not(.interrupteur-bouton):focus-visible,
+.reglages input[type="radio"]:focus-visible,
+.dialogue input[type="checkbox"]:not(.interrupteur-bouton):focus-visible,
+.dialogue input[type="radio"]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-anneau);
+}
+
+@media (pointer: coarse) {
+  .reglages input[type="checkbox"]:not(.interrupteur-bouton),
+  .reglages input[type="radio"] {
+    width: 24px;
+    height: 24px;
+  }
+  .reglages input[type="checkbox"]:not(.interrupteur-bouton):checked::after {
+    left: 7px;
+    top: 3px;
+  }
+}
+
+/* --- VPN rules: chips, picker window, info card (T3) ------------------------------------------- */
+.vpn-puces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  max-height: 11rem;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.vpn-puce {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px 2px var(--espace-3);
+  border: 1px solid var(--trait-fort);
+  border-radius: 999px;
+  background: var(--creux);
+  font-size: var(--taille-s);
+}
+
+.vpn-puce-retrait {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--texte-secondaire);
+  cursor: pointer;
+}
+
+.vpn-puce-retrait:hover,
+.vpn-puce-retrait:focus-visible {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+  outline: none;
+}
+
+.vpn-vide {
+  padding: var(--espace-3);
+  border: 1px dashed var(--trait-fort);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.carte-info {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-3);
+  padding: var(--espace-3);
+  border-radius: 10px;
+  background: var(--accent-doux);
+  font-size: var(--taille-s);
+}
+
+.carte-info p {
+  margin: 0;
+}
+
+.dialogue--sites {
+  width: min(30rem, calc(100vw - 2rem));
+}
+
+.choix-sites-liste {
+  height: 20rem;
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--trait);
+  border-radius: 10px;
+  list-style: none;
+}
+
+.choix-sites-ligne label {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  min-height: 40px;
+  padding: 0 var(--espace-3);
+  cursor: pointer;
+}
+
+.choix-sites-ligne:hover {
+  background: var(--survol);
+}
+
+.choix-sites-ligne--deja {
+  color: var(--texte-secondaire);
+}
+
+.choix-sites-ligne--deja label {
+  cursor: default;
+}
+
+.choix-sites-ligne small {
+  margin-left: auto;
+  font-size: var(--taille-xs);
+}
+
+.choix-sites-icone {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-size: var(--taille-xs);
+  font-weight: 650;
+}
+
+.choix-sites-domaine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choix-sites-outils {
+  display: flex;
+  align-items: center;
+  gap: var(--espace-3);
+  margin: var(--espace-2) 0;
+}
+
+.choix-sites-compteur {
+  margin: 0 0 0 auto;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.choix-sites-pied {
+  position: sticky;
+  bottom: 0;
+  padding-top: var(--espace-3);
+  background: var(--surface);
+}
+
+/* --- VPN: guest cards, consumption, sub-tabs, status header (T3) ------------------------------- */
+.vpn-cartes {
+  display: grid;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vpn-carte {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espace-3);
+  padding: var(--espace-3);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--carte-fond);
+}
+
+.vpn-initiale {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.vpn-carte-corps {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
+}
+
+.vpn-carte-email {
+  overflow-wrap: anywhere;
+}
+
+.vpn-carte-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+}
+
+.vpn-menu {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -6px -6px 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.vpn-menu:hover,
+.vpn-menu:focus-visible {
+  background: var(--survol);
+  outline: none;
+  box-shadow: var(--focus-anneau);
+}
+
+.vpn-grand-chiffre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espace-2);
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-variant-numeric: tabular-nums;
+}
+
+.vpn-grand-chiffre strong {
+  color: var(--texte);
+  font-size: var(--taille-xl);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.vpn-canaux {
+  display: grid;
+  gap: var(--espace-2);
+}
+
+.vpn-canal {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px var(--espace-3);
+  font-size: var(--taille-s);
+}
+
+.vpn-canal .barre {
+  grid-column: 1 / -1;
+}
+
+.vpn-canal-valeur {
+  font-variant-numeric: tabular-nums;
+  color: var(--texte-secondaire);
+}
+
+/* Sub-tabs of the VPN section: one panel at a time. */
+.vpn-onglets {
+  display: flex;
+  gap: var(--espace-1);
+  margin: 0 0 var(--espace-3);
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--creux);
+  overflow-x: auto;
+}
+
+.vpn-onglet {
+  flex: 1 0 auto;
+  min-height: 38px;
+  padding: 0 var(--espace-3);
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-size: var(--taille-s);
+  font-weight: 560;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--duree-focus),
+    color var(--duree-focus);
+}
+
+.vpn-onglet[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: var(--ombre);
+}
+
+.vpn-onglet:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-anneau);
+}
+
+.vpn-panneau {
+  display: grid;
+  gap: var(--espace-4);
+}
+
+.vpn-panneau[hidden] {
+  display: none;
+}
+
+/* Status header: pill, title, server state. */
+.vpn-statut {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-3);
+  margin-bottom: var(--espace-3);
+}
+
+.vpn-statut-texte {
+  display: grid;
+  flex: 1 1 12rem;
+  gap: 2px;
+}
+
+.vpn-statut-texte strong {
+  font-size: var(--taille-m);
+}
+
+.vpn-info {
+  border: 1px solid var(--trait);
+  border-radius: 10px;
+  padding: var(--espace-2) var(--espace-3);
+  font-size: var(--taille-s);
+}
+
+.vpn-info summary {
+  cursor: pointer;
+  font-weight: 560;
+}
+
+/* WireGuard: three steps. */
+.etapes {
+  display: grid;
+  gap: var(--espace-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etape {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: var(--espace-3);
+  padding: var(--espace-3);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--carte-fond);
+}
+
+.etape-numero {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent-doux);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.etape[data-fait="true"] .etape-numero {
+  background: var(--accent);
+  color: var(--accent-texte);
+}
+
+.etape-corps {
+  display: grid;
+  gap: var(--espace-2);
+  min-width: 0;
+}
+
+.etape-corps h5 {
+  margin: 0;
+  font-size: var(--taille-m);
+}
+
+.etape-corps p {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.carte-qr {
+  display: grid;
+  justify-items: center;
+  gap: var(--espace-3);
+  padding: var(--espace-4);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+
+.carte-qr canvas,
+.carte-qr svg,
+.carte-qr img {
+  max-width: min(100%, 15rem);
+  padding: var(--espace-3);
+  border-radius: 10px;
+  background: #fff;
+}
+
+/* --- Tags: one soft zone, a "#" before the field, round chips (everywhere) --------------------- */
+.tags-zone {
+  gap: 6px;
+  min-height: var(--champ-hauteur);
+  padding: 4px var(--espace-3);
+  border: 1px solid var(--trait-fort);
+  border-radius: 10px;
+  background: var(--creux);
+  transition:
+    border-color var(--duree-focus),
+    box-shadow var(--duree-focus),
+    background-color var(--duree-focus);
+}
+
+.tags-zone::before {
+  content: "#";
+  color: var(--accent);
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.tags-zone:focus-within {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-anneau);
+  background: var(--surface);
+}
+
+.tags-zone .tags-saisie {
+  flex: 1 1 8rem;
+  width: auto;
+  min-width: 6rem;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.tags-zone .tags-saisie:focus {
+  box-shadow: none;
+  border: 0;
+}
+
+.tag-puce {
+  padding: 3px 4px 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  background: var(--accent-doux);
+  color: var(--texte);
+  font-weight: 560;
+}
+
+.tag-retirer:hover,
+.tag-retirer:focus-visible {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+  outline: none;
+}

@@ -4,6 +4,7 @@ import { creerDossier } from "../core/modele.js";
 import { comptesDe, positionDans } from "../core/pages.js";
 import { demander, demanderNomDossier } from "./dialogues/commun.js";
 import { ouvrirDeplacerVers } from "./dialogues/deplacerVersArbre.js";
+import { ouvrirEditionDossier } from "./dialogues/dialogueDossier.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
@@ -150,6 +151,12 @@ export function brancherActionsElements(
     if (titre != null) store.envoyer({ type: A.DOSSIER_RENOMMER, id: dossier.id, titre });
   };
 
+  const changerIcone = (dossier) =>
+    ouvrirEditionDossier(store, dossier, {
+      retourFocus: tuileDe(dossier.id),
+      apresModification: () => focaliser(dossier.id),
+    });
+
   const modifier = (id) => {
     const r = trouver(store.lire().grille, id);
     if (!r) return;
@@ -210,6 +217,15 @@ export function brancherActionsElements(
       if (modifiable) {
         entrees.push(
           { libelle: "Renommer", raccourci: "F2", onChoix: () => renommerDossier(e) },
+          { libelle: "Changer l'icône…", onChoix: () => changerIcone(e) },
+          ...(e.icone
+            ? [
+                {
+                  libelle: "Réinitialiser l'icône",
+                  onChoix: () => store.envoyer({ type: A.DOSSIER_ICONE, id, icone: null }),
+                },
+              ]
+            : []),
           deplacerVers,
         );
       }

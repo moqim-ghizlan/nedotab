@@ -258,6 +258,10 @@ export function validerReglages(reglages) {
   const grille = validerGrilleAccueil(r.grilleAccueil);
   if (grille) resultat.grilleAccueil = grille;
   else delete resultat.grilleAccueil;
+  // T10: the look and the per-device settings.
+  delete resultat.apparence;
+  delete resultat.parAppareil;
+  Object.assign(resultat, validerSynchronisesAppareil(r));
   return resultat;
 }
 
@@ -306,6 +310,118 @@ export const CLES_APPAREIL = [
   "styleDossier",
   "opaciteDossier",
 ];
+
+/**
+ * T10: every setting is saved in the account (users/{uid}.reglages), so a new device, a
+ * reinstall, a backup or an export keeps it. Two tiers, both stored in `reglages`:
+ *  - `apparence`: one value for all devices (look, shapes, animations, folders, clock);
+ *  - `parAppareil[profil]`: what depends on the screen (columns, sizes, spacing, haptics,
+ *    browser bar, debug…), one entry per kind of device (pc / tablette / telephone).
+ * `reglagesAppareil` stays the VIEW the interface reads (these values for this device's
+ * profile) plus what is really local: the picture background `fond` and the device id.
+ * An empty map is kept once written: it says "synced, absent = default".
+ */
+export const CLES_GLOBALES = [
+  "affichageHeure",
+  "animationPage",
+  "animationDossier",
+  "formeIcones",
+  "ombreIcones",
+  "styleDossier",
+  "opaciteDossier",
+];
+export const CLES_PAR_APPAREIL = [
+  "colonnes",
+  "tailleTuiles",
+  "tailleTitres",
+  "espacement",
+  "retourHaptique",
+  "barreChrome",
+  "navigateur",
+  "affichageAccueil",
+  "debug",
+];
+export const PROFILS = ["pc", "tablette", "telephone"];
+let profilCourant = "pc";
+/** Profile of this device (set once at start-up from its kind). */
+export function definirProfilAppareil(profil) {
+  if (PROFILS.includes(profil)) profilCourant = profil;
+}
+export const profilAppareil = () => profilCourant;
+/** pc: Chrome and browsers on a computer; tablette: iPad; telephone: iPhone and the web app. */
+export const profilDeType = (type) =>
+  type === "iphone" || type === "pwa" ? "telephone" : type === "ipad" ? "tablette" : "pc";
+
+const pick = (objet, cles) => {
+  const sortie = {};
+  for (const c of cles) if (objet && c in objet) sortie[c] = objet[c];
+  return sortie;
+};
+
+/** `apparence` and `parAppareil` made valid (unknown keys, bad values and profiles dropped). */
+export function validerSynchronisesAppareil(reglages) {
+  const sortie = {};
+  if (reglages?.apparence && typeof reglages.apparence === "object")
+    sortie.apparence = pick(validerReglagesAppareil(reglages.apparence), CLES_GLOBALES);
+  if (reglages?.parAppareil && typeof reglages.parAppareil === "object") {
+    const par = {};
+    for (const profil of PROFILS) {
+      const v = reglages.parAppareil[profil];
+      if (v && typeof v === "object")
+        par[profil] = pick(validerReglagesAppareil(v), CLES_PAR_APPAREIL);
+    }
+    sortie.parAppareil = par;
+  }
+  return sortie;
+}
+
+/**
+ * The synced maps of `reglages` brought in line with the view of this device: the global
+ * keys go to `apparence`, the others to `parAppareil[profil]`. Returns the same object when
+ * nothing changes.
+ */
+export function reglagesDepuisVue(reglages, vue) {
+  const apparence = pick(validerReglagesAppareil(vue), CLES_GLOBALES);
+  const profil = pick(validerReglagesAppareil(vue), CLES_PAR_APPAREIL);
+  const parAppareil = { ...(reglages.parAppareil ?? {}), [profilCourant]: profil };
+  const suivant = { ...reglages, apparence, parAppareil };
+  return JSON.stringify([reglages.apparence, reglages.parAppareil]) ===
+    JSON.stringify([suivant.apparence, suivant.parAppareil])
+    ? reglages
+    : suivant;
+}
+
+/**
+ * The view of this device: what is synced overrides the local copy (a missing key in a synced
+ * map is the default); where nothing is synced yet the local copy is kept (it will be
+ * uploaded). The local picture background always stays.
+ */
+export function vueDepuisReglages(vueLocale, reglages) {
+  const local = validerReglagesAppareil(vueLocale);
+  const sortie = {};
+  if (local.fond) sortie.fond = local.fond;
+  const globales = reglages?.apparence;
+  const parProfil = reglages?.parAppareil?.[profilCourant];
+  const source = (cle, synchro) => (synchro ? synchro : local)[cle];
+  const synchrones = validerSynchronisesAppareil({ apparence: globales, parAppareil: { [profilCourant]: parProfil } });
+  for (const cle of CLES_GLOBALES) {
+    const v = source(cle, globales ? synchrones.apparence : null);
+    if (v !== undefined) sortie[cle] = v;
+  }
+  for (const cle of CLES_PAR_APPAREIL) {
+    const v = source(cle, parProfil ? synchrones.parAppareil[profilCourant] : null);
+    if (v !== undefined) sortie[cle] = v;
+  }
+  return sortie;
+}
+
+/** The state with its device view recomputed from the synced settings. */
+export function avecVueSynchronisee(etat) {
+  const vue = vueDepuisReglages(etat.reglagesAppareil, etat.reglages);
+  return JSON.stringify(vue) === JSON.stringify(etat.reglagesAppareil ?? {})
+    ? etat
+    : { ...etat, reglagesAppareil: vue };
+}
 
 /** Animation played when the home changes page (prototypes): slide by default, then not stored. */
 export const ANIMATIONS_PAGE = ["glisse", "fondu", "zoom", "cube", "ressort"];
@@ -537,7 +653,10 @@ export function fondEffectif(etat) {
 export function modifierReglagesEtat(etat, changements) {
   const cles = Object.keys(changements ?? {});
   if (cles.length && cles.every((c) => CLES_APPAREIL.includes(c))) {
-    return modifierAppareil(etat, changements);
+    const suivant = modifierAppareil(etat, changements);
+    // T10: the change is saved in the account (this also uploads local values not yet synced).
+    const reglages = reglagesDepuisVue(suivant.reglages, suivant.reglagesAppareil);
+    return reglages === suivant.reglages ? suivant : { ...suivant, reglages };
   }
   if (cles.some((c) => CLES_APPAREIL.includes(c))) return etat; // never mixed with synced ones
   const fond = changements?.fond;

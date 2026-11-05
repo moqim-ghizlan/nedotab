@@ -3,6 +3,7 @@ import { cheminVers, peutCreerDossierDans, peutPlacer, trouver } from "../core/a
 import { creerDossier } from "../core/modele.js";
 import { comptesDe } from "../core/pages.js";
 import { demanderNomDossier } from "./dialogues/commun.js";
+import { ouvrirEditionDossier } from "./dialogues/dialogueDossier.js";
 import { ouvrirAjoutSite } from "./dialogues/dialogueSite.js";
 import { el } from "./dom.js";
 import { rendreFilAriane } from "./filAriane.js";
@@ -126,6 +127,17 @@ export function ouvrirFenetreDossier(
         { class: "fenetre-ligne" },
         titre,
         champTitre,
+        el("button", {
+          type: "button",
+          class: "fenetre-icone",
+          "aria-label": "Changer l'icône du dossier",
+          title: "Changer l'icône",
+          texte: "⋯",
+          onclick: () => {
+            const d = lire(courant);
+            if (d && !lectureSeule()) ouvrirEditionDossier(store, d, {});
+          },
+        }),
         el("button", {
           type: "button",
           class: "fenetre-fermer",

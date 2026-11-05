@@ -28,13 +28,18 @@ export const iaParDefaut = () => ({ actif: false });
  * T9: the chatbot is one big switch (`actif`) and three places it can appear. A place is ON
  * unless its "sans…" flag is stored (the defaults keep today's behaviour).
  */
-export const OPTIONS_CHATBOT = ["boutonAccueil", "rechercheIa", "boutonNavigateur"];
-const CLES_SANS = ["sansBoutonAccueil", "sansRechercheIa", "sansBoutonNavigateur"];
+export const OPTIONS_CHATBOT = ["boutonAccueil", "rechercheIa", "boutonNavigateur", "heureMessages"];
+const CLES_SANS = [
+  "sansBoutonAccueil",
+  "sansRechercheIa",
+  "sansBoutonNavigateur",
+  "sansHeureMessages", // T13: time under the messages of the chat, ON by default
+];
 const cleSans = (option) => `sans${option[0].toUpperCase()}${option.slice(1)}`;
 
 /**
  * What is on: with the main switch off nothing is (the three places are ignored).
- * @returns {{ chatbot: boolean, boutonAccueil: boolean, rechercheIa: boolean, boutonNavigateur: boolean }}
+ * @returns {{ chatbot: boolean, boutonAccueil: boolean, rechercheIa: boolean, boutonNavigateur: boolean, heureMessages: boolean }}
  */
 export function optionsChatbot(ia) {
   const v = validerIa(ia);
@@ -43,6 +48,7 @@ export function optionsChatbot(ia) {
     boutonAccueil: v.actif && !v.sansBoutonAccueil,
     rechercheIa: v.actif && !v.sansRechercheIa,
     boutonNavigateur: v.actif && !v.sansBoutonNavigateur,
+    heureMessages: !v.sansHeureMessages,
   };
 }
 

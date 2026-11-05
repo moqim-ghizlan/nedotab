@@ -28,7 +28,10 @@ export async function ecranAjout({
   retour,
   peutEcrire,
   ouvrirNedoTab,
+  // T4: "fenetre" = the large add window (two columns, icon editor in view).
+  disposition = "popup",
 }) {
+  const fenetre = disposition === "fenetre";
   const grille = () => store.lire().grille;
   const existant = siteExistant(grille(), onglet.url);
   const touches = new Set();
@@ -290,6 +293,72 @@ export async function ecranAjout({
         ),
       )
     : null;
+  if (fenetre) {
+    // Large window: preview on the left, the form in blocks on the right, a sticky footer.
+    const titreCarte = (texte, pour) =>
+      el("label", { class: "ajout-carte-titre", for: pour, texte });
+    racine.replaceChildren(
+      el(
+        "div",
+        { class: "ajout-fenetre", role: "dialog", "aria-label": "Ajouter ce site" },
+        el(
+          "div",
+          { class: "ajout-fenetre-corps" },
+          el(
+            "aside",
+            { class: "ajout-fenetre-gauche" },
+            apercu.racine,
+            el("p", {
+              class: "ajout-fenetre-aide",
+              texte: "Voici la carte telle qu'elle apparaîtra sur votre accueil.",
+            }),
+          ),
+          el(
+            "div",
+            { class: "ajout-fenetre-droite" },
+            bandeauDoublon,
+            message,
+            el(
+              "section",
+              { class: "ajout-carte" },
+              champFlottant(champUrl, "Adresse"),
+              champFlottant(champNom, "Nom"),
+            ),
+            el(
+              "section",
+              { class: "ajout-carte" },
+              titreCarte("Emplacement", "p-lieu"),
+              champLieu.racine,
+            ),
+            el("section", { class: "ajout-carte" }, editeurIcone.racine),
+            el(
+              "section",
+              { class: "ajout-carte" },
+              el("div", { class: "popup-ligne" }, boutonIa, annulerIa, etatIa),
+              champTags.racine,
+              el(
+                "details",
+                { class: "ajout-repliable" },
+                el("summary", { texte: "Description" }),
+                description,
+              ),
+            ),
+          ),
+        ),
+        el(
+          "footer",
+          { class: "ajout-fenetre-pied" },
+          el("button", {
+            type: "button",
+            class: "bouton",
+            texte: "Annuler",
+            onclick: () => window.close(),
+          }),
+          ajouter,
+        ),
+      ),
+    );
+  } else {
   racine.replaceChildren(
     el(
       "div",
@@ -353,6 +422,18 @@ export async function ecranAjout({
       ),
     ),
   );
-  document.addEventListener("keydown", (e) => e.key === "Escape" && window.close(), { once: true });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") window.close();
+    else if (
+      fenetre &&
+      e.key === "Enter" &&
+      !ajouter.disabled &&
+      !e.target.closest?.("textarea, button, summary, [role=tree], [role=treeitem], .ajout-lieu-panneau, .champ-tags")
+    ) {
+      e.preventDefault();
+      ajouter.click();
+    }
+  });
   champNom.focus();
 }

@@ -4,7 +4,7 @@ import { compter, fusionnerImport, grillesIdentiques } from "../../core/fusion.j
 import { etatIndicateur } from "../../core/etatSynchro.js";
 import { ajouter, fusionnerFiles, retirerJusqua, validerFile } from "../../core/fileOperations.js";
 import { migrer } from "../../core/migration.js";
-import { validerReglages } from "../../core/reglages.js";
+import { validerReglages, vueDepuisReglages } from "../../core/reglages.js";
 import { decrire, rejouer } from "../../core/rejeu.js";
 import { chargerFirebase } from "../../firebase/charger.js";
 import { plateforme } from "../../platform/index.js";
@@ -182,11 +182,17 @@ export function creerSynchro({
     if (!serveur) return;
     const operations = fusionnerFiles(file, ...autres.values());
     const courant = store.lire();
-    const base = { ...serveur, reglagesAppareil: courant.reglagesAppareil };
+    // T10: the settings of this device come from the account (the local copy stays where the
+    // account has none yet).
+    const base = {
+      ...serveur,
+      reglagesAppareil: vueDepuisReglages(courant.reglagesAppareil, serveur.reglages),
+    };
     const suivant = rejouer(base, operations).etat;
     if (
       grillesIdentiques(courant.grille, suivant.grille) &&
-      JSON.stringify(courant.reglages) === JSON.stringify(suivant.reglages)
+      JSON.stringify(courant.reglages) === JSON.stringify(suivant.reglages) &&
+      JSON.stringify(courant.reglagesAppareil) === JSON.stringify(suivant.reglagesAppareil)
     ) {
       return; // same state (e.g. already received from another tab): no re-render
     }

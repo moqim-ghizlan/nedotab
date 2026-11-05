@@ -1,4 +1,4 @@
-import { libelleAppareil } from "../core/appareil.js";
+import { libelleAppareilAffiche } from "../core/appareils.js";
 import {
   DESCRIPTION_MAX,
   LIMITE_CARACTERES,
@@ -46,6 +46,9 @@ import {
   dureesProlongeables,
   ecartDepuisConfirmation,
   estExpire,
+  estIllimite,
+  HEURE,
+  maintenantCorrige,
   formaterTempsRestant,
   tempsRestantMs,
   libelleExpiration,
@@ -87,7 +90,15 @@ export function creerEspacePartage({
   uid,
   copier = copierTexte,
   coffre = creerCoffreUI({ charger, uid }),
+  appareils = null,
 }) {
+  /** T12: name of the device of an item: current name by id, name at the time, then the kind. */
+  const nomDe = (e) =>
+    libelleAppareilAffiche(
+      { appareilId: e.appareilId, appareil: e.appareil },
+      appareils?.liste() ?? [],
+    );
+  const estIci = (e) => !!e.appareilId && e.appareilId === appareils?.id();
   // Usable: signed in AND turned on in the settings. Every check goes through here.
   const disponible = () => disponibleCompte() && actif();
   let ouvert = false;
@@ -376,7 +387,7 @@ export function creerEspacePartage({
     if (!options.length) return toast("Durée maximale atteinte");
     const choix = await demander({
       titre: "Prolonger",
-      message: "Nouvelle durée à partir de maintenant (30 jours au plus depuis l'envoi, ou illimité).",
+      message: "Nouvelle durée à partir de maintenant (31 jours au plus, ou illimité).",
       boutons: [
         { libelle: "Annuler", valeur: null },
         ...options.map((d) => ({ libelle: d.libelle, valeur: d.id })),
@@ -520,7 +531,7 @@ export function creerEspacePartage({
           { class: "partage-meta" },
           e.epingle ? icone("epingle", { taille: 12 }) : null,
           el("span", {
-            texte: `${e.enAttente ? "Envoi… · " : ""}${ilYA(e.creeLe)} · depuis ${libelleAppareil(e.appareil)}`,
+            texte: `${e.enAttente ? "Envoi… · " : ""}${ilYA(e.creeLe)} · depuis ${nomDe(e)}${estIci(e) ? " (cet appareil)" : ""}`,
           }),
         ),
         expire.texte
@@ -793,6 +804,7 @@ export function creerEspacePartage({
     let ajout = null;
     let neuf = null;
     let resume = null;
+    let raisonsDuree = null;
     const majResume = () => {
       if (!resume) return;
       const r = nouvelleExpiration(element, choix, ecart, maintenant);
@@ -805,42 +817,72 @@ export function creerEspacePartage({
               el("strong", { texte: libelleExpiration(apres, ecart, maintenant).texte }),
             ]
           : []),
+        ...(apres && !estIllimite(r.expireLe) && r.expireLe < element.expireLe
+          ? [
+              el("br"),
+              el("small", {
+                class: "partage-modif-alerte",
+                texte: `Cet élément sera supprimé le ${new Date(r.expireLe).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })}.`,
+              }),
+            ]
+          : []),
       );
     };
     if (avecDuree) {
+      const illimite = estIllimite(element.expireLe);
       resume = el("p", { class: "partage-modif-resume", "aria-live": "polite" });
-      ajout = creerSelecteurDuree({
+      if (!illimite) {
+        ajout = creerSelecteurDuree({
+          options: [
+            { id: "garder", libelle: "Garder" },
+            ...options("ajouter", [
+              ["1h", "+ 1 h"],
+              ["1j", "+ 1 j"],
+              ["7j", "+ 7 j"],
+              ["30j", "+ 30 j"],
+            ]),
+          ],
+          valeur: "garder",
+          libelle: "Prolonger de",
+          onChoix: (id) => {
+            choix = id === "garder" ? { mode: "garder" } : { mode: "ajouter", duree: id };
+            neuf.definir("garder");
+            majResume();
+          },
+        });
+      }
+      neuf = creerSelecteurDuree({
         options: [
           { id: "garder", libelle: "Garder" },
-          ...options("ajouter", [
-            ["1h", "+ 1 h"],
-            ["1j", "+ 1 j"],
-            ["7j", "+ 7 j"],
-            ["30j", "+ 30 j"],
-            ["jamais", "Illimité"],
-          ]),
+          ...options(
+            "depuis-maintenant",
+            DUREES.map((x) => [x.id, x.libelle]),
+          ),
         ],
         valeur: "garder",
-        libelle: "Prolonger de",
-        onChoix: (id) => {
-          choix = id === "garder" ? { mode: "garder" } : { mode: "ajouter", duree: id };
-          neuf.definir(null);
-          majResume();
-        },
-      });
-      neuf = creerSelecteurDuree({
-        options: options(
-          "depuis-maintenant",
-          DUREES.map((x) => [x.id, x.libelle]),
-        ),
-        valeur: null,
         libelle: "Nouvelle durée à partir de maintenant",
         onChoix: (id) => {
-          choix = { mode: "depuis-maintenant", duree: id };
-          ajout.definir(null);
+          choix = id === "garder" ? { mode: "garder" } : { mode: "depuis-maintenant", duree: id };
+          ajout?.definir("garder");
           majResume();
         },
       });
+      // A disabled choice always says why, in plain text under the selector.
+      const raisons = [
+        ...new Set(
+          [
+            ...(ajout
+              ? options("ajouter", [["1h", ""], ["1j", ""], ["7j", ""], ["30j", ""]])
+              : []),
+            ...options("depuis-maintenant", DUREES.map((x) => [x.id, ""])),
+          ]
+            .filter((o) => o.desactive && o.raison)
+            .map((o) => o.raison),
+        ),
+      ];
+      raisonsDuree = raisons.length
+        ? el("p", { class: "partage-modif-raison", texte: raisons.join(" ") })
+        : null;
       majResume();
     }
     const ok = await demander({
@@ -854,13 +896,16 @@ export function creerEspacePartage({
               { class: "partage-modif-duree" },
               el("h3", { class: "partage-modif-titre", texte: "Durée de conservation" }),
               resume,
-              el("p", { class: "partage-modif-libelle", texte: "Prolonger de…" }),
-              ajout.racine,
+              ajout ? el("p", { class: "partage-modif-libelle", texte: "Prolonger de…" }) : null,
+              ajout?.racine ?? null,
               el("p", {
                 class: "partage-modif-libelle",
-                texte: "Ou nouvelle durée à partir de maintenant",
+                texte: ajout
+                  ? "Ou nouvelle durée à partir de maintenant"
+                  : "Nouvelle durée à partir de maintenant",
               }),
               neuf.racine,
+              raisonsDuree,
             )
           : null,
       ],
@@ -872,6 +917,24 @@ export function creerEspacePartage({
     if (!ok) return null;
     const r = nettoyerDetails({ titre: t.value, description: d.value });
     const exp = avecDuree ? nouvelleExpiration(element, choix, ecart, maintenant) : null;
+    // Shortening to about an hour deletes the item soon: ask first.
+    if (
+      exp?.ok &&
+      exp.change &&
+      !estIllimite(exp.expireLe) &&
+      exp.expireLe < element.expireLe &&
+      exp.expireLe - maintenantCorrige(ecart, maintenant) <= HEURE
+    ) {
+      const sur = await demander({
+        titre: "Raccourcir la durée ?",
+        message: "Cet élément sera supprimé dans environ une heure.",
+        boutons: [
+          { libelle: "Annuler", valeur: false },
+          { libelle: "Raccourcir", valeur: true, principal: true },
+        ],
+      });
+      if (!sur) return null;
+    }
     return exp?.ok && exp.change ? { ...r, expireLe: exp.expireLe } : r;
   }
 
@@ -938,7 +1001,10 @@ export function creerEspacePartage({
                           titre: clair.titre,
                           description: clair.description,
                           epingle: e.epingle,
-                          appareil: e.appareil,
+                          marque: {
+                            appareil: e.appareil,
+                            ...(e.appareilId ? { appareilId: e.appareilId } : {}),
+                          },
                           chiffre: true,
                         },
                         coffre.chiffrer,
@@ -1029,13 +1095,22 @@ export function creerEspacePartage({
     const vu = dernierVu();
     // First use on this device: nothing is "new" yet.
     if (vu === 0) return noterVu();
-    pastille.hidden = !elements.some((e) => (e.creeLe ?? 0) > vu && e.appareil !== typeLocal());
+    pastille.hidden = !elements.some(
+      (e) =>
+        (e.creeLe ?? 0) > vu &&
+        (e.appareilId && appareils?.id() ? e.appareilId !== appareils.id() : e.appareil !== typeLocal()),
+    );
   }
   const typeLocal = () => (import.meta.env.VITE_TARGET === "pwa" ? undefined : "extension");
 
   // --- Open / close -----------------------------------------------------------------------------
   function ouvrir() {
     if (!disponible()) return;
+    if (ouvert) {
+      // Already open: only give the focus back to the sending area.
+      if (matchMedia("(min-width: 900px)").matches) champ.focus();
+      return;
+    }
     ouvert = true;
     retourFocus = document.activeElement;
     panneau.hidden = false;
@@ -1176,7 +1251,7 @@ export function creerEspacePartage({
     deverrouiller: () => coffre.assurerDeverrouille(),
     actions: actionsGalerie,
     ecart: () => ecart,
-    appareil: (a) => libelleAppareil(a),
+    appareil: (item) => nomDe(item),
     lot: {
       async supprimer(liste) {
         try {
@@ -1287,6 +1362,8 @@ export function creerEspacePartage({
     panneau,
     ouvrir,
     fermer,
+    /** True when the sharing space can be used (signed in, synchronised, enabled). */
+    disponible,
     actualiser,
     estOuvert: () => ouvert,
     /** Tests: elements shown. */

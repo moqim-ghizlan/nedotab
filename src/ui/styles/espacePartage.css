@@ -1316,3 +1316,21 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* T6: reasons and warnings of the duration window are plain text, never a hidden tooltip. */
+.partage-modif-raison,
+.partage-modif-alerte {
+  margin: var(--espace-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--texte-secondaire, var(--texte));
+}
+.partage-modif-alerte {
+  color: var(--danger);
+}
+.partage-duree:disabled {
+  opacity: 0.6;
+}
+.partage-duree[aria-checked="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

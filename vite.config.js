@@ -104,6 +104,7 @@ export default defineConfig(({ mode }) => {
         input: {
           newtab: "newtab.html",
           popup: "popup.html",
+          ajout: "ajout.html",
           testFuites: "testFuites.html",
           "sw-extension": "src/platform/extension/sw.js",
         },

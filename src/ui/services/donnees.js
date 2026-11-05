@@ -95,6 +95,7 @@ export function creerDonnees({
     }
     const contenu = creerExport(store.lire(), {
       espacePartage,
+      appareils: enCompte() ? session?.appareils?.liste?.() : undefined,
       version: plat.getVersion(),
       plateforme: plat.capacites?.nom ?? "extension",
       maintenant: maintenant.getTime(),

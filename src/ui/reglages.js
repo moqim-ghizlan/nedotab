@@ -21,6 +21,7 @@ import {
 } from "../core/reglages.js";
 import { petitCote } from "./ecran.js";
 import { plateforme } from "../platform/index.js";
+import { curseurAvecValeur } from "./reglages/curseur.js";
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
 import { creerAvatar } from "./avatar.js";
@@ -63,28 +64,24 @@ const LISTE_MAX = "(max-width: 719px)";
 const CLE_ONGLET = "nedotab:onglet-reglages";
 const SORTIE_MS = 140;
 
-/** Quiet mark of a setting kept on this device only (never synced, V2.9). */
+/**
+ * Quiet mark of a setting that depends on the screen (T10): it is saved in the account, but
+ * one value per kind of device (computer, tablet, phone).
+ */
 const mentionAppareil = () =>
   el("span", {
     class: "mention-appareil",
-    title: "Réglage propre à cet appareil, non synchronisé",
-    texte: "Cet appareil",
+    title:
+      "Enregistré dans votre compte, propre aux appareils de ce type (ordinateurs, tablettes ou téléphones).",
+    texte: "Pour ce type d'appareil",
   });
 
-/** Label of a setting kept on this device only. */
+/** Label of a setting that depends on the kind of device. */
 const libelleAppareil = (texte) => el("p", { class: "reglages-libelle" }, texte, mentionAppareil());
 
-/** A slider with its value written next to its label. */
-function curseurAvecValeur(libelle, input, format) {
-  const valeur = el("output", { class: "reglages-valeur", for: input.id });
-  const maj = () => (valeur.textContent = format(Number(input.value)));
-  input.addEventListener("input", maj);
-  maj();
-  const tete =
-    typeof libelle === "string" ? el("p", { class: "reglages-libelle", texte: libelle }) : libelle;
-  tete.append(valeur);
-  return { racine: el("div", { class: "reglages-curseur" }, tete, input), maj };
-}
+/** Label of a setting shared by all the devices of the account (no tag: it follows you). */
+const libelleGlobal = (texte) => el("p", { class: "reglages-libelle" }, texte);
+
 
 const ko = (octets) => `${(octets / 1024).toFixed(octets < 10240 ? 1 : 0)} Ko`;
 
@@ -113,6 +110,16 @@ function segments(libelle, options, valeur, onChoix) {
   return { groupe, maj };
 }
 
+/** A settings block drawn as a card: icon + title, then its content (T1). */
+function carte(titre, nomIcone, ...contenu) {
+  return el(
+    "section",
+    { class: "reglages-section carte-reglage" },
+    el("h3", { class: "carte-reglage-titre" }, icone(nomIcone, { taille: 18 }), titre),
+    ...contenu,
+  );
+}
+
 function section(titre, ...contenu) {
   return el("section", { class: "reglages-section" }, el("h3", { texte: titre }), ...contenu);
 }
@@ -130,10 +137,12 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   const lire = () => ({ ...store.lire().reglages, fond: fondEffectif(store.lire()) });
   /** Version line; 7 quick taps on it turn the diagnostic mode on or off (V3.10). */
   const versionApropos = () => {
-    const ligne = el("p", {
-      class: "reglages-note",
-      texte: `Version installée : ${plateforme.getVersion()}`,
-    });
+    const ligne = el(
+      "p",
+      { class: "version-grande", title: "Version installée" },
+      plateforme.getVersion(),
+      el("small", { texte: "version installée" }),
+    );
     brancherGesteVersion(ligne, () => {
       const actif = !store.lire().reglagesAppareil?.debug;
       store.envoyer({ type: A.REGLAGES_MODIFIER, changements: { debug: actif } });
@@ -708,6 +717,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
   // --- Autorisations -------------------------------------------------------------------
   const etatPermission = el("p", { class: "reglages-note" });
   const boutonPermission = el("button", { type: "button", class: "bouton" });
+  const pastillePermission = el("span", { class: "pastille-etat" });
   const majPermission = async () => {
     if (!plateforme.permissionsSites.disponible) {
       etatPermission.textContent = "Non disponible sur cette plateforme.";
@@ -720,31 +730,67 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       : "Accès aux sites non accordé : les icônes viennent du service de Google ou de Chrome.";
     boutonPermission.textContent = ok ? "Retirer l'accès" : "Autoriser l'accès aux sites";
     boutonPermission.dataset.accorde = String(ok);
+    // Removing is the destructive side: red; allowing is the main action.
+    boutonPermission.classList.toggle("bouton--danger", ok);
+    boutonPermission.classList.toggle("bouton--principal", !ok);
+    pastillePermission.textContent = ok ? "Accès accordé" : "Accès non accordé";
+    pastillePermission.dataset.etat = ok ? "ok" : "attention";
   };
-  boutonPermission.addEventListener("click", () => {
+  boutonPermission.addEventListener("click", async () => {
+    if (boutonPermission.dataset.accorde === "true") {
+      // Asked first, but the browser's permission request below needs a fresh gesture, so
+      // only the removal is confirmed.
+      const ok = await demander({
+        titre: "Retirer l'accès aux sites ?",
+        message:
+          "NedoTab ne pourra plus lire le nom et l'icône des sites directement. Vous pourrez l'accorder à nouveau.",
+        boutons: [
+          { libelle: "Annuler", valeur: false },
+          { libelle: "Retirer l'accès", valeur: true, principal: true, danger: true },
+        ],
+      });
+      if (ok) plateforme.permissionsSites.retirer().then(majPermission, majPermission);
+      return;
+    }
     // Called directly in the click handler: Chrome requires a user gesture.
-    const demande =
-      boutonPermission.dataset.accorde === "true"
-        ? plateforme.permissionsSites.retirer()
-        : plateforme.permissionsSites.demander();
-    demande.then(majPermission, majPermission);
+    plateforme.permissionsSites.demander().then(majPermission, majPermission);
   });
 
   // --- Stockage --------------------------------------------------------------------------
   const etatStockage = el("p", { class: "reglages-note" });
+  const barreStockage = el("div", {
+    class: "barre",
+    role: "progressbar",
+    "aria-label": "Place utilisée par vos données",
+    "aria-valuemin": "0",
+    "aria-valuemax": "1024",
+  });
+  const remplissageStockage = el("span");
+  barreStockage.append(remplissageStockage);
+  const legendeStockage = el("p", { class: "barre-legende" });
+  const detailStockage = el("p", { class: "reglages-note" });
   const majStockage = () => {
     const etat = store.lire();
     const poids = estimerTaille(etat);
     const images = [...parcourir(etat.grille)].filter((e) => e.icone?.type === "image");
     const poidsImages = images.reduce((s, e) => s + poidsDataUrl(e.icone.valeur), 0);
     const niveau = niveauTaille(poids);
+    const pct = Math.min(100, (poids / 1024 / 1024) * 100);
+    remplissageStockage.style.width = `${pct}%`;
+    barreStockage.setAttribute("aria-valuenow", String(Math.round(poids / 1024)));
+    barreStockage.dataset.niveau = pct > 95 ? "alerte" : pct > 80 ? "attention" : "ok";
+    legendeStockage.replaceChildren(
+      el("span", {}, el("strong", { texte: ko(poids) }), " utilisés"),
+      el("span", { texte: "sur 1 024 Ko" }),
+    );
+    detailStockage.textContent = `Icônes personnalisées : ${images.length} (${ko(poidsImages)}).`;
     etatStockage.textContent =
-      `Données : ${ko(poids)} sur 1 024 Ko. Icônes personnalisées : ${images.length} (${ko(poidsImages)}).` +
       (niveau === "avertissement"
         ? " Votre grille approche de la limite : préférez les icônes automatiques aux images importées."
         : niveau === "bloque"
           ? " Limite presque atteinte : l'import d'images pour les icônes est bloqué."
           : "");
+    etatStockage.hidden = !etatStockage.textContent;
     etatStockage.classList.toggle("reglages-note--alerte", niveau !== "ok");
   };
 
@@ -767,7 +813,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     pourcent,
   );
   const curseurOpacite = curseurAvecValeur(
-    libelleAppareil("Opacité de la fenêtre de dossier"),
+    libelleGlobal("Opacité de la fenêtre de dossier"),
     opaciteDossier,
     pourcent,
   );
@@ -790,19 +836,25 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
         ]
       : null,
     apparence: [
+      session
+        ? el("p", {
+            class: "reglages-note",
+            texte: "Tous vos réglages sont enregistrés dans votre compte.",
+          })
+        : null,
       section("Thème", theme.groupe),
       section("Fond d'écran", typeFond.groupe, ...Object.values(panneaux)),
       section(
         "Animations",
         ...ligneDes(["animationsReduites"]),
-        libelleAppareil("Passage d'une page à l'autre"),
+        libelleGlobal("Passage d'une page à l'autre"),
         animationPage.groupe,
         el("p", {
           class: "reglages-note",
           texte:
             "Effet joué quand l'accueil change de page. Sans effet avec « Animations réduites » ou en défilement vertical.",
         }),
-        libelleAppareil("Ouverture des dossiers et sous-dossiers"),
+        libelleGlobal("Ouverture des dossiers et sous-dossiers"),
         animationDossier.groupe,
         el("p", {
           class: "reglages-note",
@@ -822,24 +874,29 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       section(
         "Icônes",
         curseurTuiles.racine,
-        libelleAppareil("Forme des icônes"),
+        libelleGlobal("Forme des icônes"),
         formeIcones.groupe,
         libelleAppareil("Espacement des cartes"),
         espacement.groupe,
-        libelleAppareil("Ombre sous les icônes"),
+        libelleGlobal("Ombre sous les icônes"),
         ombreIcones.groupe,
       ),
       section("Titres des icônes", ...ligneDes(["masquerTitres"]), curseurTitres.racine),
       section(
         "Dossiers",
-        libelleAppareil("Style des dossiers"),
+        libelleGlobal("Style des dossiers"),
         styleDossier.groupe,
+        el("p", {
+          class: "reglages-note",
+          texte:
+            "Chaque dossier peut avoir sa propre icône (clic droit › Changer l'icône). Elle remplace l'aperçu du contenu.",
+        }),
         curseurOpacite.racine,
         ...ligneDes(["gardeDossierOuvert"]),
       ),
       section(
         "Horloge et recherche",
-        libelleAppareil("Heure et date"),
+        libelleGlobal("Heure et date"),
         affichageHeure.groupe,
         ...ligneDes(["masquerRecherche"]),
       ),
@@ -1036,7 +1093,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
         ]
       : null,
     sauvegardes: session?.sauvegardes
-      ? [sectionSauvegardes(session.sauvegardes, session.restauration).section]
+      ? [sectionSauvegardes(session.sauvegardes, session.restauration, session.appareils).section]
       : null,
     // T9: the chatbot switch and its three places, then the assistant (key, limits).
     ia: session ? [sectionChatbot.section, sectionIa({ store, session }).section] : null,
@@ -1045,27 +1102,47 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     avance: [
       // Reading other sites needs a permission in the extension only (V3.0: capabilities).
       plateforme.capacites.permissionsSites
-        ? section("Autorisations", etatPermission, boutonPermission)
+        ? carte(
+            "Autorisations",
+            "cadenas",
+            el("div", { class: "ligne-statut" }, pastillePermission, boutonPermission),
+            etatPermission,
+          )
         : null,
-      section("Stockage", etatStockage),
+      carte("Stockage", "donnees", barreStockage, legendeStockage, detailStockage, etatStockage),
       sectionDiagnostic({ store, session }),
-      section(
+      carte(
         "À propos",
+        "ouvrir",
         versionApropos(),
         el(
           "label",
-          { class: "reglages-case" },
+          { class: "interrupteur" },
+          el(
+            "span",
+            { class: "interrupteur-texte" },
+            el(
+              "span",
+              { class: "titre-ligne" },
+              "Journal de débogage dans la console",
+              mentionAppareil(),
+            ),
+            el("span", {
+              class: "reglages-note",
+              texte: "Garde un journal technique pour comprendre un problème.",
+            }),
+          ),
           el("input", {
             type: "checkbox",
+            role: "switch",
+            class: "interrupteur-bouton",
             checked: !!store.lire().reglagesAppareil?.debug,
             onchange: (e) => modifier({ debug: e.currentTarget.checked }),
           }),
-          el("span", { texte: "Journal de débogage dans la console" }),
-          mentionAppareil(),
         ),
         el(
           "p",
-          { class: "reglages-liens" },
+          { class: "liens-boutons" },
           el("a", { href: URL_SITE, target: "_blank", rel: "noopener", texte: "Site du projet" }),
           el("a", {
             href: `${URL_SITE}mise-a-jour.html`,

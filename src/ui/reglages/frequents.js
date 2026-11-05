@@ -1,6 +1,10 @@
 import { A } from "../../core/actions.js";
 import { trouver } from "../../core/arbre.js";
-import { NOMBRES_ACCUEIL, frequentsDe } from "../../core/frequents.js";
+import {
+  NOMBRE_ACCUEIL_MAX,
+  NOMBRE_ACCUEIL_MIN,
+  frequentsDe,
+} from "../../core/frequents.js";
 import { el } from "../dom.js";
 
 /**
@@ -53,21 +57,47 @@ export function creerSectionFrequents({ store }) {
     "Afficher les sites les plus utilisés sur l'accueil",
     "Une bande de raccourcis au-dessus de la barre de recherche, mise à jour après chaque site ouvert.",
   );
-  const nombre = el(
-    "select",
-    {
-      class: "reglages-select",
-      "aria-label": "Nombre de sites sur l'accueil",
-      dataset: { reglage: "frequents-nombreAccueil" },
-      onchange: (e) => modifier({ nombreAccueil: Number(e.currentTarget.value) }),
-    },
-    NOMBRES_ACCUEIL.map((n) => el("option", { value: String(n), texte: `${n} sites` })),
+  // Segmented choice 4 to 10, like "Colonnes par page".
+  const valeurs = Array.from(
+    { length: NOMBRE_ACCUEIL_MAX - NOMBRE_ACCUEIL_MIN + 1 },
+    (_, i) => NOMBRE_ACCUEIL_MIN + i,
   );
+  const groupe = el("div", {
+    class: "segments",
+    role: "radiogroup",
+    "aria-label": "Nombre de sites sur l'accueil",
+    dataset: { reglage: "frequents-nombreAccueil" },
+  });
+  const nombre = { value: String(frequentsDe(store.lire().reglages).nombreAccueil) };
+  const marquer = () => {
+    for (const b of groupe.children)
+      b.setAttribute("aria-checked", String(b.dataset.valeur === nombre.value));
+  };
+  for (const n of valeurs) {
+    groupe.append(
+      el("button", {
+        type: "button",
+        class: "segment",
+        role: "radio",
+        dataset: { valeur: String(n) },
+        texte: String(n),
+        "aria-label": `${n} sites`,
+        onclick: () => {
+          nombre.value = String(n);
+          marquer();
+          modifier({ nombreAccueil: n });
+        },
+      }),
+    );
+  }
+  marquer();
+  const curseurNombre = { maj: marquer };
+  const majAria = () => {};
   const ligneNombre = el(
-    "label",
-    { class: "reglages-ligne" },
-    el("span", { texte: "Nombre de sites sur l'accueil" }),
-    nombre,
+    "div",
+    { class: "reglages-curseur" },
+    el("p", { class: "reglages-libelle", texte: "Nombre de sites sur l'accueil" }),
+    groupe,
   );
   const note = el("p", { class: "reglages-note", hidden: true });
   const masques = el("ul", { class: "reglages-liste" });
@@ -79,6 +109,8 @@ export function creerSectionFrequents({ store }) {
     titre.bouton.checked = f.titre;
     accueil.bouton.checked = f.accueil;
     nombre.value = String(f.nombreAccueil);
+    curseurNombre.maj();
+    majAria();
     ligneNombre.hidden = !f.accueil;
     note.hidden = suiviActif;
     note.textContent =

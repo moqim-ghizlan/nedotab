@@ -2168,18 +2168,22 @@ body.fond-clair .carte-action--principale {
 /* --- diagnostic mode (V3.10) ------------------------------------------------------------ */
 
 .badge-debug {
+  /* Top-left, under the safe area: the bottom-left corner belongs to the sharing button. */
   position: fixed;
-  left: calc(var(--espace-3) + env(safe-area-inset-left, 0px));
-  bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  top: calc(var(--espace-2) + env(safe-area-inset-top, 0px));
+  left: calc(var(--espace-2) + env(safe-area-inset-left, 0px));
   z-index: 80;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
-  background: var(--danger);
+  background: color-mix(in srgb, var(--danger) 85%, transparent);
   color: #fff;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+  /* Never blocks a click. */
   pointer-events: none;
+  user-select: none;
 }
 
 .diagnostic-texte {
@@ -3624,4 +3628,83 @@ body.fond-clair .connexion-formulaire .connexion-champ:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: var(--espace-2);
+}
+
+/* T12: devices of the account. */
+.appareils {
+  display: grid;
+  gap: var(--espace-3);
+  margin-top: var(--espace-5);
+  padding: 0 var(--espace-4) var(--espace-4);
+}
+
+.appareil-ici,
+.appareil-ligne {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espace-2);
+  padding: var(--espace-2) var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+
+.appareil-ici {
+  border-color: var(--accent);
+}
+
+.appareil-pastille {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  font-size: var(--taille-xs);
+}
+
+.appareil-nom {
+  overflow-wrap: anywhere;
+}
+
+.appareil-type,
+.appareil-detail {
+  color: var(--texte-secondaire);
+  font-size: var(--taille-xs);
+}
+
+.appareils-liste {
+  display: grid;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.appareil-infos {
+  display: grid;
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.puces-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-3);
+}
+
+.puce {
+  min-height: 36px;
+  padding: 0 var(--espace-3);
+  border: 1px solid var(--bordure);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  cursor: pointer;
+}
+
+.champ-erreur {
+  margin: 0 0 var(--espace-2);
+  color: var(--danger);
+  font-size: var(--taille-xs);
 }

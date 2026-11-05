@@ -1,5 +1,6 @@
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
+import { fermerMenu, ouvrirMenu } from "./menuContextuel.js";
 
 /**
  * Buttons of the sharing-space cards (V4.30): an icon and its label, the label being the
@@ -36,17 +37,14 @@ export function confirmerAction(bouton, texte, duree = 1500) {
 }
 
 /**
- * The row of actions of a card. `ouverts` remembers the cards whose drawer is open: the list
- * is drawn again often (typing, timers), the drawer must not close by itself.
+ * The row of actions of a card. The main actions stay in view; the others open in a floating
+ * menu anchored to the "⋯" button (it flips above the button near the bottom edge and never
+ * moves the cards below). The secondary buttons are the source of truth: a menu entry just
+ * triggers its button, so every action keeps its own logic. `_ouverts` is kept for
+ * compatibility and is no longer used.
  */
-export function rangeeActions(id, primaires, secondaires, ouverts) {
+export function rangeeActions(id, primaires, secondaires, _ouverts) {
   const autres = secondaires.filter(Boolean);
-  const ouvert = ouverts.has(id);
-  const tiroir = el(
-    "div",
-    { class: "partage-tiroir", id: `partage-tiroir-${id}`, hidden: !ouvert },
-    autres,
-  );
   const plus = autres.length
     ? el(
         "button",
@@ -55,14 +53,47 @@ export function rangeeActions(id, primaires, secondaires, ouverts) {
           class: "partage-action partage-action--plus",
           "aria-label": "Plus d'actions",
           title: "Plus d'actions",
-          "aria-expanded": String(ouvert),
-          "aria-controls": tiroir.id,
+          "aria-haspopup": "menu",
+          "aria-expanded": "false",
           onclick: (e) => {
-            const oui = tiroir.hidden;
-            tiroir.hidden = !oui;
-            e.currentTarget.setAttribute("aria-expanded", String(oui));
-            if (oui) ouverts.add(id);
-            else ouverts.delete(id);
+            const bouton = e.currentTarget;
+            if (bouton.getAttribute("aria-expanded") === "true") {
+              fermerMenu();
+              return;
+            }
+            const rect = bouton.getBoundingClientRect();
+            const entrees = [];
+            const dangers = [];
+            for (const a of autres) {
+              const entree = {
+                libelle: a.querySelector(".partage-action-libelle")?.textContent ?? a.textContent,
+                danger: a.classList.contains("partage-action--danger"),
+                onChoix: () => a.click(),
+              };
+              (entree.danger ? dangers : entrees).push(entree);
+            }
+            if (dangers.length) entrees.push("-", ...dangers);
+            bouton.setAttribute("aria-expanded", "true");
+            const menu = ouvrirMenu({
+              x: rect.right - 200,
+              y: rect.bottom + 4,
+              retourFocus: bouton,
+              libelle: "Plus d'actions",
+              entrees,
+            });
+            // Anchor above the button when the menu would not fit below it.
+            const m = menu.menu;
+            const h = m.getBoundingClientRect().height;
+            if (rect.bottom + 4 + h > innerHeight - 8) {
+              m.style.top = `${Math.max(8, rect.top - h - 4)}px`;
+            }
+            const obs = new MutationObserver(() => {
+              if (!m.isConnected) {
+                bouton.setAttribute("aria-expanded", "false");
+                obs.disconnect();
+              }
+            });
+            obs.observe(document.body, { childList: true, subtree: true });
           },
         },
         icone("plus", { taille: 18 }),
@@ -70,9 +101,8 @@ export function rangeeActions(id, primaires, secondaires, ouverts) {
     : null;
   return el(
     "div",
-    { class: "partage-actions" },
+    { class: "partage-actions", "data-carte": id },
     el("div", { class: "partage-actions-ligne" }, primaires.filter(Boolean), plus),
-    autres.length ? tiroir : null,
   );
 }
 

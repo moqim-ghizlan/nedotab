@@ -46,6 +46,7 @@ export function sectionVpn({
     occupe: false, // a new password is being generated (the first call can take a few seconds)
   };
   let minuterie = null;
+  let onglet = null; // sub-tab shown
   const racine = el("div", { class: "vpn-reglages" });
   const section = el(
     "section",
@@ -354,6 +355,7 @@ export function sectionVpn({
     return bloc;
   }
 
+  /** Sub-tabs of the section: one panel at a time, the most important first. */
   function dessiner() {
     racine.replaceChildren();
     if (!etat.charge) {
@@ -362,25 +364,122 @@ export function sectionVpn({
       );
       return;
     }
+    const aAcces = !!etat.acces && !etat.occupe;
+    // Not invited: one sentence, nothing else (no tabs, no switch, no state of the server).
+    if (!etat.acces && !etat.admin && !etat.occupe) {
+      racine.append(blocMonAcces());
+      return;
+    }
+    // Only what the person may use is offered: a guest never sees "Administration".
+    const panneaux = [];
     // V5.3: the switch of the extension (nothing in the web app: no browser proxy there).
-    if (vpn)
-      racine.append(
-        blocVpnNavigateur({
-          vpn,
-          service,
-          verification: plateforme.verificationVpn?.() ?? null,
-          options: true,
-        }).racine,
-      );
-    // V5.6: per-site rules (synced setting; extension only, with a state to edit).
-    if (vpn && store) racine.append(blocReglesVpn({ store }).racine);
-    if (etat.admin) racine.append(blocInvites());
-    // V5.9: the owner sees the volume per friend; a guest sees his own.
-    if (etat.admin) racine.append(blocTableauInvites({ service }).racine);
-    racine.append(blocMonAcces());
-    if (etat.acces && !etat.occupe) racine.append(blocConsommation({ service }).racine);
+    if (vpn) {
+      panneaux.push([
+        "navigateur",
+        "Navigateur",
+        () => [
+          blocVpnNavigateur({
+            vpn,
+            service,
+            verification: plateforme.verificationVpn?.() ?? null,
+            options: true,
+          }).racine,
+          // V5.6: per-site rules (synced setting; extension only, with a state to edit).
+          store ? blocReglesVpn({ store }).racine : null,
+        ],
+      ]);
+    }
     // V5.8: WireGuard for the whole device (guests only).
-    if (etat.acces && !etat.occupe) racine.append(blocWireguard({ service }).racine);
+    if (aAcces) panneaux.push(["appareil", "Appareil", () => [blocWireguard({ service }).racine]]);
+    panneaux.push([
+      "acces",
+      "Mon accès",
+      () => [
+        blocMonAcces(),
+        // V5.9: a guest sees his own volume (volumes only, never the sites).
+        aAcces ? blocConsommation({ service }).racine : null,
+      ],
+    ]);
+    // V5.9: the owner manages the guests, the volume per friend, the watch, the limits.
+    if (etat.admin)
+      panneaux.push([
+        "administration",
+        "Administration",
+        () => [blocInvites(), blocTableauInvites({ service }).racine],
+      ]);
+    if (!panneaux.some(([cle]) => cle === onglet)) onglet = panneaux[0][0];
+
+    racine.append(
+      carteStatut(aAcces),
+      el(
+        "div",
+        { class: "vpn-onglets", role: "tablist", "aria-label": "Sections du VPN" },
+        panneaux.map(([cle, libelle]) =>
+          el("button", {
+            type: "button",
+            class: "vpn-onglet",
+            role: "tab",
+            id: `vpn-onglet-${cle}`,
+            "aria-selected": String(cle === onglet),
+            "aria-controls": `vpn-panneau-${cle}`,
+            tabindex: cle === onglet ? "0" : "-1",
+            texte: libelle,
+            onclick: () => {
+              onglet = cle;
+              dessiner();
+            },
+            onkeydown: (e) => {
+              const i = panneaux.findIndex(([c]) => c === cle);
+              const voisin = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+              if (!voisin) return;
+              e.preventDefault();
+              onglet = panneaux[(i + voisin + panneaux.length) % panneaux.length][0];
+              dessiner();
+              racine.querySelector(`#vpn-onglet-${onglet}`)?.focus();
+            },
+          }),
+        ),
+      ),
+      // Only the visible panel is built: the others load nothing and show nothing.
+      ...panneaux
+        .filter(([cle]) => cle === onglet)
+        .map(([cle, , contenu]) =>
+          el(
+            "div",
+            {
+              class: "vpn-panneau",
+              role: "tabpanel",
+              id: `vpn-panneau-${cle}`,
+              "aria-labelledby": `vpn-onglet-${cle}`,
+            },
+            ...contenu().filter(Boolean),
+          ),
+        ),
+    );
+  }
+
+  /** Fixed header: access state, and what the VPN is (it never makes anyone anonymous). */
+  function carteStatut(aAcces) {
+    return el(
+      "div",
+      { class: "carte-reglage vpn-statut" },
+      el("span", {
+        class: "pastille-etat",
+        dataset: { etat: aAcces ? "ok" : "attention" },
+        texte: aAcces ? "Accès accordé" : etat.acces === null ? "Sur invitation" : "Non vérifié",
+      }),
+      el(
+        "div",
+        { class: "vpn-statut-texte" },
+        el("strong", { texte: "VPN privé" }),
+        el("span", {
+          class: "reglages-note",
+          texte: etat.admin
+            ? "Vous êtes le propriétaire du serveur."
+            : "Change l'adresse IP vue par les sites. Ne rend pas anonyme.",
+        }),
+      ),
+    );
   }
 
   function relancer() {

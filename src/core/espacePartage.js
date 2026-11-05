@@ -147,6 +147,7 @@ export function lireElement(id, brut, enAttente = false) {
     titre: typeof brut.titre === "string" ? brut.titre : "",
     description: typeof brut.description === "string" ? brut.description : "",
     appareil: typeof brut.appareil === "string" ? brut.appareil : "",
+    appareilId: typeof brut.appareilId === "string" ? brut.appareilId : "",
     epingle: brut.epingle === true,
     // V4.27: expiry (ms, UTC); undefined for an item created before V4.27.
     expireLe: brut.expireLe?.toMillis?.() ?? (Number.isFinite(brut.expireLe) ? brut.expireLe : undefined),

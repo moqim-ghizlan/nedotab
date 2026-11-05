@@ -6,6 +6,7 @@ import {
   deplacer,
   fusionner,
   hauteur,
+  changerIconeDossier,
   inserer,
   modifierListe,
   niveauEmplacement,
@@ -25,7 +26,12 @@ import {
   positionDans,
   reconcilier,
 } from "./pages.js";
-import { FONDS_MAX, modifierReglagesEtat, validerEntreeFond } from "./reglages.js";
+import {
+  FONDS_MAX,
+  avecVueSynchronisee,
+  modifierReglagesEtat,
+  validerEntreeFond,
+} from "./reglages.js";
 import { ETATS_IA, normaliserDescription, normaliserEtatIa, normaliserTags } from "./tags.js";
 
 export const A = {
@@ -38,6 +44,7 @@ export const A = {
   ELEMENT_DEPLACER: "ELEMENT_DEPLACER",
   DOSSIER_CREER: "DOSSIER_CREER",
   DOSSIER_RENOMMER: "DOSSIER_RENOMMER",
+  DOSSIER_ICONE: "DOSSIER_ICONE",
   DOSSIER_SUPPRIMER: "DOSSIER_SUPPRIMER",
   GRILLE_REMPLACER: "GRILLE_REMPLACER",
   ELEMENT_IA_EXCLURE: "ELEMENT_IA_EXCLURE",
@@ -306,6 +313,8 @@ function reduireBase(etat, action) {
         ),
       );
     }
+    case A.DOSSIER_ICONE:
+      return avecGrille(etat, changerIconeDossier(etat.grille, action.id, action.icone ?? null));
     case A.DOSSIER_SUPPRIMER:
       return avecGrille(etat, supprimerDossier(etat.grille, action));
     case A.REGLAGES_MODIFIER: {
@@ -335,12 +344,16 @@ function reduireBase(etat, action) {
     case A.GRILLE_RESTAURER:
       // A backup put back (already migrated and validated): grid and synced settings.
       if (!Array.isArray(action.etat?.grille) || !action.etat.reglages) return etat;
-      return { ...etat, grille: action.etat.grille, reglages: action.etat.reglages };
+      return avecVueSynchronisee({
+        ...etat,
+        grille: action.etat.grille,
+        reglages: action.etat.reglages,
+      });
     case A.SYNCHRO_APPLIQUER:
       // State chosen during a synchronisation (already migrated and validated): it is a
       // local change, saved and shown in the other tabs. Device-only settings are kept.
       if (!Array.isArray(action.grille) || !action.reglages) return etat;
-      return { ...etat, grille: action.grille, reglages: action.reglages };
+      return avecVueSynchronisee({ ...etat, grille: action.grille, reglages: action.reglages });
     case A.FUSIONNER:
       return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:

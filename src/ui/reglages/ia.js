@@ -508,6 +508,11 @@ export function creerSectionChatbot({ store }) {
         "Recherche améliorée par l'IA",
         "Questions et suggestions de l'assistant dans la barre de recherche. Désactivé, la recherche reste 100 % locale.",
       ],
+      [
+        "heureMessages",
+        "Afficher l'heure des messages",
+        "Une petite heure sous chaque message de la conversation. Désactivé, seuls les séparateurs de jour restent.",
+      ],
       ...(import.meta.env.VITE_TARGET === "pwa"
         ? []
         : [

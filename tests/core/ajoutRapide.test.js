@@ -101,3 +101,31 @@ describe("fusionnerPropositionIa", () => {
     ).toBeNull();
   });
 });
+
+import { dimensionsFenetreAjout } from "../../src/core/ajoutRapide.js";
+
+describe("fenêtre d'ajout (T4)", () => {
+  it("75 % de l'écran, centrée", () => {
+    expect(dimensionsFenetreAjout({ largeur: 1440, hauteur: 900 })).toEqual({
+      width: 1080,
+      height: 675,
+      left: 180,
+      top: 113,
+    });
+  });
+  it("bornes minimale et maximale", () => {
+    const g = dimensionsFenetreAjout({ largeur: 3840, hauteur: 2160 });
+    expect([g.width, g.height]).toEqual([1100, 800]);
+    const p = dimensionsFenetreAjout({ largeur: 800, hauteur: 600 });
+    expect([p.width, p.height]).toEqual([640, 480]);
+  });
+  it("jamais plus grande que l'écran ; origine d'un second écran respectée", () => {
+    const t = dimensionsFenetreAjout({ largeur: 500, hauteur: 400, gauche: 1920, haut: 0 });
+    expect([t.width, t.height]).toEqual([500, 400]);
+    expect(t.left).toBe(1920);
+  });
+  it("valeurs absentes : défauts raisonnables", () => {
+    const d = dimensionsFenetreAjout(undefined);
+    expect(d.width).toBeGreaterThanOrEqual(640);
+  });
+});

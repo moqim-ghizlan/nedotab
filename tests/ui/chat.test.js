@@ -104,7 +104,8 @@ describe("chat : conversation", () => {
     m.ecrire("Bonjour");
     m.envoyer();
     await vi.waitFor(() => expect(m.qa(".chat-bulle--assistant strong")).toHaveLength(1));
-    expect(m.q(".chat-bulle--utilisateur").textContent).toBe("Bonjour");
+    expect(m.q(".chat-bulle--utilisateur .chat-texte").textContent).toBe("Bonjour");
+    expect(m.q(".chat-bulle--utilisateur time.chat-heure").title).toMatch(/\d{2}:\d{2}:\d{2}/);
     expect(m.q(".chat-bulle--assistant strong").textContent).toBe("gras");
     expect(m.q(".chat-modele").textContent).toBe("gemini-x");
     expect(m.appels[0]).toEqual([{ role: "user", texte: "Bonjour" }]);

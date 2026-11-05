@@ -99,8 +99,10 @@ describe("aperçu et compteurs", () => {
     site("b"),
     dossier("T", [site("t1"), site("t2")]),
   ]);
-  it("apercuDossier : les 4 premiers sites en profondeur", () => {
-    expect(ids(apercuDossier(d))).toBe("s1,a,b,t1");
+  it("apercuDossier : les 4 premiers éléments directs, sans descendre", () => {
+    expect(ids(apercuDossier(d))).toBe("S,a,b,T");
+    const grand = dossier("G", [site("1"), site("2"), site("3"), site("4"), site("5")]);
+    expect(ids(apercuDossier(grand))).toBe("1,2,3,4");
     expect(apercuDossier(dossier("V"))).toEqual([]);
   });
   it("compterSites tous niveaux", () => {

@@ -71,6 +71,8 @@ export function creerChat({
   proposer = null,
   historiqueActif = () => true,
   exemples = () => [],
+  afficherHeure = () => true,
+  format24h = () => true,
 }) {
   /** Stored conversations: the service exists AND the user keeps their history (V4.20). */
   const stocke = () => !!conversations && historiqueActif();
@@ -133,6 +135,8 @@ export function creerChat({
     fermerBouton,
   );
   const liste = creerMessages({
+    afficherHeure,
+    format24h,
     trouverSite,
     afficherSite,
     surChargerPrecedents: () => chargerPrecedents(),

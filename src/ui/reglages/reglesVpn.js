@@ -6,7 +6,9 @@ import {
   reglesVpnDe,
   validerReglesVpn,
 } from "../../core/domainesVpn.js";
+import { choisirSites } from "../dialogues/choisirSites.js";
 import { el, remplacer } from "../dom.js";
+import { icone } from "../icones.js";
 import { toast } from "../toast.js";
 
 const CLE_SUGGESTION = "nedotab:vpn:suggestion-vue";
@@ -56,13 +58,15 @@ export function blocReglesVpn({ store }) {
   function dessiner() {
     const r = regles();
     const cle = r.mode === "tout_sauf" ? "exceptions" : "liste";
-    const nom = `vpn-mode-${Math.random().toString(36).slice(2, 6)}`;
-    const mode = (valeur, libelle) => {
-      const radio = el("input", { type: "radio", name: nom, value: valeur });
-      radio.checked = r.mode === valeur;
-      radio.addEventListener("change", () => enregistrer({ ...r, mode: valeur }));
-      return el("label", { class: "vpn-nav-option" }, radio, ` ${libelle}`);
-    };
+    const mode = (valeur, libelle) =>
+      el("button", {
+        type: "button",
+        class: "segment",
+        role: "radio",
+        "aria-checked": String(r.mode === valeur),
+        texte: libelle,
+        onclick: () => r.mode !== valeur && enregistrer({ ...r, mode: valeur }),
+      });
     const champ = el("input", {
       type: "text",
       autocomplete: "off",
@@ -80,24 +84,62 @@ export function blocReglesVpn({ store }) {
         ajouter();
       }
     });
+    let filtre = "";
+    const puces = el("ul", { class: "vpn-puces" });
+    const majPuces = () => {
+      const liste = r[cle].filter((d) => d.includes(filtre));
+      puces.replaceChildren(
+        ...liste.map((d) =>
+          el(
+            "li",
+            { class: "vpn-puce" },
+            el("span", { texte: d }),
+            el("button", {
+              type: "button",
+              class: "vpn-puce-retrait",
+              "aria-label": `Retirer ${d}`,
+              title: `Retirer ${d}`,
+              texte: "✕",
+              onclick: () => enregistrer({ ...r, [cle]: r[cle].filter((x) => x !== d) }),
+            }),
+          ),
+        ),
+      );
+    };
+    // A search field only when the list is long.
+    const recherche =
+      r[cle].length > 10
+        ? el("input", {
+            type: "search",
+            placeholder: "Rechercher dans la liste",
+            "aria-label": "Rechercher dans la liste",
+            oninput: (e) => {
+              filtre = e.currentTarget.value.trim().toLowerCase();
+              majPuces();
+            },
+          })
+        : null;
+    majPuces();
 
     remplacer(
       racine,
       el("h4", { texte: "Règles par site" }),
       el(
         "div",
-        { class: "vpn-regles-modes", role: "radiogroup", "aria-label": "Mode" },
-        mode("tout_sauf", "Tout par le VPN, sauf ces sites (en direct)"),
-        mode("seulement", "Seulement ces sites par le VPN"),
+        { class: "segments", role: "radiogroup", "aria-label": "Mode des règles" },
+        mode("tout_sauf", "Tout par le VPN, sauf…"),
+        mode("seulement", "Seulement ces sites"),
       ),
       el("p", {
         class: "reglages-note",
         texte:
-          "Un domaine couvre ses sous-domaines : exemple.com inclut www.exemple.com et mail.exemple.com.",
+          r.mode === "tout_sauf"
+            ? "Ces sites passent en direct, sans le VPN. Un domaine couvre ses sous-domaines."
+            : "Seuls ces sites passent par le VPN. Un domaine couvre ses sous-domaines.",
       }),
       el(
         "div",
-        { class: "vpn-inviter" },
+        { class: "groupe-champ" },
         champ,
         el("button", {
           type: "button",
@@ -106,27 +148,11 @@ export function blocReglesVpn({ store }) {
           onclick: ajouter,
         }),
       ),
+      recherche,
       r[cle].length
-        ? el(
-            "ul",
-            { class: "vpn-liste" },
-            r[cle].map((d) =>
-              el(
-                "li",
-                { class: "vpn-invite" },
-                el("strong", { texte: d }),
-                el("button", {
-                  type: "button",
-                  class: "bouton",
-                  texte: "Retirer",
-                  "aria-label": `Retirer ${d}`,
-                  onclick: () => enregistrer({ ...r, [cle]: r[cle].filter((x) => x !== d) }),
-                }),
-              ),
-            ),
-          )
+        ? puces
         : el("p", {
-            class: "reglages-note",
+            class: "reglages-note vpn-vide",
             texte:
               r.mode === "tout_sauf"
                 ? "Aucune exception : tout passe par le VPN."
@@ -136,23 +162,28 @@ export function blocReglesVpn({ store }) {
       suggestionDejaVue()
         ? null
         : el(
-            "p",
-            { class: "reglages-note", role: "note" },
-            "Les banques et services de streaming bloquent parfois les connexions venant de serveurs. Vous pouvez les mettre en direct. ",
-            el("button", {
-              type: "button",
-              class: "lien-discret",
-              texte: "Compris",
-              onclick: () => {
-                marquerSuggestionVue();
-                dessiner();
-              },
-            }),
+            "div",
+            { class: "carte-info", role: "note" },
+            icone("oeil", { taille: 18 }),
+            el(
+              "p",
+              {},
+              "Les banques et services de streaming bloquent parfois les connexions venant de serveurs : mettez-les en direct. ",
+              el("button", {
+                type: "button",
+                class: "lien-discret",
+                texte: "Compris",
+                onclick: () => {
+                  marquerSuggestionVue();
+                  dessiner();
+                },
+              }),
+            ),
           ),
     );
   }
 
-  /** "Ajouter depuis mes sites": the domains of the grid, to tick. */
+  /** "Choisir parmi mes sites": opens the picker window (search, compact list, counter). */
   function blocDepuisSites(r, cle) {
     const domaines = [
       ...new Set(
@@ -161,37 +192,22 @@ export function blocReglesVpn({ store }) {
           .map(({ element }) => normaliserDomaine(element.url))
           .filter(Boolean),
       ),
-    ]
-      .filter((d) => !r[cle].includes(d))
-      .sort();
+    ].sort();
     if (!domaines.length) return null;
-    const coches = new Set();
-    const bouton = el("button", {
-      type: "button",
-      class: "bouton",
-      texte: "Ajouter la sélection",
-      disabled: true,
-      onclick: () => ajouterDomaines([...coches]),
-    });
-    return el(
-      "details",
-      { class: "vpn-depuis-sites" },
-      el("summary", { texte: "Ajouter depuis mes sites" }),
-      el(
-        "ul",
-        { class: "vpn-liste" },
-        domaines.map((d) => {
-          const c = el("input", { type: "checkbox", "aria-label": d });
-          c.addEventListener("change", () => {
-            if (c.checked) coches.add(d);
-            else coches.delete(d);
-            bouton.disabled = coches.size === 0;
-          });
-          return el("li", { class: "vpn-invite" }, el("label", {}, c, ` ${d}`));
-        }),
-      ),
-      bouton,
+    const bouton = el(
+      "button",
+      {
+        type: "button",
+        class: "bouton",
+        onclick: async () => {
+          const choix = await choisirSites({ domaines, dejaAjoutes: r[cle], retourFocus: bouton });
+          if (choix) ajouterDomaines(choix);
+        },
+      },
+      icone("ajouter", { taille: 16 }),
+      "Choisir parmi mes sites",
     );
+    return bouton;
   }
 
   dessiner();

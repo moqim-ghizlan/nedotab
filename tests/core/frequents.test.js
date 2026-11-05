@@ -128,10 +128,11 @@ describe("réglage reglages.frequents", () => {
       nombreAccueil: 6,
     });
   });
-  it("bloc de l'accueil (T7) : désactivé par défaut, 6 sites, valeurs permises 4/6/8/10", () => {
+  it("bloc de l'accueil (T7) : désactivé par défaut, 6 sites, valeurs entières de 4 à 10", () => {
     expect(frequentsDe({}).accueil).toBe(false);
     expect(frequentsDe({}).nombreAccueil).toBe(6);
-    expect(validerFrequents({ nombreAccueil: 7 }).nombreAccueil).toBe(6);
+    expect(validerFrequents({ nombreAccueil: 7 }).nombreAccueil).toBe(7);
+    for (const v of [3, 11, "abc", null, 5.5]) expect(validerFrequents({ nombreAccueil: v }).nombreAccueil).toBe(6);
     expect(validerFrequents({ nombreAccueil: 10 }).nombreAccueil).toBe(10);
     expect(validerFrequents({ accueil: "oui" }).accueil).toBe(false);
     // Stored only when something differs from the defaults.

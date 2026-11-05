@@ -1,6 +1,7 @@
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
+import { validerIconeDossier } from "./iconeDossier.js";
 import { etatInitial } from "./modele.js";
-import { avecPagesValides, validerReglages, validerReglagesAppareil } from "./reglages.js";
+import { avecPagesValides, validerReglages, vueDepuisReglages } from "./reglages.js";
 import { champsEnrichissement } from "./tags.js";
 
 /** Every site of a grid (all levels) with its tags, description and AI state completed. */
@@ -72,6 +73,16 @@ function avecEpingle(e) {
   return copie;
 }
 
+/** T11: a folder keeps its custom icon only when valid (absent = generic icon). Idempotent. */
+function avecIconeDossier(e) {
+  if (!("icone" in e)) return e;
+  const propre = validerIconeDossier(e.icone);
+  const copie = { ...e };
+  if (propre) copie.icone = propre;
+  else delete copie.icone;
+  return copie;
+}
+
 function elementValide(e) {
   if (!e || typeof e !== "object" || typeof e.id !== "string" || !e.id) return false;
   if (e.type === "site") return typeof e.titre === "string" && typeof e.url === "string";
@@ -119,7 +130,7 @@ function filtrer(elements, niveau, ctx) {
       for (const site of sitesDe(e.items, ctx))
         resultat.push(idUnique(avecEpingle({ ...site, ...champsEnrichissement(site) }), ctx));
     } else {
-      const dossier = idUnique(avecEpingle(avecExclusion(e)), ctx);
+      const dossier = idUnique(avecIconeDossier(avecEpingle(avecExclusion(e))), ctx);
       resultat.push({ ...dossier, items: filtrer(e.items, niveau + 1, ctx) });
     }
   }
@@ -142,14 +153,17 @@ export function valider(
   const grille = Array.isArray(etat?.grille) ? filtrer(etat.grille, 0, ctx) : [];
   if (ctx.ignores.length) onIgnore(ctx.ignores);
   if (ctx.corrections.length) onCorriger(ctx.corrections);
+  const reglages = avecPagesValides(
+    validerReglages({ ...base.reglages, ...etat?.reglages }),
+    grille.length,
+  );
   return {
     ...etat,
     versionSchema: etat?.versionSchema ?? base.versionSchema,
     grille,
-    reglages: avecPagesValides(
-      validerReglages({ ...base.reglages, ...etat?.reglages }),
-      grille.length,
-    ),
-    reglagesAppareil: validerReglagesAppareil(etat?.reglagesAppareil),
+    reglages,
+    // T10: the view of this device = what is synced for it, over the local copy (kept where
+    // nothing is synced yet, so that an older local state is never lost).
+    reglagesAppareil: vueDepuisReglages(etat?.reglagesAppareil, reglages),
   };
 }

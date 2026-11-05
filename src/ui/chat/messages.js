@@ -2,6 +2,13 @@ import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { iconeRobot } from "./boutonRobot.js";
 import { masquerBlocActions } from "../../core/outils.js";
+import {
+  cleJour,
+  dateLongueMessage,
+  formaterHeureMessage,
+  heureVisible,
+  libelleJour,
+} from "../../core/conversations.js";
 import { referencesDe, rendreAvecSites } from "./referencesSites.js";
 
 /**
@@ -25,6 +32,9 @@ export function creerMessages({
   carteProposition = () => null,
   exemples = () => [],
   surExemple = () => {},
+  // T13: time under the bubbles (display only, never sent to the AI).
+  afficherHeure = () => true,
+  format24h = () => true,
 }) {
   const liste = el("div", {
     class: "chat-liste",
@@ -74,7 +84,19 @@ export function creerMessages({
     });
     return noeud;
   };
-  const bulleReponse = (m) => {
+  /** <time> of a message: absolute, steady, full date on hover. Empty without a date. */
+  const heureDe = (m, suivant) => {
+    if (!afficherHeure() || !heureVisible(m, suivant)) return null;
+    const options = { format24h: format24h() };
+    const t = new Date(m.date);
+    return el("time", {
+      class: "chat-heure",
+      datetime: Number.isNaN(t.getTime()) ? null : t.toISOString(),
+      title: dateLongueMessage(m.date, options),
+      texte: formaterHeureMessage(m.date, Date.now(), options),
+    });
+  };
+  const bulleReponse = (m, suivant = null) => {
     let e = reponses.get(m.id);
     if (!e) {
       const contenu = el("div", { class: "chat-contenu" });
@@ -129,6 +151,7 @@ ${texte}`;
     e.bulle.setAttribute("aria-busy", String(enFlux));
     e.copier.hidden = enFlux;
     e.pied.replaceChildren(
+      ...[heureDe(m, suivant)].filter(Boolean),
       ...(m.consulte && !enFlux
         ? [
             el("p", {
@@ -207,8 +230,17 @@ ${texte}`;
     if (etaitEnFlux && !enFlux && dernier?.role === "assistant" && !dernier.interrompu)
       annoncer("Réponse de l'assistant reçue");
     etaitEnFlux = enFlux;
-    const enfants = messages.flatMap((m) => {
-      if (m.role === "assistant") return [entree(bulleReponse(m), `a${m.id}`)];
+    let jourVu = "";
+    const enfants = messages.flatMap((m, i) => {
+      const suivant = messages[i + 1] ?? null;
+      const cle = cleJour(m.date);
+      const separateur =
+        cle && cle !== jourVu
+          ? [el("p", { class: "chat-jour", role: "separator", texte: libelleJour(m.date) })]
+          : [];
+      if (cle) jourVu = cle;
+      if (m.role === "assistant")
+        return [...separateur, entree(bulleReponse(m, suivant), `a${m.id}`)];
       const estDernier = m === dernier;
       const bulle = el(
         "div",
@@ -216,6 +248,7 @@ ${texte}`;
           class: `chat-bulle chat-bulle--utilisateur${m.etat === "erreur" ? " chat-bulle--erreur" : ""}`,
         },
         el("p", { class: "chat-texte", texte: m.texte }),
+        heureDe(m, suivant),
         m.origine === "barre"
           ? el("p", { class: "chat-origine", texte: "depuis la barre de recherche" })
           : null,
@@ -236,7 +269,7 @@ ${texte}`;
           : null,
       );
       entree(bulle, `u${m.id}`);
-      return m.sites?.length ? [bulle, carteSites(m.sites)] : [bulle];
+      return m.sites?.length ? [...separateur, bulle, carteSites(m.sites)] : [...separateur, bulle];
     });
     if (enAttente)
       enfants.push(

@@ -46,7 +46,7 @@ export function titreAffiche(item) {
  * @param {{ vues: () => object[], abonner: (f: () => void) => () => void,
  *   urlApercu: (item: object) => Promise<string|null>, deverrouiller: () => void,
  *   actions: (item: object) => object[], lot: { supprimer: Function, prolonger: Function,
- *   telecharger: Function }, ecart: () => number, appareil: (a: string) => string }} api
+ *   telecharger: Function }, ecart: () => number, appareil: (item: object) => string }} api
  */
 export function creerGalerie(api) {
   let racine = null;
@@ -86,7 +86,7 @@ export function creerGalerie(api) {
       class: "pgal-bouton",
       "aria-label": "Fermer la galerie",
       title: "Fermer (Échap)",
-      onclick: () => fermer(),
+      onclick: () => retourOuFermer(),
     },
     icone("fermer", { taille: 20 }),
   );
@@ -464,7 +464,7 @@ export function creerGalerie(api) {
           : `${quand(item.expireLe)} (reste ${formaterTempsRestant(reste)})`,
       );
     }
-    ligne("Envoyé depuis", api.appareil(item.appareil));
+    ligne("Envoyé depuis", api.appareil(item));
     ligne("Chiffré", item.chiffre ? "Oui" : "Non");
     return el("dl", { class: "pgal-infos-liste" }, lignes);
   }
@@ -585,6 +585,9 @@ export function creerGalerie(api) {
     if (courant !== null && !enVisionneuse) courant = null;
     racine.classList.toggle("pgal--visionneuse", courant !== null);
     retour.hidden = courant === null;
+    const texteFermer = courant !== null ? "Fermer l'aperçu (Échap)" : "Fermer la galerie (Échap)";
+    fermerBouton.title = texteFermer;
+    fermerBouton.setAttribute("aria-label", texteFermer);
     vueGrille.hidden = courant !== null;
     vueVisionneuse.hidden = courant === null;
     compte.textContent = `${tous().length}`;
@@ -599,16 +602,21 @@ export function creerGalerie(api) {
   }
 
   // --- life cycle --------------------------------------------------------------------------
+  // Same behaviour for the close button and Escape: close only the top-most level.
+  function retourOuFermer() {
+    if (courant !== null) aller(null);
+    else if (selection.size) {
+      selection = new Set();
+      dessiner();
+    } else fermer();
+  }
+
   function surTouche(e) {
     if (e.key === "Escape") {
       if (document.querySelector("dialog[open]:modal, .menu")) return;
       e.preventDefault();
       e.stopPropagation();
-      if (courant !== null) aller(null);
-      else if (selection.size) {
-        selection = new Set();
-        dessiner();
-      } else fermer();
+      retourOuFermer();
     } else if (courant !== null && !e.target.closest?.("input, textarea")) {
       if (e.key === "ArrowRight") voisin(1);
       else if (e.key === "ArrowLeft") voisin(-1);

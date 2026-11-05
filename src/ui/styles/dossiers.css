@@ -357,20 +357,14 @@
   font-size: var(--taille-xs);
 }
 
-/* A folder holding sub-folders shows a folded corner. */
-.tuile-icone--avec-sous {
-  position: relative;
-}
-
-.tuile-icone--avec-sous::after {
-  content: "";
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 0 var(--rayon) 0 4px;
-  background: linear-gradient(225deg, var(--fond) 50%, var(--bordure) 50%);
+/* A sub-folder in the preview is a small folder glyph; the only marker of sub-folders. */
+.tuile-icone--dossier .mini--dossier {
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
 }
 
 /*
@@ -595,4 +589,99 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--espace-2);
+}
+
+/* T11: custom folder icon, shown instead of the 2 x 2 preview and of the generic folder. */
+.tuile-icone--dossier-perso {
+  position: relative;
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  backdrop-filter: none;
+}
+
+.tuile-icone--dossier-perso > .tuile-icone {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.tuile-icone--glyphe {
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+
+.badge-sous-dossier {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+}
+
+/* Glyph picker of the folder dialog. */
+.glyphes-grille {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: var(--espace-2);
+  margin-bottom: var(--espace-2);
+}
+
+.glyphe-choix {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  color: var(--glyphe-couleur, var(--texte));
+  cursor: pointer;
+}
+
+.glyphe-choix[aria-checked="true"] {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.glyphe-choix:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.dossier-apercu-dialogue {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--espace-3);
+}
+
+.fenetre-icone {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: var(--rayon);
+  background: none;
+  color: var(--texte-secondaire);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.fenetre-icone:hover,
+.fenetre-icone:focus-visible {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--texte);
+}
+
+/* The glyph picker fills the icon panel (a flex row): without this it shrank to one column. */
+.icone-panneau > .glyphes-grille,
+.icone-panneau > .nuancier {
+  flex: 1 1 100%;
+  width: 100%;
 }

@@ -20,6 +20,7 @@ import { PAGE_ELEMENTS, lireElement } from "../core/espacePartage.js";
 import { BORNE_BASSE_MS, calculerExpiration, DUREE_DEFAUT } from "../core/expirationPartage.js";
 import { deleteObject, listAll, ref } from "firebase/storage";
 import { obtenirApp } from "./app.js";
+import { marqueAppareil } from "./appareils.js";
 import { appareilCourant } from "./sauvegardes.js";
 
 /**
@@ -85,7 +86,7 @@ export async function ajouter(
     contenu,
     titre,
     description = "",
-    appareil = appareilCourant(),
+    marque = marqueAppareil(appareilCourant()),
     epingle = false,
     chiffre = false,
     expireLe = calculerExpiration(DUREE_DEFAUT),
@@ -106,7 +107,7 @@ export async function ajouter(
   lot.set(ref, {
     type,
     ...corps,
-    appareil,
+    ...marque,
     epingle,
     creeLe: serverTimestamp(),
     expireLe: Timestamp.fromMillis(expireLe),

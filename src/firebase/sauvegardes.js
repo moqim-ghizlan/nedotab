@@ -17,6 +17,7 @@ import { typeAppareil } from "../core/appareil.js";
 import { compter } from "../core/fusion.js";
 import { aSupprimer, idSauvegarde, nettoyerNom } from "../core/sauvegardes.js";
 import { obtenirApp } from "./app.js";
+import { marqueAppareil } from "./appareils.js";
 
 /** Backups of the account: users/{uid}/sauvegardes/{AAAA-MM-JJ_HHmmss_xxxx}, immutable. */
 const json = (v) => JSON.parse(JSON.stringify(v));
@@ -32,6 +33,9 @@ export async function creerSauvegarde(uid, etat, { type, nom = null }) {
     type,
     nom: type === "manuelle" ? nettoyerNom(nom) : (nettoyerNom(nom) ?? null),
     appareil: appareilCourant(),
+    ...(marqueAppareil(appareilCourant()).appareilId
+      ? { appareilId: marqueAppareil(appareilCourant()).appareilId }
+      : {}),
     versionSchema: etat.versionSchema,
     nbSites: sites,
     nbDossiers: dossiers,

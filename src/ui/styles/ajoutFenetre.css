@@ -1,0 +1,165 @@
+/*
+ * T4: the large add window (75 % of the screen, centred). Two columns on a wide window, one
+ * on a narrow one; only the form column scrolls, the footer stays in view.
+ */
+body.ajout-page {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police);
+}
+
+#ajout {
+  height: 100%;
+}
+
+.ajout-fenetre {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.ajout-fenetre-corps {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.ajout-fenetre-gauche {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-4);
+  padding: var(--espace-5);
+  border-right: 1px solid var(--trait);
+  background: var(--carte-fond, var(--surface));
+}
+
+/* The tile, stacked and larger in the side column. */
+.ajout-fenetre-gauche .ajout-apercu {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--espace-4);
+}
+
+.ajout-fenetre-gauche .ajout-apercu-icone {
+  width: 112px;
+  height: 112px;
+  border-radius: 30px;
+}
+
+.ajout-fenetre-gauche .ajout-apercu-icone .tuile-icone {
+  width: 92px;
+  height: 92px;
+  border-radius: 24px;
+  font-size: 2.4rem;
+}
+
+/* A long title never overflows: two lines, then an ellipsis. */
+.ajout-fenetre-gauche .ajout-apercu-titre {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.ajout-fenetre-gauche .ajout-apercu-domaine {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ajout-fenetre-aide {
+  margin: 0;
+  color: var(--texte-secondaire);
+  font-size: var(--taille-s);
+}
+
+.ajout-fenetre-droite {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-3);
+  min-width: 0;
+  padding: var(--espace-5);
+  overflow-y: auto;
+}
+
+/* The place: the folder tree is tall enough to show several levels. */
+.ajout-fenetre .ajout-lieu-panneau {
+  max-height: 16rem;
+  overflow-y: auto;
+}
+
+.ajout-fenetre-pied {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espace-2);
+  padding: var(--espace-3) var(--espace-5);
+  padding-bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--trait);
+  background: var(--surface);
+}
+
+.ajout-fenetre-pied .bouton {
+  min-height: 44px;
+  padding-inline: var(--espace-5);
+}
+
+.ajout-fenetre-pied .bouton--principal {
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #000));
+}
+
+/* Inputs, tags and boxes follow the shared form style (40-44 px, green focus ring). */
+.ajout-fenetre input[type="text"],
+.ajout-fenetre textarea {
+  min-height: var(--champ-hauteur, 40px);
+}
+
+.ajout-fenetre .ajout-carte {
+  padding: var(--espace-4);
+  border: 1px solid var(--trait);
+  border-radius: var(--rayon);
+  background: var(--carte-fond, var(--surface));
+}
+
+.ajout-fenetre .bouton-ia::before {
+  content: "✦";
+  margin-right: 6px;
+}
+
+@media (max-width: 700px) {
+  .ajout-fenetre-corps {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow-y: auto;
+  }
+  .ajout-fenetre-gauche {
+    padding: var(--espace-3) var(--espace-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--trait);
+  }
+  .ajout-fenetre-gauche .ajout-apercu {
+    flex-direction: row;
+    align-items: center;
+  }
+  .ajout-fenetre-gauche .ajout-apercu-icone {
+    width: 64px;
+    height: 64px;
+  }
+  .ajout-fenetre-gauche .ajout-apercu-icone .tuile-icone {
+    width: 52px;
+    height: 52px;
+  }
+  .ajout-fenetre-aide {
+    display: none;
+  }
+  .ajout-fenetre-droite {
+    padding: var(--espace-4);
+    overflow: visible;
+  }
+}

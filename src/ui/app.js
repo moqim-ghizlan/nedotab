@@ -7,6 +7,12 @@ import { creerDossier } from "../core/modele.js";
 import { expliquer, messageIgnorees } from "../core/rejeu.js";
 import {
   affichageAccueilDe,
+  affichageHeureDe,
+  CLES_GLOBALES,
+  CLES_PAR_APPAREIL,
+  definirProfilAppareil,
+  profilAppareil,
+  profilDeType,
   COTE_TELEPHONE,
   fondEffectif,
   fondsAPurger,
@@ -60,6 +66,9 @@ import { creerServiceVisites } from "./services/visites.js";
 import { creerServiceUsage } from "./services/usage.js";
 import { frequentsDe } from "../core/frequents.js";
 import { creerFrequents } from "./frequents.js";
+import { typeAppareil } from "../core/appareil.js";
+import { demanderNomAppareil } from "./dialogues/nomAppareil.js";
+import { creerServiceAppareils } from "./services/appareils.js";
 import { creerEspacePartage } from "./espacePartage.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
@@ -95,6 +104,8 @@ function signalerIgnorees(ignorees) {
 const ACTIONS_LOCALES = new Set([A.ELEMENT_SUPPRIMER, A.ELEMENT_DEPLACER]);
 
 export async function demarrerApp(racine) {
+  // T10: the settings that depend on the screen are kept per kind of device.
+  definirProfilAppareil(profilDeType(typeAppareil(import.meta.env.VITE_TARGET)));
   const stockage = plateforme.stockage();
   let brut = null;
   let versionConnue = null;
@@ -429,6 +440,22 @@ export async function demarrerApp(racine) {
     sauvegardeVerifiee = true;
     session.sauvegardes.verifierAuto().catch(() => (sauvegardeVerifiee = false));
   });
+  // T10: settings kept only on this device until now (look, sizes…) go up to the account once.
+  let reglagesPousses = false;
+  synchro.abonner((e) => {
+    if (e.mode !== "compte" || e.statut !== "synchronise" || reglagesPousses) return;
+    reglagesPousses = true;
+    const r = store.lire();
+    const manque =
+      r.reglages.apparence === undefined || r.reglages.parAppareil?.[profilAppareil()] === undefined;
+    if (!manque) return;
+    const vue = r.reglagesAppareil ?? {};
+    const changements = {};
+    for (const cle of [...CLES_GLOBALES, ...CLES_PAR_APPAREIL]) if (cle in vue) changements[cle] = vue[cle];
+    // Even with nothing to send the marker is written ("synced, absent = default").
+    if (!Object.keys(changements).length) changements.formeIcones = vue.formeIcones ?? "arrondi";
+    store.envoyer({ type: A.REGLAGES_MODIFIER, changements });
+  });
   // V3.3: without IndexedDB (some private windows of Safari) the account works, not offline.
   let cacheVerifie = false;
   synchro.abonner((e) => {
@@ -716,6 +743,9 @@ export async function demarrerApp(racine) {
     afficherSite,
     proposer,
     historiqueActif: () => permis(iaDe(store.lire().reglages).confidentialite, "historique"),
+    // T13: time under the messages (setting of the chatbot; 12 h / 24 h as for the clock).
+    afficherHeure: () => optionsChatbot(iaDe(store.lire().reglages)).heureMessages,
+    format24h: () => affichageHeureDe(store.lire().reglagesAppareil) !== "12h",
     // V4.30: questions to start with, made locally from the user's tags (never sent).
     exemples: () => exemplesQuestions(store.lire().grille),
     confirmer: async ({ titre, message, valider }) =>
@@ -734,8 +764,18 @@ export async function demarrerApp(racine) {
     document.documentElement.dataset.panneau = "chat";
     setTimeout(() => chat.ouvrir(), 0);
   }
+  // T12: named devices ("work-pc"): list, name of this device, first-launch question.
+  const appareils = creerServiceAppareils({
+    charger: chargerFirebase,
+    uid: uidConnecte,
+    idAppareil: plateforme.idAppareil,
+    preferences: plateforme.preferences,
+    demanderNom: demanderNomAppareil,
+  });
+  session.appareils = appareils;
   // V4.24: sharing space (texts and links between the devices of the account).
   const partage = creerEspacePartage({
+    appareils,
     store,
     disponible: () => uidConnecte() !== null,
     // T8: turned off in the settings, the button, the panel, the gallery and every request go.
@@ -754,6 +794,12 @@ export async function demarrerApp(racine) {
   document.body.append(partage.bouton, partage.panneau);
   synchro.abonner(() => partage.actualiser());
   compte.abonner(() => partage.actualiser());
+  appareils.abonner(() => partage.actualiser());
+  // The list is followed once the account is synchronised, and dropped on sign-out.
+  synchro.abonner((e) => {
+    if (e.mode === "compte" && e.statut === "synchronise") appareils.demarrer().catch(() => {});
+    else if (e.mode !== "compte") appareils.arreter();
+  });
   partage.actualiser();
   // The settings arrive after the first render and change in the settings panel: the robot
   // follows them (the search bar does the same on focus).
@@ -821,9 +867,10 @@ export async function demarrerApp(racine) {
     accueil.focaliser(dossier.id);
   };
 
-  /** The home "+" offers a site or a folder. */
+  /** The home "+" offers a site, a folder and (when available) the sharing space. */
   const menuAjout = (bouton) => {
     const rect = bouton.getBoundingClientRect();
+    const peutPartager = partage.disponible?.() === true;
     ouvrirMenu({
       x: rect.left,
       y: rect.bottom + 4,
@@ -836,6 +883,9 @@ export async function demarrerApp(racine) {
             ouvrirAjoutSite(store, { apresAjout: (site) => accueil.focaliser(site.id) }),
         },
         { libelle: "Nouveau dossier", onChoix: () => nouveauDossier(bouton) },
+        ...(peutPartager
+          ? ["-", { libelle: "Partager un élément", onChoix: () => partage.ouvrir() }]
+          : []),
       ],
     });
   };

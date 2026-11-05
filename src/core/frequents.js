@@ -20,7 +20,11 @@ export const FREQUENTS_PAR_DEFAUT = Object.freeze({
   nombreAccueil: 6,
 });
 /** Sites shown in the block of the home page (T7). */
-export const NOMBRES_ACCUEIL = [4, 6, 8, 10];
+export const NOMBRE_ACCUEIL_MIN = 4;
+export const NOMBRE_ACCUEIL_MAX = 10;
+export const NOMBRE_ACCUEIL_DEFAUT = 6;
+const nombreAccueilValide = (n) =>
+  Number.isInteger(n) && n >= NOMBRE_ACCUEIL_MIN && n <= NOMBRE_ACCUEIL_MAX;
 
 /** `reglages.frequents` made valid (unknown keys dropped, ids unique and bounded). */
 export function validerFrequents(f) {
@@ -39,7 +43,9 @@ export function validerFrequents(f) {
     masques,
     // T7: the block above the search bar, off by default.
     accueil: brut.accueil === true,
-    nombreAccueil: NOMBRES_ACCUEIL.includes(brut.nombreAccueil) ? brut.nombreAccueil : 6,
+    nombreAccueil: nombreAccueilValide(brut.nombreAccueil)
+      ? brut.nombreAccueil
+      : NOMBRE_ACCUEIL_DEFAUT,
   };
 }
 

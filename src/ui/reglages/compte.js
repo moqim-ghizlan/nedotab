@@ -10,6 +10,7 @@ import {
   demanderMotsDePasse,
 } from "../connexion.js";
 import { toast } from "../toast.js";
+import { creerBlocAppareils } from "./appareils.js";
 
 /** What happens to the account's data: the privacy page of the site (V2.10). */
 const lienConfidentialite = () =>
@@ -154,6 +155,9 @@ export function sectionCompte(session) {
     return [];
   }
 
+  // T12: built once, it follows the list of devices by itself.
+  const blocAppareils = creerBlocAppareils(session);
+
   const rendre = () => {
     const etat = compte.lire();
     if (etat.statut === "verification" && etat.profil) {
@@ -220,6 +224,7 @@ export function sectionCompte(session) {
           ...boutonsMotDePasse(etat.profil),
           action("deconnexion", "Se déconnecter", () => session.deconnecter()),
         ),
+        sync.mode === "compte" ? blocAppareils : null,
       );
       danger.replaceChildren(
         ...(session.supprimerCompte

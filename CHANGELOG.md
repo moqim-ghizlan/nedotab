@@ -2,6 +2,43 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.11.1] - 2026-11-05
+
+### Corrigé
+
+- Fenêtre « Modifier le dossier » : la grille d'icônes s'affichait sur une colonne.
+- « Mes appareils » : un « null » s'affichait ; espace ajouté autour du bloc.
+- Champ d'ajout de tag refait (zone douce, « # », puces arrondies).
+- « Nombre de sites sur l'accueil » : boutons de 4 à 10 à la place du curseur.
+
+## [5.11.0] - 2026-11-05
+
+Liste `docs/plan/todo.md` (T1 à T14).
+
+### Ajouté
+
+- **Noms d'appareils (T12)** : à la première ouverture sur chaque appareil, « Comment appelez-vous cet appareil ? » (nom suggéré, « Plus tard » possible, « Déjà dans ma liste » pour reprendre un appareil existant). Liste `users/{uid}/appareils/{id}` (20 au plus), renommage et retrait dans Réglages › Compte, nom affiché dans l'espace de partage, la galerie et les sauvegardes (nom actuel par identifiant, repli sur le nom figé puis sur le type). Incluse dans l'export des données.
+- **Tous les réglages dans le compte (T10)** : l'apparence, les formes, les animations, le style des dossiers, l'heure… sont enregistrés dans `reglages.apparence` ; ce qui dépend de l'écran (colonnes, tailles, espacement, vibration, barre Chrome, navigateur, accueil, débogage) dans `reglages.parAppareil[pc | tablette | telephone]`. Sauvegardes, export, import et nouvel appareil les retrouvent ; les réglages locaux d'avant sont envoyés au compte une fois. Seuls le fond d'écran local et l'identifiant d'appareil restent locaux. Plus d'étiquette « Cet appareil » : « Pour ce type d'appareil » pour les réglages d'écran.
+- **Icône personnalisée de dossier (T11)** : « Changer l'icône… » (lettre, adresse d'image, image importée ou 12 icônes intégrées), « Réinitialiser l'icône », bouton « ⋯ » dans la fenêtre du dossier. Elle prend le dessus sur l'aperçu dans les deux styles.
+- **Heure des messages du chatbot (T13)**, séparateurs de jour, option « Afficher l'heure des messages ».
+- **« Partager un élément » dans le menu « + » (T14)**, avec séparateur.
+- **Fenêtre d'ajout de site de 75 % de l'écran (T4)**, centrée, à deux colonnes. *Choix technique : un popup d'extension est limité à 800 × 600 et reste sous le bouton ; l'injection dans la page demande la permission `scripting`, une ressource accessible à toutes les pages et échoue sous certaines CSP. Voie retenue : fenêtre dédiée (`chrome.windows.create`) sur `ajout.html`, qui marche sur toutes les pages. Pas de voile sombre (c'est une fenêtre).* Repli sur le petit formulaire si la fenêtre ne s'ouvre pas.
+- **Composants communs (T1)** : champ, groupe champ + bouton, trois boutons, cases et boutons radio personnalisés, cartes, barre de progression, tableau clé/valeur (`composants.css`).
+
+### Modifié
+
+- **Réglages › Avancé (T1)** en cartes (Autorisations, Stockage avec barre, Diagnostic en tableau, À propos avec interrupteur).
+- **Réglages › VPN (T3)** en sous-onglets (Navigateur, Appareil, Mon accès, Administration pour le propriétaire seulement), règles par site (contrôle segmenté, puces, fenêtre « Choisir des sites »), consommation lisible, invités en cartes avec menu « ⋯ », WireGuard en étapes.
+- **Aperçu d'un dossier (T8)** : seulement ses éléments directs ; un sous-dossier est une mini-icône de dossier.
+- **Nombre de sites de l'accueil (T9)** : curseur de 4 à 10.
+- **Actions « ⋯ » du partage (T7)** : menu flottant (plus de tiroir qui déplace la liste).
+- **Badge DEBUG (T2)** : en haut à gauche, plus discret, il ne recouvre plus le bouton de partage.
+
+### Corrigé
+
+- Le « ✕ » de la galerie ne ferme que l'aperçu, puis la galerie (T5).
+- **Durée d'un élément partagé (T6)** : on peut raccourcir, rallonger, passer d'illimité à fini ou l'inverse (règles Firestore mises à jour : **à déployer** avec `npm run deployer:regles`).
+
 ## [5.10.0] - 2026-11-05
 
 ### Ajouté

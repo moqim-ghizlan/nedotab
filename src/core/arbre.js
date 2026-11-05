@@ -1,3 +1,4 @@
+import { validerIconeDossier } from "./iconeDossier.js";
 /**
  * Pure helpers on the grid tree. A grid is an array of elements; a folder holds `items`
  * with the same shape. Every function returns new arrays along the modified path only.
@@ -186,14 +187,12 @@ export function deplacer(grille, id, versParentId = null, versIndex) {
   return inserer(sans, r.element, versParentId, index);
 }
 
-/** The first `n` sites of a folder, depth-first (sub-folders themselves are skipped). */
+/**
+ * The first `n` DIRECT items of a folder (sites and sub-folders, in their real order). It never
+ * goes down into a sub-folder: its content is not the content of the folder.
+ */
 export function apercuDossier(dossier, n = 4) {
-  const sites = [];
-  for (const e of parcourir(dossier.items)) {
-    if (e.type === "site") sites.push(e);
-    if (sites.length >= n) break;
-  }
-  return sites;
+  return dossier.items.slice(0, n);
 }
 
 /** Total number of sites in a folder, all levels. */
@@ -249,4 +248,23 @@ export function fusionner(
   return modifierListe(sans, parentId, (liste) =>
     liste.map((e, i) => (i === position.index ? dossier : e)),
   );
+}
+
+/**
+ * Sets (or removes with null) the custom icon of a folder. An invalid icon leaves the grid
+ * unchanged. Returns a new grid.
+ */
+export function changerIconeDossier(grille, id, icone) {
+  const propre = icone == null ? null : validerIconeDossier(icone);
+  if (icone != null && !propre) return grille;
+  return remplacer(grille, id, (e) => {
+    if (e.type !== "dossier") return e;
+    if (!propre) {
+      if (!("icone" in e)) return e;
+      const reste = { ...e };
+      delete reste.icone;
+      return reste;
+    }
+    return { ...e, icone: propre };
+  });
 }

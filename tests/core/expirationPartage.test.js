@@ -5,7 +5,6 @@ import {
   HEURE,
   JOUR,
   MINUTE,
-  VIE_MAX_MS,
   calculerExpiration,
   dureesProlongeables,
   ecartDepuisConfirmation,
@@ -31,6 +30,7 @@ describe("durées", () => {
     expect(expirationValide(ILLIMITE, T0)).toBe(true);
     expect(prolonger({ creeLe: T0, expireLe: T0 + JOUR }, "jamais", 0, T0)).toEqual({ ok: true, expireLe: ILLIMITE });
     expect(prolonger({ creeLe: T0, expireLe: ILLIMITE }, "jamais", 0, T0).ok).toBe(false);
+    expect(prolonger({ creeLe: T0, expireLe: ILLIMITE }, "1h", 0, T0)).toEqual({ ok: true, expireLe: T0 + HEURE });
   });
   it("bornes des règles : 59 min refusé, 55 min accepté, 31 jours accepté, 31 j + 1 min refusé", () => {
     expect(expirationValide(T0 + 54 * MINUTE, T0)).toBe(false);
@@ -91,21 +91,17 @@ describe("prolongation", () => {
     const r = prolonger(e(T0, T0 + HEURE), "1j", 0, T0);
     expect(r).toEqual({ ok: true, expireLe: T0 + JOUR });
   });
-  it("plafonne à 30 jours après la création, puis refuse", () => {
-    const vieux = e(T0 - 20 * JOUR, T0 + JOUR);
-    expect(prolonger(vieux, "30j", 0, T0)).toEqual({
-      ok: true,
-      expireLe: T0 - 20 * JOUR + VIE_MAX_MS,
-    });
-    const plafonne = e(T0 - 20 * JOUR, T0 - 20 * JOUR + VIE_MAX_MS);
-    expect(prolonger(plafonne, "7j", 0, T0)).toEqual({
-      ok: false,
-      erreur: "Durée maximale atteinte",
-    });
-    expect(dureesProlongeables(plafonne, 0, T0).map((d) => d.id)).toEqual(["jamais"]);
+  it("un élément créé il y a 29 jours reste prolongeable", () => {
+    const vieux = e(T0 - 29 * JOUR, T0 + JOUR);
+    expect(prolonger(vieux, "30j", 0, T0)).toEqual({ ok: true, expireLe: T0 + 30 * JOUR });
   });
-  it("ne raccourcit jamais", () => {
-    expect(prolonger(e(T0, T0 + 7 * JOUR), "1h", 0, T0).ok).toBe(false);
+  it("peut raccourcir, ou repasser d'illimité à fini", () => {
+    expect(prolonger(e(T0, T0 + 7 * JOUR), "1h", 0, T0)).toEqual({ ok: true, expireLe: T0 + HEURE });
+    expect(prolonger(e(T0, ILLIMITE), "7j", 0, T0)).toEqual({ ok: true, expireLe: T0 + 7 * JOUR });
+  });
+  it("refuse la durée identique", () => {
+    expect(prolonger(e(T0, T0 + HEURE), "1h", 0, T0).ok).toBe(false);
+    expect(dureesProlongeables(e(T0, T0 + HEURE), 0, T0).map((d) => d.id)).not.toContain("1h");
   });
 });
 
@@ -120,24 +116,34 @@ describe("nouvelleExpiration (modification d'un élément, T4)", () => {
     const r = nouvelleExpiration(elt(T0 + HEURE), { mode: "depuis-maintenant", duree: "1j" }, 0, T0);
     expect(r).toEqual({ ok: true, expireLe: T0 + JOUR, change: true });
   });
-  it("depuis maintenant : refuse de raccourcir", () => {
+  it("depuis maintenant : peut raccourcir", () => {
     const r = nouvelleExpiration(elt(T0 + 7 * JOUR), { mode: "depuis-maintenant", duree: "1h" }, 0, T0);
-    expect(r.ok).toBe(false);
+    expect(r).toEqual({ ok: true, expireLe: T0 + HEURE, change: true });
+  });
+  it("depuis maintenant : identique ⇒ change false", () => {
+    const r = nouvelleExpiration(elt(T0 + HEURE), { mode: "depuis-maintenant", duree: "1h" }, 0, T0);
+    expect(r.change).toBe(false);
+  });
+  it("depuis maintenant : sort d'illimité", () => {
+    const r = nouvelleExpiration(elt(ILLIMITE), { mode: "depuis-maintenant", duree: "30j" }, 0, T0);
+    expect(r).toEqual({ ok: true, expireLe: T0 + 30 * JOUR, change: true });
   });
   it("ajouter : ajoute à l'échéance actuelle", () => {
     const r = nouvelleExpiration(elt(T0 + 2 * HEURE), { mode: "ajouter", duree: "1j" }, 0, T0);
     expect(r).toEqual({ ok: true, expireLe: T0 + 2 * HEURE + JOUR, change: true });
   });
-  it("plafonne à 30 jours après la création, puis refuse", () => {
+  it("ajouter : plafonne à 30 jours depuis maintenant, puis refuse", () => {
     const a = nouvelleExpiration(elt(T0 + 20 * JOUR), { mode: "ajouter", duree: "30j" }, 0, T0);
     expect(a).toEqual({ ok: true, expireLe: T0 + 30 * JOUR, change: true });
     const b = nouvelleExpiration(elt(T0 + 30 * JOUR), { mode: "ajouter", duree: "1h" }, 0, T0);
     expect(b.ok).toBe(false);
   });
-  it("illimité : toujours permis (valide pour les règles), puis « déjà illimité »", () => {
+  it("illimité : permis depuis un élément fini ; « ajouter » sur illimité refusé", () => {
     const a = nouvelleExpiration(elt(T0 + HEURE), { mode: "ajouter", duree: "jamais" }, 0, T0);
     expect(a).toEqual({ ok: true, expireLe: ILLIMITE, change: true });
-    expect(nouvelleExpiration(elt(ILLIMITE), { mode: "ajouter", duree: "1j" }, 0, T0).ok).toBe(false);
+    const r = nouvelleExpiration(elt(ILLIMITE), { mode: "ajouter", duree: "1j" }, 0, T0);
+    expect(r.ok).toBe(false);
+    expect(r.erreur).toContain("illimité");
   });
   it("suit l'horloge du serveur (appareil décalé)", () => {
     const ecart = 3 * HEURE;

@@ -16,7 +16,6 @@ import { blocTableauInvites } from "../../src/ui/reglages/vpnInvites.js";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 const texte = () => document.body.textContent;
-const bouton = (t) => [...document.querySelectorAll("button")].find((b) => b.textContent === t);
 
 beforeEach(() => {
   document.body.replaceChildren();
@@ -136,18 +135,35 @@ const serviceProprietaire = () => ({
   coupureSecurite: vi.fn(async () => ({ ok: true, valeur: { ok: true } })),
 });
 
+/** Opens the "⋯" menu of the guest `email`, then clicks the entry `nom`. */
+function choisir(email, nom) {
+  document.querySelector(`button[aria-label="Actions pour ${email}"]`).click();
+  [...document.querySelectorAll(".menu-entree")].find((b) => b.textContent === nom).click();
+}
+/** The limit field built by the "Modifier la limite" window (demander is mocked). */
+const champLimite = () => {
+  const { contenu } = demander.mock.calls.at(-1)[0];
+  return contenu[0].querySelector("input");
+};
+
 describe("tableau du propriétaire", () => {
   it("volumes par ami, total serveur, alerte à 80 %, phrase de confidentialité, aucun site", async () => {
     const service = serviceProprietaire();
     document.body.append(blocTableauInvites({ service }).racine);
     await flush();
     expect(texte()).toContain("ami@ex.org");
-    expect(texte()).toContain("Proxy 3 Go · WireGuard 1 Go");
-    expect(texte()).toContain("dernière activité 05/11");
-    expect(texte()).toContain("Serveur : 9 To sur 10 To gratuits (90 %)");
+    // Per channel, summed over the guests, with units that stay consistent.
+    expect(texte()).toContain("Proxy du navigateur");
+    expect(texte()).toContain("3 Go");
+    expect(texte()).toContain("1 Go");
+    expect(texte()).toContain("Dernière activité : 05/11");
+    expect(texte()).toContain("9 To / 10 To inclus");
+    expect(texte()).toContain("90 % du trafic gratuit");
     expect(texte()).toContain("approche de sa limite gratuite");
     expect(texte()).toContain("jamais les sites visités");
-    expect(document.querySelectorAll("svg rect")).toHaveLength(2);
+    expect(texte()).toMatch(/novembre 2026, remise à zéro le 1er/i);
+    // No isolated tick: the chart waits for a few days of traffic.
+    expect(document.querySelectorAll("svg rect").length).not.toBe(1);
     expect(texte()).not.toMatch(/https?:/);
   });
 
@@ -156,11 +172,11 @@ describe("tableau du propriétaire", () => {
     document.body.append(blocTableauInvites({ service }).racine);
     await flush();
     demander.mockResolvedValueOnce(false);
-    bouton("Couper maintenant").click();
+    choisir("ami@ex.org", "Couper maintenant");
     await flush();
     expect(service.couper).not.toHaveBeenCalled();
     demander.mockResolvedValueOnce(true);
-    bouton("Couper maintenant").click();
+    choisir("ami@ex.org", "Couper maintenant");
     await flush();
     expect(service.couper).toHaveBeenCalledWith("ami@ex.org");
   });
@@ -169,23 +185,28 @@ describe("tableau du propriétaire", () => {
     const service = serviceProprietaire();
     document.body.append(blocTableauInvites({ service }).racine);
     await flush();
-    bouton("Rétablir").click();
+    choisir("coupe@ex.org", "Rétablir");
     await flush();
     expect(service.retablir).toHaveBeenCalledWith("coupe@ex.org");
-    const champ = document.querySelector('input[aria-label^="Limite mensuelle de ami"]');
-    champ.value = "";
-    bouton("Enregistrer la limite").click();
+    demander.mockImplementationOnce(async ({ contenu }) => {
+      contenu[0].querySelector("input").value = "";
+      return true;
+    });
+    choisir("ami@ex.org", "Modifier la limite…");
     await flush();
     expect(service.definirLimite).toHaveBeenCalledWith("ami@ex.org", null);
+    expect(champLimite().closest(".champ-suffixe").textContent).toContain("Go");
   });
 
   it("limite invalide : aucun appel", async () => {
     const service = serviceProprietaire();
     document.body.append(blocTableauInvites({ service }).racine);
     await flush();
-    const champ = document.querySelector('input[aria-label^="Limite mensuelle de ami"]');
-    champ.value = "0";
-    bouton("Enregistrer la limite").click();
+    demander.mockImplementationOnce(async ({ contenu }) => {
+      contenu[0].querySelector("input").value = "0";
+      return true;
+    });
+    choisir("ami@ex.org", "Modifier la limite…");
     await flush();
     expect(service.definirLimite).not.toHaveBeenCalled();
   });

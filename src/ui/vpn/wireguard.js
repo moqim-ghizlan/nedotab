@@ -10,6 +10,7 @@ import {
 import { plateforme } from "../../platform/index.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
+import { icone } from "../icones.js";
 import { toast } from "../toast.js";
 import { dessinerQr, effacerQr } from "./qr.js";
 
@@ -101,77 +102,91 @@ export function blocWireguard({
 
   const note = (texte) => el("p", { class: "reglages-note", texte });
 
+  /** A step: a number in a circle (a tick once done), a short title, one line, its action. */
+  const etape = (numero, titre, explication, { fait = false, contenu = [] } = {}) =>
+    el(
+      "li",
+      { class: "etape", dataset: { fait: String(fait) } },
+      el("span", { class: "etape-numero", "aria-hidden": "true" }, fait ? icone("coche", { taille: 18 }) : String(numero)),
+      el(
+        "div",
+        { class: "etape-corps" },
+        el("h5", { texte: titre }),
+        explication ? el("p", { texte: explication }) : null,
+        ...contenu,
+      ),
+    );
+
   function dessiner() {
+    const lienInstall = el("a", {
+      class: "bouton",
+      href: URL_INSTALLATION,
+      target: "_blank",
+      rel: "noopener noreferrer",
+    }, icone("ouvrir", { taille: 16 }), "Installer WireGuard");
     racine.replaceChildren(
       el("h4", { texte: "VPN pour tout l'appareil (WireGuard)" }),
       note(NOTE_DOUBLE_VPN),
       el(
         "ol",
-        { class: "vpn-etapes" },
-        el(
-          "li",
-          {},
-          "Installez l'app WireGuard (gratuite) sur l'appareil à protéger : ",
-          el("a", {
-            href: URL_INSTALLATION,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            texte: "liens officiels",
-          }),
-          ".",
-        ),
-        el(
-          "li",
-          {},
-          profil
-            ? "Scannez le code ci-dessous."
-            : "Affichez votre QR code (ou le fichier de configuration).",
-        ),
-        el("li", {
-          texte: "Dans l'app WireGuard : « Ajouter un tunnel », puis « Scanner un QR code ».",
+        { class: "etapes" },
+        etape(1, "Installer l'app WireGuard", "Gratuite, sur l'appareil à protéger.", {
+          contenu: [lienInstall],
         }),
-        el(
-          "li",
-          {},
-          "Activez le tunnel, puis vérifiez l'adresse vue par les sites : ",
-          el("a", {
-            href: URL_ECHO,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            texte: "ouvrir un test",
-          }),
-          " (ligne « ip= », « loc= » = le pays du serveur).",
+        etape(
+          2,
+          "Afficher mon QR code",
+          profil ? "Scannez le code ci-dessous." : "Ou récupérez le fichier de configuration.",
+          { fait: !!profil, contenu: [profil ? blocProfil() : blocDemande()] },
+        ),
+        etape(
+          3,
+          "Dans WireGuard : ajouter le tunnel",
+          "« Ajouter un tunnel », puis « Scanner un QR code », et activez-le.",
+        ),
+        etape(
+          4,
+          "Tester que ça marche",
+          "La ligne « loc= » doit afficher le pays du serveur.",
+          {
+            contenu: [
+              el("a", {
+                class: "bouton",
+                href: URL_ECHO,
+                target: "_blank",
+                rel: "noopener noreferrer",
+              }, icone("ouvrir", { taille: 16 }), "Ouvrir un test d'adresse"),
+            ],
+          },
         ),
       ),
-      profil ? blocProfil() : blocDemande(),
+      note("Le VPN change l'adresse IP vue par les sites ; il ne rend pas anonyme."),
+      !profil && !occupe
+        ? el("button", {
+            type: "button",
+            class: "bouton bouton--danger",
+            texte: "Recréer mon profil",
+            onclick: recreer,
+          })
+        : null,
     );
   }
 
   function blocDemande() {
-    return el(
-      "div",
-      { class: "vpn-actions" },
-      el("button", {
-        type: "button",
-        class: "bouton bouton--principal",
-        texte: occupe ? "Chargement…" : "Afficher mon QR code",
-        disabled: occupe,
-        onclick: afficher,
-      }),
-      el("button", {
-        type: "button",
-        class: "bouton",
-        texte: "Recréer mon profil",
-        onclick: recreer,
-      }),
-    );
+    return el("button", {
+      type: "button",
+      class: "bouton bouton--principal",
+      texte: occupe ? "Chargement…" : "Afficher mon QR code",
+      disabled: occupe,
+      onclick: afficher,
+    });
   }
 
   function blocProfil() {
     const zone = el("div", { class: `vpn-qr-zone${revele ? "" : " vpn-qr-zone--flou"}` }, canvas);
     return el(
       "div",
-      { class: "vpn-profil" },
+      { class: "carte-qr vpn-profil" },
       el("p", { class: "vpn-nav-alerte", role: "alert", texte: AVERTISSEMENT_QR }),
       zone,
       el(
@@ -203,6 +218,12 @@ export function blocWireguard({
       ),
       note(AVERTISSEMENT_FICHIER),
       note(`Ce code disparaît après ${Math.round(duree / 1000)} secondes.`),
+      el("button", {
+        type: "button",
+        class: "bouton bouton--danger",
+        texte: "Recréer mon profil",
+        onclick: recreer,
+      }),
     );
   }
 

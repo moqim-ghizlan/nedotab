@@ -7,6 +7,7 @@ import "./ui/styles/selecteurDossier.css";
 import "./ui/styles/ajout.css";
 import "./ui/styles/dossiers.css";
 import "./ui/styles/reglages.css";
+import "./ui/styles/composants.css";
 import "./ui/styles/vpnNavigateur.css";
 import "./ui/styles/pages.css";
 import "./ui/styles/chat.css";
