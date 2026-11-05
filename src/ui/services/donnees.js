@@ -93,8 +93,19 @@ export function creerDonnees({
         espacePartage = undefined;
       }
     }
+    // V6.0: subjects and todos too; offline, the export goes on without them.
+    let todos;
+    if (enCompte()) {
+      try {
+        const lus = await (await charger()).lireToutLesTodos(uid());
+        todos = { sujets: lus.sujets, todos: lus.todos };
+      } catch {
+        todos = undefined;
+      }
+    }
     const contenu = creerExport(store.lire(), {
       espacePartage,
+      todos,
       appareils: enCompte() ? session?.appareils?.liste?.() : undefined,
       version: plat.getVersion(),
       plateforme: plat.capacites?.nom ?? "extension",

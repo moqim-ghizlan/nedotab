@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.0.0] - 2026-11-05
+
+Socle des **todos** (Sujet → Todos). Aucun écran dans cette version.
+
+### Ajouté
+
+- Modèle pur `src/core/sujets.js` et `src/core/todos.js` (validation, échéance en date seule, `faitLe`, ordre à écart, lecture normalisée).
+- Accès Firestore `src/firebase/todos.js` : lots document + compteur, mises à jour partielles, suppression d'un sujet en cascade par lots de 400 (relançable), recalcul des compteurs.
+- Règles Firestore `sujets`, `todos`, `todosMeta/usage` (limites 30 sujets, 500 todos, `getAfter`, dates serveur, `creeLe` immuable) et index `todos` (`sujetId`, `ordre`). **À déployer** : `npm run deployer:regles`.
+- Export des données : clé `todos`. Suppression de compte : préfixe Storage `todos/{uid}/` prévu.
+
+### Limites connues
+
+- Les todos sont hors des sauvegardes (voir `docs/decisions.md`). Décisions de la V6 prises sur les recommandations des plans.
+
 ## [5.11.1] - 2026-11-05
 
 ### Corrigé

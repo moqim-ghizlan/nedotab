@@ -269,6 +269,86 @@ service cloud.firestore {
                 && request.resource.data.octets <= 209715200));
     }
 
+    // V6.0: todos (Subject -> Todos). Flat collections linked by `sujetId`; nothing is added to
+    // users/{uid}. The rules cannot count a collection: todosMeta/usage is changed in the same
+    // batch as each creation (getAfter), so a 31st subject, a 501st todo, or a creation that does
+    // not increment the counter by exactly 1, is refused. A removal is never blocked by a counter.
+    // Dates: creeLe / modifieLe are always the server time; creeLe never changes afterwards.
+    function sujetValide(d) {
+      return d.keys().hasOnly(['nom', 'ordre', 'couleur', 'creeLe', 'modifieLe'])
+        && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 60
+        && d.ordre is number
+        && (d.get('couleur', null) == null
+            || d.couleur in ['pin', 'mer', 'ciel', 'prune', 'rose', 'ambre', 'sable', 'ardoise'])
+        && d.modifieLe == request.time;
+    }
+
+    function todoValide(d) {
+      return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
+        && d.v == 1
+        && d.sujetId is string && d.sujetId.size() >= 1 && d.sujetId.size() <= 40
+        && d.titre is string && d.titre.size() <= 200
+        && d.description is string && d.description.size() <= 20000
+        && (d.echeance == null
+            || (d.echeance is string
+                && d.echeance.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')))
+        && d.fait is bool
+        && (d.fait ? d.faitLe is timestamp : d.faitLe == null)
+        && d.ordre is number
+        && d.images is list && d.images.size() <= 10
+        && d.modifieLe == request.time;
+    }
+
+    match /users/{uid}/sujets/{id} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && sujetValide(request.resource.data)
+        && request.resource.data.creeLe == request.time
+        && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0) <= 30
+        && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0)
+          == (exists(/databases/$(db)/documents/users/$(uid)/todosMeta/usage)
+              ? get(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0) : 0) + 1;
+      allow update: if proprietaire(uid)
+        && sujetValide(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'ordre', 'couleur', 'modifieLe']);
+    }
+
+    match /users/{uid}/todos/{id} {
+      allow read, delete: if proprietaire(uid);
+      allow create: if proprietaire(uid)
+        && todoValide(request.resource.data)
+        && request.resource.data.creeLe == request.time
+        && exists(/databases/$(db)/documents/users/$(uid)/sujets/$(request.resource.data.sujetId))
+        && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbTodos', 0) <= 500
+        && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbTodos', 0)
+          == (exists(/databases/$(db)/documents/users/$(uid)/todosMeta/usage)
+              ? get(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbTodos', 0) : 0) + 1;
+      // Partial updates: only these fields may change; creeLe never does.
+      allow update: if proprietaire(uid)
+        && todoValide(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sujetId', 'titre', 'description', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
+        && (request.resource.data.sujetId == resource.data.sujetId
+            || exists(/databases/$(db)/documents/users/$(uid)/sujets/$(request.resource.data.sujetId)));
+    }
+
+    match /users/{uid}/todosMeta/usage {
+      allow read, delete: if proprietaire(uid);
+      allow create, update: if proprietaire(uid)
+        && request.resource.data.keys().hasOnly(['nbSujets', 'nbTodos', 'octets'])
+        && (!('nbSujets' in request.resource.data)
+            || (request.resource.data.nbSujets is int
+                && request.resource.data.nbSujets >= 0
+                && request.resource.data.nbSujets <= 30))
+        && (!('nbTodos' in request.resource.data)
+            || (request.resource.data.nbTodos is int
+                && request.resource.data.nbTodos >= 0
+                && request.resource.data.nbTodos <= 500))
+        && (!('octets' in request.resource.data)
+            || (request.resource.data.octets is int
+                && request.resource.data.octets >= 0
+                && request.resource.data.octets <= 209715200));
+    }
+
     // V4.28: config/partage (emergency switch, allowed creators) and the working documents of
     // the cleanup are for the functions only: no client may read them. The other documents
     // (config/ia…) stay readable by a signed-in user.

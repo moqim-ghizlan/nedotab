@@ -3,6 +3,8 @@
  * its schema. Pure: the download is done by the interface.
  */
 import { exporterElements } from "./espacePartage.js";
+import { exporterSujets } from "./sujets.js";
+import { exporterTodos } from "./todos.js";
 
 export const FORMAT_EXPORT = "nedotab-export";
 export const VERSION_FORMAT = 1;
@@ -20,7 +22,7 @@ export function nomFichierExport(date = new Date()) {
  */
 export function creerExport(
   etat,
-  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats, espacePartage, appareils },
+  { version, plateforme, maintenant = Date.now(), sauvegardes, conversations, stats, espacePartage, appareils, todos },
 ) {
   const resultat = {
     format: FORMAT_EXPORT,
@@ -35,6 +37,10 @@ export function creerExport(
   if (stats) resultat.stats = stats;
   // V4.24: texts and links of the sharing space (account only). Backups never include it.
   if (espacePartage) resultat.espacePartage = exporterElements(espacePartage);
+  // V6.0: subjects and todos (account only). Image metadata without any storage path; counters
+  // and other internal fields never leave. Backups never include them (V6.7, decision 1).
+  if (todos && Array.isArray(todos.sujets) && Array.isArray(todos.todos))
+    resultat.todos = { sujets: exporterSujets(todos.sujets), todos: exporterTodos(todos.todos) };
   // T12: the names of the devices (no technical identifier beyond the random id of the list).
   if (Array.isArray(appareils) && appareils.length)
     resultat.appareils = appareils.map(({ id, nom, type, creeLe, vuLe }) => ({

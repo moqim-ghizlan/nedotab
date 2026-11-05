@@ -65,8 +65,10 @@ export const supprimerMonCompte = onCall(
     await liens.supprimerLiensDe(uid);
     // V5.2: no VPN access may outlive its account (the agent drops it within a minute).
     await vpn.retirerAccesDe(uid);
-    // Backgrounds (users/{uid}/) and files of the sharing space (partages/{uid}/, V4.25).
-    for (const prefix of [`users/${uid}/`, `partages/${uid}/`]) {
+    // Backgrounds (users/{uid}/), files of the sharing space (partages/{uid}/, V4.25) and images
+    // of the todos (todos/{uid}/, V6.4). The documents (sujets, todos, todosMeta) went with
+    // users/{uid} above (recursiveDelete).
+    for (const prefix of [`users/${uid}/`, `partages/${uid}/`, `todos/${uid}/`]) {
       try {
         await getStorage().bucket().deleteFiles({ prefix });
       } catch (e) {

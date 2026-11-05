@@ -13,6 +13,20 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sujetId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "ordre",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

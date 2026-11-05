@@ -102,6 +102,24 @@ export {
   reconcilier as reconcilierPartage,
   supprimerFichier as supprimerFichierPartage,
 } from "./espacePartageFichiers.js";
+export {
+  creerSujet as creerSujetTodos,
+  creerTodo,
+  deplacerTodo,
+  ecouterCompteurs as ecouterCompteursTodos,
+  ecouterSujets,
+  ecouterTodos,
+  ecrireOrdres as ecrireOrdresTodos,
+  lirePageTodos,
+  lireTout as lireToutLesTodos,
+  majSujet,
+  majTodo,
+  nouvelIdSujet,
+  nouvelIdTodo,
+  recalculerCompteurs as recalculerCompteursTodos,
+  supprimerSujet,
+  supprimerTodo,
+} from "./todos.js";
 export { creerLien as creerLienPartage, listerLiens, revoquerLien } from "./liensPartage.js";
 export {
   creerMeta as creerMetaCoffre,
