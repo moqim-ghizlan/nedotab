@@ -5,7 +5,7 @@ import {
   TEXTE_PROPRIETAIRE,
 } from "../../core/vpnConsommation.js";
 import { demander } from "../dialogues/commun.js";
-import { el } from "../dom.js";
+import { ajouter, el, remplacer } from "";
 import { toast } from "../toast.js";
 
 const NS = "http://www.w3.org/2000/svg";
@@ -132,7 +132,8 @@ export function blocTableauInvites({ service, apres = () => {} }) {
   }
 
   function dessiner() {
-    racine.replaceChildren(
+    remplacer(
+      racine,
       el("h4", { texte: "Consommation du mois" }),
       el("p", { class: "reglages-note", texte: TEXTE_PROPRIETAIRE }),
     );
@@ -140,7 +141,8 @@ export function blocTableauInvites({ service, apres = () => {} }) {
     if (!donnees) return racine.append(el("p", { class: "reglages-note", texte: "Chargement…" }));
     const s = donnees.serveur;
     const pct = Math.min(100, Math.round((s.octets / (s.limiteGo * 1e9)) * 100));
-    racine.append(
+    ajouter(
+      racine,
       el("p", {
         texte: `Serveur : ${formaterOctets(s.octets)} sur ${formaterOctets(s.limiteGo * 1e9)} gratuits (${pct} %)`,
       }),

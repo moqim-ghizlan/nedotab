@@ -4,7 +4,7 @@ import {
   phraseConsommation,
   TEXTE_INVITE,
 } from "../../core/vpnConsommation.js";
-import { el } from "../dom.js";
+import { el, remplacer } from "";
 
 /**
  * Settings → VPN, for a guest (V5.9): this month's volume against the limit, the message when it
@@ -21,7 +21,8 @@ export function blocConsommation({ service }) {
     const c = r?.ok ? lireConsommation(r.valeur) : null;
     if (!c) return racine.replaceChildren();
     const alerte = messageAlerte(c);
-    racine.replaceChildren(
+    remplacer(
+      racine,
       el("h4", { texte: "Ma consommation" }),
       el("p", { class: "vpn-conso-phrase", texte: phraseConsommation(c) }),
       c.pourcent === null

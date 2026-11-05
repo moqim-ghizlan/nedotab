@@ -8,7 +8,7 @@ import {
   validerEmail,
 } from "../../core/vpn.js";
 import { demander } from "../dialogues/commun.js";
-import { el } from "../dom.js";
+import { ajouter, el } from "";
 import { creerServiceVpn } from "../services/vpn.js";
 import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";
@@ -232,7 +232,8 @@ export function sectionVpn({
       return bloc;
     }
     if (!etat.acces) {
-      bloc.append(
+      ajouter(
+        bloc,
         note(LIBELLE_RESERVE),
         etat.admin
           ? note("Pour l'utiliser vous-même, invitez votre propre adresse e-mail ci-dessus.")

@@ -13,3 +13,9 @@ export function el(tag, attributs = {}, ...enfants) {
   noeud.append(...enfants.flat().filter((e) => e != null && e !== false));
   return noeud;
 }
+
+const valides = (l) => l.flat().filter((e) => e != null && e !== false);
+/** parent.replaceChildren without the "null" / "undefined" text that a skipped child would add. */
+export const remplacer = (parent, ...enfants) => parent.replaceChildren(...valides(enfants));
+/** parent.append without the "null" / "undefined" text that a skipped child would add. */
+export const ajouter = (parent, ...enfants) => parent.append(...valides(enfants));

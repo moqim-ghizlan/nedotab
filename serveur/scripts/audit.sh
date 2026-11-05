@@ -27,7 +27,9 @@ droits() { # droits <fichier> <droits attendus séparés par des espaces>
 echo "== Ports en écoute (ss -tulpn) =="
 ss -H -tuln | awk '{print $1, $5}' | sort -u
 # Autorisés : 22/tcp, 80/tcp (certificat), 443/tcp, 51820/udp ; 51821/tcp seulement sur 127.0.0.1.
-INATTENDUS="$(ss -H -tuln | awk '{print $1, $5}' | grep -Ev '127\.0\.0\.(1|53|54):|\[::1\]:|^udp .*:(68|123)$|:(22|80|443)$|^udp .*:51820$|^udp .*%lo:' || true)"
+# squid ouvre des ports UDP éphémères pour interroger le DNS (sockets clients) : normal.
+INATTENDUS="$(ss -H -tulnp | awk '{print $1, $5, $7}' | grep -Ev 'users:\(\("squid"' | awk '{print $1, $2}' |
+  grep -Ev '127\.0\.0\.(1|53|54):|127\.0\.0\.53%lo:|\[::1\]:|^udp .*:(68|123)$|:(22|80|443)$|^udp .*:51820$|^udp .*%[a-z0-9]+:68$' || true)"
 [ -z "$INATTENDUS" ] && ok "aucun port inattendu en écoute" || { ecart "ports inattendus :"; echo "$INATTENDUS"; }
 ss -H -tln | awk '$4 ~ /:51821$/ {print $4}' | grep -qvE '^127\.0\.0\.1:51821$' &&
   ecart "l'interface wg-easy n'écoute pas qu'en local" || ok "interface wg-easy (51821) en local seulement"

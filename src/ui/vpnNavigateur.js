@@ -2,7 +2,7 @@ import { LIBELLE_RESERVE } from "../core/vpn.js";
 import { MESSAGES } from "../core/vpnProxy.js";
 import { blocConnexionVpn } from "./connexionVpn.js";
 import { NOTE_WEBRTC, VPN_FAIT, VPN_NE_FAIT_PAS } from "../core/vpnHonnetete.js";
-import { el } from "./dom.js";
+import { ajouter, el, remplacer } from "./dom.js";
 
 /**
  * V5.3: the VPN switch of the extension, shared by the toolbar window and the settings.
@@ -40,7 +40,8 @@ export function blocVpnNavigateur({
   const connexion = verification
     ? blocConnexionVpn({ verification, vpn, historique: options, apres: () => rafraichir() })
     : null;
-  racine.append(
+  ajouter(
+    racine,
     el(
       "label",
       { class: "vpn-nav-ligne", for: interrupteur.id },
@@ -138,7 +139,8 @@ export function blocVpnNavigateur({
       }
       await rafraichir();
     });
-    zoneOptions.replaceChildren(
+    remplacer(
+      zoneOptions,
       el(
         "label",
         { class: "vpn-nav-option", for: caseNav.id },
@@ -169,7 +171,7 @@ export function blocVpnNavigateur({
       }),
       e.protections && !e.protections.webrtc
         ? el("p", { class: "vpn-nav-alerte", role: "alert", texte: MESSAGES.webrtcAutre })
-        : null,
+        : "",
       el(
         "details",
         { class: "vpn-honnete" },
@@ -183,7 +185,7 @@ export function blocVpnNavigateur({
       el("p", {
         class: "reglages-note",
         texte:
-          "Le VPN de l'extension concerne uniquement Google Chrome. Pour tout l'ordinateur ou l'iPhone, utilisez WireGuard (bientôt).",
+          "Le VPN de l'extension concerne uniquement Google Chrome. Pour tout l'ordinateur ou l'iPhone, utilisez WireGuard (section plus bas).",
       }),
     );
   }

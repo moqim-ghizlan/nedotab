@@ -1,6 +1,6 @@
 import { couleurEtat, INTERVALLE_AUTO_MS } from "../core/diagnosticVpn.js";
 import { drapeau, nomPays } from "../core/drapeau.js";
-import { el } from "./dom.js";
+import { el, remplacer } from "";
 
 const SYMBOLES = { ok: "✓", echec: "✗", inconnu: "–" };
 const heure = (t) =>
@@ -74,7 +74,8 @@ export function blocConnexionVpn({
     if (d?.latenceMs != null) lignes.push(donnee("Latence", `${d.latenceMs} ms`));
     if (d) lignes.push(donnee("Vérifié le", heure(d.le)));
 
-    racine.replaceChildren(
+    remplacer(
+      racine,
       el(
         "div",
         { class: "vpn-verif-tete" },

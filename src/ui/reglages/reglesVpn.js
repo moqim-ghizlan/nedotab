@@ -6,7 +6,7 @@ import {
   reglesVpnDe,
   validerReglesVpn,
 } from "../../core/domainesVpn.js";
-import { el } from "../dom.js";
+import { el, remplacer } from "";
 import { toast } from "../toast.js";
 
 const CLE_SUGGESTION = "nedotab:vpn:suggestion-vue";
@@ -81,7 +81,8 @@ export function blocReglesVpn({ store }) {
       }
     });
 
-    racine.replaceChildren(
+    remplacer(
+      racine,
       el("h4", { texte: "Règles par site" }),
       el(
         "div",
