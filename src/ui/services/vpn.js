@@ -21,7 +21,12 @@ export function creerServiceVpn({
       const fb = await chargerFb();
       return { ok: true, valeur: await fb.appelerVpn(nom, donnees) };
     } catch (e) {
-      return { ok: false, code: e?.code ?? null, erreur: messageErreurVpn(e), message: e?.message };
+      // The SDK may append the HTTP status ("CHARTE_REQUISE [400]"): the message is kept clean.
+      const message =
+        typeof e?.message === "string" ? e.message.replace(/\s*\[\d{3}\]$/, "") : undefined;
+      // Visible in the debug console (?debug): the call, the code and the message. Never data.
+      console.debug("[VPN]", nom, e?.code ?? "", message ?? "");
+      return { ok: false, code: e?.code ?? null, erreur: messageErreurVpn(e), message };
     }
   };
   /**
@@ -49,7 +54,10 @@ export function creerServiceVpn({
     /** { ok: true, valeur: { domaine, port, compte, motDePasse, pays } | null } */
     async acces() {
       const r = await avecCharte("vpnObtenirAcces");
-      return r.ok ? { ok: true, valeur: lireAcces(r.valeur) } : r;
+      if (r.ok) return { ok: true, valeur: lireAcces(r.valeur) };
+      // A refusal written by our own function says why (config missing, charter…): shown with it.
+      const precis = r.code === "functions/failed-precondition" && r.message;
+      return precis && precis !== r.erreur ? { ...r, erreur: `${r.erreur} (${precis})` } : r;
     },
     /** V5.8: { ok: true, valeur: { config, nomProfil, pays } }. The key is not kept here. */
     async profil() {

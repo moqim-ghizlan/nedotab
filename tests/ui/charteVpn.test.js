@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { CHARTE_POINTS, CHARTE_VERSION, CODE_CHARTE } from "../../src/core/vpnCharte.js";
 import { creerServiceVpn } from "../../src/ui/services/vpn.js";
 
-const exigee = Object.assign(new Error(CODE_CHARTE), { code: "functions/failed-precondition" });
+const exigee = Object.assign(new Error(`${CODE_CHARTE} [400]`), {
+  code: "functions/failed-precondition",
+});
 const ACCES = {
   domaine: "vpn.ex.org",
   port: 443,
