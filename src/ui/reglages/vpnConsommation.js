@@ -4,7 +4,7 @@ import {
   phraseConsommation,
   TEXTE_INVITE,
 } from "../../core/vpnConsommation.js";
-import { el, remplacer } from "";
+import { el, remplacer } from "../dom.js";
 
 /**
  * Settings → VPN, for a guest (V5.9): this month's volume against the limit, the message when it

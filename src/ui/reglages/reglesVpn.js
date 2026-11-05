@@ -6,7 +6,7 @@ import {
   reglesVpnDe,
   validerReglesVpn,
 } from "../../core/domainesVpn.js";
-import { el, remplacer } from "";
+import { el, remplacer } from "../dom.js";
 import { toast } from "../toast.js";
 
 const CLE_SUGGESTION = "nedotab:vpn:suggestion-vue";

@@ -1,6 +1,6 @@
 import { couleurEtat, INTERVALLE_AUTO_MS } from "../core/diagnosticVpn.js";
 import { drapeau, nomPays } from "../core/drapeau.js";
-import { el, remplacer } from "";
+import { el, remplacer } from "./dom.js";
 
 const SYMBOLES = { ok: "✓", echec: "✗", inconnu: "–" };
 const heure = (t) =>

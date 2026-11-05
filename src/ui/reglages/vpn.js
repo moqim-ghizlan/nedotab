@@ -8,7 +8,7 @@ import {
   validerEmail,
 } from "../../core/vpn.js";
 import { demander } from "../dialogues/commun.js";
-import { ajouter, el } from "";
+import { ajouter, el } from "../dom.js";
 import { creerServiceVpn } from "../services/vpn.js";
 import { plateforme } from "../../platform/index.js";
 import { toast } from "../toast.js";

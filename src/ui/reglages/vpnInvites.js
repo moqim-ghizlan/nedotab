@@ -5,7 +5,7 @@ import {
   TEXTE_PROPRIETAIRE,
 } from "../../core/vpnConsommation.js";
 import { demander } from "../dialogues/commun.js";
-import { ajouter, el, remplacer } from "";
+import { ajouter, el, remplacer } from "../dom.js";
 import { toast } from "../toast.js";
 
 const NS = "http://www.w3.org/2000/svg";
