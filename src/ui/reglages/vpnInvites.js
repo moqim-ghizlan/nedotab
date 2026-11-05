@@ -157,11 +157,78 @@ export function blocTableauInvites({ service, apres = () => {} }) {
             texte: `Le serveur approche de sa limite gratuite${s.securite ? " : la coupure de sécurité a suspendu les invités" : ""}.`,
           })
         : null,
+      ligneSurveillance(donnees.surveillance),
       graphiqueServeur(s.jours),
       coupureSecurite(s),
+      avance(),
       donnees.invites.length
         ? el("ul", { class: "vpn-cartes" }, donnees.invites.map(carte))
         : el("p", { class: "reglages-note", texte: "Aucun invité pour l'instant." }),
+    );
+  }
+
+  const heure = (ms) =>
+    new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+  /** "Serveur : en ligne depuis 08:30" / "hors ligne depuis 14:10" (watch every 10 minutes). */
+  function ligneSurveillance(v) {
+    if (!v?.actif)
+      return el(
+        "p",
+        { class: "reglages-note" },
+        "Surveillance de disponibilité inactive. ",
+        el("button", {
+          type: "button",
+          class: "lien-discret",
+          texte: "Activer",
+          onclick: () => agir(() => service.initialiserSurveillance(), "Surveillance activée."),
+        }),
+      );
+    const depuis = v.depuis ? ` depuis ${heure(v.depuis)}` : "";
+    if (v.enLigne === null)
+      return el("p", { class: "reglages-note", texte: "Serveur : premier test en attente." });
+    return el("p", {
+      class: v.alerte ? "vpn-nav-alerte" : "reglages-note",
+      role: v.alerte ? "alert" : "status",
+      texte: v.enLigne ? `Serveur : en ligne${depuis}` : `Serveur : hors ligne${depuis}`,
+    });
+  }
+
+  /** Rotation after a doubt or a compromise: asks first, says what the guests will have to do. */
+  function avance() {
+    const demande = (titre, message, appel, fait) =>
+      el("button", {
+        type: "button",
+        class: "bouton bouton--danger",
+        texte: titre,
+        onclick: async () => {
+          const ok = await demander({
+            titre,
+            message,
+            boutons: [
+              { libelle: "Annuler", valeur: false },
+              { libelle: "Continuer", valeur: true, principal: true, danger: true },
+            ],
+          });
+          if (ok) await agir(appel, fait);
+        },
+      });
+    return el(
+      "details",
+      { class: "vpn-avance" },
+      el("summary", { texte: "Sécurité : renouveler les accès de tous" }),
+      demande(
+        "Nouveaux mots de passe pour tous",
+        "Chaque invité devra cliquer sur « Rafraîchir mes identifiants » dans son extension. À faire en cas de doute.",
+        () => service.regenererTous(),
+        "Nouveaux mots de passe générés.",
+      ),
+      demande(
+        "Recréer tous les profils WireGuard",
+        "Tous les anciens profils cessent de marcher : chaque ami devra importer son nouveau QR code. À réserver à une compromission.",
+        () => service.recreerTousProfils(),
+        "Profils à recréer : l'agent les renouvelle en une minute.",
+      ),
     );
   }
 

@@ -23,6 +23,9 @@ import {
 
 export const QUOTA_OBTENIR_PAR_JOUR = 30;
 export const MESSAGE_RESERVE = "Le VPN est réservé aux invités.";
+/** V5.10: version of the guest charter. Raising it asks everybody to accept again. */
+export const CHARTE_VERSION = 1;
+export const MESSAGE_CHARTE = "CHARTE_REQUISE";
 
 const CHEMIN = {
   config: "vpn/config",
@@ -63,6 +66,7 @@ export function creerFonctionsVpn({
   maintenant = () => Date.now(),
   cout,
   journal = () => {},
+  charteObligatoire = false,
 }) {
   const lire = async (chemin) => {
     const s = await db.doc(chemin).get();
@@ -201,6 +205,9 @@ export function creerFonctionsVpn({
         // The e-mail now belongs to another account (the first one was deleted): re-issue.
         await db.doc(CHEMIN.invitation(h)).set({ statut: "en_attente" }, { merge: true });
       }
+      // V5.10: the charter is accepted once, before the first identifiers are given.
+      if (charteObligatoire && invitation.charte?.version !== CHARTE_VERSION)
+        throw new ErreurVpn("failed-precondition", MESSAGE_CHARTE);
       const c = await config();
       await limiter(consommer, uid);
       await accepter(uid, h);
@@ -212,6 +219,25 @@ export function creerFonctionsVpn({
         motDePasse: dechiffrer(acces.motDePasseChiffre, cle(), uid),
         pays: c.pays ?? null,
       };
+    },
+
+    /**
+     * V5.10: a guest accepts the charter (the date is kept on his invitation, which exists
+     * before his access does). `version` is the one the screen displayed.
+     */
+    async accepterCharte(auth, { version } = {}) {
+      if (auth?.token?.email_verified !== true || !auth.token.email)
+        throw new ErreurVpn("permission-denied", MESSAGE_RESERVE);
+      const h = hashEmail(auth.token.email);
+      const invitation = await lire(CHEMIN.invitation(h));
+      if (!invitation || invitation.statut === "revoquee")
+        throw new ErreurVpn("permission-denied", MESSAGE_RESERVE);
+      if (version !== CHARTE_VERSION)
+        throw new ErreurVpn("invalid-argument", "La charte a changé : relisez-la.");
+      await db
+        .doc(CHEMIN.invitation(h))
+        .set({ charte: { version: CHARTE_VERSION, le: maintenant() } }, { merge: true });
+      return { ok: true };
     },
 
     /** A guest asks for a new password (doubt): the old one stops working at the next sync. */

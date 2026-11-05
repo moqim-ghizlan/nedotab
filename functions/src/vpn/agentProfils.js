@@ -60,6 +60,7 @@ export function creerProfilsVpn({
       const snap = await db.collection(acces).where("actif", "==", true).get();
       const profils = [];
       for (const d of snap.docs) {
+        if (d.data().technique === true) continue; // V5.10: no WireGuard profile for the watch account
         let nom = d.data().nomProfil;
         if (!FORME_NOM_PROFIL.test(nom ?? "")) {
           nom = genererNomProfil();

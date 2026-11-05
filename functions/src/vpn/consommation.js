@@ -8,7 +8,7 @@ import { GO, jourParis, joursRestants } from "./temps.js";
 import { hashEmail, normaliserEmail } from "./identifiants.js";
 import { monterVersion } from "./version.js";
 
-export function creerConsommationVpn({ db, maintenant = () => Date.now() }) {
+export function creerConsommationVpn({ db, maintenant = () => Date.now(), surveillance = null }) {
   const lire = async (chemin) => {
     const s = await db.doc(chemin).get();
     return s.exists ? s.data() : null;
@@ -103,6 +103,8 @@ export function creerConsommationVpn({ db, maintenant = () => Date.now() }) {
           coupureSecurite: config?.coupureSecurite !== false,
         },
         mois,
+        // V5.10: "Serveur : en ligne / hors ligne depuis HH:MM"
+        surveillance: surveillance ? await surveillance.etat() : { actif: false },
       };
     },
 

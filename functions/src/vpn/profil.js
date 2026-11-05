@@ -6,7 +6,8 @@
  * vpn/config/profils/{uid}   { nomProfil, configChiffree, creeLe, version, aRecreer? }
  */
 import { dechiffrer } from "../chiffrement.js";
-import { ErreurVpn, MESSAGE_RESERVE } from "./fonctions.js";
+import { CHARTE_VERSION, ErreurVpn, MESSAGE_CHARTE, MESSAGE_RESERVE } from "./fonctions.js";
+import { hashEmail } from "./identifiants.js";
 
 export const QUOTA_PROFIL_PAR_JOUR = 10;
 export const MESSAGE_EN_PREPARATION = "Votre profil est en préparation, réessayez dans une minute.";
@@ -17,6 +18,7 @@ export function creerProfilInvite({
   consommer,
   journal = () => {},
   maintenant = Date.now,
+  charteObligatoire = false,
 }) {
   const lire = async (chemin) => {
     const s = await db.doc(chemin).get();
@@ -29,6 +31,12 @@ export function creerProfilInvite({
       throw new ErreurVpn("permission-denied", MESSAGE_RESERVE);
     const acces = await lire(`vpn/config/acces/${auth.uid}`);
     if (!acces || acces.actif !== true) throw new ErreurVpn("permission-denied", MESSAGE_RESERVE);
+    // V5.10: no profile before the charter is accepted.
+    if (charteObligatoire && auth.token.email) {
+      const inv = await lire(`vpn/config/invitations/${hashEmail(auth.token.email)}`);
+      if (inv?.charte?.version !== CHARTE_VERSION)
+        throw new ErreurVpn("failed-precondition", MESSAGE_CHARTE);
+    }
     return acces;
   }
 

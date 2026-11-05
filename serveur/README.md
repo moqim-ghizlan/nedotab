@@ -45,6 +45,8 @@ ssh -i ~/.ssh/vpn-nedotab admin-vpn@<domaine>
 | `20-agent.sh` | V5.2 : agent de synchronisation (utilisateur `vpn-agent`, timer d'une minute). Variable `VPN_AGENT_URL` ; le jeton est demandé en saisie masquée |
 | `20-wireguard.sh` | V5.7 : Docker, wg-easy 15.5.0, isolement des clients, agent de profils. Variable `DOMAINE` ; lancer après `20-agent.sh` |
 | `21-rapport.sh` | V5.9 : journal Squid réduit (compte + octets), assistant `vpn-compteurs`, agent de rapport toutes les 15 minutes |
+| `22-sauvegarde.sh` | V5.10 : sauvegarde chiffrée hebdomadaire (`age`, clé publique) ; `sauvegarder.sh` à la demande, `restaurer.sh` sur un serveur neuf |
+| `audit.sh` | V5.10 : audit de sécurité en lecture seule (OK / ÉCART) |
 | `30-dns.sh` | V5.5 : résolveur DNS du serveur (Quad9 / Cloudflare) |
 
 Copier les scripts : `scp -r serveur/scripts serveur/proxy admin-vpn@<domaine>:~/` (ou `ubuntu@` avant `01`).
@@ -99,3 +101,11 @@ Console Oracle → Instance → **Console connection** (console série) → se c
 - **Coupure de sécurité** : à 95 % du trafic gratuit du mois, les invités (pas le propriétaire, reconnu à son invitation) passent en `suspendu: "securite"` ; désactivable (case dans Réglages → VPN). Levée au mois suivant par `vpnTacheQuotidienne` (00:10, Europe/Paris).
 - **Suspension** (limite mensuelle, sécurité, ou « Couper maintenant ») : le compte disparaît de la synchro du proxy (≤ 2 minutes) et son client WireGuard est **désactivé**, jamais supprimé (`/api/client/{id}/disable`, puis `/enable`). Une coupure manuelle n'est levée que par le propriétaire.
 - **Fuseau** : jours et mois en `Europe/Paris` partout (changement de mois à minuit, heure de Paris).
+
+## Sécurité, sauvegarde, reconstruction (V5.10)
+- **Audit** : `sudo bash audit.sh` (lecture seule) ; résultats consignés dans `docs/securite-serveur.md`.
+- **Sauvegarde** : `22-sauvegarde.sh` (clé publique `age` fournie par le propriétaire ; **la clé privée n'est jamais sur le serveur**). Contenu : volume de wg-easy (clés), `squid.conf`, environnement de l'agent, identifiants wg-easy de l'agent, modèle compose. **Pas** le fichier des comptes (régénéré par l'agent), **pas** les certificats. Chiffrée dans un seul flux, jamais en clair sur le disque ; 8 archives gardées dans `/var/backups/vpn`. Jamais dans le dépôt git.
+- **Reconstruction** : `serveur/RECONSTRUIRE.md` (objectif < 30 min, **non chronométrée tant qu'elle n'a pas été essayée**).
+- **Rotation des secrets** : `docs/rotation.md`.
+- **Surveillance** : `vpnSurveillance` (toutes les 10 minutes) ouvre une connexion TLS au proxy avec un compte technique (limite 1 Go, aucun profil WireGuard). Trois échecs de suite = alerte dans l'écran du propriétaire ; le premier succès la termine. Activation : bouton « Activer » de l'écran du propriétaire (crée le compte, l'agent l'ajoute au proxy).
+- **Charte** : acceptée une fois avant les premiers identifiants ou le premier profil ; version et date gardées sur l'invitation de l'invité.

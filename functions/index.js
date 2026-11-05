@@ -30,6 +30,8 @@ import { creerVerificationSites } from "./src/sites/verifier.js";
 import { creerProfilsVpn, ErreurProfil } from "./src/vpn/agentProfils.js";
 import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
 import { creerConsommationVpn } from "./src/vpn/consommation.js";
+import { creerRotationVpn } from "./src/vpn/rotation.js";
+import { creerSurveillanceVpn } from "./src/vpn/surveillance.js";
 import { creerProfilInvite } from "./src/vpn/profil.js";
 import { tacheQuotidienne } from "./src/vpn/planifie.js";
 import { creerRapportVpn, ErreurRapport } from "./src/vpn/rapport.js";
@@ -337,6 +339,7 @@ const vpn = creerFonctionsVpn({
     }
   },
   consommer: (uid, options) => consommer(getFirestore(), uid, options),
+  charteObligatoire: true, // V5.10
   // Only a number of accounts: never an e-mail, a login or a destination.
   journal: (infos) => logger.info("vpn : synchro", infos),
 });
@@ -372,6 +375,7 @@ export const vpnRegenererMotDePasse = appelVpn((auth) => vpn.regenererMotDePasse
 // V5.8: the guest's own WireGuard profile (a private key travels in the answer: nothing is logged).
 const profilInvite = creerProfilInvite({
   db: getFirestore(),
+  charteObligatoire: true, // V5.10
   cle: () => VPN_CLE_CHIFFREMENT.value(),
   consommer: (uid, options) => consommer(getFirestore(), uid, options),
   journal: (infos) => logger.info("vpn : profil", infos),
@@ -455,7 +459,12 @@ const rapportVpn = creerRapportVpn({
   jetonAgent: () => VPN_JETON_AGENT.value(),
   journal: (infos) => logger.info("vpn : rapport", infos), // counts only
 });
-const consommationVpn = creerConsommationVpn({ db: getFirestore() });
+const surveillanceVpn = creerSurveillanceVpn({
+  db: getFirestore(),
+  cle: () => VPN_CLE_CHIFFREMENT.value(),
+  journal: (infos) => logger.warn("vpn : disponibilité", infos), // up/down only
+});
+const consommationVpn = creerConsommationVpn({ db: getFirestore(), surveillance: surveillanceVpn });
 
 export const vpnAgentRapport = onRequest(OPTIONS_AGENT, async (req, res) => {
   res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "Content-Type": "application/json" });
@@ -496,3 +505,30 @@ export const vpnTacheQuotidienne = onSchedule(
     logger.info("vpn : tâche quotidienne", r);
   },
 );
+
+// --- V5.10: charter, availability watch -------------------------------------------------------
+export const vpnAccepterCharte = appelVpn((auth, donnees) => vpn.accepterCharte(auth, donnees));
+export const vpnInitialiserSurveillance = appelVpn((auth) => surveillanceVpn.initialiser(auth));
+
+/** Every 10 minutes: tests the proxy with the technical account (three failures = alert). */
+export const vpnSurveillance = onSchedule(
+  {
+    schedule: "every 10 minutes",
+    region: "europe-west1",
+    secrets: [VPN_CLE_CHIFFREMENT],
+    timeoutSeconds: 60,
+    memory: "256MiB",
+  },
+  async () => {
+    await surveillanceVpn.verifier();
+  },
+);
+
+// Rotation of the secrets (owner only). See docs/rotation.md.
+const rotationVpn = creerRotationVpn({
+  db: getFirestore(),
+  journal: (infos) => logger.info("vpn : rotation", infos), // counts only
+  cle: () => VPN_CLE_CHIFFREMENT.value(),
+});
+export const vpnRegenererTous = appelVpn((auth) => rotationVpn.regenererTous(auth));
+export const vpnRecreerTousProfils = appelVpn((auth) => rotationVpn.recreerTousProfils(auth));

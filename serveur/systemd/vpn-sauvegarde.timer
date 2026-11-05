@@ -1,0 +1,10 @@
+[Unit]
+Description=Sauvegarde chiffrée hebdomadaire de la configuration du VPN
+
+[Timer]
+OnCalendar=Sun 03:30
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

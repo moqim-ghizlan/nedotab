@@ -1,0 +1,9 @@
+[Unit]
+Description=Sauvegarde chiffrée de la configuration du VPN (V5.10)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vpn-sauvegarder
+PrivateTmp=yes
+ProtectHome=read-only

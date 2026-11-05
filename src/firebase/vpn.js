@@ -17,6 +17,10 @@ export const FONCTIONS_VPN = [
   "vpnCouper",
   "vpnRetablir",
   "vpnCoupureSecurite",
+  "vpnAccepterCharte",
+  "vpnInitialiserSurveillance",
+  "vpnRegenererTous",
+  "vpnRecreerTousProfils",
 ];
 
 /** Calls a VPN function of the server and returns its answer (errors keep their callable code). */

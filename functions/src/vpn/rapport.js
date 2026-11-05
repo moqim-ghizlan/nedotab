@@ -135,7 +135,8 @@ export function creerRapportVpn({
         s.securite = true;
         for (const d of snap.docs) {
           const a = d.data();
-          if (a.actif !== true || a.suspendu || (await estProprietaire(d.id, a))) continue;
+          if (a.actif !== true || a.suspendu || a.technique === true || (await estProprietaire(d.id, a)))
+            continue;
           await db.doc(`vpn/config/acces/${d.id}`).set({ suspendu: "securite" }, { merge: true });
           changement = true;
         }

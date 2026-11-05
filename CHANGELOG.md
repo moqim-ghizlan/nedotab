@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [5.10.0] - 2026-11-05
+
+### Ajouté
+
+- **Charte d'utilisation (V5.10)** : affichée avant la première activation (proxy ou profil WireGuard), à accepter une fois ; version et date gardées côté serveur. Refusée = rien d'activé. *Texte à relire et valider par le propriétaire avant publication.*
+- **Surveillance de disponibilité** : toutes les 10 minutes, un compte technique (limite 1 Go, sans profil WireGuard) ouvre un tunnel par le proxy ; 3 échecs de suite = alerte, retour = fin d'alerte. L'écran du propriétaire affiche « Serveur : en ligne / hors ligne depuis HH:MM ».
+- **Rotation des secrets** : nouveaux mots de passe pour tous et recréation de tous les profils WireGuard (écran du propriétaire, avec confirmation), script `migrer-cle-vpn.mjs` pour changer `VPN_CLE_CHIFFREMENT`. Procédures dans `docs/rotation.md`.
+- **Serveur** : `audit.sh` (audit en lecture seule), `22-sauvegarde.sh` / `sauvegarder.sh` (archive chiffrée `age`, hebdomadaire), `restaurer.sh`, `RECONSTRUIRE.md`.
+- Site : section « VPN privé (sur invitation) » dans la politique de confidentialité (**brouillon à relire**) et rappel des permissions ajoutées sur la page de mise à jour.
+- Documents : audit, checklist V5 (domaines 25 à 33), liste de bugs, idées dans `brainstorm.md`.
+
+### Pas encore fait (conditions de clôture de la V5)
+
+L'audit, la checklist sur les vrais appareils, la reconstruction chronométrée, l'essai réel des rotations et la relecture de la charte et de la confidentialité par le propriétaire. **La V5 n'est donc pas marquée terminée dans `roadmap.md`.**
+
 ## [5.9.0] - 2026-11-05
 
 ### Ajouté
