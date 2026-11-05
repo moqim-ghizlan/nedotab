@@ -7,21 +7,29 @@ export function fauxDb(initial = {}) {
   const donnees = new Map(Object.entries(initial));
   let file = Promise.resolve();
 
-  const ref = (chemin) => ({
-    path: chemin,
-    id: chemin.split("/").at(-1),
-    get: async () => ({
-      exists: donnees.has(chemin),
+  // Like the real Firestore: a document path has an EVEN number of segments.
+  const exigerDocument = (chemin) => {
+    if (chemin.split("/").length % 2 !== 0)
+      throw new Error(`Le chemin doit désigner un document : ${chemin}`);
+  };
+  const ref = (chemin) => {
+    exigerDocument(chemin);
+    return {
+      path: chemin,
       id: chemin.split("/").at(-1),
-      data: () => clone(donnees.get(chemin)),
-    }),
-    set: async (v, o) => ecrire(chemin, v, o?.merge),
-    update: async (v) => {
-      if (!donnees.has(chemin)) throw new Error("NOT_FOUND");
-      ecrire(chemin, v, true);
-    },
-    delete: async () => void donnees.delete(chemin),
-  });
+      get: async () => ({
+        exists: donnees.has(chemin),
+        id: chemin.split("/").at(-1),
+        data: () => clone(donnees.get(chemin)),
+      }),
+      set: async (v, o) => ecrire(chemin, v, o?.merge),
+      update: async (v) => {
+        if (!donnees.has(chemin)) throw new Error("NOT_FOUND");
+        ecrire(chemin, v, true);
+      },
+      delete: async () => void donnees.delete(chemin),
+    };
+  };
   const clone = (v) => (v === undefined ? undefined : structuredClone(v));
   const ecrire = (chemin, valeur, fusion) => {
     donnees.set(

@@ -4,7 +4,7 @@
  * with a dedicated technical account (limit 1 Go, no WireGuard profile, never a guest). Three
  * failures in a row raise the alert; the first success ends it. Nothing but the state is stored.
  *
- * vpn/config/surveillance      { echecs, alerte, horsLigneDepuis?, enLigneDepuis?, dernierTest }
+ * vpn/config/surveillance/etat      { echecs, alerte, horsLigneDepuis?, enLigneDepuis?, dernierTest }
  * vpn/config/acces/technique   { compte, empreinte, motDePasseChiffre, technique: true, ... }
  */
 import { Buffer } from "node:buffer";
@@ -120,7 +120,7 @@ export function creerSurveillanceVpn({
         technique: true,
         limiteMensuelleGo: 1,
       });
-      await db.doc("vpn/config/surveillance").set({ echecs: 0, alerte: false });
+      await db.doc("vpn/config/surveillance/etat").set({ echecs: 0, alerte: false });
       await monterVersion(db, maintenant);
       return { ok: true, dejaFait: false };
     },
@@ -136,9 +136,9 @@ export function creerSurveillanceVpn({
         compte: acces.compte,
         motDePasse: dechiffrer(acces.motDePasseChiffre, cle(), UID_TECHNIQUE),
       });
-      const avant = (await lire("vpn/config/surveillance")) ?? {};
+      const avant = (await lire("vpn/config/surveillance/etat")) ?? {};
       const apres = evaluer(avant, resultat.ok, maintenant());
-      await db.doc("vpn/config/surveillance").set(apres);
+      await db.doc("vpn/config/surveillance/etat").set(apres);
       // State changes only: "hors ligne" and "retour en ligne".
       if (apres.alerte !== !!avant.alerte) journal({ horsLigne: apres.alerte });
       return { actif: true, ok: resultat.ok, alerte: apres.alerte };
@@ -146,7 +146,7 @@ export function creerSurveillanceVpn({
 
     /** What the owner's screen shows: online / offline since, alert. */
     async etat() {
-      const s = await lire("vpn/config/surveillance");
+      const s = await lire("vpn/config/surveillance/etat");
       if (!s) return { actif: false, enLigne: null, depuis: null, alerte: false };
       return {
         actif: true,
