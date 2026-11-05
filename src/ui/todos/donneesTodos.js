@@ -563,6 +563,15 @@ export function creerDonneesTodos({ charger, uid }) {
     deplacerVersSujet,
     creerTodoAvecId,
     viderCochages: vider,
+    /** Settings (V6.7): export, import, recount, remove everything. */
+    lireTout: async () => (await fb()).lireToutLesTodos(uid()),
+    importer: async (plan, options) => (await fb()).importerTodos(uid(), plan, options),
+    toutSupprimer: async (options) => (await fb()).toutSupprimerTodos(uid(), options),
+    recalculer: async () => (await fb()).recalculerCompteursTodos(uid()),
+    nbEnAttente: () =>
+      etat.sujets.filter((s) => s.enAttente).length +
+      etat.todos.filter((t) => t.enAttente).length +
+      etat.aujourdhui.filter((t) => t.enAttente && !etat.todos.some((x) => x.id === t.id)).length,
     suivreAujourdhui,
     rafraichirRetard,
     chargerTous,

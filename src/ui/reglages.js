@@ -38,6 +38,7 @@ import { demander } from "./dialogues/commun.js";
 import { creerSectionFrequents } from "./reglages/frequents.js";
 import { iaDe } from "../core/ia.js";
 import { sectionDonnees } from "./reglages/donnees.js";
+import { sectionTodos } from "./reglages/todos.js";
 import { ouvrirRangement } from "./rangement/ecran.js";
 import { creerSectionChatbot, sectionIa } from "./reglages/ia.js";
 import { sectionVpn } from "./reglages/vpn.js";
@@ -831,6 +832,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 store,
               }).section
             : null,
+          session.todos ? sectionTodos({ donnees: session.todos.donnees }).section : null,
           compteUi.confidentialite,
           compteUi.danger,
         ]

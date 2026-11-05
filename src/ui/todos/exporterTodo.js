@@ -5,7 +5,7 @@ import { telecharger } from "../../platform/partage.js";
 import { toast } from "../toast.js";
 
 /** Gives the file: the share sheet where there is one (iPhone), else a download. No `downloads` permission. */
-const livrerParDefaut = (fichier) =>
+export const livrerParDefaut = (fichier) =>
   plateforme.partagerFichier
     ? plateforme.partagerFichier(fichier)
     : (telecharger(fichier, fichier.name, fichier.type), "telecharge");

@@ -182,7 +182,10 @@ describe("synchro et saisie", () => {
     fen.dispatchEvent(new Event("cancel", { cancelable: true }));
   });
 
-  it("« Recharger » prend la version de l'autre appareil", async () => {
+  const bouton = (fen, texte) =>
+    [...fen.querySelectorAll(".todo-editeur-bandeau button")].find((b) => b.textContent === texte);
+
+  it("conflit : « Prendre l'autre » reprend la version distante et garde la mienne 10 minutes", async () => {
     const { pousser, p } = await monter({ todos: [todo("a", { description: "desc" })] });
     p.panneau.querySelector('[data-id="a"] .todo-corps').click();
     const fen = editeur();
@@ -190,9 +193,55 @@ describe("synchro et saisie", () => {
     description.focus();
     saisir(description, "ma version");
     pousser([todo("a", { description: "version distante" })]);
-    fen.querySelector(".todo-editeur-bandeau .lien-discret").click();
+    expect(fen.querySelector(".todo-editeur-bandeau").textContent).toContain("la description");
+    expect(description.value).toBe("ma version");
+    bouton(fen, "Prendre l'autre").click();
     expect(description.value).toBe("version distante");
+    // The text that was replaced stays available, in memory.
+    expect(fen.querySelector(".todo-editeur-bandeau").textContent).toContain("gardée 10 minutes");
+    bouton(fen, "Voir ma version").click();
+    expect(description.value).toBe("ma version");
+  });
+
+  it("conflit : « Garder ma version » envoie mon texte, qui gagne", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { pousser, p, fb } = await monter({ todos: [todo("a", { description: "desc" })] });
+    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
+    const fen = editeur();
+    const description = fen.querySelector("#todo-description");
+    description.focus();
+    saisir(description, "ma version");
+    pousser([todo("a", { description: "version distante" })]);
+    bouton(fen, "Garder ma version").click();
+    await vi.advanceTimersByTimeAsync(10);
+    expect(fb.majTodo.mock.calls.at(-1)[2]).toEqual({ description: "ma version" });
     expect(fen.querySelector(".todo-editeur-bandeau").hidden).toBe(true);
+  });
+
+  it("champ libre changé ailleurs : remplacé, avec « Voir ma version »", async () => {
+    const { pousser, p } = await monter({ todos: [todo("a", { titre: "avant" })] });
+    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
+    const fen = editeur();
+    document.activeElement?.blur?.();
+    pousser([todo("a", { titre: "autre appareil" })]);
+    expect(fen.querySelector("#todo-titre").value).toBe("autre appareil");
+    expect(fen.querySelector(".todo-editeur-bandeau").hidden).toBe(false);
+    bouton(fen, "Voir ma version").click();
+    expect(fen.querySelector("#todo-titre").value).toBe("avant");
+  });
+
+  it("l'écho de ma propre écriture n'est pas un conflit (titre rogné compris)", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { pousser, p } = await monter({ todos: [todo("a", { titre: "avant" })] });
+    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
+    const fen = editeur();
+    const t = fen.querySelector("#todo-titre");
+    t.focus();
+    saisir(t, "nouveau titre ");
+    await vi.advanceTimersByTimeAsync(1600);
+    pousser([todo("a", { titre: "nouveau titre" })]);
+    expect(fen.querySelector(".todo-editeur-bandeau").hidden).toBe(true);
+    expect(t.value).toBe("nouveau titre ");
   });
 
   it("un champ libre est mis à jour par un instantané", async () => {

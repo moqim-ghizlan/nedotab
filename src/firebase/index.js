@@ -112,6 +112,8 @@ export {
   ecouterSujets,
   ecouterTodos,
   ecrireOrdres as ecrireOrdresTodos,
+  importerTodos,
+  toutSupprimer as toutSupprimerTodos,
   lirePageTodos,
   lirePageTous as lirePageTousLesTodos,
   lireTout as lireToutLesTodos,

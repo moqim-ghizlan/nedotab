@@ -1,3 +1,4 @@
+import { memoireSession } from "../../core/conflitTodo.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
@@ -208,10 +209,13 @@ export function creerPanneauTodos({
   function rendreEtat() {
     const e = donnees.etat();
     const horsLigne = typeof navigator !== "undefined" && navigator.onLine === false;
+    const n = donnees.nbEnAttente();
     const texte = horsLigne
-      ? "Hors ligne"
-      : e.enAttente
-        ? "En attente d'envoi"
+      ? n > 0
+        ? `Hors ligne · ${n} en attente d'envoi`
+        : "Hors ligne"
+      : e.enAttente || n > 0
+        ? `En attente d'envoi${n > 0 ? ` (${n})` : ""}`
         : null;
     etatReseau.textContent = texte ?? "";
     etatReseau.hidden = !texte;
@@ -342,6 +346,7 @@ export function creerPanneauTodos({
   /** Called when the account changes: the button is always there, the data follow the sign-in. */
   function actualiser() {
     if (!disponible()) {
+      memoireSession.vider(); // nothing the user wrote survives a sign-out, not even in memory
       donnees.reinitialiser();
       sujetId = null;
       vueSujet?.liberer?.();

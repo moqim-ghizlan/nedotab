@@ -54,7 +54,18 @@ async function contenu(uid) {
       headers: proprietaire,
     })
   ).json();
+  // V6.0 / V6.4: subjects, todos, counters and the pictures of the todos.
+  const sujets = await (await fetch(`${FIRESTORE}/users/${uid}/sujets`, { headers: proprietaire })).json();
+  const todos = await (await fetch(`${FIRESTORE}/users/${uid}/todos`, { headers: proprietaire })).json();
+  const todosMeta = await (await fetch(`${FIRESTORE}/users/${uid}/todosMeta`, { headers: proprietaire })).json();
+  const imagesTodos = await (
+    await fetch(`${STOCKAGE}?prefix=${encodeURIComponent(`todos/${uid}/`)}`, { headers: proprietaire })
+  ).json();
   return {
+    sujets: (sujets.documents ?? []).length,
+    todos: (todos.documents ?? []).length,
+    todosMeta: (todosMeta.documents ?? []).length,
+    fichiersTodos: (imagesTodos.items ?? []).length,
     fichiersPartages: (partages.items ?? []).length,
     document: doc.status === 200,
     sauvegardes: (sauvegardes.documents ?? []).length,
@@ -86,6 +97,15 @@ async function remplir(nom) {
   // V4.25: a file of the sharing space (partages/{uid}/…) goes with the account too.
   await fb.envoyerFichierPartage(uid, new File([new Uint8Array(20)], "a.pdf", { type: "application/pdf" })).promesse;
   for (const id of ["f1", "f2"]) await fb.envoyerFond(fb.cheminFond(uid, id), image()).promesse;
+  // V6.0 / V6.4: one subject, two todos, the counters, and a picture in todos/{uid}/…
+  const sujetId = await fb.creerSujetTodos(uid, { nom: "Sujet", ordre: 1000 });
+  for (const titre of ["un", "deux"])
+    await fb.creerTodo(uid, { v: 1, sujetId, titre, description: "", echeance: null, fait: false, ordre: 1000, images: [] });
+  await fetch(`${STOCKAGE}?name=${encodeURIComponent(`todos/${uid}/t1/${"a".repeat(32)}.webp`)}`, {
+    method: "POST",
+    headers: { ...proprietaire, "content-type": "image/webp" },
+    body: new Uint8Array(64),
+  });
   return uid;
 }
 
@@ -95,15 +115,15 @@ describe("supprimerMonCompte (émulateurs)", () => {
   it("grille, 3 sauvegardes, 2 fonds et compte : tout supprimé ; un autre utilisateur intact", async () => {
     const autre = await remplir("autre-utilisateur");
     const uid = await remplir("a-supprimer");
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1, sujets: 1, todos: 2, todosMeta: 1, fichiersTodos: 1 });
 
     await connecter("a-supprimer"); // recent sign-in, as the interface asks for
     await fb.supprimerMonCompte();
-    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0, stats: 0, partage: 0, meta: 0, fichiersPartages: 0 });
+    expect(await contenu(uid)).toEqual({ document: false, sauvegardes: 0, conversations: 0, messagesConversations: 0, fichiers: 0, stats: 0, partage: 0, meta: 0, fichiersPartages: 0, sujets: 0, todos: 0, todosMeta: 0, fichiersTodos: 0 });
     // The Auth account is gone: signing in again creates a new account.
     const nouveau = await connecter("a-supprimer");
     expect(nouveau.uid).not.toBe(uid);
-    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
+    expect(await contenu(autre)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1, sujets: 1, todos: 2, todosMeta: 1, fichiersTodos: 1 });
   }, 60000);
 
   it("sans être connecté : refusé", async () => {
@@ -120,6 +140,6 @@ describe("supprimerMonCompte (émulateurs)", () => {
       code: "functions/failed-precondition",
       message: expect.stringMatching(/^Reconnectez-vous pour confirmer/),
     });
-    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1 });
+    expect(await contenu(uid)).toEqual({ document: true, sauvegardes: 3, conversations: 1, messagesConversations: 2, fichiers: 2, stats: 1, partage: 3, meta: 1, fichiersPartages: 1, sujets: 1, todos: 2, todosMeta: 1, fichiersTodos: 1 });
   }, 70000);
 });

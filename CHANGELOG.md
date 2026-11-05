@@ -2,6 +2,24 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.7.0] - 2026-11-05
+
+### Ajouté
+
+- **Hors ligne** : indicateur « En attente d'envoi (N) » / « Hors ligne · N en attente d'envoi » dans l'en-tête du panneau. Une création refusée au retour (compteur changé entre-temps) est rejouée après un recomptage, puis message clair. Todo supprimé ailleurs pendant l'édition : « Ce todo a été supprimé sur un autre appareil », avec « Le recréer ».
+- **Conflits entre appareils** : champs différents = fusion naturelle ; même champ = dernier enregistrement gagne **sans perte silencieuse**. Champ en cours de saisie jamais remplacé (bandeau « Garder ma version / Prendre l'autre ») ; champ libre remplacé : l'ancien texte reste 10 minutes **en mémoire** avec « Voir ma version ». L'écho de ses propres écritures n'est plus pris pour un conflit.
+- **Réglages › Compte › Todos** : « Exporter mes todos (JSON) » (fichier non chiffré, prévenu), « Importer… » (aperçu « 12 sujets, 143 todos, 2 ignorés — Importer », ajout seulement, identifiants régénérés, 10 Mo, progression et annulation), « Recalculer les compteurs » (sujets, todos, images), « Supprimer tous mes todos » (taper SUPPRIMER).
+- Export RGPD et suppression de compte vérifiés de bout en bout (test des émulateurs étendu : sujets, todos, compteurs, images).
+
+### Décisions (voir `docs/decisions.md`)
+
+- Les todos **ne sont pas dans les sauvegardes** (limite de 1 Mio par document) : export / import JSON. Pas de corbeille (l'annulation de 5 s suffit). Ajout d'image impossible hors ligne.
+
+### Limites connues
+
+- L'import crée les éléments un par un (les règles contrôlent le compteur à chaque création) : 500 todos prennent environ une minute.
+- L'export JSON ne contient pas les fichiers des images (seulement leurs notes).
+
 ## [6.6.0] - 2026-11-05
 
 ### Ajouté

@@ -186,18 +186,22 @@ export async function lireTout(uid) {
 
 /** New subject: one batch (subject + counter). @returns {Promise<string>} its id. */
 export async function creerSujet(uid, { nom, ordre, couleur = null }, id = nouvelIdSujet(uid)) {
-  const lot = writeBatch(db());
-  lot.set(doc(sujets(uid), id), {
-    nom,
-    ordre,
-    couleur,
-    nbRestants: 0,
-    nbTotal: 0,
-    creeLe: serverTimestamp(),
-    modifieLe: serverTimestamp(),
+  // A creation queued offline can be refused when it finally arrives (the counter moved in the
+  // meantime): the counters are recounted once and the creation is tried again, then a clear error.
+  await apresRecalcul(uid, async () => {
+    const lot = writeBatch(db());
+    lot.set(doc(sujets(uid), id), {
+      nom,
+      ordre,
+      couleur,
+      nbRestants: 0,
+      nbTotal: 0,
+      creeLe: serverTimestamp(),
+      modifieLe: serverTimestamp(),
+    });
+    lot.set(meta(uid), { nbSujets: increment(1) }, { merge: true });
+    await lot.commit();
   });
-  lot.set(meta(uid), { nbSujets: increment(1) }, { merge: true });
-  await lot.commit();
   return id;
 }
 
@@ -252,6 +256,11 @@ export async function supprimerSujet(uid, id, { avantLot, surProgres } = {}) {
  * be given (lazy creation of the editor, V6.3). @returns {Promise<string>} its id.
  */
 export async function creerTodo(uid, todo, id = nouvelIdTodo(uid)) {
+  await apresRecalcul(uid, () => ecrireCreation(uid, todo, id));
+  return id;
+}
+
+async function ecrireCreation(uid, todo, id) {
   const lot = writeBatch(db());
   lot.set(doc(todos(uid), id), {
     v: todo.v,
@@ -273,7 +282,6 @@ export async function creerTodo(uid, todo, id = nouvelIdTodo(uid)) {
     nbRestants: increment(todo.fait ? 0 : 1),
   });
   await lot.commit();
-  return id;
 }
 
 /**
@@ -363,6 +371,80 @@ export async function ecrireOrdres(uid, nature, ordres) {
       lot.update(doc(collec, id), { ordre, modifieLe: serverTimestamp() });
     await lot.commit();
   }
+}
+
+/**
+ * Adds the subjects and the todos of an import (V6.7): NEVER replaces anything, every identifier
+ * is new. One creation = one batch (the rules check the counter by +1), so it runs one after the
+ * other; `surProgres(fait, total)` and `annule()` let the interface show and stop it.
+ * @returns {Promise<{ sujets: number, todos: number, annule: boolean }>}
+ */
+export async function importerTodos(uid, plan, { surProgres, annule = () => false } = {}) {
+  const existants = await getDocs(sujets(uid));
+  let ordreSujet = Math.max(0, ...existants.docs.map((d) => d.data().ordre ?? 0));
+  const total = plan.sujets.length + plan.todos.length;
+  let fait = 0;
+  const correspondance = new Map(); // id in the file -> new id
+  const sujetsTries = [...plan.sujets].sort((a, b) => a.ordre - b.ordre);
+  for (const s of sujetsTries) {
+    if (annule()) break;
+    ordreSujet += 1000;
+    const id = await creerSujet(uid, { nom: s.nom, ordre: ordreSujet, couleur: s.couleur });
+    correspondance.set(s.ancienId, id);
+    surProgres?.(++fait, total);
+  }
+  const rangs = new Map();
+  let crees = 0;
+  for (const t of [...plan.todos].sort((a, b) => a.ordre - b.ordre)) {
+    if (annule()) break;
+    const sujetId = correspondance.get(t.ancienSujetId);
+    if (!sujetId) continue;
+    const ordre = (rangs.get(sujetId) ?? 0) + 1000;
+    rangs.set(sujetId, ordre);
+    await creerTodo(uid, {
+      v: 1,
+      sujetId,
+      titre: t.titre,
+      description: t.description,
+      echeance: t.echeance,
+      fait: t.fait,
+      ordre,
+      images: [],
+    });
+    crees++;
+    surProgres?.(++fait, total);
+  }
+  return { sujets: correspondance.size, todos: crees, annule: annule() };
+}
+
+/**
+ * Removes EVERY todo and subject of the account ("Supprimer tous mes todos"): the files of the
+ * pictures first, then the documents by batches of 400, then the counters at zero. Can be run
+ * again after a failure.
+ */
+export async function toutSupprimer(uid, { surProgres } = {}) {
+  let supprimes = 0;
+  for (;;) {
+    const s = await getDocs(query(todos(uid), limit(TAILLE_LOT)));
+    if (s.empty) break;
+    const lus = s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean);
+    const images = lus.flatMap((t) => t.images);
+    if (images.length) await supprimerFichiers(images);
+    const lot = writeBatch(db());
+    s.docs.forEach((d) => lot.delete(d.ref));
+    await lot.commit();
+    supprimes += s.size;
+    surProgres?.(supprimes);
+  }
+  for (;;) {
+    const s = await getDocs(query(sujets(uid), limit(TAILLE_LOT)));
+    if (s.empty) break;
+    const lot = writeBatch(db());
+    s.docs.forEach((d) => lot.delete(d.ref));
+    await lot.commit();
+  }
+  await setDoc(meta(uid), { nbSujets: 0, nbTodos: 0, octets: 0 });
+  return supprimes;
 }
 
 /**

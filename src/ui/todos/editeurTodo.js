@@ -1,3 +1,4 @@
+import { decider, memoireSession } from "../../core/conflitTodo.js";
 import { creerDiffere } from "../../core/differe.js";
 import { ajouterJours, jourLocal, lundiProchain } from "../../core/echeances.js";
 import { ilYA } from "../../core/espacePartage.js";
@@ -52,7 +53,10 @@ export function ouvrirEditeur({
   if (id && !depart) return null;
   let sujetCourant = depart?.sujetId ?? sujetId;
   let enAttente = {}; // fields typed and not yet sent
-  let base = depart ?? { titre: "", description: "", echeance: null };
+  // What the screen was last in line with, and what this editor last sent (its own echo).
+  let base = { titre: depart?.titre ?? "", description: depart?.description ?? "", echeance: depart?.echeance ?? "" };
+  const envoye = {};
+  const distants = {}; // fields in conflict: the value of the other device
   let pret = Promise.resolve(); // the id of the todo is known once this resolves
   let enVol = 0; // writes issued and not yet acknowledged
   let composition = false;
@@ -107,11 +111,18 @@ export function ouvrirEditeur({
   const dates = el("p", { class: "todo-editeur-dates" });
   const message = el("p", { class: "todos-message todos-message--erreur", role: "alert", hidden: true });
   const statut = el("span", { class: "todo-editeur-statut", role: "status", "aria-live": "polite" });
+  // Banner of the conflicts (V6.7): the text tells what happened, the buttons what can be done.
+  const texteBandeau = el("span", { class: "todo-editeur-bandeau-texte" });
+  const boutonGarder = el("button", { type: "button", class: "lien-discret", texte: "Garder ma version", onclick: () => garderMaVersion() });
+  const boutonPrendre = el("button", { type: "button", class: "lien-discret", texte: "Prendre l'autre", onclick: () => prendreLAutre() });
+  const boutonVoir = el("button", { type: "button", class: "lien-discret", texte: "Voir ma version", onclick: () => voirMaVersion() });
   const bandeau = el(
     "div",
     { class: "todo-editeur-bandeau", role: "status", hidden: true },
-    el("span", { texte: "Modifié sur un autre appareil." }),
-    el("button", { type: "button", class: "lien-discret", texte: "Recharger", onclick: () => recharger() }),
+    texteBandeau,
+    boutonGarder,
+    boutonPrendre,
+    boutonVoir,
   );
 
   const boutonApercu = el(
@@ -239,6 +250,8 @@ export function ouvrirEditeur({
     const champs = enAttente;
     enAttente = {};
     if (Object.keys(champs).length === 0) return pret;
+    for (const cle of ["titre", "description", "echeance"])
+      if (cle in champs) envoye[cle] = champs[cle] ?? "";
     // Nothing exists yet: wait for the first useful input.
     if (!id && !utile(champs)) {
       enAttente = { ...champs, ...enAttente };
@@ -446,19 +459,32 @@ export function ouvrirEditeur({
       return;
     }
     vu = true;
-    const conflits = [];
-    const poser = (champ, cle, valeur) => {
-      if (!occupe(champ, cle)) {
-        if (champ.value !== valeur) champ.value = valeur;
-      } else if (valeur !== base[cle] && champ.value !== valeur) {
-        conflits.push(cle);
+    const remplaces = [];
+    const poser = (champ, cle, valeur, normaliser) => {
+      const decision = decider({
+        local: champ.value,
+        distante: valeur,
+        base: base[cle],
+        envoye: envoye[cle],
+        occupe: occupe(champ, cle),
+        normaliser,
+      });
+      if (decision === "conflit") distants[cle] = valeur;
+      else if (decision === "remplace") {
+        // Another device changed a free field: its text takes the place, ours is kept in memory.
+        memoireSession.garder(id, cle, champ.value);
+        champ.value = valeur;
+        remplaces.push(cle);
+      } else if (!occupe(champ, cle) && champ.value !== valeur && valeur !== base[cle]) {
+        champ.value = valeur;
       }
+      if (decision !== "conflit") delete distants[cle];
+      base[cle] = valeur;
     };
-    poser(titre, "titre", t.titre);
+    poser(titre, "titre", t.titre, (v) => v.trim());
     poser(description, "description", t.description);
     poser(echeance, "echeance", t.echeance ?? "");
-    bandeau.hidden = conflits.length === 0;
-    base = { titre: t.titre, description: t.description, echeance: t.echeance ?? "" };
+    majBandeau(remplaces);
     fait.checked = !!t.fait;
     fait.disabled = false;
     sujetCourant = t.sujetId;
@@ -469,17 +495,70 @@ export function ouvrirEditeur({
     if (!apercu.hidden) apercu.replaceChildren(rendreMarkdown(description.value));
   }
 
-  /** "Recharger": takes the other device's version for the fields still waiting. */
-  function recharger() {
-    const t = donnees.etat().todos.find((x) => x.id === id);
-    if (!t) return;
-    differe.annuler();
-    enAttente = {};
-    titre.value = t.titre;
-    description.value = t.description;
-    echeance.value = t.echeance ?? "";
+  const CHAMPS = { titre, description, echeance };
+  const NOMS = { titre: "le titre", description: "la description", echeance: "l'échéance" };
+  const liste_ = (cles) => cles.map((c) => NOMS[c]).join(", ");
+
+  /** Shows what happened: a conflict on a field being typed, or a field replaced by the other device. */
+  function majBandeau(remplaces = []) {
+    const conflits = Object.keys(distants);
+    if (conflits.length) {
+      texteBandeau.textContent = `Modifié sur un autre appareil : ${liste_(conflits)}.`;
+      boutonGarder.hidden = false;
+      boutonPrendre.hidden = false;
+      boutonVoir.hidden = true;
+      bandeau.hidden = false;
+    } else if (remplaces.length) {
+      texteBandeau.textContent = `Modifié sur un autre appareil : ${liste_(remplaces)}. Votre version est gardée 10 minutes.`;
+      boutonGarder.hidden = true;
+      boutonPrendre.hidden = true;
+      boutonVoir.hidden = false;
+      bandeau.hidden = false;
+    } else if (!boutonVoir.hidden && !bandeau.hidden) {
+      // The "replaced" notice stays until the user acts on it or closes the window.
+    } else {
+      bandeau.hidden = true;
+    }
+  }
+
+  /** "Garder ma version": the text on screen is sent and wins (the last write wins). */
+  function garderMaVersion() {
+    for (const cle of Object.keys(distants)) {
+      delete distants[cle];
+      const valeur = cle === "titre" ? titre.value.trim() : CHAMPS[cle].value || (cle === "echeance" ? null : "");
+      planifier(cle, valeur);
+    }
+    differe.vider();
     bandeau.hidden = true;
+  }
+
+  /** "Prendre l'autre": the other device's text replaces ours, which stays 10 minutes in memory. */
+  function prendreLAutre() {
+    for (const [cle, valeur] of Object.entries(distants)) {
+      memoireSession.garder(id, cle, CHAMPS[cle].value);
+      CHAMPS[cle].value = valeur;
+      delete enAttente[cle];
+      delete distants[cle];
+    }
+    if (Object.keys(enAttente).length === 0) differe.annuler();
+    texteBandeau.textContent = "Version de l'autre appareil reprise. La vôtre est gardée 10 minutes.";
+    boutonGarder.hidden = true;
+    boutonPrendre.hidden = true;
+    boutonVoir.hidden = false;
     fixerEtat("enregistre");
+  }
+
+  /** "Voir ma version": brings back the text that was replaced (and sends it, as any edit). */
+  function voirMaVersion() {
+    for (const cle of ["titre", "description", "echeance"]) {
+      const gardee = memoireSession.lire(id, cle);
+      if (gardee === undefined) continue;
+      CHAMPS[cle].value = gardee;
+      memoireSession.oublier(id, cle);
+      planifier(cle, cle === "titre" ? gardee.trim() : cle === "echeance" ? gardee || null : gardee);
+    }
+    differe.vider();
+    bandeau.hidden = true;
   }
 
   // --- Open / close -------------------------------------------------------------------------------------
