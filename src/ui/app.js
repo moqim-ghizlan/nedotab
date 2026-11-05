@@ -810,6 +810,7 @@ export async function demarrerApp(racine) {
     uid: uidConnecte,
     connecter: () => session.connecter(),
     fermerAutres: () => partage.fermer(),
+    store,
   });
   session.todos = todos;
   document.body.append(todos.bouton, todos.panneau);

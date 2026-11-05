@@ -2,6 +2,7 @@ import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
 import { creerListeSujets } from "./listeSujets.js";
+import { creerListeTodos } from "./listeTodos.js";
 
 const grandEcran = () => globalThis.matchMedia?.("(min-width: 900px)").matches;
 const ID_TITRE = "todos-titre";
@@ -30,7 +31,8 @@ export function creerPanneauTodos({
   uid,
   connecter = async () => {},
   fermerAutres = () => {},
-  creerVueSujet = vueVide,
+  store,
+  creerVueSujet = (ctx) => creerListeTodos({ ...ctx, store }),
   donnees = creerDonneesTodos({ charger, uid }),
 }) {
   let ouvert = false;
@@ -306,15 +308,3 @@ export function creerPanneauTodos({
   };
 }
 
-/** Placeholder of the content of a subject until V6.2. */
-function vueVide() {
-  return {
-    racine: el(
-      "div",
-      { class: "todos-vue todos-vue--sujet todos-vue--centre" },
-      el("p", { class: "todos-vide", texte: "Aucun todo pour l'instant" }),
-    ),
-    rendre() {},
-    titre: "Sujet",
-  };
-}

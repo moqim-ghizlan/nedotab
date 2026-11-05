@@ -325,3 +325,125 @@ body:has(.partage-bouton[hidden]) .todos-bouton {
   .todos-bouton,
   .todos-sujet { transition: none; }
 }
+
+/* --- Todos of a subject (V6.2) ------------------------------------------------------------------ */
+.todos-liste { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.todo-ligne {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  border-radius: var(--rayon-petit);
+  transition: background-color 120ms;
+}
+.todo-ligne:hover { background: var(--survol); }
+.todo-ligne.sortable-ghost { opacity: 0.35; }
+.todo-ligne.sortable-chosen { background: var(--creux); box-shadow: var(--ombre); }
+.todo-ligne--attente .todo-titre { opacity: 0.75; }
+.todo-case {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: transparent;
+  cursor: pointer;
+}
+/* The visible ring is 22 px; the target around it is 44 px. */
+.todo-case::before {
+  content: "";
+  position: absolute;
+  inset: 11px;
+  border: 2px solid var(--trait-fort);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    background-color 160ms,
+    border-color 160ms;
+}
+.todo-case svg { position: relative; }
+.todo-case[aria-checked="true"] { color: var(--accent-texte); }
+.todo-case[aria-checked="true"]::before { border-color: var(--accent); background: var(--accent); }
+.todo-case:focus-visible,
+.todo-corps:focus-visible,
+.todos-faits-titre:focus-visible,
+.todos-choix-sujet:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.todo-corps {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--espace-2);
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.todo-titre {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.todo-titre--brouillon { color: var(--texte-secondaire); font-style: italic; }
+.todo-date {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--creux);
+  color: var(--texte-secondaire);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.todo-ligne--faite .todo-titre {
+  color: var(--texte-secondaire);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.todos-faits-titre {
+  justify-self: start;
+  min-height: 44px;
+  padding: 0 12px 0 4px;
+  border: 0;
+  background: none;
+  color: var(--texte-secondaire);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.todos-faits-titre::before { content: "▸ "; }
+.todos-faits-titre[aria-expanded="true"]::before { content: "▾ "; }
+.todos-liste[hidden],
+.todos-faits-titre[hidden] { display: none; }
+.todos-voir-plus { justify-self: center; }
+.todos-choix-liste { display: grid; gap: var(--espace-2); max-height: 50vh; overflow-y: auto; }
+.todos-choix-sujet {
+  min-height: 44px;
+  padding: 0 14px 0 18px;
+  border: 1px solid var(--trait);
+  border-left: 5px solid var(--c, var(--trait-fort));
+  border-radius: var(--rayon-petit);
+  background: var(--creux);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.todos-choix-sujet:hover { background: var(--survol); }
+
+/* Edit window (replaced by the editor of V6.3, same class). */
+.todo-editeur { width: min(560px, calc(100vw - 24px)); }
+.todo-editeur .formulaire { display: grid; gap: var(--espace-3); }
+.todo-editeur-titre { font-size: 1.25rem; font-weight: 650; }
+.todo-editeur-description { padding-block: 10px; resize: vertical; }
+.todo-editeur-pied { display: flex; flex-wrap: wrap; gap: var(--espace-4); align-items: center; }
+.todo-editeur-label { display: inline-flex; align-items: center; gap: var(--espace-2); }
+.todo-editeur-dates { margin: 0; font-size: 0.8125rem; color: var(--texte-secondaire); }

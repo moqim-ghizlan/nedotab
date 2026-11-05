@@ -35,6 +35,10 @@ function monter({ sujets = [], disponible = true, compteurs = { nbSujets: sujets
     majSujet: vi.fn(async () => {}),
     supprimerSujet: vi.fn(async () => 0),
     ecrireOrdresTodos: vi.fn(async () => {}),
+    ecouterTodos: vi.fn((_u, _s, rappel) => {
+      queueMicrotask(() => rappel([], { depuisCache: false, enAttente: false, plein: false }));
+      return () => {};
+    }),
   };
   const fermerAutres = vi.fn();
   const connecter = vi.fn(async () => {});
@@ -145,7 +149,7 @@ describe("panneau des todos", () => {
     p.panneau.querySelector(".todos-sujet-corps").click();
     expect(p.sujetOuvert()).toBe("a");
     expect(p.panneau.querySelector(".todos-titre").textContent).toBe("Maison");
-    expect(p.panneau.textContent).toContain("Aucun todo pour l'instant");
+    expect(p.panneau.textContent).toContain("Rien à faire ici");
     p.panneau.querySelector(".todos-retour").click();
     expect(p.sujetOuvert()).toBeNull();
     expect(p.panneau.querySelector(".todos-sujets")).not.toBeNull();

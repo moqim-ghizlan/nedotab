@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.2.0] - 2026-11-05
+
+### Ajouté
+
+- **Les todos d'un sujet** : ouvrir un sujet affiche ses todos. Ajout rapide par une ligne (Entrée, en début de liste), cocher (écriture de l'état final après 300 ms sans clic), « Faits (N) » replié sous « À faire », réordonner (glisser ou flèches sur la poignée, un seul todo écrit), « Déplacer vers… » un autre sujet (un lot, compteurs des deux sujets), suppression avec « Annuler » 5 s, « Voir plus » par pages de 100, 500 todos maximum.
+- **Fenêtre d'édition** : titre, description (texte brut), échéance, case « fait », dates « Créé … · Modifié … ». Frappe écrite 1,5 s après la dernière touche, et tout de suite à la fermeture ; un instantané ne remplace jamais un champ qui a le focus.
+- `src/core/echeances.js` (format court de l'échéance), liste mise à jour par clés stables (`listeCle.js`).
+- Clavier : ↑ ↓ entre les lignes, Espace coche, flèches sur la poignée pour déplacer.
+
+### Notes
+
+- Les règles Firestore ne changent pas (déjà déployées avec la V6.1).
+
 ## [6.1.0] - 2026-11-05
 
 ### Ajouté
