@@ -16,7 +16,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { lireSujet } from "../core/sujets.js";
-import { lireTodo } from "../core/todos.js";
+import { PAGE_TODOS, lireTodo } from "../core/todos.js";
 import { obtenirApp } from "./app.js";
 
 /**
@@ -38,8 +38,6 @@ const meta = (uid) => doc(db(), "users", uid, "todosMeta", "usage");
 
 /** Size of a batch: Firestore accepts 500 operations, 400 leaves room for the counter. */
 export const TAILLE_LOT = 400;
-/** A page of todos of one subject ("Voir plus", V6.2). */
-export const PAGE_TODOS = 100;
 
 /** A new id, generated on the device so that the next writes can be queued offline. */
 export const nouvelIdTodo = (uid) => doc(todos(uid)).id;
@@ -141,6 +139,8 @@ export async function creerSujet(uid, { nom, ordre, couleur = null }, id = nouve
     nom,
     ordre,
     couleur,
+    nbRestants: 0,
+    nbTotal: 0,
     creeLe: serverTimestamp(),
     modifieLe: serverTimestamp(),
   });
@@ -206,6 +206,11 @@ export async function creerTodo(uid, todo, id = nouvelIdTodo(uid)) {
     modifieLe: serverTimestamp(),
   });
   lot.set(meta(uid), { nbTodos: increment(1) }, { merge: true });
+  // V6.1: the counters of the subject move in the same batch (no need to read every todo).
+  lot.update(doc(sujets(uid), todo.sujetId), {
+    nbTotal: increment(1),
+    nbRestants: increment(todo.fait ? 0 : 1),
+  });
   await lot.commit();
   return id;
 }
@@ -214,11 +219,20 @@ export async function creerTodo(uid, todo, id = nouvelIdTodo(uid)) {
  * Partial update: `champs` holds ONLY what changed (see champsModifies). `fait` also writes
  * `faitLe` (server date when it becomes true, null when it becomes false).
  */
-export async function majTodo(uid, id, champs) {
+export async function majTodo(uid, id, champs, { sujetId } = {}) {
   const ecrit = { ...champs };
   if ("fait" in ecrit) ecrit.faitLe = ecrit.fait ? serverTimestamp() : null;
   else delete ecrit.faitLe;
-  await updateDoc(doc(todos(uid), id), { ...ecrit, modifieLe: serverTimestamp() });
+  const donnees = { ...ecrit, modifieLe: serverTimestamp() };
+  // Ticking a todo moves the "remaining" counter of its subject in the same batch.
+  if ("fait" in ecrit && sujetId) {
+    const lot = writeBatch(db());
+    lot.update(doc(todos(uid), id), donnees);
+    lot.update(doc(sujets(uid), sujetId), { nbRestants: increment(ecrit.fait ? -1 : 1) });
+    await lot.commit();
+    return;
+  }
+  await updateDoc(doc(todos(uid), id), donnees);
 }
 
 /**
@@ -236,18 +250,38 @@ export async function apresRecalcul(uid, action) {
 }
 
 /** Removes a todo and decrements the counter (one batch). */
-export function supprimerTodo(uid, id) {
+export function supprimerTodo(uid, id, { sujetId, fait } = {}) {
   return apresRecalcul(uid, async () => {
     const lot = writeBatch(db());
     lot.delete(doc(todos(uid), id));
     lot.set(meta(uid), { nbTodos: increment(-1) }, { merge: true });
+    if (sujetId) {
+      // The subject may be gone (deleted on another device): then only the todo is removed.
+      lot.update(doc(sujets(uid), sujetId), {
+        nbTotal: increment(-1),
+        nbRestants: increment(fait ? 0 : -1),
+      });
+    }
     await lot.commit();
   });
 }
 
-/** Moves a todo to another subject: one field, and its place in the new list. */
-export async function deplacerTodo(uid, id, sujetId, ordre) {
-  await updateDoc(doc(todos(uid), id), { sujetId, ordre, modifieLe: serverTimestamp() });
+/**
+ * Moves a todo to another subject: its `sujetId`, its place in the new list and the counters of
+ * the TWO subjects, in one batch. If the destination is gone, the batch fails and nothing moves.
+ */
+export async function deplacerTodo(uid, id, { depuis, vers, ordre, fait }) {
+  const lot = writeBatch(db());
+  lot.update(doc(todos(uid), id), { sujetId: vers, ordre, modifieLe: serverTimestamp() });
+  lot.update(doc(sujets(uid), depuis), {
+    nbTotal: increment(-1),
+    nbRestants: increment(fait ? 0 : -1),
+  });
+  lot.update(doc(sujets(uid), vers), {
+    nbTotal: increment(1),
+    nbRestants: increment(fait ? 0 : 1),
+  });
+  await lot.commit();
 }
 
 /** Writes new orders in batches of 400 (renumbering when the gap is exhausted). */
@@ -274,5 +308,13 @@ export async function recalculerCompteurs(uid) {
   ]);
   const compteurs = { nbSujets: a.data().count, nbTodos: b.data().count };
   await setDoc(meta(uid), compteurs, { merge: true });
+  // Counters of each subject (total and remaining), by counting queries.
+  for (const s of (await getDocs(sujets(uid))).docs) {
+    const [total, restants] = await Promise.all([
+      getCountFromServer(query(todos(uid), where("sujetId", "==", s.id))),
+      getCountFromServer(query(todos(uid), where("sujetId", "==", s.id), where("fait", "==", false))),
+    ]);
+    await updateDoc(s.ref, { nbTotal: total.data().count, nbRestants: restants.data().count });
+  }
   return compteurs;
 }

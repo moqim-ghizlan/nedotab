@@ -13,6 +13,7 @@ import "./ui/styles/pages.css";
 import "./ui/styles/chat.css";
 import "./ui/styles/frequents.css";
 import "./ui/styles/espacePartage.css";
+import "./ui/styles/todos.css";
 import "./ui/styles/galerie.css";
 import "./ui/styles/popup.css";
 import { appliquerCacheDemarrage } from "./ui/apparence.js";

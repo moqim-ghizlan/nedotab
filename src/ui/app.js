@@ -70,6 +70,7 @@ import { typeAppareil } from "../core/appareil.js";
 import { demanderNomAppareil } from "./dialogues/nomAppareil.js";
 import { creerServiceAppareils } from "./services/appareils.js";
 import { creerEspacePartage } from "./espacePartage.js";
+import { creerPanneauTodos } from "./todos/panneauTodos.js";
 import { brancherRaccourcisGlobaux } from "./aideRaccourcis.js";
 import { creerBoutonEdition } from "./modeEdition.js";
 import { creerVueGrille } from "./vueGrille.js";
@@ -801,6 +802,23 @@ export async function demarrerApp(racine) {
     else if (e.mode !== "compte") appareils.arreter();
   });
   partage.actualiser();
+  // V6.1: todos (subjects, then the todos of a subject). Always on the page; the panel asks to
+  // sign in when there is no account. One panel at a time: opening one closes the other.
+  const todos = creerPanneauTodos({
+    disponible: () => uidConnecte() !== null,
+    charger: chargerFirebase,
+    uid: uidConnecte,
+    connecter: () => session.connecter(),
+    fermerAutres: () => partage.fermer(),
+  });
+  session.todos = todos;
+  document.body.append(todos.bouton, todos.panneau);
+  synchro.abonner(() => todos.actualiser());
+  compte.abonner(() => todos.actualiser());
+  new MutationObserver(() => {
+    if (partage.bouton.getAttribute("aria-expanded") === "true") todos.fermer();
+  }).observe(partage.bouton, { attributes: true, attributeFilter: ["aria-expanded"] });
+  todos.actualiser();
   // The settings arrive after the first render and change in the settings panel: the robot
   // follows them (the search bar does the same on focus).
   let reglagesIaVus = JSON.stringify(store.lire().reglages?.ia ?? null);

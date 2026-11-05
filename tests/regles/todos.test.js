@@ -230,6 +230,37 @@ describe("todos", () => {
   });
 });
 
+describe("compteurs du sujet (V6.1)", () => {
+  it("un sujet naît avec des compteurs à zéro, jamais autre chose", async () => {
+    await assertSucceeds(ajouterSujet(db("alice"), "s1", { nbRestants: 0, nbTotal: 0 }));
+    await assertFails(ajouterSujet(db("alice"), "s2", { nbRestants: 3, nbTotal: 3 }));
+  });
+  it("le lot de création d'un todo fait bouger les deux compteurs du sujet", async () => {
+    await ajouterSujet(db("alice"), "s1", { nbRestants: 0, nbTotal: 0 });
+    const d = db("alice");
+    const lot = writeBatch(d);
+    lot.set(tod(d, "t1"), todo());
+    lot.set(meta(d), { nbTodos: increment(1) }, { merge: true });
+    lot.update(suj(d, "s1"), { nbTotal: increment(1), nbRestants: increment(1) });
+    await assertSucceeds(lot.commit());
+    const lu = (await getDoc(suj(db("alice"), "s1"))).data();
+    if (lu.nbTotal !== 1 || lu.nbRestants !== 1) throw new Error("compteurs du sujet faux");
+  });
+  it("refuse un compteur négatif, non entier ou hors borne", async () => {
+    await ajouterSujet(db("alice"), "s1", { nbRestants: 0, nbTotal: 0 });
+    const ref = suj(db("alice"), "s1");
+    await assertFails(updateDoc(ref, { nbRestants: -1 }));
+    await assertFails(updateDoc(ref, { nbTotal: 1.5 }));
+    await assertFails(updateDoc(ref, { nbTotal: 501 }));
+    await assertSucceeds(updateDoc(ref, { nbTotal: 12, nbRestants: 7 }));
+  });
+  it("ne laisse pas glisser un autre champ avec les compteurs", async () => {
+    await ajouterSujet(db("alice"), "s1", { nbRestants: 0, nbTotal: 0 });
+    await assertFails(updateDoc(suj(db("alice"), "s1"), { nbTotal: 1, nom: "autre" }));
+    await assertFails(updateDoc(suj(db("bob"), "s1", "alice"), { nbTotal: 1 }));
+  });
+});
+
 describe("todosMeta", () => {
   it("n'accepte que des entiers dans les bornes", async () => {
     await assertSucceeds(setDoc(meta(db("alice")), { nbSujets: 3, nbTodos: 10, octets: 0 }));

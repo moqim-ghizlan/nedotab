@@ -14,6 +14,8 @@ export const IMAGES_MAX = 10;
 export const NOTE_IMAGE_MAX = 300;
 export const ECART_ORDRE = 1000;
 export const ECART_MIN = 0.001;
+/** A page of todos of one subject ("Voir plus"). */
+export const PAGE_TODOS = 100;
 
 /** Characters counted by code points (an emoji counts for one). */
 export const longueur = (texte) => [...String(texte ?? "")].length;

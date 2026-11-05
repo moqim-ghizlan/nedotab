@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.1.0] - 2026-11-05
+
+### Ajouté
+
+- **Todos : bouton et panneau** à gauche (à côté du bouton de partage) : liste des sujets avec nom, couleur (8 couleurs fixes) et nombre de todos restants ; créer, renommer en place, colorer, réordonner (glisser, ou flèches sur la poignée), supprimer avec confirmation (nombre de todos) puis « Annuler » 5 s. États : non connecté, chargement, vide, hors ligne, erreur, 30 sujets maximum.
+- Compteurs `nbRestants` / `nbTotal` dans chaque sujet, modifiés dans le même lot que chaque création, cochage, suppression et déplacement de todo. Règles du sujet mises à jour. **À déployer** : `npm run deployer:regles`.
+- `src/core/differe.js` : écriture différée (1,5 s) utilisée dès la V6.2.
+
+### Notes
+
+- Les règles du sujet acceptent tout compteur entier de 0 à 500 plutôt que des pas de ±1 : le bouton « Recalculer » (V6.7) doit pouvoir écrire une valeur absolue.
+- Aucune permission ajoutée au manifest.
+
 ## [6.0.0] - 2026-11-05
 
 Socle des **todos** (Sujet → Todos). Aucun écran dans cette version.

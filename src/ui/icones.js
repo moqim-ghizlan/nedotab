@@ -108,6 +108,20 @@ const TRACES = {
   retour: ["M15 5l-7 7 7 7"],
   chevron: ["M9 5l7 7-7 7"],
   bas: ["M12 5v14", "M6 13l6 6 6-6"],
+  // V6.1: todos (check in a rounded square), grip, "more" dots, search, filter, pen on a page.
+  todos: [
+    "M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z",
+    "M8.5 12.2l2.4 2.4 4.6-5",
+  ],
+  poignee: ["M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01"],
+  points: ["M5 12h.01M12 12h.01M19 12h.01"],
+  loupe: ["M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z", "M20 20l-4-4"],
+  filtre: ["M4 6h16M7 12h10M10 18h4"],
+  calendrier: [
+    "M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
+    "M4 10h16M9 3v4M15 3v4",
+  ],
+  deplacer: ["M5 12h14", "M13 6l6 6-6 6"],
 };
 
 export function icone(nom, { taille = 18 } = {}) {

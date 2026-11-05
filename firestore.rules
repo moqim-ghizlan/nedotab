@@ -275,12 +275,19 @@ service cloud.firestore {
     // not increment the counter by exactly 1, is refused. A removal is never blocked by a counter.
     // Dates: creeLe / modifieLe are always the server time; creeLe never changes afterwards.
     function sujetValide(d) {
-      return d.keys().hasOnly(['nom', 'ordre', 'couleur', 'creeLe', 'modifieLe'])
+      return d.keys().hasOnly(['nom', 'ordre', 'couleur', 'creeLe', 'modifieLe', 'nbRestants', 'nbTotal'])
+        && d.get('nbRestants', 0) is int && d.get('nbRestants', 0) >= 0 && d.get('nbRestants', 0) <= 500
+        && d.get('nbTotal', 0) is int && d.get('nbTotal', 0) >= 0 && d.get('nbTotal', 0) <= 500
         && d.nom is string && d.nom.size() >= 1 && d.nom.size() <= 60
         && d.ordre is number
         && (d.get('couleur', null) == null
             || d.couleur in ['pin', 'mer', 'ciel', 'prune', 'rose', 'ambre', 'sable', 'ardoise'])
         && d.modifieLe == request.time;
+    }
+
+    function compteursSujetValides(d) {
+      return d.get('nbRestants', 0) is int && d.get('nbRestants', 0) >= 0 && d.get('nbRestants', 0) <= 500
+        && d.get('nbTotal', 0) is int && d.get('nbTotal', 0) >= 0 && d.get('nbTotal', 0) <= 500;
     }
 
     function todoValide(d) {
@@ -304,13 +311,20 @@ service cloud.firestore {
       allow create: if proprietaire(uid)
         && sujetValide(request.resource.data)
         && request.resource.data.creeLe == request.time
+        && request.resource.data.get('nbRestants', 0) == 0
+        && request.resource.data.get('nbTotal', 0) == 0
         && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0) <= 30
         && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0)
           == (exists(/databases/$(db)/documents/users/$(uid)/todosMeta/usage)
               ? get(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbSujets', 0) : 0) + 1;
+      // Either the user edits the subject (name, colour, order), or a todo operation moves the
+      // counters nbRestants / nbTotal (V6.1, same batch as the todo; non-negative integers, the
+      // "Recalculer" of V6.7 writes absolute values, so no step limit here).
       allow update: if proprietaire(uid)
-        && sujetValide(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'ordre', 'couleur', 'modifieLe']);
+        && ((sujetValide(request.resource.data)
+             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nom', 'ordre', 'couleur', 'modifieLe']))
+            || (compteursSujetValides(request.resource.data)
+                && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nbRestants', 'nbTotal'])));
     }
 
     match /users/{uid}/todos/{id} {
