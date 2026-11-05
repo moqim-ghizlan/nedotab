@@ -1,3 +1,4 @@
+# Rebuild after resetting the Pages source.
 # Builds the showcase site (site/ → dist/site/) and deploys it to GitHub Pages.
 name: Deploy site to Pages
 
