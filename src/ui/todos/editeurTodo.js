@@ -267,8 +267,10 @@ export function ouvrirEditeur({
           if (!r.ok && id === neuf) id = null;
         });
       } else {
-        lancer(donnees.majTodo(id, champs)).then((r) => {
-          if (!r.ok && r.code === "not-found") supprimeAilleurs(champs);
+        lancer(donnees.majTodo(id, champs)).then(async (r) => {
+          // The rules refuse an update of a missing document before "not-found" can be reported.
+          const refus = r.code === "not-found" || r.code === "permission-denied";
+          if (!r.ok && refus && !(await donnees.todoExiste(id))) supprimeAilleurs(champs);
         });
       }
     });

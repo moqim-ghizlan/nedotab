@@ -32,6 +32,14 @@ const todo = (extra = {}) => ({
   v: 1, sujetId: "s1", titre: "t", description: "", echeance: null, fait: false, faitLe: null,
   ordre: 1000, images: [], creeLe: serverTimestamp(), modifieLe: serverTimestamp(), ...extra,
 });
+/** Reads a document with the rules off. (withSecurityRulesDisabled returns nothing: capture inside.) */
+async function lireServeur(chemin) {
+  let lu;
+  await env.withSecurityRulesDisabled(async (c) => {
+    lu = await getDoc(doc(c.firestore(), chemin));
+  });
+  return lu;
+}
 const sujetExistant = () =>
   env.withSecurityRulesDisabled((c) =>
     setDoc(suj(c.firestore(), "s1"), { nom: "S", ordre: 1, nbRestants: 0, nbTotal: 0 }),
@@ -53,7 +61,7 @@ describe("écritures hors ligne", () => {
     expect((await getDoc(tod(d, "t1"))).data().titre).toBe("version 20");
     await enableNetwork(d);
     await Promise.all(envois);
-    const serveur = await env.withSecurityRulesDisabled((c) => getDoc(tod(c.firestore(), "t1")));
+    const serveur = await lireServeur("users/alice/todos/t1");
     expect(serveur.data().titre).toBe("version 20");
   });
 
@@ -69,7 +77,7 @@ describe("écritures hors ligne", () => {
       updateDoc(tod(a, "t1"), { titre: "titre de A", modifieLe: serverTimestamp() }),
       updateDoc(tod(b, "t1"), { description: "description de B", modifieLe: serverTimestamp() }),
     ]);
-    const lu = (await env.withSecurityRulesDisabled((c) => getDoc(tod(c.firestore(), "t1")))).data();
+    const lu = (await lireServeur("users/alice/todos/t1")).data();
     expect(lu.titre).toBe("titre de A");
     expect(lu.description).toBe("description de B");
   });
@@ -86,14 +94,16 @@ describe("écritures hors ligne", () => {
     await env.withSecurityRulesDisabled((c) => setDoc(meta(c.firestore()), { nbTodos: 500 }));
     await enableNetwork(d);
     await assertFails(envoi);
-    const serveur = await env.withSecurityRulesDisabled((c) => getDoc(tod(c.firestore(), "tard")));
+    const serveur = await lireServeur("users/alice/todos/tard");
     expect(serveur.exists()).toBe(false);
   });
 
-  it("modifier un todo supprimé ailleurs : not-found", async () => {
+  it("modifier un todo supprimé ailleurs : refusé (les règles passent avant « not-found »)", async () => {
+    // Un update sur un document absent n'a pas de `resource` : la règle le refuse. L'application
+    // le sait et vérifie alors si le todo existe encore (todoExiste) pour proposer de le recréer.
     await sujetExistant();
     await expect(updateDoc(tod(db(), "fantome"), { titre: "x", modifieLe: serverTimestamp() })).rejects.toMatchObject({
-      code: "not-found",
+      code: "permission-denied",
     });
   });
 

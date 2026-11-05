@@ -7,6 +7,7 @@ import {
 import { deleteObject, getBytes, listAll, ref, updateMetadata, uploadBytes } from "firebase/storage";
 import {
   doc,
+  getDoc,
   increment,
   runTransaction,
   serverTimestamp,
@@ -94,15 +95,23 @@ describe("Storage todos/{uid}/{todoId}/{nom}", () => {
       );
     }
   });
-  it("une image n'est jamais modifiée", async () => {
+  it("les métadonnées d'une image ne se modifient pas", async () => {
+    // (Le remplacement d'un fichier par un autre au même nom n'est pas distingué d'une création
+    // par l'émulateur Storage : la règle `update: false` s'applique en production.)
     const r = ref(stockage("alice"), `todos/alice/t1/${ID}.webp`);
     await uploadBytes(r, octets(10), { contentType: "image/webp" });
-    await assertFails(uploadBytes(r, octets(20), { contentType: "image/webp" }));
     await assertFails(updateMetadata(r, { contentType: "text/html" }));
   });
 });
 
 describe("Firestore : champ images du todo", () => {
+  // One connection per test: a document reference belongs to the instance that made it.
+  let dA;
+  let dB;
+  beforeEach(() => {
+    dA = db("alice");
+    dB = db("alice");
+  });
   const sujet = () =>
     env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "users/alice/sujets/s1"), { nom: "S", ordre: 1 }));
   const meta = (d) => doc(d, "users/alice/todosMeta/usage");
@@ -120,7 +129,7 @@ describe("Firestore : champ images du todo", () => {
   });
   const creer = async (images = []) => {
     await sujet();
-    const d = db("alice");
+    const d = dA;
     const lot = writeBatch(d);
     lot.set(tod(d), {
       v: 1, sujetId: "s1", titre: "t", description: "", echeance: null, fait: false, faitLe: null,
@@ -130,10 +139,10 @@ describe("Firestore : champ images du todo", () => {
     return lot.commit();
   };
   const ajouter = (images) =>
-    runTransaction(db("alice"), async (tx) => {
-      await tx.get(tod(db("alice")));
-      tx.update(tod(db("alice")), { images, modifieLe: serverTimestamp() });
-      tx.set(meta(db("alice")), { octets: increment(1000) }, { merge: true });
+    runTransaction(dA, async (tx) => {
+      await tx.get(tod(dA));
+      tx.update(tod(dA), { images, modifieLe: serverTimestamp() });
+      tx.set(meta(dA), { octets: increment(1000) }, { merge: true });
     });
 
   it("accepte une image bien formée (transaction todo + octets)", async () => {
@@ -144,15 +153,15 @@ describe("Firestore : champ images du todo", () => {
     await creer();
     const ids = Array.from({ length: 10 }, (_, i) => i.toString(16).padStart(32, "c"));
     const dix = ids.map((id, i) => img({ id, chemin: `todos/alice/t1/${id}.webp`, ordre: i }));
-    await assertSucceeds(updateDoc(tod(db("alice")), { images: dix, modifieLe: serverTimestamp() }));
+    await assertSucceeds(updateDoc(tod(dA), { images: dix, modifieLe: serverTimestamp() }));
     await assertFails(
-      updateDoc(tod(db("alice")), { images: [...dix, img({ id: ID2 })], modifieLe: serverTimestamp() }),
+      updateDoc(tod(dA), { images: [...dix, img({ id: ID2 })], modifieLe: serverTimestamp() }),
     );
   });
   it("refuse une image mal formée", async () => {
     await creer();
     const essai = (extra) =>
-      updateDoc(tod(db("alice")), { images: [img(extra)], modifieLe: serverTimestamp() });
+      updateDoc(tod(dA), { images: [img(extra)], modifieLe: serverTimestamp() });
     await assertFails(essai({ chemin: `todos/bob/t1/${ID}.webp` })); // dossier d'un autre compte
     await assertFails(essai({ chemin: "https://exemple.fr/p.webp" })); // une adresse, jamais
     await assertFails(essai({ chemin: `todos/alice/t1/photo.webp` }));
@@ -165,23 +174,23 @@ describe("Firestore : champ images du todo", () => {
   });
   it("octets : au-delà de 200 Mo refusé", async () => {
     await creer();
-    await assertSucceeds(setDoc(meta(db("alice")), { octets: 200 * MO }));
-    await assertFails(setDoc(meta(db("alice")), { octets: 200 * MO + 1 }));
+    await assertSucceeds(setDoc(meta(dA), { octets: 200 * MO }));
+    await assertFails(setDoc(meta(dA), { octets: 200 * MO + 1 }));
   });
   it("concurrence : deux appareils ajoutent une image, les deux restent", async () => {
     await creer();
-    const ajoutOk = (id) =>
-      runTransaction(db("alice"), async (tx) => {
-        const s = await tx.get(tod(db("alice")));
+    const ajoutOk = (d, id) =>
+      runTransaction(d, async (tx) => {
+        const s = await tx.get(tod(d));
         const liste = s.data().images ?? [];
-        tx.update(tod(db("alice")), {
+        tx.update(tod(d), {
           images: [...liste, img({ id, chemin: `todos/alice/t1/${id}.webp`, ordre: liste.length })],
           modifieLe: serverTimestamp(),
         });
-        tx.set(meta(db("alice")), { octets: increment(1000) }, { merge: true });
+        tx.set(meta(d), { octets: increment(1000) }, { merge: true });
       });
-    await Promise.all([ajoutOk(ID), ajoutOk(ID2)]);
-    const lu = (await (await import("firebase/firestore")).getDoc(tod(db("alice")))).data();
+    await Promise.all([ajoutOk(dA, ID), ajoutOk(dB, ID2)]);
+    const lu = (await getDoc(tod(dA))).data();
     if (lu.images.length !== 2) throw new Error(`2 images attendues, ${lu.images.length} trouvées`);
   });
 });

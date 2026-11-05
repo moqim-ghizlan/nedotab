@@ -124,6 +124,7 @@ export {
   recalculerCompteurs as recalculerCompteursTodos,
   supprimerSujet,
   supprimerTodo,
+  todoExiste as todoExisteTodos,
 } from "./todos.js";
 export {
   envoyerImage as envoyerImageTodo,

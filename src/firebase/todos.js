@@ -2,6 +2,7 @@ import {
   collection,
   doc,
   getCountFromServer,
+  getDoc,
   getDocs,
   increment,
   limit,
@@ -153,6 +154,11 @@ export async function lirePageTous(uid, dernierCreeLe = null, taille = PAGE_TODO
     todos: s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean),
     plein: s.size >= taille,
   };
+}
+
+/** Does the todo still exist? (An update refused by the rules on a missing document looks like a refusal.) */
+export async function todoExiste(uid, id) {
+  return (await getDoc(doc(todos(uid), id))).exists();
 }
 
 /** Todos of a subject after `dernierOrdre` (a "Voir plus" page). */

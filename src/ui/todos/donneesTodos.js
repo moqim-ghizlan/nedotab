@@ -563,6 +563,14 @@ export function creerDonneesTodos({ charger, uid }) {
     deplacerVersSujet,
     creerTodoAvecId,
     viderCochages: vider,
+    /** After a refused update: was the todo deleted on another device? Offline: assumed to exist. */
+    todoExiste: async (id) => {
+      try {
+        return await (await fb()).todoExisteTodos(uid(), id);
+      } catch {
+        return true;
+      }
+    },
     /** Settings (V6.7): export, import, recount, remove everything. */
     lireTout: async () => (await fb()).lireToutLesTodos(uid()),
     importer: async (plan, options) => (await fb()).importerTodos(uid(), plan, options),
