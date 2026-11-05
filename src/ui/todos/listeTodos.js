@@ -34,6 +34,7 @@ export function creerListeTodos({ donnees, sujetId, store, memoriser = false }) 
   let glisse = false;
   let renduEnAttente = false;
   let faitsOuverts = false;
+  let erreurAffichee = false;
 
   donnees.suivreSujet(sujetId);
 
@@ -328,7 +329,13 @@ export function creerListeTodos({ donnees, sujetId, store, memoriser = false }) 
     chargement.hidden = !charge;
     vide.hidden = mondial || charge || e.todos.length > 0 || e.todosStatut === "erreur";
     aucun.hidden = charge || visibles.length > 0 || source.length === 0 || !barre.actif();
-    if (statut === "erreur") dire("Les todos sont indisponibles pour l'instant.");
+    if (statut === "erreur") {
+      dire("Les todos sont indisponibles pour l'instant.");
+      erreurAffichee = true;
+    } else if (erreurAffichee) {
+      erreurAffichee = false;
+      dire(null);
+    }
     plus.hidden = mondial || !e.todosPlein;
     chargerPlus.hidden = !mondial || !e.tousPlein || e.tousStatut === "chargement";
     portee.hidden = !mondial;
