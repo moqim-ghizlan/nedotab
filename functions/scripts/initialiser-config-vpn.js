@@ -17,5 +17,8 @@ if (!domaine || !pays || !projet) {
 if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domaine)) throw new Error("Domaine invalide.");
 
 initializeApp({ projectId: projet });
-await getFirestore().doc("vpn/config").set({ domaineProxy: domaine, portProxy: 443, pays, actif: true });
+await getFirestore().doc("vpn/config").set(
+  { domaineProxy: domaine, portProxy: 443, pays, actif: true },
+  { merge: true }, // V5.10 : ne pas effacer limiteServeurGo, coupureSecurite…
+);
 console.log(`vpn/config écrit sur ${projet} : ${domaine}:443 (${pays}).`);
