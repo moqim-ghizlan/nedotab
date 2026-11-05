@@ -838,7 +838,6 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
                 store,
               }).section
             : null,
-          section("Todos : activation", ...ligneDes(["sansTodos"])),
           session.todos ? sectionTodos({ donnees: session.todos.donnees }).section : null,
           compteUi.confidentialite,
           compteUi.danger,
@@ -912,6 +911,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       sectionFrequents.section,
     ],
     general: [
+      section("Todos", ...ligneDes(["sansTodos"])),
       section(
         "Ouverture des liens",
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),
