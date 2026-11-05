@@ -1,4 +1,5 @@
 import { memoireSession } from "../../core/conflitTodo.js";
+import { ecrireLocal, lireLocal } from "./memoireLocale.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
@@ -34,7 +35,9 @@ export function creerPanneauTodos({
   connecter = async () => {},
   fermerAutres = () => {},
   store,
-  creerVueSujet = (ctx) => creerListeTodos({ ...ctx, store }),
+  // V6.8: reopen the last subject (and keep the last filter and sort) on this device.
+  memoriser = false,
+  creerVueSujet = (ctx) => creerListeTodos({ ...ctx, store, memoriser }),
   donnees = creerDonneesTodos({ charger, uid }),
 }) {
   let ouvert = false;
@@ -42,6 +45,7 @@ export function creerPanneauTodos({
   let sujetId = null; // null: list of the subjects
   let vueSujet = null;
   let onglet = "sujets"; // sujets | aujourdhui (V6.5)
+  let dejaRestaure = !memoriser; // the last subject is reopened once per page, never forced again
   let vueAujourdhui = null;
 
   const pastille = el("span", { class: "todos-pastille", hidden: true, "aria-hidden": "true" });
@@ -105,6 +109,7 @@ export function creerPanneauTodos({
     });
   const ongletSujets = ongletBouton("sujets", "Sujets");
   const ongletAujourdhui = ongletBouton("aujourdhui", "Aujourd'hui");
+  ongletAujourdhui.tabIndex = -1; // one tab stop for the tab list, the arrows move inside it
   const onglets = el(
     "div",
     { class: "todos-onglets", role: "tablist", "aria-label": "Todos", hidden: true },
@@ -186,6 +191,7 @@ export function creerPanneauTodos({
   }
 
   function ouvrirListe() {
+    dejaRestaure = true; // the user chose the list: do not jump back into a subject
     vueSujet?.liberer?.();
     vueSujet = null;
     sujetId = null;
@@ -199,6 +205,7 @@ export function creerPanneauTodos({
     const sujet = donnees.etat().sujets.find((s) => s.id === id);
     if (!sujet) return;
     sujetId = id;
+    if (memoriser) ecrireLocal("dernierSujet", id);
     vueSujet?.liberer?.();
     vueSujet = creerVueSujet({ donnees, sujetId: id, retour: () => ouvrirListe() });
     retour.hidden = false;
@@ -241,6 +248,11 @@ export function creerPanneauTodos({
         vueSujet.rendre();
         return;
       }
+    }
+    if (!dejaRestaure && e.statut === "ok" && onglet === "sujets") {
+      dejaRestaure = true;
+      const dernier = lireLocal("dernierSujet");
+      if (dernier && e.sujets.some((s) => s.id === dernier)) return ouvrirSujet(dernier);
     }
     if (onglet === "aujourdhui" && vueAujourdhui) {
       afficher(vueAujourdhui.racine);

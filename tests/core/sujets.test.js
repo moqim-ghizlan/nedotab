@@ -13,7 +13,7 @@ import {
 
 describe("nom de sujet", () => {
   it("retire les caractères de contrôle et de direction", () => {
-    expect(nettoyerNom("  Tra‮vail\u0000  perso ")).toBe("Tra vail perso");
+    expect(nettoyerNom("  Tra\u202Evail\u0000  perso ")).toBe("Tra vail perso");
   });
   it("refuse vide et plus de 60 caractères", () => {
     expect(validerNom("   ")).toMatch(/nom/);
@@ -48,7 +48,7 @@ describe("lireSujet / trierSujets / exporterSujets", () => {
   it("ignore un document aberrant", () => {
     expect(lireSujet("a", null)).toBeNull();
     expect(lireSujet("a", { nom: 3 })).toBeNull();
-    expect(lireSujet("a", { nom: "\u0000‮" })).toBeNull();
+    expect(lireSujet("a", { nom: "\u0000\u202E" })).toBeNull();
   });
   it("normalise couleur et compteurs", () => {
     const s = lireSujet("a", { nom: "x", ordre: 5, couleur: "fluo", nbRestants: -3, nbTotal: 2.5 });

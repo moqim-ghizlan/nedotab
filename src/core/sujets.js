@@ -13,7 +13,7 @@ export const COULEURS_SUJET = ["pin", "mer", "ciel", "prune", "rose", "ambre", "
 export const ECART_ORDRE = 1000;
 
 // Control characters and bidirectional marks (RTL tricks) never belong to a name.
-const CARACTERES_INTERDITS = /[\p{Cc}​-‏‪-‮⁦-⁩﻿]/gu;
+const CARACTERES_INTERDITS = /[\p{Cc}\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/gu;
 
 /** Name cleaned: no control or direction character, one space between words, 60 characters. */
 export function nettoyerNom(nom) {

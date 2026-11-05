@@ -72,7 +72,7 @@ describe("todoVersMarkdown", () => {
     expect(r.meta.titre).toBe("");
   });
   it("un titre piégé ne casse pas l'en-tête (deux-points, guillemets, #, emoji, RTL, retour à la ligne)", () => {
-    for (const titre of ['Rapport : « v2 » ?', 'Il a dit "non"', "# titre", "- liste", "a: b\nc: d", "🎉 fête 👨‍👩‍👧", "abc\u202Edef", "titre\\fin"]) {
+    for (const titre of ['Rapport : « v2 » ?', 'Il a dit "non"', "# titre", "- liste", "a: b\nc: d", "🎉 fête 👨\u200D👩\u200D👧", "abc\u202Edef", "titre\\fin"]) {
       const r = relire(todoVersMarkdown(todo({ titre }), { nom: "S" }));
       expect(r.meta.titre).toBe(titre.replace(/\s+/g, " ").trim());
       expect(r.meta.fait).toBe(false);
@@ -144,7 +144,7 @@ describe("nomFichierSur", () => {
   });
   it("ne coupe pas un emoji en deux", () => {
     // A family emoji is ONE character made of several parts glued by U+200D.
-    const famille = "\u{1F468}‍\u{1F469}‍\u{1F467}";
+    const famille = "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}";
     // 79 letters + one emoji = 80 characters: the emoji stays whole.
     expect(nomFichierSur("a".repeat(79) + famille)).toBe("a".repeat(79) + famille);
     // 80 letters + the emoji: the emoji is dropped whole, never cut in two.

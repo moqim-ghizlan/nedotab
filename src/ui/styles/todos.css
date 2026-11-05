@@ -743,3 +743,21 @@ body:has(.partage-bouton[hidden]) .todos-bouton {
 }
 .todo-rapide:hover { background: var(--survol); color: var(--texte); }
 .todo-rapide:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* --- Finishing (V6.8) -------------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .todo-case::before,
+  .todo-ligne,
+  .todos-onglet,
+  .todo-image { transition: none; }
+  .todos,
+  .todos[hidden] { translate: none; transition: none; }
+}
+/* Larger text (200 %): nothing overflows, long titles wrap in the editor and the lines grow. */
+.todo-ligne { min-height: 52px; height: auto; }
+.todo-editeur-titre { min-width: 0; overflow-wrap: anywhere; }
+@media (forced-colors: active) {
+  .todo-case::before { border-color: CanvasText; }
+  .todo-case[aria-checked="true"]::before { background: Highlight; border-color: Highlight; }
+  .todo-date { border: 1px solid CanvasText; }
+}

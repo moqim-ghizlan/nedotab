@@ -2,6 +2,27 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.8.0] - 2026-11-05
+
+Finitions et stabilisation de la partie **extension** des todos. Aucune fonctionnalité nouvelle.
+
+### Ajouté
+
+- **Mémoire de l'appareil** : le panneau rouvre le dernier sujet ouvert et garde le dernier filtre et le dernier tri (identifiants et choix de menu seulement, jamais un texte), en local.
+- **Accessibilité** : une seule étape de tabulation pour les onglets (flèches pour changer), mouvement réduit étendu, contraste forcé (mode Windows), textes agrandis sans débordement. Test qui vérifie que chaque bouton, champ et case a un nom accessible.
+- **Tests de revue de sécurité** : aucun `innerHTML` dans `src/ui/todos`, un seul module de rendu Markdown, aucun `getDownloadURL`, aucun contenu de todo dans les journaux ni dans l'IA, aucune permission ni dépendance ajoutée depuis la V6.0.
+- Mesure de performance automatisée (500 todos : ouverture et instantané sans recréer les lignes).
+- Documentation : `docs/tests/checklist-v6.md`, `bugs-v6.md`, `v6-restant.md`, `docs/exports.md`, `CLAUDE.md`, plan et feuille de route à jour.
+
+### Corrigé
+
+- Rendu Markdown déplacé dans `src/ui/todos/rendreMarkdown.js` (il a besoin d'un DOM) ; `src/core/markdown.js` garde la partie pure.
+- Caractères invisibles littéraux remplacés par des échappements `\uXXXX` (le linter les refuse). `npm run lint` est propre.
+
+### Limites connues (rappel)
+
+Pas de rappels ; GIF / HEIC / SVG refusés ; todos hors sauvegardes ; pas de corbeille ; import un par un ; export JSON sans les fichiers d'images. **Rien n'a été déployé, publié ni testé à la main** : voir `docs/tests/v6-restant.md`.
+
 ## [6.7.0] - 2026-11-05
 
 ### Ajouté

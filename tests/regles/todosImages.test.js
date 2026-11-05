@@ -103,7 +103,7 @@ describe("Storage todos/{uid}/{todoId}/{nom}", () => {
 });
 
 describe("Firestore : champ images du todo", () => {
-  const sujet = (d) =>
+  const sujet = () =>
     env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), "users/alice/sujets/s1"), { nom: "S", ordre: 1 }));
   const meta = (d) => doc(d, "users/alice/todosMeta/usage");
   const tod = (d) => doc(d, "users/alice/todos/t1");

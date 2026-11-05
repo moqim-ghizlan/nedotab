@@ -2,6 +2,7 @@ import { FILTRES, TRIS, DELAI_RECHERCHE_MS } from "../../core/rechercheTodos.js"
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirMenu } from "../menuContextuel.js";
+import { ecrireLocal, lireLocal } from "./memoireLocale.js";
 
 /**
  * The bar under the add field of a subject (V6.5): search (150 ms after the last key), a filter
@@ -12,8 +13,15 @@ import { ouvrirMenu } from "../menuContextuel.js";
  * @param {object} d
  * @param {(etat: { requete: string, filtre: string, tri: string, portee: string }) => void} d.onChange
  */
-export function creerBarreFiltres({ onChange }) {
+export function creerBarreFiltres({ onChange, memoriser = false }) {
   const etat = { requete: "", filtre: "tous", tri: "manuel", portee: "sujet" };
+  // V6.8: the last filter and sort of this device (menu choices only, never the search text).
+  if (memoriser) {
+    const f = lireLocal("filtre");
+    const t = lireLocal("tri");
+    if (FILTRES.some((x) => x.id === f)) etat.filtre = f;
+    if (TRIS.some((x) => x.id === t)) etat.tri = t;
+  }
   let minuteur = null;
 
   const champ = el("input", {
@@ -63,6 +71,10 @@ export function creerBarreFiltres({ onChange }) {
 
   const changer = (suite) => {
     Object.assign(etat, suite);
+    if (memoriser && ("filtre" in suite || "tri" in suite)) {
+      ecrireLocal("filtre", etat.filtre);
+      ecrireLocal("tri", etat.tri);
+    }
     afficher();
     onChange({ ...etat });
   };

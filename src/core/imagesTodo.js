@@ -102,7 +102,7 @@ export const cheminValide = (uid, chemin) =>
   new RegExp(`^todos/${uid}/[^/]+/[0-9a-f]{32}\\.(jpg|png|webp)$`).test(String(chemin));
 
 // Control characters and direction marks never belong to a note.
-const INTERDITS = /[\p{Cc}​-‏‪-‮⁦-⁩﻿]/gu;
+const INTERDITS = /[\p{Cc}\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/gu;
 /** Note cleaned (plain text, 300 characters). */
 export const nettoyerNote = (note) =>
   [...String(note ?? "").replace(INTERDITS, " ").replace(/[ \t]+/g, " ").trim()].slice(0, NOTE_MAX).join("");

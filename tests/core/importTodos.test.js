@@ -122,7 +122,7 @@ describe("validerImportTodos", () => {
     expect(r.resume.ignores).toBe(1);
   });
   it("noms de sujet nettoyés (contrôle, direction) et couleur inconnue remise à zéro", () => {
-    const f = JSON.stringify({ format: FORMAT_TODOS, todos: { sujets: [{ id: "s1", nom: "Tra‮vail", couleur: "fluo" }], todos: [{ sujetId: "s1", titre: "t" }] } });
+    const f = JSON.stringify({ format: FORMAT_TODOS, todos: { sujets: [{ id: "s1", nom: "Tra\u202Evail", couleur: "fluo" }], todos: [{ sujetId: "s1", titre: "t" }] } });
     const r = validerImportTodos(f);
     expect(r.plan.sujets[0]).toMatchObject({ nom: "Tra vail", couleur: null });
   });

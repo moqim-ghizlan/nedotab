@@ -96,7 +96,7 @@ describe("noms et chemins", () => {
 
 describe("notes et métadonnées", () => {
   it("la note est du texte brut de 300 caractères, sans contrôle ni direction", () => {
-    expect(nettoyerNote("  a‮b\u0000c  ")).toBe("a b c");
+    expect(nettoyerNote("  a\u202Eb\u0000c  ")).toBe("a b c");
     expect(nettoyerNote("x".repeat(400))).toHaveLength(300);
     expect(nettoyerNote(null)).toBe("");
   });

@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { outilMarkdown, rendreMarkdown } from "../../src/core/markdown.js";
+import { outilMarkdown } from "../../src/core/markdown.js";
+import { rendreMarkdown } from "../../src/ui/todos/rendreMarkdown.js";
 
 const rendre = (texte) => {
   const boite = document.createElement("div");

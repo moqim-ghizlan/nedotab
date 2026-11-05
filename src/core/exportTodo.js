@@ -32,9 +32,9 @@ export const NOM_MAX = 80;
 export const SANS_TITRE = "sans-titre";
 
 // Control characters and the characters that reverse the reading direction (RTL tricks).
-// eslint-disable-next-line no-control-regex
 // (The zero-width joiner U+200D stays: it glues the parts of an emoji such as a family.)
-const TROMPEURS = /[\u0000-\u001f\u007f-\u009f​‎‏‪-‮⁦-⁩﻿]/g;
+// eslint-disable-next-line no-control-regex
+const TROMPEURS = /[\u0000-\u001f\u007f-\u009f\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
 const INTERDITS_WINDOWS = /[\\/:*?"<>|]/g;
 const RESERVES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 

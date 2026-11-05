@@ -2,7 +2,7 @@ import { decider, memoireSession } from "../../core/conflitTodo.js";
 import { creerDiffere } from "../../core/differe.js";
 import { ajouterJours, jourLocal, lundiProchain } from "../../core/echeances.js";
 import { ilYA } from "../../core/espacePartage.js";
-import { outilMarkdown, rendreMarkdown } from "../../core/markdown.js";
+import { outilMarkdown } from "../../core/markdown.js";
 import { DESCRIPTION_MAX, TITRE_MAX, echeanceValide, longueur } from "../../core/todos.js";
 import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
@@ -10,6 +10,7 @@ import { icone } from "../icones.js";
 import { rapatrierToasts, toast } from "../toast.js";
 import { ouvrirMenu } from "../menuContextuel.js";
 import { copierMarkdown, exporterTodo } from "./exporterTodo.js";
+import { rendreMarkdown } from "./rendreMarkdown.js";
 import { creerGalerieTodo } from "./galerieTodo.js";
 import { SANS_TITRE } from "./ligneTodo.js";
 

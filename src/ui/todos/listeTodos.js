@@ -25,7 +25,7 @@ const REDUIT = () => globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")
  * @param {string} d.sujetId
  * @param {import("../../core/store.js").Store} [d.store]
  */
-export function creerListeTodos({ donnees, sujetId, store }) {
+export function creerListeTodos({ donnees, sujetId, store, memoriser = false }) {
   const aFaire = new Map();
   const faits = new Map();
   const partout = new Map();
@@ -64,6 +64,7 @@ export function creerListeTodos({ donnees, sujetId, store }) {
   );
   const formulaire = el("form", { class: "todos-ajout", novalidate: true }, champ, ajouter, nouveau);
   const barre = creerBarreFiltres({
+    memoriser,
     onChange: (fo) => {
       if (fo.portee === "tous" && donnees.etat().tousStatut === "vide") donnees.chargerTous();
       if (fo.portee === "sujet") donnees.viderTous();
