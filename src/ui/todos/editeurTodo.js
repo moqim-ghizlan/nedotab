@@ -7,6 +7,8 @@ import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { rapatrierToasts, toast } from "../toast.js";
+import { ouvrirMenu } from "../menuContextuel.js";
+import { copierMarkdown, exporterTodo } from "./exporterTodo.js";
 import { creerGalerieTodo } from "./galerieTodo.js";
 import { SANS_TITRE } from "./ligneTodo.js";
 
@@ -124,6 +126,18 @@ export function ouvrirEditeur({
     },
     icone("oeil", { taille: 18 }),
   );
+  const boutonPlus = el(
+    "button",
+    {
+      type: "button",
+      class: "todos-fermer",
+      "aria-haspopup": "menu",
+      "aria-label": "Plus d'actions",
+      title: "Plus d'actions",
+      onclick: () => menuPlus(),
+    },
+    icone("points", { taille: 18 }),
+  );
   const boutonFermer = el(
     "button",
     {
@@ -166,6 +180,7 @@ export function ouvrirEditeur({
         el("span", { class: "todo-editeur-espace" }),
         boutonApercu,
         ...complements.map((c) => c.bouton),
+        boutonPlus,
         boutonFermer,
       ),
       bandeau,
@@ -373,6 +388,49 @@ export function ouvrirEditeur({
     }
   });
   // Escape: the native "cancel" of the dialog closes it; the "close" event below sends the rest.
+
+  // --- Menu "⋯": export (V6.6) --------------------------------------------------------------------
+  /** The todo as it is on screen (what was typed counts even if not yet sent). */
+  function todoCourant() {
+    const t = donnees.trouver(id);
+    return {
+      ...t,
+      titre: titre.value.trim(),
+      description: description.value,
+      echeance: echeance.value || null,
+    };
+  }
+  const sujetCourantObjet = () => donnees.etat().sujets.find((s) => s.id === sujetCourant) ?? null;
+
+  function menuPlus() {
+    const r = boutonPlus.getBoundingClientRect();
+    const existe = !!id && !!donnees.trouver(id);
+    const avecImages = existe && (donnees.trouver(id).images?.length ?? 0) > 0;
+    ouvrirMenu({
+      x: r.left,
+      y: r.bottom + 4,
+      libelle: "Plus d'actions",
+      retourFocus: boutonPlus,
+      entrees: [
+        {
+          libelle: avecImages ? "Exporter en .zip" : "Exporter en .md",
+          desactive: !existe,
+          info: "Écrivez d'abord quelque chose",
+          onChoix: () => {
+            differe.vider();
+            exporterTodo({ todo: todoCourant(), sujet: sujetCourantObjet(), lireImage: (c) => donnees.lireImage(c) });
+          },
+        },
+        {
+          libelle: "Copier en Markdown",
+          desactive: !existe,
+          info: "Écrivez d'abord quelque chose",
+          // Called straight from the click: the clipboard needs a user gesture.
+          onChoix: () => copierMarkdown({ todo: todoCourant(), sujet: sujetCourantObjet() }),
+        },
+      ],
+    });
+  }
 
   // --- Snapshots from the server --------------------------------------------------------------------
   const sale = (cle) => cle in enAttente;

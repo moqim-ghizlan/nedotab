@@ -2,6 +2,20 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.6.0] - 2026-11-05
+
+### Ajouté
+
+- **Export d'un todo** (menu « ⋯ » de l'éditeur) : un fichier `.md` sans image, une archive `.zip` (le `.md` et un dossier `images/`) avec des images. En-tête YAML (titre, dates ISO, échéance, fait, sujet), description telle quelle, images numérotées avec leur note en italique, chemins relatifs. Format documenté dans `docs/exports.md`.
+- **Copier en Markdown** (texte seul).
+- Images lues une par une avec progression (« Préparation… 3/7 ») et bouton Annuler ; hors ligne avec des images : « Hors ligne : les images ne sont pas disponibles ». Sur iPhone, si la feuille de partage refuse un geste trop ancien, un bouton « Partager » donne un nouveau geste.
+- Nom de fichier sûr sous Windows et macOS (caractères interdits, noms réservés, points finaux, emoji jamais coupé en deux).
+
+### Notes
+
+- **L'export d'un sujet entier est abandonné** (décision de l'utilisateur), non implémenté.
+- Aucune permission ni dépendance ajoutée (`downloads` non utilisée, ZIP maison).
+
 ## [6.5.0] - 2026-11-05
 
 ### Ajouté
