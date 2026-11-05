@@ -14,6 +14,10 @@ fi
 : "${DOMAINE:?variable DOMAINE manquante}"
 [[ "$DOMAINE" =~ ^[A-Za-z0-9.-]+$ ]] || { echo "Domaine invalide." >&2; exit 1; }
 [ -s /etc/vpn-agent/env ] || { echo "Lancer d'abord 20-agent.sh." >&2; exit 1; }
+# Adresses des fonctions de profils, rapport : les fonctions v2 n'ont pas toutes la même forme
+# d'adresse (vpnAgentSynchro est en *.run.app) : on les écrit EXPLICITEMENT dans l'environnement.
+URL_FONCTIONS="${URL_FONCTIONS:-https://europe-west1-nedotab-app.cloudfunctions.net}"
+[[ "$URL_FONCTIONS" =~ ^https://[A-Za-z0-9.-]+$ ]] || { echo "URL_FONCTIONS invalide." >&2; exit 1; }
 
 RACINE="$(dirname "$(readlink -f "$0")")/.."
 [ -f "$RACINE/wireguard/docker-compose.yml" ] || RACINE="$HOME"
@@ -89,6 +93,15 @@ if [ "${PRET:-0}" != 1 ]; then
   exit 1
 fi
 : > /opt/wg-easy/init.env
+
+# --- Adresses des fonctions pour les agents (profils, dépôt, rapport) : remplacées à chaque lancement
+sed -i '/^VPN_WG_URL_/d' /etc/vpn-agent/env
+printf 'VPN_WG_URL_PROFILS=%s/vpnAgentProfils
+VPN_WG_URL_DEPOT=%s/vpnAgentDeposerProfil
+VPN_WG_URL_RAPPORT=%s/vpnAgentRapport
+'   "$URL_FONCTIONS" "$URL_FONCTIONS" "$URL_FONCTIONS" >> /etc/vpn-agent/env
+chown root:vpn-agent /etc/vpn-agent/env
+chmod 640 /etc/vpn-agent/env
 
 # --- Agent de profils et isolement
 id vpn-agent >/dev/null 2>&1 || { echo "Utilisateur vpn-agent absent : lancer 20-agent.sh." >&2; exit 1; }

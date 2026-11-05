@@ -49,7 +49,7 @@ Copier les fichiers : `scp -r serveur admin-vpn@nedotab-vpn.duckdns.org:~/`
 
 | # | Commande | Attendu |
 |---|---|---|
-| a | `sudo bash ~/scripts/20-wireguard.sh` avec `DOMAINE=nedotab-vpn.duckdns.org` | affiche **une seule fois** le mot de passe `admin-wg` : le ranger tout de suite |
+| a | `sudo DOMAINE=nedotab-vpn.duckdns.org URL_FONCTIONS=https://europe-west1-nedotab-app.cloudfunctions.net bash ~/scripts/20-wireguard.sh` (les adresses de `vpnAgentProfils`, `vpnAgentDeposerProfil`, `vpnAgentRapport` sont écrites dans `/etc/vpn-agent/env`) | affiche **une seule fois** le mot de passe `admin-wg` : le ranger tout de suite |
 | b | `sudo bash ~/scripts/21-rapport.sh` | « OK : rapport de volumes toutes les 15 minutes » |
 | c | `sudo AGE_DESTINATAIRE=age1… bash ~/scripts/22-sauvegarde.sh` | première archive dans `/var/backups/vpn` |
 | d | `journalctl -u vpn-wg-agent -n 5` | « wg : N profils, +X -Y, Z deposes » |
