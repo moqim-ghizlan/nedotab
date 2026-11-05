@@ -1,3 +1,4 @@
+import { bornesSemaine, compterEnRetard, jourLocal, msAvantMinuit } from "../../core/echeances.js";
 import { creerSujet, estPleinSujets, renommerSujet, trierSujets } from "../../core/sujets.js";
 import {
   PAGE_TODOS,
@@ -40,6 +41,14 @@ export function creerDonneesTodos({ charger, uid }) {
     todosStatut: "chargement",
     todosPlein: false,
     limite: PAGE_TODOS,
+    // "Aujourd'hui" view and search in every subject (V6.5).
+    aujourdhui: [],
+    aujourdhuiStatut: "chargement",
+    aujourdhuiPlein: false,
+    enRetard: 0,
+    tous: [],
+    tousStatut: "vide", // vide | chargement | ok | erreur
+    tousPlein: false,
   };
   /** Ticks waiting for 300 ms without a click: id -> { fait, minuteur } (double-click safe). */
   const cochages = new Map();
@@ -53,14 +62,20 @@ export function creerDonneesTodos({ charger, uid }) {
     return trierSujets(etat.sujets.filter((s) => !suppressions.has(`sujet:${s.id}`)));
   }
 
-  /** Todos of the open subject: removals hidden, pending ticks applied, in manual order. */
-  function todosVisibles() {
-    return trierTodos(
-      etat.todos
-        .filter((t) => !suppressions.has(`todo:${t.id}`))
-        .map((t) => (cochages.has(t.id) ? { ...t, fait: cochages.get(t.id).fait } : t)),
-    );
-  }
+  /** Removals hidden, pending ticks applied. */
+  const appliquer = (liste) =>
+    liste
+      .filter((t) => !suppressions.has(`todo:${t.id}`))
+      .map((t) => (cochages.has(t.id) ? { ...t, fait: cochages.get(t.id).fait } : t));
+
+  /** Todos of the open subject, in manual order. */
+  const todosVisibles = () => trierTodos(appliquer(etat.todos));
+
+  /** A todo known by any of the lists on screen (subject, "Aujourd'hui", search everywhere). */
+  const trouver = (id) =>
+    etat.todos.find((t) => t.id === id) ??
+    etat.aujourdhui.find((t) => t.id === id) ??
+    etat.tous.find((t) => t.id === id);
 
   async function demarrer() {
     const id = uid();
@@ -172,7 +187,7 @@ export function creerDonneesTodos({ charger, uid }) {
   }
 
   function cocher(id) {
-    const t = etat.todos.find((x) => x.id === id);
+    const t = trouver(id);
     if (!t) return;
     const actuel = cochages.has(id) ? cochages.get(id).fait : t.fait;
     clearTimeout(cochages.get(id)?.minuteur);
@@ -186,7 +201,7 @@ export function creerDonneesTodos({ charger, uid }) {
     if (!p) return;
     clearTimeout(p.minuteur);
     cochages.delete(id);
-    const t = etat.todos.find((x) => x.id === id);
+    const t = trouver(id);
     if (t && t.fait !== p.fait) {
       fb()
         .then((m) => m.majTodo(uid(), id, { fait: p.fait }, { sujetId: t.sujetId }))
@@ -212,7 +227,7 @@ export function creerDonneesTodos({ charger, uid }) {
 
   /** Partial update: `champs` holds only what changed. */
   async function majTodo(id, champs) {
-    const t = etat.todos.find((x) => x.id === id);
+    const t = trouver(id);
     try {
       await (await fb()).majTodo(uid(), id, champs, { sujetId: t?.sujetId });
       return { ok: true };
@@ -223,7 +238,7 @@ export function creerDonneesTodos({ charger, uid }) {
 
   /** Hides the todo at once and removes it after the delay. */
   function supprimerTodo(id) {
-    const t = etat.todos.find((x) => x.id === id);
+    const t = trouver(id);
     if (!t) return { annuler() {} };
     return differer(`todo:${id}`, async () =>
       (await fb()).supprimerTodo(uid(), id, {
@@ -260,7 +275,7 @@ export function creerDonneesTodos({ charger, uid }) {
 
   /** Moves a todo to another subject (one batch with both counters): the top of its list. */
   async function deplacerVersSujet(id, versId) {
-    const t = etat.todos.find((x) => x.id === id);
+    const t = trouver(id);
     if (!t) return { ok: false, erreur: "Ce todo n'existe plus." };
     if (!etat.sujets.some((s) => s.id === versId))
       return { ok: false, erreur: "Ce sujet n'existe plus. Rien n'a été déplacé." };
@@ -277,6 +292,117 @@ export function creerDonneesTodos({ charger, uid }) {
     } catch (e) {
       return { ok: false, erreur: messageErreur(e) };
     }
+  }
+
+  // --- "Aujourd'hui", late counter, search everywhere (V6.5) ------------------------------------
+  let arretAujourdhui = null;
+  let jourVu = jourLocal();
+
+  async function demarrerAujourdhui() {
+    const id = uid();
+    if (!id || arretAujourdhui) return;
+    try {
+      const m = await fb();
+      if (arretAujourdhui) return;
+      arretAujourdhui = m.ecouterAujourdhui(
+        id,
+        bornesSemaine(jourLocal()).fin,
+        (liste, meta) => {
+          etat.aujourdhui = liste;
+          etat.aujourdhuiStatut = "ok";
+          etat.aujourdhuiPlein = meta.plein;
+          etat.enRetard = compterEnRetard(liste);
+          notifier();
+        },
+        () => {
+          etat.aujourdhuiStatut = "erreur";
+          notifier();
+        },
+      );
+    } catch {
+      etat.aujourdhuiStatut = "erreur";
+      notifier();
+    }
+  }
+
+  /** Follows the "Aujourd'hui" view (one listener; stopped when the tab is left). */
+  function suivreAujourdhui(actif) {
+    if (!actif) {
+      arretAujourdhui?.();
+      arretAujourdhui = null;
+      return;
+    }
+    etat.aujourdhuiStatut = "chargement";
+    demarrerAujourdhui();
+    notifier();
+  }
+
+  /** The "en retard" counter of the button: from the view when it runs, else one counting query. */
+  async function rafraichirRetard() {
+    const id = uid();
+    if (!id) return;
+    if (arretAujourdhui) {
+      etat.enRetard = compterEnRetard(etat.aujourdhui);
+      return notifier();
+    }
+    try {
+      etat.enRetard = await (await fb()).compterEnRetardTodos(id, jourLocal());
+      notifier();
+    } catch {
+      /* offline: the last value stays */
+    }
+  }
+
+  /** Midnight, or back to a page left open: the labels and the view follow the new day. */
+  function surChangementDeJour() {
+    const j = jourLocal();
+    if (j === jourVu) return;
+    jourVu = j;
+    if (arretAujourdhui) {
+      arretAujourdhui();
+      arretAujourdhui = null;
+      demarrerAujourdhui();
+    }
+    rafraichirRetard();
+    notifier();
+  }
+  let minuit = null;
+  function armerMinuit() {
+    clearTimeout(minuit);
+    minuit = setTimeout(() => {
+      surChangementDeJour();
+      armerMinuit();
+    }, msAvantMinuit());
+  }
+  armerMinuit();
+  if (typeof document !== "undefined")
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) surChangementDeJour();
+    });
+
+  /** "Tous les sujets": the next 100 todos, only when the user asks for them. */
+  async function chargerTous() {
+    const id = uid();
+    if (!id || etat.tousStatut === "chargement") return;
+    etat.tousStatut = "chargement";
+    notifier();
+    try {
+      const dernier = etat.tous.at(-1)?.creeLe ?? null;
+      const page = await (await fb()).lirePageTousLesTodos(id, dernier);
+      const connus = new Set(etat.tous.map((t) => t.id));
+      etat.tous = [...etat.tous, ...page.todos.filter((t) => !connus.has(t.id))];
+      etat.tousPlein = page.plein;
+      etat.tousStatut = "ok";
+    } catch {
+      etat.tousStatut = "erreur";
+    }
+    notifier();
+  }
+
+  function viderTous() {
+    etat.tous = [];
+    etat.tousStatut = "vide";
+    etat.tousPlein = false;
   }
 
   /** Creation of the editor (V6.3): the id is known first so that the next writes can queue. */
@@ -408,7 +534,13 @@ export function creerDonneesTodos({ charger, uid }) {
 
   return {
     /** Snapshot for the views. Subjects waiting to be removed are left out. */
-    etat: () => ({ ...etat, sujets: visibles(), todos: todosVisibles() }),
+    etat: () => ({
+      ...etat,
+      sujets: visibles(),
+      todos: todosVisibles(),
+      aujourdhui: appliquer(etat.aujourdhui),
+      tous: appliquer(etat.tous),
+    }),
     abonner(f) {
       abonnes.add(f);
       return () => abonnes.delete(f);
@@ -431,6 +563,12 @@ export function creerDonneesTodos({ charger, uid }) {
     deplacerVersSujet,
     creerTodoAvecId,
     viderCochages: vider,
+    suivreAujourdhui,
+    rafraichirRetard,
+    chargerTous,
+    viderTous,
+    enRetard: () => etat.enRetard,
+    trouver,
     /** Images of a todo (V6.4): each call loads the module on demand. */
     envoyerImage: async (todoId, image, options) =>
       (await fb()).envoyerImageTodo(uid(), todoId, image, options),
@@ -448,6 +586,10 @@ export function creerDonneesTodos({ charger, uid }) {
     notifier,
     reinitialiser() {
       arreter();
+      suivreAujourdhui(false);
+      viderTous();
+      etat.aujourdhui = [];
+      etat.enRetard = 0;
       etat.sujetOuvert = null;
       etat.todos = [];
       etat.sujets = [];

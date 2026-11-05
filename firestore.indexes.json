@@ -19,6 +19,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "fait",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "echeance",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "todos",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "sujetId",
           "order": "ASCENDING"
         },

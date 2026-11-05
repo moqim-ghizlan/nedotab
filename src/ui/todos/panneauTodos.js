@@ -3,6 +3,7 @@ import { icone } from "../icones.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
 import { creerListeSujets } from "./listeSujets.js";
 import { creerListeTodos } from "./listeTodos.js";
+import { creerVueAujourdhui } from "./vueAujourdhui.js";
 
 const grandEcran = () => globalThis.matchMedia?.("(min-width: 900px)").matches;
 const ID_TITRE = "todos-titre";
@@ -39,6 +40,8 @@ export function creerPanneauTodos({
   let retourFocus = null;
   let sujetId = null; // null: list of the subjects
   let vueSujet = null;
+  let onglet = "sujets"; // sujets | aujourdhui (V6.5)
+  let vueAujourdhui = null;
 
   const pastille = el("span", { class: "todos-pastille", hidden: true, "aria-hidden": "true" });
   const bouton = el(
@@ -82,6 +85,31 @@ export function creerPanneauTodos({
     icone("fermer", { taille: 18 }),
   );
   const corps = el("div", { class: "todos-corps" });
+  // Tabs of the home of the panel (V6.5): the subjects, and what is due in every subject.
+  const ongletBouton = (id, libelle) =>
+    el("button", {
+      type: "button",
+      role: "tab",
+      class: "todos-onglet",
+      id: `todos-onglet-${id}`,
+      "aria-selected": String(id === onglet),
+      texte: libelle,
+      onclick: () => choisirOnglet(id),
+      onkeydown: (e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          choisirOnglet(id === "sujets" ? "aujourdhui" : "sujets", true);
+        }
+      },
+    });
+  const ongletSujets = ongletBouton("sujets", "Sujets");
+  const ongletAujourdhui = ongletBouton("aujourdhui", "Aujourd'hui");
+  const onglets = el(
+    "div",
+    { class: "todos-onglets", role: "tablist", "aria-label": "Todos", hidden: true },
+    ongletSujets,
+    ongletAujourdhui,
+  );
   const panneau = el(
     "aside",
     {
@@ -99,6 +127,7 @@ export function creerPanneauTodos({
       el("div", { class: "todos-entete-titre" }, titre, etatReseau),
       fermerBouton,
     ),
+    onglets,
     corps,
   );
 
@@ -137,6 +166,24 @@ export function creerPanneauTodos({
     if (corps.firstElementChild !== noeud || corps.childElementCount !== 1) corps.replaceChildren(noeud);
   }
 
+  function choisirOnglet(id, focus = false) {
+    if (id === onglet) return;
+    onglet = id;
+    for (const [bouton, nom] of [[ongletSujets, "sujets"], [ongletAujourdhui, "aujourdhui"]]) {
+      bouton.setAttribute("aria-selected", String(nom === id));
+      bouton.tabIndex = nom === id ? 0 : -1;
+    }
+    if (id === "aujourdhui") {
+      vueAujourdhui ??= creerVueAujourdhui({ donnees, store });
+      donnees.suivreAujourdhui(true);
+    } else {
+      donnees.suivreAujourdhui(false);
+      donnees.rafraichirRetard();
+    }
+    if (focus) (id === "sujets" ? ongletSujets : ongletAujourdhui).focus();
+    rendre();
+  }
+
   function ouvrirListe() {
     vueSujet?.liberer?.();
     vueSujet = null;
@@ -144,7 +191,7 @@ export function creerPanneauTodos({
     titre.textContent = "Todos";
     retour.hidden = true;
     rendre();
-    sujets.racine.querySelector(".todos-sujet-corps")?.focus();
+    (onglet === "sujets" ? sujets.racine.querySelector(".todos-sujet-corps") : null)?.focus();
   }
 
   function ouvrirSujet(id) {
@@ -174,6 +221,7 @@ export function creerPanneauTodos({
   function rendre() {
     if (!ouvert) return;
     rendreEtat();
+    onglets.hidden = !disponible() || sujetId !== null;
     if (!disponible()) return afficher(nonConnecte);
     const e = donnees.etat();
     if (e.statut === "erreur") return afficher(erreur);
@@ -190,6 +238,10 @@ export function creerPanneauTodos({
         return;
       }
     }
+    if (onglet === "aujourdhui" && vueAujourdhui) {
+      afficher(vueAujourdhui.racine);
+      return vueAujourdhui.rendre();
+    }
     if (e.statut === "chargement" && e.sujets.length === 0) return afficher(chargement);
     afficher(sujets.racine);
     sujets.rendre();
@@ -202,8 +254,13 @@ export function creerPanneauTodos({
 
   /** The dot of the button is the number of late todos (V6.5); here, room for it only. */
   function majPastille() {
-    pastille.hidden = !(donnees.enRetard?.() > 0);
-    if (!pastille.hidden) pastille.textContent = "";
+    const n = donnees.enRetard();
+    pastille.hidden = !(n > 0);
+    pastille.textContent = n > 99 ? "99+" : String(n);
+    bouton.setAttribute(
+      "aria-label",
+      `${ouvert ? "Fermer" : "Ouvrir"} les todos${n > 0 ? `, ${n} en retard` : ""}`,
+    );
   }
 
   // --- Open / close ----------------------------------------------------------------------------------
@@ -214,8 +271,9 @@ export function creerPanneauTodos({
     retourFocus = document.activeElement;
     panneau.hidden = false;
     bouton.setAttribute("aria-expanded", "true");
-    bouton.setAttribute("aria-label", "Fermer les todos");
     if (disponible()) donnees.demarrer();
+    if (onglet === "aujourdhui") donnees.suivreAujourdhui(true);
+    majPastille();
     rendre();
     // No automatic focus on a phone: the keyboard would pop up on its own.
     if (grandEcran() && disponible() && !sujetId) sujets.focusAjout();
@@ -230,8 +288,10 @@ export function creerPanneauTodos({
     vueSujet?.vider?.();
     panneau.hidden = true;
     bouton.setAttribute("aria-expanded", "false");
-    bouton.setAttribute("aria-label", "Ouvrir les todos");
     document.removeEventListener("keydown", surTouche);
+    donnees.suivreAujourdhui(false);
+    donnees.rafraichirRetard();
+    majPastille();
     document.removeEventListener("pointerdown", surExterieur);
     if (document.hidden) donnees.arreter();
     (retourFocus?.isConnected ? retourFocus : bouton).focus?.();
@@ -288,9 +348,11 @@ export function creerPanneauTodos({
       vueSujet = null;
       retour.hidden = true;
       titre.textContent = "Todos";
-    } else if (ouvert) {
-      donnees.demarrer();
+    } else {
+      if (ouvert) donnees.demarrer();
+      donnees.rafraichirRetard();
     }
+    majPastille();
     rendre();
   }
 

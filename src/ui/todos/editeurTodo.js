@@ -1,4 +1,5 @@
 import { creerDiffere } from "../../core/differe.js";
+import { ajouterJours, jourLocal, lundiProchain } from "../../core/echeances.js";
 import { ilYA } from "../../core/espacePartage.js";
 import { outilMarkdown, rendreMarkdown } from "../../core/markdown.js";
 import { DESCRIPTION_MAX, TITRE_MAX, echeanceValide, longueur } from "../../core/todos.js";
@@ -84,6 +85,21 @@ export function ouvrirEditeur({
   });
   const compteur = el("span", { class: "todo-editeur-compteur", "aria-live": "polite", hidden: true });
   const echeance = el("input", { type: "date", class: "todos-champ", id: "todo-echeance" });
+  const rapide = (libelle, jour) =>
+    el("button", {
+      type: "button",
+      class: "todo-rapide",
+      texte: libelle,
+      onclick: () => poserEcheance(jour()),
+    });
+  const raccourcisDate = el(
+    "div",
+    { class: "todo-editeur-rapides", role: "group", "aria-label": "Échéances rapides" },
+    rapide("Aujourd'hui", () => jourLocal()),
+    rapide("Demain", () => ajouterJours(jourLocal(), 1)),
+    rapide("Semaine prochaine", () => lundiProchain(jourLocal())),
+    rapide("Effacer", () => null),
+  );
   const choixSujet = el("select", { class: "todos-champ", id: "todo-sujet", "aria-label": "Sujet" });
   const fait = el("input", { type: "checkbox", id: "todo-fait" });
   const dates = el("p", { class: "todo-editeur-dates" });
@@ -165,6 +181,7 @@ export function ouvrirEditeur({
         { class: "todo-editeur-pied" },
         el("label", { class: "todo-editeur-label", for: "todo-echeance" }, "Échéance"),
         echeance,
+        raccourcisDate,
         el("label", { class: "todo-editeur-label", for: "todo-sujet" }, "Sujet"),
         choixSujet,
         el("label", { class: "todo-editeur-label todo-editeur-fait", for: "todo-fait" }, fait, "Fait"),
@@ -286,6 +303,12 @@ export function ouvrirEditeur({
     planifier("echeance", v);
     differe.vider();
   });
+  /** A quick button: the same path as the date field (null erases the due date). */
+  function poserEcheance(jour) {
+    echeance.value = jour ?? "";
+    planifier("echeance", jour);
+    differe.vider();
+  }
   fait.addEventListener("change", () => {
     if (id) donnees.cocher(id);
   });

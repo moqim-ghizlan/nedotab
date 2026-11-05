@@ -2,6 +2,24 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.5.0] - 2026-11-05
+
+### Ajouté
+
+- **Échéances lisibles** : « Aujourd'hui », « Demain », « Hier », « Dans 3 jours », « En retard de 2 jours », date courte au-delà d'une semaine. Toujours en toutes lettres (jamais la couleur seule) ; un todo en retard porte aussi une icône. Tous les calculs se font par **jour du calendrier local** (changement d'heure, 29 février, fin d'année testés), jamais par conversion UTC.
+- **Boutons rapides** dans l'éditeur : Aujourd'hui, Demain, Semaine prochaine (le lundi), Effacer.
+- **Recherche** dans le sujet (titre et description, sans accents ni casse, 150 ms après la dernière touche, mots trouvés surlignés sans HTML), **filtres** (Tous, À faire, Faits, En retard, Sans échéance), **tris** (ordre manuel, échéance, création, dernière modification) et bouton **« Tous les sujets »** qui charge 100 todos de plus à chaque clic (coût visible). L'ordre manuel ne se change que lorsque rien ne trie ni ne filtre.
+- **Onglet « Aujourd'hui »** : en retard, aujourd'hui, demain, cette semaine, tous sujets confondus, sections repliables avec compteurs, sujet rappelé sous chaque todo, 200 résultats au plus. Recalcul à minuit et au retour sur la page.
+- **Pastille** rouge sur le bouton avec le nombre de todos en retard.
+
+### À déployer (avec accord)
+
+`npm run deployer:regles` pour l'**index** (`fait`, `echeance`) **avant** d'utiliser l'onglet « Aujourd'hui ».
+
+### Écarté
+
+- **Rappels / notifications** : non livrés (aucune permission ajoutée, rien sur iPhone). Décision consignée dans `docs/decisions.md`.
+
 ## [6.4.0] - 2026-11-05
 
 ### Ajouté

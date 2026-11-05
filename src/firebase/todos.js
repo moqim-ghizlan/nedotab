@@ -105,6 +105,56 @@ export function ecouterCompteurs(uid, rappel, surErreur) {
   );
 }
 
+/**
+ * "Aujourd'hui" view (V6.5): the todos still to do due by the end of the week, all subjects, by due
+ * date, 200 at most. Index: `fait` + `echeance` (firestore.indexes.json). A todo without a due
+ * date holds `null` and is never returned: that is wanted.
+ */
+export function ecouterAujourdhui(uid, finSemaine, rappel, surErreur, taille = 200) {
+  return onSnapshot(
+    query(
+      todos(uid),
+      where("fait", "==", false),
+      where("echeance", "<=", finSemaine),
+      orderBy("echeance"),
+      limit(taille),
+    ),
+    { includeMetadataChanges: true },
+    (s) =>
+      rappel(
+        s.docs
+          .map((d) =>
+            lireTodo(d.id, d.data({ serverTimestamps: "estimate" }), d.metadata.hasPendingWrites),
+          )
+          .filter(Boolean),
+        { depuisCache: s.metadata.fromCache, plein: s.size >= taille },
+      ),
+    surErreur,
+  );
+}
+
+/** Number of todos still to do due before `aujourdhui` ("en retard"): one counting query. */
+export async function compterEnRetard(uid, aujourdhui) {
+  const s = await getCountFromServer(
+    query(todos(uid), where("fait", "==", false), where("echeance", "<", aujourdhui)),
+  );
+  return s.data().count;
+}
+
+/**
+ * A page of todos of every subject, newest first (search in "Tous les sujets": an explicit
+ * button, 100 at a time, so the cost is visible).
+ */
+export async function lirePageTous(uid, dernierCreeLe = null, taille = PAGE_TODOS) {
+  const base = [todos(uid), orderBy("creeLe", "desc")];
+  if (dernierCreeLe != null) base.push(startAfter(new Date(dernierCreeLe)));
+  const s = await getDocs(query(...base, limit(taille)));
+  return {
+    todos: s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean),
+    plein: s.size >= taille,
+  };
+}
+
 /** Todos of a subject after `dernierOrdre` (a "Voir plus" page). */
 export async function lirePageTodos(uid, sujetId, dernierOrdre, taille = PAGE_TODOS) {
   const s = await getDocs(

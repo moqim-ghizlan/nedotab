@@ -104,13 +104,16 @@ export {
 } from "./espacePartageFichiers.js";
 export {
   creerSujet as creerSujetTodos,
+  compterEnRetard as compterEnRetardTodos,
   creerTodo,
   deplacerTodo,
+  ecouterAujourdhui,
   ecouterCompteurs as ecouterCompteursTodos,
   ecouterSujets,
   ecouterTodos,
   ecrireOrdres as ecrireOrdresTodos,
   lirePageTodos,
+  lirePageTous as lirePageTousLesTodos,
   lireTout as lireToutLesTodos,
   majSujet,
   majTodo,
