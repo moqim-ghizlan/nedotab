@@ -806,3 +806,7 @@ input[type="date"].todos-champ {
   /* No hover on a touch screen: the grip and the "..." stay visible. */
   .todos-vue--libre .todo-poignee { visibility: hidden; }
 }
+
+.todos-retour[hidden],
+.todos-etat[hidden],
+.todos-vue [hidden] { display: none; }
