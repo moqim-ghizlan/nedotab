@@ -96,10 +96,11 @@ fi
 
 # --- Adresses des fonctions pour les agents (profils, dépôt, rapport) : remplacées à chaque lancement
 sed -i '/^VPN_WG_URL_/d' /etc/vpn-agent/env
-printf 'VPN_WG_URL_PROFILS=%s/vpnAgentProfils
-VPN_WG_URL_DEPOT=%s/vpnAgentDeposerProfil
-VPN_WG_URL_RAPPORT=%s/vpnAgentRapport
-'   "$URL_FONCTIONS" "$URL_FONCTIONS" "$URL_FONCTIONS" >> /etc/vpn-agent/env
+{
+  echo "VPN_WG_URL_PROFILS=${URL_FONCTIONS}/vpnAgentProfils"
+  echo "VPN_WG_URL_DEPOT=${URL_FONCTIONS}/vpnAgentDeposerProfil"
+  echo "VPN_WG_URL_RAPPORT=${URL_FONCTIONS}/vpnAgentRapport"
+} >> /etc/vpn-agent/env
 chown root:vpn-agent /etc/vpn-agent/env
 chmod 640 /etc/vpn-agent/env
 
