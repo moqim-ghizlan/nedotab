@@ -17,6 +17,9 @@ done
 
 # Journal réduit de Squid : « compte octets_reçus octets_envoyés ». logformat sans %ru ni %>a.
 CONF=/etc/squid/squid.conf
+# « access_log none » (V5.1) masque TOUS les journaux suivants : constaté le 2026-11-05, le journal de
+# volumes restait vide. On le retire : le seul journal restant est celui des volumes (sans adresse).
+sed -i '/^access_log none$/d' "$CONF"
 if ! grep -q '^logformat octets ' "$CONF"; then
   cp -a "$CONF" "$CONF.avant-v59"
   cat >> "$CONF" <<'CONF'

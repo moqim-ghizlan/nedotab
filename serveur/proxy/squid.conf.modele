@@ -35,7 +35,11 @@ forwarded_for delete
 via off
 httpd_suppress_version_string on
 cache deny all
+# V5.1 : aucun journal (sans cette ligne, Squid écrirait les adresses visitées dans access.log).
+# V5.9 : 21-rapport.sh RETIRE cette ligne (elle masquerait tout autre journal) et ajoute le SEUL
+# journal, celui des VOLUMES (compte + octets, jamais une adresse de site).
+access_log none » : il masquerait
+# ce journal (constaté sur le serveur).
 access_log none
-# V5.9 : 21-rapport.sh ajoute un journal de VOLUMES (compte + octets, jamais une adresse de site).
 cache_store_log none
 strip_query_terms on
