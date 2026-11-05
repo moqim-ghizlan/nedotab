@@ -177,7 +177,7 @@ describe("supprimer", () => {
     p.panneau.querySelector('[data-id="a"]').dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     [...document.querySelectorAll(".menu-entree")].find((b) => b.textContent === "Supprimer").click();
     await vi.advanceTimersByTimeAsync(5100);
-    expect(fb.supprimerTodo).toHaveBeenCalledWith("u1", "a", { sujetId: "s1", fait: false });
+    expect(fb.supprimerTodo).toHaveBeenCalledWith("u1", "a", { sujetId: "s1", fait: false, images: [] });
   });
 });
 

@@ -15,9 +15,11 @@ import {
   where,
   writeBatch,
 } from "firebase/firestore";
+import { octetsDesImages } from "../core/imagesTodo.js";
 import { lireSujet } from "../core/sujets.js";
 import { PAGE_TODOS, lireTodo } from "../core/todos.js";
 import { obtenirApp } from "./app.js";
+import { supprimerDossierTodo, supprimerFichiers } from "./todosImages.js";
 
 /**
  * Todos (V6.0): users/{uid}/sujets/{id}, users/{uid}/todos/{id} (flat, with a `sujetId` field:
@@ -165,11 +167,20 @@ export async function supprimerSujet(uid, id, { avantLot, surProgres } = {}) {
   for (;;) {
     const s = await getDocs(query(todos(uid), where("sujetId", "==", id), limit(TAILLE_LOT)));
     if (s.empty) break;
-    if (avantLot) await avantLot(s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean));
+    const lus = s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean);
+    if (avantLot) await avantLot(lus);
+    // The files go BEFORE the documents (V6.4): a failure leaves the todos, the run can start again.
+    const images = lus.flatMap((t) => t.images);
+    if (images.length) await supprimerFichiers(images);
+    const octets = octetsDesImages(images);
     await apresRecalcul(uid, async () => {
       const lot = writeBatch(db());
       s.docs.forEach((d) => lot.delete(d.ref));
-      lot.set(meta(uid), { nbTodos: increment(-s.size) }, { merge: true });
+      lot.set(
+        meta(uid),
+        { nbTodos: increment(-s.size), ...(octets ? { octets: increment(-octets) } : {}) },
+        { merge: true },
+      );
       await lot.commit();
     });
     supprimes += s.size;
@@ -250,11 +261,19 @@ export async function apresRecalcul(uid, action) {
 }
 
 /** Removes a todo and decrements the counter (one batch). */
-export function supprimerTodo(uid, id, { sujetId, fait } = {}) {
+export async function supprimerTodo(uid, id, { sujetId, fait, images = [] } = {}) {
+  // The files first (V6.4), then the document: if the files fail, nothing is lost and it can run again.
+  if (images.length) await supprimerFichiers(images);
+  await supprimerDossierTodo(uid, id).catch(() => {});
+  const octets = octetsDesImages(images);
   return apresRecalcul(uid, async () => {
     const lot = writeBatch(db());
     lot.delete(doc(todos(uid), id));
-    lot.set(meta(uid), { nbTodos: increment(-1) }, { merge: true });
+    lot.set(
+      meta(uid),
+      { nbTodos: increment(-1), ...(octets ? { octets: increment(-octets) } : {}) },
+      { merge: true },
+    );
     if (sujetId) {
       // The subject may be gone (deleted on another device): then only the todo is removed.
       lot.update(doc(sujets(uid), sujetId), {
@@ -306,8 +325,13 @@ export async function recalculerCompteurs(uid) {
     getCountFromServer(sujets(uid)),
     getCountFromServer(todos(uid)),
   ]);
+  // The weight of the pictures is the sum of the sizes written in the todos.
+  const octets = (await getDocs(todos(uid))).docs.reduce(
+    (somme, d) => somme + octetsDesImages(lireTodo(d.id, d.data())?.images),
+    0,
+  );
   const compteurs = { nbSujets: a.data().count, nbTodos: b.data().count };
-  await setDoc(meta(uid), compteurs, { merge: true });
+  await setDoc(meta(uid), { ...compteurs, octets }, { merge: true });
   // Counters of each subject (total and remaining), by counting queries.
   for (const s of (await getDocs(sujets(uid))).docs) {
     const [total, restants] = await Promise.all([

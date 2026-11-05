@@ -6,6 +6,7 @@ import { demander } from "../dialogues/commun.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { rapatrierToasts, toast } from "../toast.js";
+import { creerGalerieTodo } from "./galerieTodo.js";
 import { SANS_TITRE } from "./ligneTodo.js";
 
 let ouvert = null;
@@ -34,7 +35,14 @@ function quand(ms) {
  * @param {string} d.sujetId subject of a new todo
  * @param {HTMLElement} [d.retourFocus]
  */
-export function ouvrirEditeur({ donnees, todoId = null, sujetId, retourFocus, complements = [] }) {
+export function ouvrirEditeur({
+  donnees,
+  todoId = null,
+  sujetId,
+  retourFocus,
+  // Plugged parts of the window (V6.4: the pictures). Each: { racine, bouton, monter, maj, liberer }.
+  complements = [creerGalerieTodo({ donnees })],
+}) {
   ouvert?.fermer();
   let id = todoId;
   const depart = id ? donnees.etat().todos.find((t) => t.id === id) : null;
@@ -151,6 +159,7 @@ export function ouvrirEditeur({ donnees, todoId = null, sujetId, retourFocus, co
       description,
       apercu,
       compteur,
+      ...complements.map((c) => c.racine).filter(Boolean),
       el(
         "div",
         { class: "todo-editeur-pied" },
@@ -375,6 +384,7 @@ export function ouvrirEditeur({ donnees, todoId = null, sujetId, retourFocus, co
     if (choixSujet.value !== t.sujetId) choixSujet.value = t.sujetId;
     dates.textContent = `Créé ${quand(t.creeLe)} · Modifié ${quand(t.modifieLe)}`;
     majCompteur();
+    for (const c of complements) c.maj?.(t);
     if (!apercu.hidden) apercu.replaceChildren(rendreMarkdown(description.value));
   }
 

@@ -226,7 +226,11 @@ export function creerDonneesTodos({ charger, uid }) {
     const t = etat.todos.find((x) => x.id === id);
     if (!t) return { annuler() {} };
     return differer(`todo:${id}`, async () =>
-      (await fb()).supprimerTodo(uid(), id, { sujetId: t.sujetId, fait: t.fait }),
+      (await fb()).supprimerTodo(uid(), id, {
+        sujetId: t.sujetId,
+        fait: t.fait,
+        images: t.images,
+      }),
     );
   }
 
@@ -427,6 +431,14 @@ export function creerDonneesTodos({ charger, uid }) {
     deplacerVersSujet,
     creerTodoAvecId,
     viderCochages: vider,
+    /** Images of a todo (V6.4): each call loads the module on demand. */
+    envoyerImage: async (todoId, image, options) =>
+      (await fb()).envoyerImageTodo(uid(), todoId, image, options),
+    lireImage: async (chemin) => (await fb()).lireImageTodo(chemin),
+    majNoteImage: async (todoId, imageId, note) =>
+      (await fb()).majNoteImageTodo(uid(), todoId, imageId, note),
+    reordonnerImages: async (todoId, ids) => (await fb()).reordonnerImagesTodo(uid(), todoId, ids),
+    supprimerImage: async (todoId, image) => (await fb()).supprimerImageTodo(uid(), todoId, image),
     nouvelIdTodo: async () => (await fb()).nouvelIdTodo(uid()),
     // Used by the todo views (V6.2) and the settings (V6.7).
     differer,

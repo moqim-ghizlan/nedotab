@@ -26,6 +26,7 @@ import { recupererPage, sonderSite } from "./src/reseau/recupererPage.js";
 import { nettoyerEspacePartage } from "./src/espacePartage/nettoyer.js";
 import { ErreurLien, creerLiens } from "./src/espacePartage/liens/liens.js";
 import { reconcilierEspacePartage } from "./src/espacePartage/reconcilier.js";
+import { reconcilierTodos } from "./src/todos/reconcilier.js";
 import { creerVerificationSites } from "./src/sites/verifier.js";
 import { creerProfilsVpn, ErreurProfil } from "./src/vpn/agentProfils.js";
 import { creerFonctionsVpn, ErreurVpn } from "./src/vpn/fonctions.js";
@@ -234,6 +235,27 @@ export const reconcilierEspacePartageProgramme = onSchedule(
       },
     });
     logger.info("espace de partage réconcilié", r);
+  },
+);
+
+// --- V6.4: reconciliation of the todos (counters, orphan pictures) ----------------------------------
+export const reconcilierTodosProgramme = onSchedule(
+  { schedule: "every day 04:00", timeZone: "Europe/Paris", region: "europe-west1", maxInstances: 1, timeoutSeconds: 300 },
+  async () => {
+    const bucket = getStorage().bucket();
+    const r = await reconcilierTodos({
+      db: getFirestore(),
+      stockage: {
+        lister: async (uid) =>
+          (await bucket.getFiles({ prefix: `todos/${uid}/` }))[0].map((f) => ({
+            nom: f.name,
+            ageMs: Date.now() - new Date(f.metadata.timeCreated).getTime(),
+          })),
+        supprimer: (chemin) => bucket.file(chemin).delete({ ignoreNotFound: true }),
+      },
+    });
+    // Volumes only: never a title, a note or a path.
+    logger.info("todos réconciliés", r);
   },
 );
 

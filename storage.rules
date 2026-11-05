@@ -34,6 +34,24 @@ service firebase.storage {
       // A file is never modified: a new send is a new folder {id}.
       allow update: if false;
     }
+    // V6.4: pictures of the todos, todos/{uid}/{todoId}/{id}.{ext} and their thumbnail
+    // {id}_mini.{ext}. A folder at the ROOT (like partages/) so that a lifecycle rule can target
+    // "todos/" alone. Raster images only (the declared type is a safeguard, not a proof: the app
+    // really decodes the picture and redraws it, which also drops the EXIF block), 5 MB at most,
+    // a generated name. A file is never modified: a new picture is a new name.
+    match /todos/{uid}/{todoId}/{nom} {
+      allow read, delete: if verifie() && request.auth.uid == uid;
+      allow create: if verifie() && request.auth.uid == uid
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType != null
+        && request.resource.contentType.matches('image/(webp|jpeg|png)')
+        && nom.matches('^[0-9a-f]{32}(_mini)?[.](webp|jpg|png)$');
+      allow update: if false;
+    }
+    match /todos/{uid}/{tout=**} {
+      allow list: if verifie() && request.auth.uid == uid;
+    }
     // V4.28: encrypted copies of the share links, at the root so that a lifecycle rule can target
     // "liens/". Clients never read nor write them: the functions (Admin SDK) do.
     match /liens/{tout=**} {

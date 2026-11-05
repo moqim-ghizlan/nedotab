@@ -120,6 +120,13 @@ export {
   supprimerSujet,
   supprimerTodo,
 } from "./todos.js";
+export {
+  envoyerImage as envoyerImageTodo,
+  lireImage as lireImageTodo,
+  majNote as majNoteImageTodo,
+  reordonnerImages as reordonnerImagesTodo,
+  supprimerImage as supprimerImageTodo,
+} from "./todosImages.js";
 export { creerLien as creerLienPartage, listerLiens, revoquerLien } from "./liensPartage.js";
 export {
   creerMeta as creerMetaCoffre,

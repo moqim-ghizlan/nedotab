@@ -290,7 +290,35 @@ service cloud.firestore {
         && d.get('nbTotal', 0) is int && d.get('nbTotal', 0) >= 0 && d.get('nbTotal', 0) <= 500;
     }
 
-    function todoValide(d) {
+    // V6.4: one picture of a todo. The file must be in the folder of THIS user (todos/{uid}/...).
+    function imageValide(uid, i) {
+      return i is map
+        && i.keys().hasOnly(['id', 'chemin', 'note', 'taille', 'typeMime', 'largeur', 'hauteur', 'ordre'])
+        && i.id is string && i.id.matches('^[0-9a-f]{32}$')
+        && i.chemin is string && i.chemin.matches('^todos/' + uid + '/[^/]+/[0-9a-f]{32}[.](webp|jpg|png)$')
+        && i.note is string && i.note.size() <= 300
+        && i.taille is int && i.taille > 0 && i.taille <= 5242880
+        && i.typeMime in ['image/webp', 'image/jpeg', 'image/png']
+        && i.largeur is int && i.hauteur is int
+        && i.ordre is number;
+    }
+
+    // A rule cannot loop: the ten possible places are checked one by one, guarded by the size.
+    function imagesValides(uid, l) {
+      return l.size() <= 10
+        && (l.size() <= 0 || imageValide(uid, l[0]))
+        && (l.size() <= 1 || imageValide(uid, l[1]))
+        && (l.size() <= 2 || imageValide(uid, l[2]))
+        && (l.size() <= 3 || imageValide(uid, l[3]))
+        && (l.size() <= 4 || imageValide(uid, l[4]))
+        && (l.size() <= 5 || imageValide(uid, l[5]))
+        && (l.size() <= 6 || imageValide(uid, l[6]))
+        && (l.size() <= 7 || imageValide(uid, l[7]))
+        && (l.size() <= 8 || imageValide(uid, l[8]))
+        && (l.size() <= 9 || imageValide(uid, l[9]));
+    }
+
+    function todoValide(uid, d) {
       return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
         && d.v == 1
         && d.sujetId is string && d.sujetId.size() >= 1 && d.sujetId.size() <= 40
@@ -302,7 +330,7 @@ service cloud.firestore {
         && d.fait is bool
         && (d.fait ? d.faitLe is timestamp : d.faitLe == null)
         && d.ordre is number
-        && d.images is list && d.images.size() <= 10
+        && d.images is list && imagesValides(uid, d.images)
         && d.modifieLe == request.time;
     }
 
@@ -330,7 +358,7 @@ service cloud.firestore {
     match /users/{uid}/todos/{id} {
       allow read, delete: if proprietaire(uid);
       allow create: if proprietaire(uid)
-        && todoValide(request.resource.data)
+        && todoValide(uid, request.resource.data)
         && request.resource.data.creeLe == request.time
         && exists(/databases/$(db)/documents/users/$(uid)/sujets/$(request.resource.data.sujetId))
         && getAfter(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbTodos', 0) <= 500
@@ -339,7 +367,7 @@ service cloud.firestore {
               ? get(/databases/$(db)/documents/users/$(uid)/todosMeta/usage).data.get('nbTodos', 0) : 0) + 1;
       // Partial updates: only these fields may change; creeLe never does.
       allow update: if proprietaire(uid)
-        && todoValide(request.resource.data)
+        && todoValide(uid, request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sujetId', 'titre', 'description', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
         && (request.resource.data.sujetId == resource.data.sujetId
             || exists(/databases/$(db)/documents/users/$(uid)/sujets/$(request.resource.data.sujetId)));
@@ -367,7 +395,7 @@ service cloud.firestore {
     // the cleanup are for the functions only: no client may read them. The other documents
     // (config/ia…) stay readable by a signed-in user.
     match /config/{doc} {
-      allow read: if connecte() && !(doc in ['partage', 'nettoyageEspacePartage', 'reconciliationEspacePartage']);
+      allow read: if connecte() && !(doc in ['partage', 'nettoyageEspacePartage', 'reconciliationEspacePartage', 'reconciliationTodos']);
       allow write: if false;
     }
 

@@ -2,6 +2,19 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [6.4.0] - 2026-11-05
+
+### Ajouté
+
+- **Images dans les todos**, chacune avec sa **note** (300 caractères) : glisser-déposer sur toute la page de l'éditeur, coller (`Ctrl+V`), bouton « Ajouter une image », sélection multiple. Galerie de vignettes (chargées au défilement), note sous chaque vignette, visionneuse plein écran (flèches, Échap), réordonner, supprimer.
+- **Limites** : 10 images par todo, 1 920 px, 5 Mo après compression, 200 Mo par compte. JPEG, PNG, WebP ; **GIF, HEIC et SVG refusés** avec un message. Ajout impossible hors ligne (message clair). Envoi une image à la fois, file de 2 transferts.
+- **Vie privée** : l'image est décodée, remise à l'endroit puis ré-encodée, ce qui supprime l'EXIF (position GPS). Fichiers dans `todos/{uid}/…` (règles Storage), aucun lien public.
+- Suppression d'un todo ou d'un sujet : les fichiers partent d'abord. Fonction quotidienne de réconciliation (fichiers orphelins, compteurs). Règles Firestore : structure des images vérifiée.
+
+### À déployer (avec accord)
+
+`npm run deployer:regles`, `npm run deployer:stockage`, `npm run deployer:fonctions`. Mettre à jour la politique de confidentialité du site (nouvelles données : images de todos).
+
 ## [6.3.0] - 2026-11-05
 
 ### Ajouté
