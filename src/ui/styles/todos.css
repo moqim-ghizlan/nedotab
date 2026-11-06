@@ -465,3 +465,6 @@ body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), e
 /* The list of a select opens in the system's colours: give it readable ones. */
 .todo-champ--sujet { color-scheme: light dark; }
 .todo-champ--sujet option { background: var(--surface); color: var(--texte); }
+
+/* The delete button is an icon, next to the subject. */
+.todo-supprimer { flex: none; width: 44px; height: 44px; padding: 0; }

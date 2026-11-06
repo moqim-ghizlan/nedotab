@@ -101,13 +101,12 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
   });
   const supprimer = el(
     "button",
-    { type: "button", class: "todo-supprimer", onclick: () => surSuppression?.(courant.id) },
-    icone("poubelle", { taille: 18 }),
-    el("span", { texte: "Supprimer" }),
+    { type: "button", class: "todo-supprimer", "aria-label": "Supprimer le todo", title: "Supprimer le todo", onclick: () => surSuppression?.(courant.id) },
+    icone("poubelle", { taille: 20 }),
   );
   // The subject of the todo: another one moves it there.
   const choixSujet = el("select", { class: "todo-champ todo-champ--sujet", id: `todo-sujet-${todo.id}`, "aria-label": "Sujet" });
-  const rangeeSujet = el("div", { class: "todo-sujet-rangee" }, el("label", { for: choixSujet.id, texte: "Sujet" }), choixSujet);
+  const rangeeSujet = el("div", { class: "todo-sujet-rangee" }, el("label", { for: choixSujet.id, texte: "Sujet" }), choixSujet, supprimer);
   choixSujet.addEventListener("change", async () => {
     const vers = choixSujet.value;
     if (vers === courant.sujetId) return;
@@ -131,7 +130,6 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     rangeeSujet,
     message,
     dates,
-    el("div", { class: "todo-actions" }, supprimer),
     champFichier,
     champCamera,
   );

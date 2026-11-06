@@ -317,8 +317,10 @@ describe("changer le sujet d'un todo", () => {
   it("le bouton Supprimer est un vrai bouton avec une icône", async () => {
     const { p } = await monter({ todos: [todo("a")] });
     const b = p.panneau.querySelector('[data-id="a"] .todo-supprimer');
-    expect(b.textContent).toBe("Supprimer");
+    expect(b.textContent).toBe("");
+    expect(b.getAttribute("aria-label")).toBe("Supprimer le todo");
     expect(b.querySelector("svg")).not.toBeNull();
+    expect(b.parentElement.querySelector("select")).not.toBeNull(); // next to the subject
   });
   it("les dates : créé et appareil ; « Modifié » seulement s'il apporte quelque chose", async () => {
     const t0 = new Date(2026, 10, 6, 21, 31).getTime();
