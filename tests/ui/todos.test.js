@@ -53,12 +53,18 @@ async function monter({ sujets = [sujet("s1"), sujet("s2")], todos = [], options
 const titres = (p) => [...p.panneau.querySelectorAll(".todos-liste:not(.todos-liste--faits) .todo-titre")].map((n) => n.textContent);
 
 describe("panneau des todos (version simple)", () => {
-  it("un seul écran : sujets en onglets, todos du sujet choisi, champ d'ajout", async () => {
+  it("un seul écran : sujets en liste, todos du sujet choisi, champ d'ajout", async () => {
     const { p } = await monter({ todos: [todo("a"), todo("b", { sujetId: "s2" })] });
-    expect([...p.panneau.querySelectorAll('[role="tab"] .sujet-nom')].map((n) => n.textContent)).toEqual(["Sujet s1", "Sujet s2"]);
-    expect(p.panneau.querySelector('[role="tab"][aria-selected="true"]').dataset.id).toBe("s1");
+    expect(p.panneau.querySelector(".sujet-courant-nom").textContent).toBe("Sujet s1");
+    // The list of all the subjects opens from the button.
+    expect(p.panneau.querySelector(".sujets-liste").hidden).toBe(true);
+    p.panneau.querySelector(".sujet-courant").click();
+    expect(p.panneau.querySelector(".sujets-liste").hidden).toBe(false);
+    expect([...p.panneau.querySelectorAll('[role="option"] .sujet-nom')].map((n) => n.textContent)).toEqual(["Sujet s1", "Sujet s2"]);
+    expect(p.panneau.querySelector('[role="option"][aria-selected="true"]').dataset.id).toBe("s1");
     expect(titres(p)).toEqual(["a"]);
-    p.panneau.querySelectorAll('[role="tab"]')[1].click();
+    p.panneau.querySelectorAll('[role="option"]')[1].click();
+    expect(p.panneau.querySelector(".sujets-liste").hidden).toBe(true);
     await attendre();
     await attendre();
     expect(titres(p)).toEqual(["b"]);

@@ -18,14 +18,32 @@ const NOMS_COULEURS = { pin: "Pin", mer: "Mer", ciel: "Ciel", prune: "Prune", ro
  */
 export function creerBandeauSujets({ donnees }) {
   const lignes = new Map();
-  const onglets = el("div", { class: "sujets-onglets", role: "tablist", "aria-label": "Sujets" });
+  // The chosen subject is one button; it opens the LIST of all the subjects (there can be many).
+  const onglets = el("div", { class: "sujets-liste", role: "listbox", "aria-label": "Sujets", hidden: true });
+  const courantPoint = el("span", { class: "sujet-point", "aria-hidden": "true" });
+  const courantNom = el("span", { class: "sujet-courant-nom" });
+  const courantReste = el("span", { class: "sujet-reste", hidden: true });
+  const courantBtn = el(
+    "button",
+    { type: "button", class: "sujet-courant", "aria-haspopup": "listbox", "aria-expanded": "false", onclick: () => basculerListe(onglets.hidden) },
+    courantPoint,
+    courantNom,
+    courantReste,
+    icone("bas", { taille: 16 }),
+  );
   const plus = el("button", { type: "button", class: "sujets-plus", "aria-label": "Nouveau sujet", title: "Nouveau sujet", onclick: () => ouvrirFormulaire(true) }, icone("ajouter", { taille: 18 }));
   const menu = el("button", { type: "button", class: "sujets-menu", "aria-haspopup": "menu", "aria-label": "Actions du sujet", title: "Actions du sujet", onclick: () => ouvrirActions() }, icone("points", { taille: 18 }));
   const champ = el("input", { type: "text", class: "todos-champ", placeholder: "Nom du sujet", "aria-label": "Nom du nouveau sujet", maxlength: String(NOM_SUJET_MAX * 2), autocomplete: "off", enterkeyhint: "done" });
   const message = el("p", { class: "todos-message", role: "status", "aria-live": "polite", hidden: true });
   const creer = el("button", { type: "submit", class: "bouton bouton--principal", texte: "Créer" });
   const formulaire = el("form", { class: "sujets-formulaire", novalidate: true, hidden: true }, champ, creer);
-  const racine = el("div", { class: "sujets" }, el("div", { class: "sujets-rangee" }, onglets, plus, menu), formulaire, message);
+  const racine = el("div", { class: "sujets" }, el("div", { class: "sujets-rangee" }, courantBtn, plus, menu), onglets, formulaire, message);
+
+  function basculerListe(ouvrir) {
+    onglets.hidden = !ouvrir;
+    courantBtn.setAttribute("aria-expanded", String(ouvrir));
+    if (ouvrir) (onglets.querySelector('[aria-selected="true"]') ?? onglets.querySelector("[role=option]"))?.focus();
+  }
 
   function ouvrirFormulaire(oui) {
     formulaire.hidden = !oui;
@@ -57,7 +75,7 @@ export function creerBandeauSujets({ donnees }) {
     const point = el("span", { class: "sujet-point", "aria-hidden": "true" });
     const nom = el("span", { class: "sujet-nom" });
     const reste = el("span", { class: "sujet-reste" });
-    const li = el("button", { type: "button", role: "tab", class: "sujet", onclick: () => donnees.choisir(s.id) }, point, nom, reste);
+    const li = el("button", { type: "button", role: "option", class: "sujet", onclick: () => { donnees.choisir(s.id); basculerListe(false); courantBtn.focus(); } }, point, nom, reste);
     li.dataset.id = s.id;
     const ligne = {
       li,
@@ -76,16 +94,21 @@ export function creerBandeauSujets({ donnees }) {
     return ligne;
   }
 
-  // Arrows move between the tabs.
+  // Arrows move in the list, Escape closes it.
   onglets.addEventListener("keydown", (e) => {
-    if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
-    const liste = [...onglets.querySelectorAll('[role="tab"]')];
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      basculerListe(false);
+      courantBtn.focus();
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    const liste = [...onglets.querySelectorAll("[role=option]")];
     const i = liste.indexOf(document.activeElement);
     if (i < 0) return;
     e.preventDefault();
-    const j = e.key === "Home" ? 0 : e.key === "End" ? liste.length - 1 : (i + (e.key === "ArrowRight" ? 1 : -1) + liste.length) % liste.length;
-    liste[j].focus();
-    donnees.choisir(liste[j].dataset.id);
+    liste[e.key === "Home" ? 0 : e.key === "End" ? liste.length - 1 : (i + (e.key === "ArrowDown" ? 1 : -1) + liste.length) % liste.length].focus();
   });
 
   // --- Actions on the chosen subject -------------------------------------------------------------------------
@@ -165,24 +188,25 @@ export function creerBandeauSujets({ donnees }) {
   function rendre() {
     const e = donnees.etat();
     reconcilier(onglets, lignes, e.sujets, creerLigne);
-    // The chosen tab (also when only the choice changed).
-    for (const l of lignes.values()) l.li.setAttribute("aria-selected", String(l.li.dataset.id === e.sujetId)), (l.li.tabIndex = l.li.dataset.id === e.sujetId ? 0 : -1);
+    // The chosen subject, on the button; the list marks it.
+    for (const l of lignes.values()) {
+      const choisi = l.li.dataset.id === e.sujetId;
+      l.li.setAttribute("aria-selected", String(choisi));
+      l.li.tabIndex = choisi ? 0 : -1;
+    }
+    const actuel = e.sujets.find((x) => x.id === e.sujetId);
+    courantNom.textContent = actuel?.nom ?? "Choisir un sujet";
+    courantBtn.dataset.couleur = actuel?.couleur ?? "";
+    courantReste.textContent = actuel?.nbRestants ? String(actuel.nbRestants) : "";
+    courantReste.hidden = !actuel?.nbRestants;
     const vide = e.sujets.length === 0;
     menu.hidden = vide;
-    onglets.hidden = vide;
+    courantBtn.hidden = vide;
+    if (vide) basculerListe(false);
     plus.disabled = e.compteurs.nbSujets >= 30;
     plus.title = plus.disabled ? "30 sujets maximum" : "Nouveau sujet";
     // Nothing yet: the form is the welcome.
     if (vide && e.statut === "ok" && formulaire.hidden) formulaire.hidden = false;
-    // Keep the chosen tab in view.
-    const actif = onglets.querySelector('[aria-selected="true"]');
-    if (actif) {
-      // Only the strip scrolls (scrollIntoView would also scroll the panel itself).
-      const debut = actif.getBoundingClientRect().left - onglets.getBoundingClientRect().left + onglets.scrollLeft;
-      if (debut < onglets.scrollLeft) onglets.scrollLeft = Math.max(0, debut - 8);
-      else if (debut + actif.offsetWidth > onglets.scrollLeft + onglets.clientWidth)
-        onglets.scrollLeft = debut + actif.offsetWidth - onglets.clientWidth + 28;
-    }
   }
 
   return { racine, rendre, focusAjout: () => ouvrirFormulaire(true), formulaireVisible: () => !formulaire.hidden };
