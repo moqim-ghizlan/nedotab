@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getCountFromServer,
-  getDoc,
   getDocs,
   increment,
   limit,
@@ -11,7 +10,6 @@ import {
   query,
   serverTimestamp,
   setDoc,
-  startAfter,
   updateDoc,
   where,
   writeBatch,
@@ -104,88 +102,6 @@ export function ecouterCompteurs(uid, rappel, surErreur) {
     },
     surErreur,
   );
-}
-
-/**
- * "Aujourd'hui" view (V6.5): the todos still to do due by the end of the week, all subjects, by due
- * date, 200 at most. Index: `fait` + `echeance` (firestore.indexes.json). A todo without a due
- * date holds `null` and is never returned: that is wanted.
- */
-export function ecouterAujourdhui(uid, finSemaine, rappel, surErreur, taille = 200) {
-  return onSnapshot(
-    query(
-      todos(uid),
-      where("fait", "==", false),
-      where("echeance", "<=", finSemaine),
-      orderBy("echeance"),
-      limit(taille),
-    ),
-    { includeMetadataChanges: true },
-    (s) =>
-      rappel(
-        s.docs
-          .map((d) =>
-            lireTodo(d.id, d.data({ serverTimestamps: "estimate" }), d.metadata.hasPendingWrites),
-          )
-          .filter(Boolean),
-        { depuisCache: s.metadata.fromCache, plein: s.size >= taille },
-      ),
-    surErreur,
-  );
-}
-
-/** Number of todos still to do due before `aujourdhui` ("en retard"): one counting query. */
-export async function compterEnRetard(uid, aujourdhui) {
-  const s = await getCountFromServer(
-    query(todos(uid), where("fait", "==", false), where("echeance", "<", aujourdhui)),
-  );
-  return s.data().count;
-}
-
-/**
- * A page of todos of every subject, newest first (search in "Tous les sujets": an explicit
- * button, 100 at a time, so the cost is visible).
- */
-export async function lirePageTous(uid, dernierCreeLe = null, taille = PAGE_TODOS) {
-  const base = [todos(uid), orderBy("creeLe", "desc")];
-  if (dernierCreeLe != null) base.push(startAfter(new Date(dernierCreeLe)));
-  const s = await getDocs(query(...base, limit(taille)));
-  return {
-    todos: s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean),
-    plein: s.size >= taille,
-  };
-}
-
-/** Does the todo still exist? (An update refused by the rules on a missing document looks like a refusal.) */
-export async function todoExiste(uid, id) {
-  return (await getDoc(doc(todos(uid), id))).exists();
-}
-
-/** Todos of a subject after `dernierOrdre` (a "Voir plus" page). */
-export async function lirePageTodos(uid, sujetId, dernierOrdre, taille = PAGE_TODOS) {
-  const s = await getDocs(
-    query(
-      todos(uid),
-      where("sujetId", "==", sujetId),
-      orderBy("ordre"),
-      startAfter(dernierOrdre),
-      limit(taille),
-    ),
-  );
-  return {
-    todos: s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean),
-    plein: s.size >= taille,
-  };
-}
-
-/** Every subject and todo, for the export of the user's data. */
-export async function lireTout(uid) {
-  const [a, b] = await Promise.all([getDocs(sujets(uid)), getDocs(todos(uid))]);
-  const lus = {
-    sujets: a.docs.map((d) => lireSujet(d.id, d.data())).filter(Boolean),
-    todos: b.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean),
-  };
-  return { ...lus, ignores: a.size + b.size - lus.sujets.length - lus.todos.length };
 }
 
 // --- Subjects --------------------------------------------------------------------------------
@@ -347,110 +263,6 @@ export async function supprimerTodo(uid, id, { sujetId, fait, images = [] } = {}
     }
     await lot.commit();
   });
-}
-
-/**
- * Moves a todo to another subject: its `sujetId`, its place in the new list and the counters of
- * the TWO subjects, in one batch. If the destination is gone, the batch fails and nothing moves.
- */
-export async function deplacerTodo(uid, id, { depuis, vers, ordre, fait }) {
-  const lot = writeBatch(db());
-  lot.update(doc(todos(uid), id), { sujetId: vers, ordre, modifieLe: serverTimestamp() });
-  lot.update(doc(sujets(uid), depuis), {
-    nbTotal: increment(-1),
-    nbRestants: increment(fait ? 0 : -1),
-  });
-  lot.update(doc(sujets(uid), vers), {
-    nbTotal: increment(1),
-    nbRestants: increment(fait ? 0 : 1),
-  });
-  await lot.commit();
-}
-
-/** Writes new orders in batches of 400 (renumbering when the gap is exhausted). */
-export async function ecrireOrdres(uid, nature, ordres) {
-  const entrees = [...ordres];
-  const collec = nature === "sujets" ? sujets(uid) : todos(uid);
-  for (let i = 0; i < entrees.length; i += TAILLE_LOT) {
-    const lot = writeBatch(db());
-    for (const [id, ordre] of entrees.slice(i, i + TAILLE_LOT))
-      lot.update(doc(collec, id), { ordre, modifieLe: serverTimestamp() });
-    await lot.commit();
-  }
-}
-
-/**
- * Adds the subjects and the todos of an import (V6.7): NEVER replaces anything, every identifier
- * is new. One creation = one batch (the rules check the counter by +1), so it runs one after the
- * other; `surProgres(fait, total)` and `annule()` let the interface show and stop it.
- * @returns {Promise<{ sujets: number, todos: number, annule: boolean }>}
- */
-export async function importerTodos(uid, plan, { surProgres, annule = () => false } = {}) {
-  const existants = await getDocs(sujets(uid));
-  let ordreSujet = Math.max(0, ...existants.docs.map((d) => d.data().ordre ?? 0));
-  const total = plan.sujets.length + plan.todos.length;
-  let fait = 0;
-  const correspondance = new Map(); // id in the file -> new id
-  const sujetsTries = [...plan.sujets].sort((a, b) => a.ordre - b.ordre);
-  for (const s of sujetsTries) {
-    if (annule()) break;
-    ordreSujet += 1000;
-    const id = await creerSujet(uid, { nom: s.nom, ordre: ordreSujet, couleur: s.couleur });
-    correspondance.set(s.ancienId, id);
-    surProgres?.(++fait, total);
-  }
-  const rangs = new Map();
-  let crees = 0;
-  for (const t of [...plan.todos].sort((a, b) => a.ordre - b.ordre)) {
-    if (annule()) break;
-    const sujetId = correspondance.get(t.ancienSujetId);
-    if (!sujetId) continue;
-    const ordre = (rangs.get(sujetId) ?? 0) + 1000;
-    rangs.set(sujetId, ordre);
-    await creerTodo(uid, {
-      v: 1,
-      sujetId,
-      titre: t.titre,
-      description: t.description,
-      echeance: t.echeance,
-      fait: t.fait,
-      ordre,
-      images: [],
-    });
-    crees++;
-    surProgres?.(++fait, total);
-  }
-  return { sujets: correspondance.size, todos: crees, annule: annule() };
-}
-
-/**
- * Removes EVERY todo and subject of the account ("Supprimer tous mes todos"): the files of the
- * pictures first, then the documents by batches of 400, then the counters at zero. Can be run
- * again after a failure.
- */
-export async function toutSupprimer(uid, { surProgres } = {}) {
-  let supprimes = 0;
-  for (;;) {
-    const s = await getDocs(query(todos(uid), limit(TAILLE_LOT)));
-    if (s.empty) break;
-    const lus = s.docs.map((d) => lireTodo(d.id, d.data())).filter(Boolean);
-    const images = lus.flatMap((t) => t.images);
-    if (images.length) await supprimerFichiers(images);
-    const lot = writeBatch(db());
-    s.docs.forEach((d) => lot.delete(d.ref));
-    await lot.commit();
-    supprimes += s.size;
-    surProgres?.(supprimes);
-  }
-  for (;;) {
-    const s = await getDocs(query(sujets(uid), limit(TAILLE_LOT)));
-    if (s.empty) break;
-    const lot = writeBatch(db());
-    s.docs.forEach((d) => lot.delete(d.ref));
-    await lot.commit();
-  }
-  await setDoc(meta(uid), { nbSujets: 0, nbTodos: 0, octets: 0 });
-  return supprimes;
 }
 
 /**

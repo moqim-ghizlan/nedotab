@@ -2,6 +2,21 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.0.0] - 2026-11-06
+
+Les todos **refaits de zéro, en plus simple**.
+
+### Changé
+
+- **Un seul écran** : les sujets en onglets en haut, les todos du sujet choisi dessous, un champ « Nouveau todo » en bas. Un todo s'ouvre **sur place** : un titre, une description, **une seule image**. Rien d'autre.
+- Cocher dessine la coche ; les todos faits se replient sous « Faits (N) ».
+- Enregistrement automatique (1,5 s après la dernière frappe, et à la fermeture).
+- Réglage **Réglages › Général › Todos › Activer les todos**.
+
+### Supprimé
+
+Échéances, filtres, tris, recherche, vue « Aujourd'hui », éditeur Markdown, plusieurs images et notes d'images, déplacement entre sujets, glisser pour réordonner, export et import (todos et sujets ne sont plus dans l'export de données), conflits entre appareils, balayage tactile. Les données déjà créées restent lisibles ; les règles Firestore et Storage ne changent pas (rien à redéployer).
+
 ## [6.9.0] - 2026-11-05
 
 Les todos dans la PWA (iPhone, iPad). **Code écrit et testé en simulation seulement : rien n'a été essayé sur un appareil iOS** (`docs/tests/checklist-v6-ios.md`). Le plan demandait la validation « extension à 100 % » avant cette version : elle a été enchaînée à la demande de l'utilisateur, sans cette validation manuelle.

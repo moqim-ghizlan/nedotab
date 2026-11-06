@@ -104,33 +104,18 @@ export {
 } from "./espacePartageFichiers.js";
 export {
   creerSujet as creerSujetTodos,
-  compterEnRetard as compterEnRetardTodos,
   creerTodo,
-  deplacerTodo,
-  ecouterAujourdhui,
   ecouterCompteurs as ecouterCompteursTodos,
   ecouterSujets,
   ecouterTodos,
-  ecrireOrdres as ecrireOrdresTodos,
-  importerTodos,
-  toutSupprimer as toutSupprimerTodos,
-  lirePageTodos,
-  lirePageTous as lirePageTousLesTodos,
-  lireTout as lireToutLesTodos,
   majSujet,
   majTodo,
-  nouvelIdSujet,
-  nouvelIdTodo,
-  recalculerCompteurs as recalculerCompteursTodos,
   supprimerSujet,
   supprimerTodo,
-  todoExiste as todoExisteTodos,
 } from "./todos.js";
 export {
   envoyerImage as envoyerImageTodo,
   lireImage as lireImageTodo,
-  majNote as majNoteImageTodo,
-  reordonnerImages as reordonnerImagesTodo,
   supprimerImage as supprimerImageTodo,
 } from "./todosImages.js";
 export { creerLien as creerLienPartage, listerLiens, revoquerLien } from "./liensPartage.js";

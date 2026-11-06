@@ -11,7 +11,7 @@ import { formaterTaille, niveauQuota, texteQuota } from "./espacePartageFichiers
 
 export { formaterTaille, niveauQuota, texteQuota };
 
-export const IMAGES_MAX = 10;
+export const IMAGES_MAX = 1;
 export const COTE_MAX = 1920;
 export const COTE_MINI = 240;
 export const POIDS_MAX = 5 * 1024 * 1024;
@@ -35,7 +35,7 @@ export function validerImage(fichier, { nbImages = 0, octetsUtilises = 0 } = {})
   const ext = extensionDe(fichier?.name);
   const taille = Number(fichier?.size);
   if (nbImages >= IMAGES_MAX)
-    return { ok: false, code: "limite", erreur: `${IMAGES_MAX} images au maximum par todo.` };
+    return { ok: false, code: "limite", erreur: "Un todo ne peut avoir qu'une image." };
   if (type.includes("svg") || ext === "svg")
     return { ok: false, code: "svg", erreur: "Les images SVG ne sont pas acceptées." };
   if (type === "image/gif" || ext === "gif")

@@ -10,7 +10,7 @@ export const VERSION_TODO = 1;
 export const LIMITE_TODOS = 500;
 export const TITRE_MAX = 200;
 export const DESCRIPTION_MAX = 20_000;
-export const IMAGES_MAX = 10;
+export const IMAGES_MAX = 1;
 export const NOTE_IMAGE_MAX = 300;
 export const ECART_ORDRE = 1000;
 export const ECART_MIN = 0.001;
@@ -109,7 +109,7 @@ export function modifierTodo(todo, changements, maintenant = Date.now()) {
   const erreur = validerTodo(suivant);
   if (erreur) return { ok: false, erreur };
   if (Array.isArray(suivant.images) && suivant.images.length > IMAGES_MAX)
-    return { ok: false, erreur: `${IMAGES_MAX} images au maximum.` };
+    return { ok: false, erreur: "Un todo ne peut avoir qu'une image." };
   if ("fait" in changements)
     return { ok: true, todo: basculerFait(suivant, !!changements.fait, maintenant) };
   return { ok: true, todo: suivant };
