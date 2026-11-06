@@ -33,6 +33,7 @@ export function creerPanneauTodos({
   fermerAutres = () => {},
   store,
   preparer,
+  appareils = null,
   donnees = creerDonneesTodos({ charger, uid }),
 }) {
   let ouvert = false;
@@ -132,7 +133,7 @@ export function creerPanneauTodos({
   }
 
   const creer = (t) => {
-    const ligne = creerLigneTodo({ donnees, todo: t, surBascule: bascule, store, preparer });
+    const ligne = creerLigneTodo({ donnees, todo: t, surBascule: bascule, store, preparer, appareils });
     ligne.surSuppression(supprimerTodo);
     return ligne;
   };

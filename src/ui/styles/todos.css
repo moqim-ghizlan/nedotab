@@ -436,3 +436,8 @@ body:has(.partage-bouton[hidden]) .todos-bouton { left: max(var(--espace-4), env
 .visionneuse-etat { margin: 0; text-align: center; font-size: 0.8125rem; opacity: 0.8; }
 .visionneuse-etat:empty { display: none; }
 @media (max-width: 899px) { .visionneuse-scene { padding: 0; } }
+
+/* Created / modified, and from which device. */
+.todo-dates { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: 0.8125rem; color: var(--texte-secondaire); }
+.todo-dates dt { font-weight: 600; }
+.todo-dates dd { margin: 0; }

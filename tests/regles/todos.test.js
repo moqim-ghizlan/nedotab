@@ -157,6 +157,13 @@ describe("todos", () => {
     lot.set(meta(d), { nbTodos: increment(-1) }, { merge: true });
     await assertSucceeds(lot.commit());
   });
+  it("l'appareil de création : texte court accepté, autre chose refusé, jamais modifiable", async () => {
+    await assertSucceeds(ajouterTodo(db("alice"), "t1", { appareil: "PC bureau", appareilId: "abcd1234" }));
+    await assertFails(ajouterTodo(db("alice"), "t2", { appareil: "x".repeat(65) }));
+    await assertFails(ajouterTodo(db("alice"), "t3", { appareil: 5 }));
+    await assertFails(ajouterTodo(db("alice"), "t4", { appareilId: "x".repeat(41) }));
+    await assertFails(updateDoc(tod(db("alice"), "t1"), { appareil: "autre", modifieLe: serverTimestamp() }));
+  });
   it("un titre vide est un brouillon valide", async () => {
     await assertSucceeds(ajouterTodo(db("alice"), "t1", { titre: "" }));
   });

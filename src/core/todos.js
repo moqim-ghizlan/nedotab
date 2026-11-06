@@ -171,6 +171,8 @@ export function lireTodo(id, brut, enAttente = false) {
     creeLe: enMs(brut.creeLe),
     modifieLe: enMs(brut.modifieLe),
     ordre: Number.isFinite(brut.ordre) ? brut.ordre : 0,
+    appareil: typeof brut.appareil === "string" ? brut.appareil : "",
+    appareilId: typeof brut.appareilId === "string" ? brut.appareilId : "",
     images: images.sort((a, b) => a.ordre - b.ordre),
     enAttente,
   };

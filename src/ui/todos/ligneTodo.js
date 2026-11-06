@@ -1,3 +1,4 @@
+import { libelleAppareilAffiche } from "../../core/appareils.js";
 import { creerDiffere } from "../../core/differe.js";
 import { cheminMini, validerImage, validerResultat } from "../../core/imagesTodo.js";
 import { DESCRIPTION_MAX, TITRE_MAX } from "../../core/todos.js";
@@ -24,7 +25,7 @@ const tactile = () => !!globalThis.matchMedia?.("(pointer: coarse)").matches;
  * @param {import("../../core/store.js").Store} [d.store]
  * @param {typeof preparerImage} [d.preparer] (tests)
  */
-export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = preparerImage }) {
+export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = preparerImage, appareils = null }) {
   let courant = todo;
   let ouvert = false;
   let miniUrl = null;
@@ -78,6 +79,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
   });
   const message = el("p", { class: "todo-message", role: "status", "aria-live": "polite", hidden: true });
   const zonePhoto = el("div", { class: "todo-photo-zone" });
+  const dates = el("dl", { class: "todo-dates" });
   const champFichier = el("input", {
     type: "file",
     accept: "image/jpeg,image/png,image/webp",
@@ -110,6 +112,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     champDescription,
     zonePhoto,
     message,
+    dates,
     el("div", { class: "todo-actions" }, supprimer),
     champFichier,
     champCamera,
@@ -118,6 +121,19 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
   detail.inert = true;
   corps.setAttribute("aria-controls", detail.id);
   const li = el("li", { class: "todo", dataset: { id: todo.id } }, el("div", { class: "todo-tete" }, case_, corps), detail);
+
+  // --- Dates and device ------------------------------------------------------------------------------
+  const quand = (ms) =>
+    ms == null ? "à l'instant" : new Date(ms).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+  function rendreDates(t) {
+    const depuis = t.appareil || t.appareilId ? libelleAppareilAffiche({ appareilId: t.appareilId, appareil: t.appareil }, appareils?.liste?.() ?? []) : "";
+    dates.replaceChildren(
+      el("dt", { texte: "Créé" }),
+      el("dd", { texte: `${quand(t.creeLe)}${depuis ? `, depuis ${depuis}` : ""}` }),
+      el("dt", { texte: "Modifié" }),
+      el("dd", { texte: quand(t.modifieLe) }),
+    );
+  }
 
   // --- Saving ----------------------------------------------------------------------------------------
   const differe = creerDiffere(() => envoyer(), 1500);
@@ -273,6 +289,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     if (!image) mini.hidden = true;
     if (ouvert && image) chargerPhoto(image);
     if (!envoi) rendrePhoto();
+    rendreDates(t);
   }
 
   function chargerPhoto(image) {

@@ -18,6 +18,8 @@ import { octetsDesImages } from "../core/imagesTodo.js";
 import { lireSujet } from "../core/sujets.js";
 import { PAGE_TODOS, lireTodo } from "../core/todos.js";
 import { obtenirApp } from "./app.js";
+import { marqueAppareil } from "./appareils.js";
+import { appareilCourant } from "./sauvegardes.js";
 import { supprimerDossierTodo, supprimerFichiers } from "./todosImages.js";
 
 /**
@@ -194,6 +196,8 @@ async function ecrireCreation(uid, todo, id) {
     faitLe: todo.fait ? serverTimestamp() : null,
     ordre: todo.ordre,
     images: todo.images ?? [],
+    // The device that created it (its name at that time, and its id to show the current name).
+    ...marqueAppareil(appareilCourant()),
     creeLe: serverTimestamp(),
     modifieLe: serverTimestamp(),
   });

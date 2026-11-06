@@ -320,7 +320,7 @@ service cloud.firestore {
     }
 
     function todoValide(uid, d) {
-      return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
+      return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images', 'appareil', 'appareilId'])
         && d.v == 1
         && d.sujetId is string && d.sujetId.size() >= 1 && d.sujetId.size() <= 40
         && d.titre is string && d.titre.size() <= 200
@@ -328,6 +328,8 @@ service cloud.firestore {
         && (d.echeance == null
             || (d.echeance is string
                 && d.echeance.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')))
+        && (!('appareil' in d) || (d.appareil is string && d.appareil.size() <= 64))
+        && (!('appareilId' in d) || (d.appareilId is string && d.appareilId.size() <= 40))
         && d.fait is bool
         && (d.fait ? d.faitLe is timestamp : d.faitLe == null)
         && d.ordre is number
