@@ -461,3 +461,7 @@ body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), e
 .todo-sujet-rangee { display: flex; align-items: center; gap: var(--espace-3); }
 .todo-sujet-rangee label { flex: none; font-size: 0.875rem; color: var(--texte-secondaire); }
 .todo-champ--sujet { flex: 1; min-height: 44px; padding: 0 12px; }
+
+/* The list of a select opens in the system's colours: give it readable ones. */
+.todo-champ--sujet { color-scheme: light dark; }
+.todo-champ--sujet option { background: var(--surface); color: var(--texte); }

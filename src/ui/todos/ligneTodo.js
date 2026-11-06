@@ -147,11 +147,13 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     const depuis = t.appareil || t.appareilId ? libelleAppareilAffiche({ appareilId: t.appareilId, appareil: t.appareil }, appareils?.liste?.() ?? []) : "";
     // The modification line only appears when it tells something more than the creation.
     const different = t.modifieLe != null && t.creeLe != null && Math.abs(t.modifieLe - t.creeLe) > 60_000;
-    dates.replaceChildren(
+    const pastilles = [
       el("span", { class: "todo-date" }, icone("horloge", { taille: 14 }), el("span", { texte: `Créé ${quand(t.creeLe)}` })),
       depuis ? el("span", { class: "todo-date" }, icone("grille", { taille: 14 }), el("span", { texte: depuis })) : null,
       different ? el("span", { class: "todo-date" }, icone("crayon", { taille: 14 }), el("span", { texte: `Modifié ${quand(t.modifieLe)}` })) : null,
-    );
+    ];
+    // (replaceChildren(null) would write the word "null")
+    dates.replaceChildren(...pastilles.filter(Boolean));
   }
 
   // --- Saving ----------------------------------------------------------------------------------------
