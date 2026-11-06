@@ -477,3 +477,5 @@ body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), e
 .todos-attente-photo[hidden] { display: none; }
 .todos-attente-image { flex: none; width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
 .todos-attente-nom { flex: 1; min-width: 0; overflow: hidden; font-size: 0.875rem; color: var(--texte-secondaire); text-overflow: ellipsis; white-space: nowrap; }
+
+.sujets-plus[hidden] { display: none; }

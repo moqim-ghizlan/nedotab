@@ -203,6 +203,8 @@ export function creerBandeauSujets({ donnees }) {
     menu.hidden = vide;
     courantBtn.hidden = vide;
     if (vide) basculerListe(false);
+    // With no subject the form below is the welcome: no "+" beside it.
+    plus.hidden = vide;
     plus.disabled = e.compteurs.nbSujets >= 30;
     plus.title = plus.disabled ? "30 sujets maximum" : "Nouveau sujet";
     // Nothing yet: the form is the welcome.
