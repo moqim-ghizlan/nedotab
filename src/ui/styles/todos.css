@@ -134,19 +134,15 @@ body:has(.partage-bouton[hidden]) .todos-bouton { left: max(var(--espace-4), env
 
 /* --- Subjects: tabs -------------------------------------------------------------------------------------- */
 .sujets { display: grid; gap: var(--espace-2); padding: var(--espace-3) var(--espace-4) var(--espace-2); }
-.sujets-rangee { display: flex; align-items: center; gap: var(--espace-1); }
+.sujets-rangee { display: flex; align-items: flex-start; gap: var(--espace-1); }
 .sujets-onglets {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
   padding: 2px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent);
 }
-.sujets-onglets::-webkit-scrollbar { display: none; }
 .sujets-onglets[hidden] { display: none; }
 .sujet {
   --c: var(--accent);
