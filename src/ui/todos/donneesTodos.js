@@ -5,6 +5,7 @@ import {
   ordreEntre,
   trierTodos,
 } from "../../core/todos.js";
+import { toast } from "../toast.js";
 import { ecrireLocal, lireLocal } from "./memoireLocale.js";
 
 /** Time left to cancel a removal before it is really written. */
@@ -127,6 +128,7 @@ export function creerDonneesTodos({ charger, uid }) {
         ),
       );
       if (etat.sujetId) demarrerTodos();
+      reprendre();
     } catch {
       demarre = false;
       etat.statut = "erreur";
@@ -155,7 +157,24 @@ export function creerDonneesTodos({ charger, uid }) {
   }
 
   // --- Delayed removals and ticks ------------------------------------------------------------------
-  function differer(cle, ecrire) {
+  // A removal waits 5 s ("Annuler"). If the page is closed or reloaded in between, the async write
+  // would be lost: so the removal is also noted on this device (ids only, never a text) and
+  // finished at the next start. It is forgotten once written or cancelled.
+  const lireEnAttente = () => {
+    try {
+      return JSON.parse(lireLocal("suppressions") ?? "[]");
+    } catch {
+      return [];
+    }
+  };
+  const noterEnAttente = (cle, charge) =>
+    ecrireLocal("suppressions", JSON.stringify([...lireEnAttente().filter((x) => x.cle !== cle), { cle, uid: uid(), ...charge }]));
+  const oublierEnAttente = (cle) => {
+    const reste = lireEnAttente().filter((x) => x.cle !== cle);
+    ecrireLocal("suppressions", reste.length ? JSON.stringify(reste) : null);
+  };
+
+  function differer(cle, ecrire, charge = null) {
     let fini = false;
     const lancer = () => {
       if (fini) return;
@@ -163,11 +182,16 @@ export function creerDonneesTodos({ charger, uid }) {
       clearTimeout(entree.minuteur);
       suppressions.delete(cle);
       Promise.resolve(ecrire())
-        .catch(() => {})
+        .then(() => oublierEnAttente(cle))
+        .catch(() => {
+          // Told, and the element comes back: nothing is lost silently.
+          toast("La suppression a échoué : l'élément a été gardé. Réessayez.", { type: "erreur", duree: 8000 });
+        })
         .finally(notifier);
     };
     const entree = { minuteur: setTimeout(lancer, DELAI_ANNULATION_MS), ecrire: lancer };
     suppressions.set(cle, entree);
+    if (charge) noterEnAttente(cle, charge);
     notifier();
     return {
       annuler() {
@@ -175,9 +199,26 @@ export function creerDonneesTodos({ charger, uid }) {
         fini = true;
         clearTimeout(entree.minuteur);
         suppressions.delete(cle);
+        oublierEnAttente(cle);
         notifier();
       },
     };
+  }
+
+  /** Finishes the removals interrupted by a reload (of this account only). */
+  async function reprendre() {
+    const id = uid();
+    for (const x of lireEnAttente()) {
+      if (x.uid !== id || suppressions.has(x.cle)) continue;
+      try {
+        const m = await fb();
+        if (x.type === "sujet") await m.supprimerSujet(id, x.id);
+        else await m.supprimerTodo(id, x.id, { sujetId: x.sujetId, fait: x.fait, images: x.images ?? [] });
+        oublierEnAttente(x.cle);
+      } catch {
+        /* kept: tried again at the next start */
+      }
+    }
   }
 
   function ecrireCochage(id) {
@@ -235,7 +276,7 @@ export function creerDonneesTodos({ charger, uid }) {
     resultat(async () => void (await (await fb()).majSujet(uid(), id, { couleur })));
 
   /** Hides the subject at once and removes it, with its todos and pictures, after the delay. */
-  const supprimerSujet = (id) => differer(`sujet:${id}`, async () => (await fb()).supprimerSujet(uid(), id));
+  const supprimerSujet = (id) => differer(`sujet:${id}`, async () => (await fb()).supprimerSujet(uid(), id), { type: "sujet", id });
 
   // --- Todos -------------------------------------------------------------------------------------------
   /** A new todo at the top of the list of the chosen subject. */
@@ -275,9 +316,8 @@ export function creerDonneesTodos({ charger, uid }) {
   function supprimerTodo(id) {
     const t = trouver(id);
     if (!t) return { annuler() {} };
-    return differer(`todo:${id}`, async () =>
-      (await fb()).supprimerTodo(uid(), id, { sujetId: t.sujetId, fait: t.fait, images: t.images }),
-    );
+    const charge = { type: "todo", id, sujetId: t.sujetId, fait: t.fait, images: t.images.map((i) => ({ id: i.id, chemin: i.chemin, taille: i.taille })) };
+    return differer(`todo:${id}`, async () => (await fb()).supprimerTodo(uid(), id, { sujetId: t.sujetId, fait: t.fait, images: t.images }), charge);
   }
 
   // --- The picture of a todo (one) ----------------------------------------------------------------------

@@ -334,3 +334,32 @@ describe("changer le sujet d'un todo", () => {
     expect(b.p.panneau.querySelector('[data-id="a"] .todo-dates').textContent).toContain("Modifié");
   });
 });
+
+describe("suppressions interrompues par un rechargement", () => {
+  it("un sujet supprimé puis la page rechargée avant 5 s est supprimé au démarrage suivant", async () => {
+    const a = await monter({ sujets: [sujet("s1")] });
+    // The subject is removed ("Sujet supprimé", 5 s to cancel) ...
+    a.p.donnees.supprimerSujet("s1");
+    expect(JSON.parse(localStorage.getItem("nedotab:todos:suppressions"))).toMatchObject([{ type: "sujet", id: "s1", uid: "u1" }]);
+    // ... and the page is reloaded at once: a new start finishes the job.
+    document.body.replaceChildren();
+    const b = await monter({ sujets: [sujet("s1")] });
+    await attendre();
+    expect(b.fb.supprimerSujet).toHaveBeenCalledWith("u1", "s1");
+    expect(localStorage.getItem("nedotab:todos:suppressions")).toBeNull();
+  });
+  it("annuler oublie la suppression", async () => {
+    const a = await monter({ sujets: [sujet("s1")] });
+    a.p.donnees.supprimerSujet("s1").annuler();
+    expect(localStorage.getItem("nedotab:todos:suppressions")).toBeNull();
+  });
+  it("une suppression qui échoue le dit et garde l'élément", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const a = await monter({ sujets: [sujet("s1")] });
+    a.fb.supprimerSujet.mockRejectedValueOnce(new Error("refusé"));
+    a.p.donnees.supprimerSujet("s1");
+    await vi.advanceTimersByTimeAsync(5100);
+    expect(document.querySelector(".toast").textContent).toContain("La suppression a échoué");
+    expect(a.p.donnees.etat().sujets).toHaveLength(1);
+  });
+});
