@@ -240,3 +240,61 @@ describe("panneau des todos (version simple)", () => {
     expect(p.panneau.querySelector(".todos-etat").textContent).toBe("En attente d'envoi (1)");
   });
 });
+
+describe("photo ajoutée en créant le todo", () => {
+  const coller = (cible, fichier) => {
+    const e = new Event("paste", { bubbles: true, cancelable: true });
+    e.clipboardData = { files: [fichier] };
+    cible.dispatchEvent(e);
+    return e;
+  };
+  const prete = () => ({ blob: new Blob(["p"]), mini: new Blob(["m"]), ext: "webp", typeMime: "image/webp", largeur: 1, hauteur: 1 });
+  global.URL.createObjectURL ??= () => "blob:test";
+  global.URL.revokeObjectURL ??= () => {};
+
+  it("Ctrl+V d'une image : elle s'affiche à côté du champ, puis part avec le nouveau todo", async () => {
+    const preparer = vi.fn(async () => prete());
+    const { p, fb } = await monter({ options: { preparer } });
+    const e = coller(p.panneau.querySelector(".todos-compositeur input[type=text], .todos-compositeur .todos-champ"), new File(["x"], "image.png", { type: "image/png" }));
+    expect(e.defaultPrevented).toBe(true);
+    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(false);
+    expect(p.panneau.querySelector(".todos-attente-nom").textContent).toBe("Image collée");
+    const form = p.panneau.querySelector(".todos-compositeur");
+    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    await attendre();
+    await attendre();
+    await attendre();
+    expect(fb.creerTodo.mock.calls[0][1].titre).toBe("Photo");
+    expect(fb.envoyerImageTodo).toHaveBeenCalledOnce();
+    expect(fb.envoyerImageTodo.mock.calls[0][1]).toBe("t-neuf");
+    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+  });
+
+  it("le bouton joindre prend un fichier, avec un titre ; « Retirer » l'enlève", async () => {
+    const { p, fb } = await monter();
+    const champ = p.panneau.querySelector('.todos-compositeur input[type="file"]');
+    Object.defineProperty(champ, "files", { value: [new File(["x"], "vacances.jpg", { type: "image/jpeg" })], configurable: true });
+    champ.dispatchEvent(new Event("change"));
+    expect(p.panneau.querySelector(".todos-attente-nom").textContent).toBe("vacances.jpg");
+    p.panneau.querySelector(".todos-attente-photo .todo-lien").click();
+    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+    expect(fb.envoyerImageTodo).not.toHaveBeenCalled();
+  });
+
+  it("un texte collé reste un texte collé ; un GIF est refusé avec un message", async () => {
+    const { p } = await monter();
+    const e = new Event("paste", { bubbles: true, cancelable: true });
+    e.clipboardData = { files: [] };
+    p.panneau.querySelector(".todos-compositeur .todos-champ").dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    coller(p.panneau.querySelector(".todos-compositeur .todos-champ"), new File(["x"], "a.gif", { type: "image/gif" }));
+    expect(p.panneau.querySelector(".todos-compositeur .todos-message").textContent).toContain("GIF");
+  });
+
+  it("un todo ouvert prend l'image collée, pas le champ d'ajout", async () => {
+    const { p } = await monter({ todos: [todo("a")], options: { preparer: vi.fn(async () => prete()) } });
+    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
+    coller(p.panneau.querySelector('[data-id="a"] .todo-champ--description'), new File(["x"], "image.png", { type: "image/png" }));
+    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+  });
+});

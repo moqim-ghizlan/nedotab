@@ -1,9 +1,11 @@
+import { validerImage } from "../../core/imagesTodo.js";
 import { TITRE_MAX } from "../../core/todos.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { toast } from "../toast.js";
 import { creerBandeauSujets } from "./bandeauSujets.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
+import { televerserPhoto } from "./envoiPhoto.js";
 import { creerLigneTodo } from "./ligneTodo.js";
 import { reconcilier } from "./listeCle.js";
 
@@ -72,7 +74,57 @@ export function creerPanneauTodos({
   const champ = el("input", { type: "text", class: "todos-champ", placeholder: "Nouveau todo", "aria-label": "Titre du nouveau todo", maxlength: String(TITRE_MAX * 2), autocomplete: "off", enterkeyhint: "done" });
   const ajouter = el("button", { type: "submit", class: "todos-ajouter", "aria-label": "Ajouter le todo", title: "Ajouter le todo" }, icone("ajouter", { taille: 20 }));
   const message = el("p", { class: "todos-message", role: "status", "aria-live": "polite", hidden: true });
-  const compositeur = el("form", { class: "todos-compositeur", novalidate: true }, el("div", { class: "todos-compositeur-ligne" }, champ, ajouter), message);
+  // A picture can be added right away: with the button, by pasting (Ctrl+V) or by dropping a file.
+  const champFichier = el("input", {
+    type: "file",
+    accept: "image/jpeg,image/png,image/webp",
+    hidden: true,
+    tabindex: "-1",
+    "aria-hidden": "true",
+    onchange: () => {
+      attacher(champFichier.files?.[0]);
+      champFichier.value = "";
+    },
+  });
+  const joindre = el("button", { type: "button", class: "todos-joindre", "aria-label": "Joindre une photo", title: "Joindre une photo (ou Ctrl+V)", onclick: () => champFichier.click() }, icone("image", { taille: 20 }));
+  const vignette = el("img", { class: "todos-attente-image", alt: "" });
+  const nomPhoto = el("span", { class: "todos-attente-nom" });
+  const retirer = el("button", { type: "button", class: "todo-lien", texte: "Retirer", onclick: () => retirerPhoto() });
+  const photoAttente = el("div", { class: "todos-attente-photo", hidden: true }, vignette, nomPhoto, retirer);
+  const compositeur = el(
+    "form",
+    { class: "todos-compositeur", novalidate: true },
+    photoAttente,
+    el("div", { class: "todos-compositeur-ligne" }, joindre, champ, ajouter),
+    message,
+    champFichier,
+  );
+
+  let photoEnAttente = null;
+  let photoUrl = null;
+  function attacher(fichier) {
+    if (!fichier) return;
+    const v = validerImage(fichier, { nbImages: 0, octetsUtilises: donnees.etat().compteurs.octets });
+    if (!v.ok) return dire(v.erreur);
+    retirerPhoto();
+    photoEnAttente = fichier;
+    photoUrl = URL.createObjectURL(fichier);
+    vignette.src = photoUrl;
+    nomPhoto.textContent = fichier.name && fichier.name !== "image.png" ? fichier.name : "Image collée";
+    photoAttente.hidden = false;
+    dire(null);
+    champ.focus();
+  }
+  function retirerPhoto() {
+    if (photoUrl) URL.revokeObjectURL(photoUrl);
+    photoUrl = null;
+    photoEnAttente = null;
+    photoAttente.hidden = true;
+  }
+  const imageDe = (liste) => [...(liste ?? [])].find((f) => f.type?.startsWith("image/"));
+  // Ctrl+V with a picture in the clipboard (a pasted text stays a pasted text). A todo that is open
+  // takes the picture first (it calls preventDefault).
+
 
   const nonConnecte = el(
     "div",
@@ -87,6 +139,20 @@ export function creerPanneauTodos({
     el("button", { type: "button", class: "bouton", texte: "Réessayer", onclick: () => { donnees.arreter(); donnees.demarrer(); } }),
   );
   const principal = el("div", { class: "todos-principal" }, bandeau.racine, corps, compositeur);
+  const surPaste = (e) => {
+    if (e.defaultPrevented) return;
+    const f = imageDe(e.clipboardData?.files);
+    if (!f || compositeur.hidden) return;
+    e.preventDefault();
+    attacher(f);
+  };
+  principal.addEventListener("dragover", (e) => [...(e.dataTransfer?.types ?? [])].includes("Files") && e.preventDefault());
+  principal.addEventListener("drop", (e) => {
+    const f = imageDe(e.dataTransfer?.files);
+    if (!f || compositeur.hidden) return;
+    e.preventDefault();
+    attacher(f);
+  });
   const panneau = el(
     "aside",
     { class: "todos", role: "dialog", "aria-labelledby": "todos-titre", "aria-modal": "false", hidden: true },
@@ -97,6 +163,8 @@ export function creerPanneauTodos({
     erreur,
   );
 
+  panneau.addEventListener("paste", surPaste);
+
   // --- Adding a todo --------------------------------------------------------------------------------------
   function dire(texte) {
     message.textContent = texte ?? "";
@@ -105,15 +173,22 @@ export function creerPanneauTodos({
   compositeur.addEventListener("submit", async (e) => {
     e.preventDefault();
     const titre = champ.value;
-    if (!titre.trim()) return dire("Écrivez un titre pour ajouter un todo.");
+    const photo = photoEnAttente;
+    if (!titre.trim() && !photo) return dire("Écrivez un titre ou joignez une photo.");
     champ.value = "";
-    const r = await donnees.ajouterTodo(titre);
+    retirerPhoto();
+    const r = await donnees.ajouterTodo(titre.trim() || "Photo");
     if (!r.ok) {
       champ.value = titre;
       return dire(r.erreur);
     }
     dire(null);
     champ.focus();
+    // The picture goes after the todo exists; a failure is told, the todo is kept.
+    if (photo) {
+      const envoi = await televerserPhoto({ donnees, todoId: r.id, fichier: photo, preparer });
+      if (!envoi.ok) toast(`Todo ajouté, mais ${envoi.erreur.charAt(0).toLowerCase()}${envoi.erreur.slice(1)}`, { type: "erreur", duree: 8000 });
+    }
   });
   champ.addEventListener("input", () => !message.hidden && dire(null));
 
