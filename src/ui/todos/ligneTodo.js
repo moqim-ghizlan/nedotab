@@ -233,8 +233,9 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     }
     zonePhoto.append(
       el("button", { type: "button", class: "todo-ajout-photo", onclick: () => champFichier.click() }, icone("image", { taille: 18 }), el("span", { texte: "Ajouter une photo" })),
-      tactile() ? el("button", { type: "button", class: "todo-lien", texte: "Prendre une photo", onclick: () => champCamera.click() }) : null,
     );
+    // (append(null) would write the word "null")
+    if (tactile()) zonePhoto.append(el("button", { type: "button", class: "todo-lien", texte: "Prendre une photo", onclick: () => champCamera.click() }));
   }
 
   // Ctrl+V with a picture in the clipboard (a pasted text stays a pasted text).
