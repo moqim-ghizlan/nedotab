@@ -261,6 +261,17 @@ export function creerDonneesTodos({ charger, uid }) {
     notifier();
   }
 
+  /** Moves a todo to another subject (one batch with both counters): it goes to the top. */
+  async function deplacer(id, versId) {
+    const t = trouver(id);
+    if (!t) return { ok: false, erreur: "Ce todo n'existe plus." };
+    if (!etat.sujets.some((s) => s.id === versId))
+      return { ok: false, erreur: "Ce sujet n'existe plus. Rien n'a été déplacé." };
+    return resultat(async () =>
+      void (await (await fb()).deplacerTodo(uid(), id, { depuis: t.sujetId, vers: versId, ordre: -Date.now(), fait: t.fait })),
+    );
+  }
+
   function supprimerTodo(id) {
     const t = trouver(id);
     if (!t) return { annuler() {} };
@@ -294,6 +305,7 @@ export function creerDonneesTodos({ charger, uid }) {
     majTodo,
     cocher,
     supprimerTodo,
+    deplacer,
     envoyerImage,
     lireImage,
     supprimerImage,

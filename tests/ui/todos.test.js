@@ -37,6 +37,7 @@ async function monter({ sujets = [sujet("s1"), sujet("s2")], todos = [], options
     majSujet: vi.fn(async () => {}),
     supprimerSujet: vi.fn(async () => {}),
     creerTodo: vi.fn(async () => "t-neuf"),
+    deplacerTodo: vi.fn(async () => {}),
     majTodo: vi.fn(async () => {}),
     supprimerTodo: vi.fn(async () => {}),
     envoyerImageTodo: vi.fn(async () => ({ promesse: Promise.resolve({}), annuler() {} })),
@@ -296,5 +297,38 @@ describe("photo ajoutée en créant le todo", () => {
     p.panneau.querySelector('[data-id="a"] .todo-corps').click();
     coller(p.panneau.querySelector('[data-id="a"] .todo-champ--description'), new File(["x"], "image.png", { type: "image/png" }));
     expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+  });
+});
+
+describe("changer le sujet d'un todo", () => {
+  it("la liste propose tous les sujets ; un autre sujet déplace le todo (un lot, deux compteurs)", async () => {
+    const { p, fb } = await monter({ todos: [todo("a")] });
+    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
+    const choix = p.panneau.querySelector('[data-id="a"] .todo-champ--sujet');
+    expect([...choix.options].map((o) => o.textContent)).toEqual(["Sujet s1", "Sujet s2"]);
+    expect(choix.value).toBe("s1");
+    choix.value = "s2";
+    choix.dispatchEvent(new Event("change"));
+    await attendre();
+    await attendre();
+    expect(fb.deplacerTodo).toHaveBeenCalledOnce();
+    expect(fb.deplacerTodo.mock.calls[0][2]).toMatchObject({ depuis: "s1", vers: "s2", fait: false });
+  });
+  it("le bouton Supprimer est un vrai bouton avec une icône", async () => {
+    const { p } = await monter({ todos: [todo("a")] });
+    const b = p.panneau.querySelector('[data-id="a"] .todo-supprimer');
+    expect(b.textContent).toBe("Supprimer");
+    expect(b.querySelector("svg")).not.toBeNull();
+  });
+  it("les dates : créé et appareil ; « Modifié » seulement s'il apporte quelque chose", async () => {
+    const t0 = new Date(2026, 10, 6, 21, 31).getTime();
+    const a = await monter({ todos: [todo("a", { creeLe: t0, modifieLe: t0 + 5000, appareil: "Pc-lyon" })] });
+    const texte = a.p.panneau.querySelector('[data-id="a"] .todo-dates').textContent;
+    expect(texte).toContain("Créé 6 nov. 2026");
+    expect(texte).toContain("Pc-lyon");
+    expect(texte).not.toContain("Modifié");
+    document.body.replaceChildren();
+    const b = await monter({ todos: [todo("a", { creeLe: t0, modifieLe: t0 + 3_600_000 })] });
+    expect(b.p.panneau.querySelector('[data-id="a"] .todo-dates').textContent).toContain("Modifié");
   });
 });

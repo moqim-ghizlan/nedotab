@@ -270,6 +270,18 @@ export async function supprimerTodo(uid, id, { sujetId, fait, images = [] } = {}
 }
 
 /**
+ * Moves a todo to another subject: its `sujetId`, its place (the top of the new list) and the
+ * counters of the TWO subjects, in one batch. If the destination is gone, nothing moves.
+ */
+export async function deplacerTodo(uid, id, { depuis, vers, ordre, fait }) {
+  const lot = writeBatch(db());
+  lot.update(doc(todos(uid), id), { sujetId: vers, ordre, modifieLe: serverTimestamp() });
+  lot.update(doc(sujets(uid), depuis), { nbTotal: increment(-1), nbRestants: increment(fait ? 0 : -1) });
+  lot.update(doc(sujets(uid), vers), { nbTotal: increment(1), nbRestants: increment(fait ? 0 : 1) });
+  await lot.commit();
+}
+
+/**
  * Recounts the subjects and the todos and corrects the counters (after a drift). The size of the
  * images (`octets`) is kept: only the reconciliation of V6.4 can recompute it.
  * @returns {Promise<{ nbSujets: number, nbTodos: number }>}

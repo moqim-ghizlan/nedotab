@@ -26,8 +26,8 @@
 /* --- Button: bottom left, beside the sharing button ---------------------------------------------- */
 .todos-bouton {
   position: fixed;
-  left: calc(max(var(--espace-4), env(safe-area-inset-left, 0px)) + 60px);
-  bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px));
+  left: max(var(--espace-4), env(safe-area-inset-left, 0px));
+  bottom: calc(max(var(--espace-4), env(safe-area-inset-bottom, 0px)) + 60px);
   z-index: 30;
   display: grid;
   place-items: center;
@@ -45,7 +45,7 @@
   transition: transform 200ms var(--ressort), background-color 160ms;
 }
 .todos-bouton[hidden] { display: none; }
-body:has(.partage-bouton[hidden]) .todos-bouton { left: max(var(--espace-4), env(safe-area-inset-left, 0px)); }
+body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px)); }
 .todos-bouton:hover { transform: translateY(-2px); }
 .todos-bouton:active { transform: scale(0.94); }
 .todos-bouton[aria-expanded="true"] { background: var(--accent); border-color: transparent; color: var(--accent-texte); }
@@ -359,8 +359,27 @@ body:has(.partage-bouton[hidden]) .todos-bouton { left: max(var(--espace-4), env
 .todo-supprimer { min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--texte-secondaire); font: inherit; font-size: 0.875rem; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .todo-lien:hover { color: var(--texte); }
 .todo-actions { display: flex; justify-content: flex-end; }
-.todo-supprimer { color: var(--danger); text-decoration: none; }
-.todo-supprimer:hover { text-decoration: underline; }
+/* A real button: outlined in the danger colour, filled on hover. */
+.todo-supprimer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms, transform 140ms;
+}
+.todo-supprimer:hover { background: color-mix(in srgb, var(--danger) 22%, transparent); }
+.todo-supprimer:active { transform: scale(0.97); }
 
 .todos-faits-titre { min-height: 44px; margin-top: var(--espace-2); padding: 0 12px; border: 0; background: none; color: var(--texte-secondaire); font: inherit; font-weight: 600; cursor: pointer; }
 .todos-faits-titre::before { content: "▸ "; }
@@ -434,16 +453,11 @@ body:has(.partage-bouton[hidden]) .todos-bouton { left: max(var(--espace-4), env
 .visionneuse-etat:empty { display: none; }
 @media (max-width: 899px) { .visionneuse-scene { padding: 0; } }
 
-/* Created / modified, and from which device. */
-.todo-dates { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; margin: 0; font-size: 0.8125rem; color: var(--texte-secondaire); }
-.todo-dates dt { font-weight: 600; }
-.todo-dates dd { margin: 0; }
-
-/* A picture joined to the todo being written. */
-.todos-joindre { display: grid; flex: none; place-items: center; width: 48px; height: 48px; padding: 0; border: 1px solid var(--trait-fort); border-radius: 50%; background: none; color: var(--texte-secondaire); cursor: pointer; }
-.todos-joindre:hover { border-color: var(--accent); color: var(--texte); }
-.todos-joindre:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.todos-attente-photo { display: flex; align-items: center; gap: var(--espace-3); padding: 6px 8px; border: 1px solid var(--trait); border-radius: 14px; background: var(--creux); }
-.todos-attente-photo[hidden] { display: none; }
-.todos-attente-image { flex: none; width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
-.todos-attente-nom { flex: 1; min-width: 0; overflow: hidden; font-size: 0.875rem; color: var(--texte-secondaire); text-overflow: ellipsis; white-space: nowrap; }
+/* Created / modified and the device: quiet chips. */
+.todo-dates { display: flex; flex-wrap: wrap; gap: 6px; }
+.todo-date { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--creux); font-size: 0.75rem; color: var(--texte-secondaire); }
+.todo-date svg { flex: none; }
+/* Subject of the todo. */
+.todo-sujet-rangee { display: flex; align-items: center; gap: var(--espace-3); }
+.todo-sujet-rangee label { flex: none; font-size: 0.875rem; color: var(--texte-secondaire); }
+.todo-champ--sujet { flex: 1; min-height: 44px; padding: 0 12px; }

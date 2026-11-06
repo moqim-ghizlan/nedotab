@@ -5,6 +5,7 @@ import { DESCRIPTION_MAX, TITRE_MAX } from "../../core/todos.js";
 import { vibrer } from "../haptique.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
+import { toast } from "../toast.js";
 import { ErreurImage, preparerImage } from "./compresserImage.js";
 import { ouvrirVisionneuse } from "./visionneuse.js";
 
@@ -79,7 +80,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
   });
   const message = el("p", { class: "todo-message", role: "status", "aria-live": "polite", hidden: true });
   const zonePhoto = el("div", { class: "todo-photo-zone" });
-  const dates = el("dl", { class: "todo-dates" });
+  const dates = el("div", { class: "todo-dates" });
   const champFichier = el("input", {
     type: "file",
     accept: "image/jpeg,image/png,image/webp",
@@ -98,12 +99,28 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     "aria-hidden": "true",
     onchange: () => ajouterPhoto(champCamera.files?.[0]).finally(() => (champCamera.value = "")),
   });
-  const supprimer = el("button", {
-    type: "button",
-    class: "todo-supprimer",
-    texte: "Supprimer le todo",
-    onclick: () => surSuppression?.(courant.id),
+  const supprimer = el(
+    "button",
+    { type: "button", class: "todo-supprimer", onclick: () => surSuppression?.(courant.id) },
+    icone("poubelle", { taille: 18 }),
+    el("span", { texte: "Supprimer" }),
+  );
+  // The subject of the todo: another one moves it there.
+  const choixSujet = el("select", { class: "todo-champ todo-champ--sujet", id: `todo-sujet-${todo.id}`, "aria-label": "Sujet" });
+  const rangeeSujet = el("div", { class: "todo-sujet-rangee" }, el("label", { for: choixSujet.id, texte: "Sujet" }), choixSujet);
+  choixSujet.addEventListener("change", async () => {
+    const vers = choixSujet.value;
+    if (vers === courant.sujetId) return;
+    const r = await donnees.deplacer(courant.id, vers);
+    if (!r.ok) {
+      choixSujet.value = courant.sujetId;
+      dire(r.erreur);
+    } else toast(`Déplacé vers « ${choixSujet.selectedOptions[0]?.textContent ?? ""} »`);
   });
+  function remplirSujets() {
+    choixSujet.replaceChildren(...donnees.etat().sujets.map((s) => el("option", { value: s.id, texte: s.nom })));
+    choixSujet.value = courant.sujetId;
+  }
   let surSuppression = null;
   const interieur = el(
     "div",
@@ -111,6 +128,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     champTitre,
     champDescription,
     zonePhoto,
+    rangeeSujet,
     message,
     dates,
     el("div", { class: "todo-actions" }, supprimer),
@@ -124,14 +142,15 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
 
   // --- Dates and device ------------------------------------------------------------------------------
   const quand = (ms) =>
-    ms == null ? "à l'instant" : new Date(ms).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+    ms == null ? "à l'instant" : new Date(ms).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   function rendreDates(t) {
     const depuis = t.appareil || t.appareilId ? libelleAppareilAffiche({ appareilId: t.appareilId, appareil: t.appareil }, appareils?.liste?.() ?? []) : "";
+    // The modification line only appears when it tells something more than the creation.
+    const different = t.modifieLe != null && t.creeLe != null && Math.abs(t.modifieLe - t.creeLe) > 60_000;
     dates.replaceChildren(
-      el("dt", { texte: "Créé" }),
-      el("dd", { texte: `${quand(t.creeLe)}${depuis ? `, depuis ${depuis}` : ""}` }),
-      el("dt", { texte: "Modifié" }),
-      el("dd", { texte: quand(t.modifieLe) }),
+      el("span", { class: "todo-date" }, icone("horloge", { taille: 14 }), el("span", { texte: `Créé ${quand(t.creeLe)}` })),
+      depuis ? el("span", { class: "todo-date" }, icone("grille", { taille: 14 }), el("span", { texte: depuis })) : null,
+      different ? el("span", { class: "todo-date" }, icone("crayon", { taille: 14 }), el("span", { texte: `Modifié ${quand(t.modifieLe)}` })) : null,
     );
   }
 
@@ -307,6 +326,7 @@ export function creerLigneTodo({ donnees, todo, surBascule, store, preparer = pr
     corps.setAttribute("aria-expanded", String(oui));
     detail.inert = !oui;
     if (oui) {
+      remplirSujets();
       champTitre.value = aEcrire.titre ?? courant.titre;
       champDescription.value = aEcrire.description ?? courant.description;
       autoHauteur();

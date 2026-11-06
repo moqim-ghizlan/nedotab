@@ -105,6 +105,7 @@ export {
 export {
   creerSujet as creerSujetTodos,
   creerTodo,
+  deplacerTodo,
   ecouterCompteurs as ecouterCompteursTodos,
   ecouterSujets,
   ecouterTodos,
