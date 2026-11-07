@@ -229,3 +229,47 @@ describe("chat : pas prêt", () => {
     expect(m.q(".chat-zone").disabled).toBe(true);
   });
 });
+
+describe("chat : un appui à l'extérieur masque le panneau (TODO 10)", () => {
+  const appui = (cible) => cible.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+  const apres = () => new Promise((r) => setTimeout(r, 5));
+
+  it("masque, garde la conversation et le brouillon ; rouvrir retrouve l'état", async () => {
+    const m = await monter();
+    m.chat.ouvrir();
+    m.ecrire("bonjour");
+    m.envoyer();
+    await apres();
+    m.ecrire("brouillon en cours");
+    await apres();
+    const hors = document.createElement("div");
+    document.body.append(hors);
+    appui(hors);
+    expect(m.chat.panneau.hidden).toBe(true);
+    m.chat.ouvrir();
+    expect(m.q(".chat-zone").value).toBe("brouillon en cours");
+    expect(m.chat.panneau.textContent).toContain("bonjour");
+  });
+
+  it("un appui dans le panneau ne masque pas", async () => {
+    const m = await monter();
+    m.chat.ouvrir();
+    await apres();
+    appui(m.q(".chat-zone"));
+    expect(m.chat.panneau.hidden).toBe(false);
+  });
+
+  it("un appui dans une fenêtre ou un menu ouvert par le panneau ne masque pas", async () => {
+    const m = await monter();
+    m.chat.ouvrir();
+    await apres();
+    const d = document.createElement("dialog");
+    document.body.append(d);
+    appui(d);
+    const menu = document.createElement("div");
+    menu.className = "menu";
+    document.body.append(menu);
+    appui(menu);
+    expect(m.chat.panneau.hidden).toBe(false);
+  });
+});

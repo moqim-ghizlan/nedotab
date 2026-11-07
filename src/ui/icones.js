@@ -66,6 +66,9 @@ const TRACES = {
     "M15 9V5a1 1 0 0 0-1-1H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3",
   ],
   coche: ["M5 12.5l4.5 4.5L19 7.5"],
+  // "Done": a circle with a tick. "Save": a floppy disk.
+  fait: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M8 12.5l3 3 5-6"],
+  enregistrer: ["M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4z", "M8 4v5h7V4", "M8 20v-6h8v6"],
   ouvrir: ["M14 4h6v6", "M20 4l-9 9", "M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"],
   telecharger: ["M12 4v11", "M7 10l5 5 5-5", "M5 20h14"],
   partager: [

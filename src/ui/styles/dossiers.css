@@ -276,8 +276,8 @@
     margin: 0;
     border: 0;
     border-radius: 0;
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
-      env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    padding: var(--safe-haut) var(--safe-droite)
+      var(--safe-bas) var(--safe-gauche);
   }
   .fenetre-dossier[open] {
     animation: monter 220ms ease-out;
@@ -373,15 +373,24 @@
  */
 .fenetre-dossier {
   transition:
+    opacity 160ms ease-out,
     background-color 160ms ease-out,
     border-color 160ms ease-out,
     box-shadow 160ms ease-out;
 }
 
-.fenetre-dossier--sortie {
+/* The setting "Opacité de la fenêtre de dossier" (base.css) paints the window with a blur: the
+   selector is heavier on purpose, or the frosted panel would stay and hide the drop target.
+   opacity: 0 removes everything the window paints, its blur included, whatever rule set it.
+   "backdrop-filter" is never followed by "-webkit-backdrop-filter" here: the CSS minifier then
+   keeps only the prefixed one, which Chrome ignores (the blur stayed on the whole page). */
+.fenetre-dossier--sortie,
+:root[data-opacite-dossier] .fenetre-dossier.fenetre-dossier--sortie {
+  opacity: 0;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
+  backdrop-filter: none;
 }
 
 .fenetre-dossier--sortie > *,
@@ -390,9 +399,9 @@
 }
 
 .fenetre-dossier--sortie::backdrop {
+  opacity: 0;
   background: transparent;
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .case--insertion-avant,

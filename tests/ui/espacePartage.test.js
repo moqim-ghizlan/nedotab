@@ -237,6 +237,12 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     await attendre();
     choisirDansMenu(p.panneau, "Supprimer");
     await attendre();
+    // Nothing is removed before the confirmation (focus on « Annuler »).
+    expect(appels.supprimer).toEqual([]);
+    const conf = document.querySelector('[role="alertdialog"]');
+    expect(conf.textContent).toContain("irréversible");
+    [...conf.querySelectorAll("button")].find((x) => x.textContent === "Supprimer").click();
+    await attendre();
     await attendre();
     expect(appels.supprimer).toEqual(["1"]);
     const annuler = [...document.querySelectorAll("button")].find(
@@ -246,6 +252,17 @@ describe("panneau de l'espace de partage (V4.24)", () => {
     annuler.click();
     await attendre();
     expect(fb.restaurerPartage).toHaveBeenCalled();
+  });
+
+  it("supprimer : « Annuler » dans la confirmation ne supprime rien", async () => {
+    const { p, appels } = monter({ elements: [el_()] });
+    p.ouvrir();
+    await attendre();
+    choisirDansMenu(p.panneau, "Supprimer");
+    await attendre();
+    [...document.querySelector('[role="alertdialog"]').querySelectorAll("button")].find((x) => x.textContent === "Annuler").click();
+    await attendre();
+    expect(appels.supprimer).toEqual([]);
   });
 
   it("épingler", async () => {

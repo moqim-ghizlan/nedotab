@@ -1,13 +1,12 @@
-import { validerImage } from "../../core/imagesTodo.js";
-import { TITRE_MAX } from "../../core/todos.js";
+import { texteEnvoi } from "../../core/etatEnvoi.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { toast } from "../toast.js";
 import { creerBandeauSujets } from "./bandeauSujets.js";
 import { creerDonneesTodos } from "./donneesTodos.js";
-import { televerserPhoto } from "./envoiPhoto.js";
 import { creerLigneTodo } from "./ligneTodo.js";
 import { reconcilier } from "./listeCle.js";
+import { ouvrirModaleTodo } from "./modaleTodo.js";
 
 const grandEcran = () => globalThis.matchMedia?.("(min-width: 900px)").matches;
 
@@ -40,7 +39,6 @@ export function creerPanneauTodos({
 }) {
   let ouvert = false;
   let retourFocus = null;
-  let ouvertId = null; // the todo open in place (one at a time)
   let faitsOuverts = false;
   const aFaire = new Map();
   const faits = new Map();
@@ -51,7 +49,7 @@ export function creerPanneauTodos({
     { type: "button", class: "todos-bouton", "aria-label": "Ouvrir les todos", title: "Todos", "aria-expanded": "false", onclick: () => (ouvert ? fermer() : ouvrir()) },
     icone("todos", { taille: 22 }),
   );
-  const etatReseau = el("span", { class: "todos-etat", role: "status", "aria-live": "polite", hidden: true });
+  const etatReseau = el("span", { class: "todos-etat", role: "status", "aria-live": "polite" });
   const fermerBouton = el("button", { type: "button", class: "todos-fermer", "aria-label": "Fermer", title: "Fermer (Échap)", onclick: () => fermer() }, icone("fermer", { taille: 18 }));
   const bandeau = creerBandeauSujets({ donnees });
 
@@ -67,64 +65,28 @@ export function creerPanneauTodos({
       rendre();
     },
   });
-  const vide = el("div", { class: "todos-vide", hidden: true }, el("strong", { texte: "Rien à faire ici" }), el("span", { texte: "Écrivez un todo dans le champ en bas." }));
+  const vide = el("div", { class: "todos-vide", hidden: true }, el("strong", { texte: "Rien à faire ici" }), el("span", { texte: "Touchez « Nouveau todo » pour en ajouter un." }));
   const chargement = el("p", { class: "todos-attente", role: "status", texte: "Chargement…", hidden: true });
   const corps = el("div", { class: "todos-corps" }, vide, chargement, listeAFaire, boutonFaits, listeFaits);
 
-  const champ = el("input", { type: "text", class: "todos-champ", placeholder: "Nouveau todo", "aria-label": "Titre du nouveau todo", maxlength: String(TITRE_MAX * 2), autocomplete: "off", enterkeyhint: "done" });
-  const ajouter = el("button", { type: "submit", class: "todos-ajouter", "aria-label": "Ajouter le todo", title: "Ajouter le todo" }, icone("ajouter", { taille: 20 }));
-  const message = el("p", { class: "todos-message", role: "status", "aria-live": "polite", hidden: true });
-  // A picture can be added right away: with the button, by pasting (Ctrl+V) or by dropping a file.
-  const champFichier = el("input", {
-    type: "file",
-    accept: "image/jpeg,image/png,image/webp",
-    hidden: true,
-    tabindex: "-1",
-    "aria-hidden": "true",
-    onchange: () => {
-      attacher(champFichier.files?.[0]);
-      champFichier.value = "";
-    },
-  });
-  const joindre = el("button", { type: "button", class: "todos-joindre", "aria-label": "Joindre une photo", title: "Joindre une photo (ou Ctrl+V)", onclick: () => champFichier.click() }, icone("image", { taille: 20 }));
-  const vignette = el("img", { class: "todos-attente-image", alt: "" });
-  const nomPhoto = el("span", { class: "todos-attente-nom" });
-  const retirer = el("button", { type: "button", class: "todo-lien", texte: "Retirer", onclick: () => retirerPhoto() });
-  const photoAttente = el("div", { class: "todos-attente-photo", hidden: true }, vignette, nomPhoto, retirer);
-  const compositeur = el(
-    "form",
-    { class: "todos-compositeur", novalidate: true },
-    photoAttente,
-    el("div", { class: "todos-compositeur-ligne" }, joindre, champ, ajouter),
-    message,
-    champFichier,
+  // Creating happens in a window (modaleTodo.js): the bar at the bottom is one button.
+  const ajouter = el(
+    "button",
+    { type: "button", class: "todos-ajouter", "aria-haspopup": "dialog", "aria-label": "Nouveau todo", title: "Nouveau todo", onclick: () => ouvrirCreation(null, ajouter) },
+    icone("ajouter", { taille: 20 }),
+    el("span", { class: "todos-ajouter-texte", texte: "Nouveau todo" }),
   );
+  const compositeur = el("div", { class: "todos-compositeur" }, ajouter);
 
-  let photoEnAttente = null;
-  let photoUrl = null;
-  function attacher(fichier) {
-    if (!fichier) return;
-    const v = validerImage(fichier, { nbImages: 0, octetsUtilises: donnees.etat().compteurs.octets });
-    if (!v.ok) return dire(v.erreur);
-    retirerPhoto();
-    photoEnAttente = fichier;
-    photoUrl = URL.createObjectURL(fichier);
-    vignette.src = photoUrl;
-    nomPhoto.textContent = fichier.name && fichier.name !== "image.png" ? fichier.name : "Image collée";
-    photoAttente.hidden = false;
-    dire(null);
-    champ.focus();
-  }
-  function retirerPhoto() {
-    if (photoUrl) URL.revokeObjectURL(photoUrl);
-    photoUrl = null;
-    photoEnAttente = null;
-    photoAttente.hidden = true;
-  }
   const imageDe = (liste) => [...(liste ?? [])].find((f) => f.type?.startsWith("image/"));
-  // Ctrl+V with a picture in the clipboard (a pasted text stays a pasted text). A todo that is open
-  // takes the picture first (it calls preventDefault).
 
+  function ouvrirCreation(fichier, origine) {
+    if (donnees.etat().compteurs.nbTodos >= 500) return toast("500 todos maximum.", { type: "erreur" });
+    ouvrirModaleTodo({ donnees, sujetId: donnees.etat().sujetId, preparer, appareils, retourFocus: origine ?? ajouter, fichier });
+  }
+  function ouvrirEdition(todo, origine) {
+    ouvrirModaleTodo({ donnees, todo, preparer, appareils, retourFocus: origine, surSupprimer: supprimerTodo });
+  }
 
   const nonConnecte = el(
     "div",
@@ -139,19 +101,20 @@ export function creerPanneauTodos({
     el("button", { type: "button", class: "bouton", texte: "Réessayer", onclick: () => { donnees.arreter(); donnees.demarrer(); } }),
   );
   const principal = el("div", { class: "todos-principal" }, bandeau.racine, corps, compositeur);
+  // A picture pasted or dropped on the panel starts a new todo with it.
   const surPaste = (e) => {
-    if (e.defaultPrevented) return;
+    if (e.defaultPrevented || document.querySelector("dialog[open]:modal")) return;
     const f = imageDe(e.clipboardData?.files);
     if (!f || compositeur.hidden) return;
     e.preventDefault();
-    attacher(f);
+    ouvrirCreation(f, ajouter);
   };
   principal.addEventListener("dragover", (e) => [...(e.dataTransfer?.types ?? [])].includes("Files") && e.preventDefault());
   principal.addEventListener("drop", (e) => {
     const f = imageDe(e.dataTransfer?.files);
     if (!f || compositeur.hidden) return;
     e.preventDefault();
-    attacher(f);
+    ouvrirCreation(f, ajouter);
   });
   const panneau = el(
     "aside",
@@ -165,62 +128,35 @@ export function creerPanneauTodos({
 
   panneau.addEventListener("paste", surPaste);
 
-  // --- Adding a todo --------------------------------------------------------------------------------------
-  function dire(texte) {
-    message.textContent = texte ?? "";
-    message.hidden = !texte;
-  }
-  compositeur.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const titre = champ.value;
-    const photo = photoEnAttente;
-    if (!titre.trim() && !photo) return dire("Écrivez un titre ou joignez une photo.");
-    champ.value = "";
-    retirerPhoto();
-    const r = await donnees.ajouterTodo(titre.trim() || "Photo");
-    if (!r.ok) {
-      champ.value = titre;
-      return dire(r.erreur);
-    }
-    dire(null);
-    champ.focus();
-    // The picture goes after the todo exists; a failure is told, the todo is kept.
-    if (photo) {
-      const envoi = await televerserPhoto({ donnees, todoId: r.id, fichier: photo, preparer });
-      if (!envoi.ok) toast(`Todo ajouté, mais ${envoi.erreur.charAt(0).toLowerCase()}${envoi.erreur.slice(1)}`, { type: "erreur", duree: 8000 });
-    }
-  });
-  champ.addEventListener("input", () => !message.hidden && dire(null));
-
   // --- Lines -------------------------------------------------------------------------------------------------------
-  function bascule(id, oui) {
-    if (ouvertId && ouvertId !== id) (aFaire.get(ouvertId) ?? faits.get(ouvertId))?.basculer(false);
-    ouvertId = oui ? id : null;
-    const ligne = aFaire.get(id) ?? faits.get(id);
-    ligne?.basculer(oui);
-    if (oui) ligne?.li.scrollIntoView?.({ block: "nearest", behavior: matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  }
-
   function supprimerTodo(id) {
     const attente = donnees.supprimerTodo(id);
-    if (ouvertId === id) ouvertId = null;
     toast("Todo supprimé", { action: { libelle: "Annuler", onClic: () => attente.annuler() }, cle: "todos-suppression" });
   }
 
   const creer = (t) => {
-    const ligne = creerLigneTodo({ donnees, todo: t, surBascule: bascule, store, preparer, appareils });
-    ligne.surSuppression(supprimerTodo);
-    return ligne;
+    return creerLigneTodo({ donnees, todo: t, surOuvrir: ouvrirEdition, store });
   };
 
   // --- Render ---------------------------------------------------------------------------------------------------------
+  // The "not sent yet" note: Firestore marks every write as pending for a moment (the counters
+  // move in the same batch as the todo, a snapshot comes back from the cache before the server's
+  // answer). Told only when it lasts (5 s) or when the device is offline; the place is kept so
+  // nothing jumps.
+  let attenteDepuis = null;
+  let minuteurEtat = null;
   function rendreEtat() {
     const e = donnees.etat();
     const horsLigne = typeof navigator !== "undefined" && navigator.onLine === false;
     const n = e.todos.filter((t) => t.enAttente).length + e.sujets.filter((s) => s.enAttente).length;
-    const texte = horsLigne ? (n > 0 ? `Hors ligne · ${n} en attente d'envoi` : "Hors ligne") : n > 0 ? `En attente d'envoi (${n})` : "";
+    if (n === 0) attenteDepuis = null;
+    else attenteDepuis ??= Date.now();
+    const { texte } = texteEnvoi({ enAttente: n, horsLigne, depuis: attenteDepuis, maintenant: Date.now() });
     etatReseau.textContent = texte;
-    etatReseau.hidden = !texte;
+    etatReseau.classList.toggle("todos-etat--visible", !!texte);
+    clearTimeout(minuteurEtat);
+    minuteurEtat = null;
+    if (n > 0 && !horsLigne && !texte) minuteurEtat = setTimeout(rendreEtat, Math.max(100, 5000 - (Date.now() - attenteDepuis) + 50));
   }
 
   function rendre() {
@@ -239,8 +175,6 @@ export function creerPanneauTodos({
     if (aucunSujet) return;
     const a = e.todos.filter((t) => !t.fait);
     const f = e.todos.filter((t) => t.fait);
-    // The line open in place must still exist (removed here or elsewhere).
-    if (ouvertId && !e.todos.some((t) => t.id === ouvertId)) ouvertId = null;
     reconcilier(listeAFaire, aFaire, a, creer);
     reconcilier(listeFaits, faits, f, creer);
     boutonFaits.hidden = f.length === 0;
@@ -251,9 +185,8 @@ export function creerPanneauTodos({
     chargement.hidden = !charge;
     vide.hidden = charge || e.todos.length > 0 || e.todosStatut === "erreur";
     const plein = e.compteurs.nbTodos >= 500;
-    champ.disabled = plein;
     ajouter.disabled = plein;
-    champ.placeholder = plein ? "500 todos maximum" : "Nouveau todo";
+    ajouter.title = plein ? "500 todos maximum" : "Nouveau todo";
   }
   donnees.abonner(rendre);
 
@@ -269,7 +202,7 @@ export function creerPanneauTodos({
     rendre();
     // No automatic focus on a phone: the keyboard would pop up on its own.
     const e = donnees.etat();
-    if (grandEcran() && disponible() && e.sujets.length > 0) champ.focus();
+    if (grandEcran() && disponible() && e.sujets.length > 0) ajouter.focus();
     else if (grandEcran() && disponible() && e.statut === "ok") bandeau.focusAjout();
     else if (!grandEcran() || !disponible()) fermerBouton.focus();
     document.addEventListener("keydown", surTouche);
@@ -285,6 +218,7 @@ export function creerPanneauTodos({
     bouton.setAttribute("aria-expanded", "false");
     document.removeEventListener("keydown", surTouche);
     document.removeEventListener("pointerdown", surExterieur);
+    clearTimeout(minuteurEtat);
     if (document.hidden) donnees.arreter();
     (retourFocus?.isConnected ? retourFocus : bouton).focus?.();
   }
@@ -331,7 +265,6 @@ export function creerPanneauTodos({
     }
     if (!disponible()) {
       donnees.reinitialiser();
-      ouvertId = null;
     } else if (ouvert) donnees.demarrer();
     rendre();
   }
@@ -344,7 +277,5 @@ export function creerPanneauTodos({
     actualiser,
     donnees,
     estOuvert: () => ouvert,
-    /** Tests: the todo open in place, or null. */
-    ouvertId: () => ouvertId,
   };
 }

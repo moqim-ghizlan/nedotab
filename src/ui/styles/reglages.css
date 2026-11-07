@@ -71,8 +71,8 @@ body.fond-sombre {
 /* Below the iPhone's status bar and away from its rounded corners (V3.1, app installed). */
 .barre-haut {
   position: fixed;
-  top: calc(var(--espace-4) + env(safe-area-inset-top, 0px));
-  right: calc(var(--espace-4) + env(safe-area-inset-right, 0px));
+  top: calc(var(--espace-4) + var(--safe-haut));
+  right: calc(var(--espace-4) + var(--safe-droite));
   z-index: 10;
   display: flex;
   align-items: center;
@@ -804,7 +804,7 @@ body.fond-sombre {
 @media (max-width: 519px) {
   .reglages {
     --reglages-marge: 0px;
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-haut);
     border: 0;
     border-radius: 0;
     background: var(--surface);
@@ -816,7 +816,7 @@ body.fond-sombre {
 
   .reglages-corps,
   .reglages-nav {
-    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(40px + var(--safe-bas));
   }
 }
 
@@ -2054,8 +2054,8 @@ body.fond-clair .carte-action--principale {
 @media (max-width: 520px) {
   .galerie-fenetre {
     inset: 0;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-top: var(--safe-haut);
+    padding-bottom: var(--safe-bas);
     border: 0;
     border-radius: 0;
   }
@@ -2126,7 +2126,7 @@ body.fond-clair .carte-action--principale {
   .dialogue:has(.apercu-resume) .dialogue-actions,
   .dialogue:has(.apercu-resume) .dialogue-boutons {
     position: sticky;
-    bottom: calc(-1 * var(--espace-5) - env(safe-area-inset-bottom, 0px));
+    bottom: calc(-1 * var(--espace-5) - var(--safe-bas));
     padding-block: var(--espace-3);
     background: var(--surface);
   }
@@ -2170,8 +2170,8 @@ body.fond-clair .carte-action--principale {
 .badge-debug {
   /* Top-left, under the safe area: the bottom-left corner belongs to the sharing button. */
   position: fixed;
-  top: calc(var(--espace-2) + env(safe-area-inset-top, 0px));
-  left: calc(var(--espace-2) + env(safe-area-inset-left, 0px));
+  top: calc(var(--espace-2) + var(--safe-haut));
+  left: calc(var(--espace-2) + var(--safe-gauche));
   z-index: 80;
   padding: 1px 7px;
   border-radius: 999px;

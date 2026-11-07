@@ -1,5 +1,6 @@
 import { COULEURS_SUJET, NOM_SUJET_MAX } from "../../core/sujets.js";
 import { demander } from "../dialogues/commun.js";
+import { confirmerSuppression } from "../dialogues/confirmerSuppression.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirMenu } from "../menuContextuel.js";
@@ -31,7 +32,7 @@ export function creerBandeauSujets({ donnees }) {
     courantReste,
     icone("bas", { taille: 16 }),
   );
-  const plus = el("button", { type: "button", class: "sujets-plus", "aria-label": "Nouveau sujet", title: "Nouveau sujet", onclick: () => ouvrirFormulaire(true) }, icone("ajouter", { taille: 18 }));
+  const plus = el("button", { type: "button", class: "sujets-plus", "aria-label": "Nouveau sujet", title: "Nouveau sujet", "aria-expanded": "false", onclick: () => ouvrirFormulaire(formulaire.hidden) }, icone("ajouter", { taille: 18 }));
   const menu = el("button", { type: "button", class: "sujets-menu", "aria-haspopup": "menu", "aria-label": "Actions du sujet", title: "Actions du sujet", onclick: () => ouvrirActions() }, icone("points", { taille: 18 }));
   const champ = el("input", { type: "text", class: "todos-champ", placeholder: "Nom du sujet", "aria-label": "Nom du nouveau sujet", maxlength: String(NOM_SUJET_MAX * 2), autocomplete: "off", enterkeyhint: "done" });
   const message = el("p", { class: "todos-message", role: "status", "aria-live": "polite", hidden: true });
@@ -48,8 +49,15 @@ export function creerBandeauSujets({ donnees }) {
   function ouvrirFormulaire(oui) {
     formulaire.hidden = !oui;
     message.hidden = true;
+    plus.setAttribute("aria-expanded", String(oui));
+    plus.classList.toggle("sujets-plus--ouvert", oui);
+    plus.setAttribute("aria-label", oui ? "Fermer sans créer" : "Nouveau sujet");
     if (oui) champ.focus();
-    else plus.focus();
+    else {
+      champ.value = "";
+      message.classList.remove("todos-message--erreur");
+      if (!plus.hidden) plus.focus();
+    }
   }
   formulaire.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -60,7 +68,6 @@ export function creerBandeauSujets({ donnees }) {
       message.classList.add("todos-message--erreur");
       return;
     }
-    champ.value = "";
     ouvrirFormulaire(false);
   });
   formulaire.addEventListener("keydown", (e) => {
@@ -155,14 +162,8 @@ export function creerBandeauSujets({ donnees }) {
   }
 
   async function demanderSuppression(s) {
-    if (s.nbTotal > 0) {
-      const ok = await demander({
-        titre: "Supprimer ce sujet ?",
-        message: `« ${s.nom} » et ${s.nbTotal === 1 ? "son todo" : `ses ${s.nbTotal} todos`} seront supprimés.`,
-        boutons: [{ libelle: "Annuler", valeur: false }, { libelle: "Supprimer", valeur: true, danger: true }],
-      });
-      if (!ok) return;
-    }
+    const qui = s.nbTotal > 0 ? `Le sujet « ${s.nom} » et ${s.nbTotal === 1 ? "son todo seront supprimés." : `ses ${s.nbTotal} todos seront supprimés.`}` : `Le sujet « ${s.nom} » sera supprimé.`;
+    if (!(await confirmerSuppression({ message: qui, retourFocus: menu }))) return;
     const attente = donnees.supprimerSujet(s.id);
     toast("Sujet supprimé", { action: { libelle: "Annuler", onClic: () => attente.annuler() }, cle: "todos-suppression" });
   }
@@ -206,7 +207,7 @@ export function creerBandeauSujets({ donnees }) {
     // With no subject the form below is the welcome: no "+" beside it.
     plus.hidden = vide;
     plus.disabled = e.compteurs.nbSujets >= 30;
-    plus.title = plus.disabled ? "30 sujets maximum" : "Nouveau sujet";
+    plus.title = plus.disabled ? "30 sujets maximum" : formulaire.hidden ? "Nouveau sujet" : "Fermer sans créer";
     // Nothing yet: the form is the welcome.
     if (vide && e.statut === "ok" && formulaire.hidden) formulaire.hidden = false;
   }

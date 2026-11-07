@@ -279,12 +279,12 @@ export function creerDonneesTodos({ charger, uid }) {
   const supprimerSujet = (id) => differer(`sujet:${id}`, async () => (await fb()).supprimerSujet(uid(), id), { type: "sujet", id });
 
   // --- Todos -------------------------------------------------------------------------------------------
-  /** A new todo at the top of the list of the chosen subject. */
-  async function ajouterTodo(titre) {
-    if (!etat.sujetId) return { ok: false, erreur: "Créez d'abord un sujet." };
+  /** A new todo at the top of the list of the chosen subject (or of `sujetId`), with its description. */
+  async function ajouterTodo(titre, { sujetId = etat.sujetId, description = "" } = {}) {
+    if (!sujetId) return { ok: false, erreur: "Créez d'abord un sujet." };
     if (estPleinTodos(etat.compteurs.nbTodos)) return { ok: false, erreur: "500 todos maximum." };
-    const premier = todosVisibles().find((t) => !t.fait);
-    const r = creerTodo({ sujetId: etat.sujetId, titre, ordre: ordreEntre(null, premier?.ordre ?? null) });
+    const premier = sujetId === etat.sujetId ? todosVisibles().find((t) => !t.fait) : null;
+    const r = creerTodo({ sujetId, titre, description, ordre: ordreEntre(null, premier?.ordre ?? null) });
     if (!r.ok) return r;
     return resultat(async () => ({ id: await (await fb()).creerTodo(uid(), r.todo) }));
   }

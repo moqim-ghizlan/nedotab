@@ -21,6 +21,30 @@ export const DEBOUNCE_MS = 150;
 const APPUI_LONG_MS = 400;
 const SEUIL_MOUVEMENT_PX = 8;
 const HAUTEUR_RESERVEE = "72px";
+// Home block (TODO 9): the number of pills shown last time. The room is kept from the very first
+// frame (grey placeholders), so the search bar never moves when the real icons arrive.
+const CLE_ACCUEIL = "nedotab:frequentsAccueil";
+const HAUTEUR_ACCUEIL = "48px";
+export const DELAI_STABLE_MS = 300;
+
+/** The number shown last time; 0 = known empty; `defaut` when nothing was ever remembered. */
+function lireNbAccueil(defaut) {
+  try {
+    const brut = localStorage.getItem(CLE_ACCUEIL);
+    if (brut === null) return defaut;
+    const n = Number(brut);
+    return Number.isInteger(n) && n >= 0 ? Math.min(n, 12) : defaut;
+  } catch {
+    return defaut;
+  }
+}
+function ecrireNbAccueil(n) {
+  try {
+    localStorage.setItem(CLE_ACCUEIL, String(n));
+  } catch {
+    /* only a comfort */
+  }
+}
 
 function lireVu() {
   try {
@@ -72,6 +96,20 @@ export function creerFrequents({
     titre,
     liste,
   );
+  // Never seen yet: the room of a usual row is kept (the setting is on), it shrinks only if there is nothing to show.
+  const nbMemorise = accueil ? lireNbAccueil(0) : 0;
+  let stable = null; // the pills only take clicks once the layout has settled
+  // (the setting is known locally: switched off, no room is reserved)
+  // The search bar must NEVER move: while the setting is on, the room of the row is kept from the
+  // first frame, with or without icons (placeholders only when we know how many there will be).
+  if (accueil && lireAffichage(store.lire().reglages)) {
+    racine.hidden = false;
+    racine.classList.add("frequents--reserve", "frequents--chargement");
+    racine.style.minHeight = HAUTEUR_ACCUEIL;
+    liste.replaceChildren(
+      ...Array.from({ length: nbMemorise }, () => el("li", { class: "frequent frequent--squelette", "aria-hidden": "true" })),
+    );
+  }
   if (!accueil && lireVu()) {
     // Seen last time: the room is kept from the start, no jump when the row appears.
     racine.hidden = false;
@@ -193,6 +231,8 @@ export function creerFrequents({
   }
 
   function rendre() {
+    // Home block waiting for its figures: the grey placeholders stay, nothing is hidden or moved.
+    if (accueil && ordre === null && racine.classList.contains("frequents--chargement")) return;
     const sites = (ordre ?? [])
       .map((id) => {
         const r = trouver(id);
@@ -203,10 +243,23 @@ export function creerFrequents({
     const afficher = lireAffichage(reglages()) && sites.length > 0;
     liste.replaceChildren(...sites.map(creerElement));
     titre.hidden = accueil || !frequentsDe(reglages()).titre;
-    racine.hidden = !afficher;
-    racine.classList.remove("frequents--reserve");
-    racine.style.minHeight = "";
+    // Home block: the room stays reserved whenever the setting is on, even with nothing to show.
+    const reserve = accueil && lireAffichage(reglages());
+    racine.hidden = reserve ? false : !afficher;
+    racine.classList.toggle("frequents--reserve", reserve);
+    racine.style.minHeight = reserve ? HAUTEUR_ACCUEIL : "";
     if (ordre !== null && !accueil) ecrireVu(afficher);
+    if (accueil && ordre !== null) {
+      ecrireNbAccueil(afficher ? sites.length : 0);
+      if (racine.classList.contains("frequents--chargement")) {
+        // First real render: fade in, and no click for a short moment (a tap meant for the search
+        // bar must never land on a pill).
+        racine.classList.remove("frequents--chargement");
+        racine.classList.add("frequents--arrivee", "frequents--stabilisation");
+        clearTimeout(stable);
+        stable = setTimeout(() => racine.classList.remove("frequents--arrivee", "frequents--stabilisation"), DELAI_STABLE_MS);
+      }
+    }
     racine.dispatchEvent(new CustomEvent("frequents:change", { bubbles: true, detail: { afficher } }));
   }
 

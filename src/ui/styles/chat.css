@@ -7,8 +7,8 @@
 .robot-bouton {
   position: fixed;
   z-index: 40;
-  right: calc(var(--espace-5) + env(safe-area-inset-right, 0px));
-  bottom: calc(var(--espace-5) + env(safe-area-inset-bottom, 0px));
+  right: calc(var(--espace-5) + var(--safe-droite));
+  bottom: calc(var(--espace-5) + var(--safe-bas));
   display: grid;
   place-items: center;
   width: 52px;
@@ -135,7 +135,7 @@ body.avec-robot .toasts {
     inset: 0 0 auto;
     width: 100%;
     height: var(--chat-hauteur, 100dvh);
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-haut);
     border: 0;
     border-radius: 0;
     background: var(--surface);
@@ -769,7 +769,7 @@ body.avec-robot .toasts {
 /* --- Input ------------------------------------------------------------------------------------ */
 .chat-saisie {
   flex: none;
-  padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 12px calc(12px + var(--safe-bas));
 }
 
 .chat--clavier .chat-saisie {
@@ -1294,7 +1294,7 @@ body.avec-robot .toasts {
 
 /* The bottom row of the grid never hides under the robot. */
 body.avec-robot #app {
-  padding-bottom: calc(52px + var(--espace-5) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(52px + var(--espace-5) + var(--safe-bas));
 }
 
 @media (pointer: coarse) {

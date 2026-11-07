@@ -129,3 +129,54 @@ describe("rangée « Les plus utilisés » (V4.22)", () => {
     expect(visite).toHaveBeenCalledWith("a");
   });
 });
+
+describe("bloc d'accueil : la place est réservée dès le premier rendu (TODO 9)", () => {
+  const grille = [site("a"), site("b"), site("c")];
+  const classement = grille.map((g, i) => ligne(g, 5 - i, 5 - i));
+
+  function monterAccueil({ charge, memo, garder = false }) {
+    if (!garder) localStorage.clear();
+    if (memo) localStorage.setItem("nedotab:frequentsAccueil", String(memo));
+    const etat = etatInitial();
+    const store = creerStore({ ...etat, grille, reglages: { ...etat.reglages, frequents: { ...(etat.reglages.frequents ?? {}), accueil: true } } }, reduire);
+    const abonnes = new Set();
+    let pret = charge;
+    const usage = { classement: () => classement, charge: () => pret, abonner: (f) => (abonnes.add(f), () => abonnes.delete(f)) };
+    const f = creerFrequents({
+      store, usage, suiviActif: () => true, afficherDansGrille: vi.fn(), modifierSite: vi.fn(),
+      accueil: true, lireAffichage: () => true, maximum: () => 8,
+    });
+    document.body.append(f.racine);
+    return { f, arriver: () => ((pret = true), abonnes.forEach((x) => x())) };
+  }
+
+  it("avant les chiffres : emplacements gris au nombre mémorisé, rangée visible, aucun clic possible", () => {
+    const { f } = monterAccueil({ charge: false, memo: 3 });
+    expect(f.racine.hidden).toBe(false);
+    expect(f.racine.querySelectorAll(".frequent--squelette")).toHaveLength(3);
+    expect(f.racine.classList.contains("frequents--chargement")).toBe(true);
+    expect(f.racine.style.minHeight).toBe("48px");
+  });
+
+  it("à l'arrivée des chiffres : vraies pastilles, même hauteur réservée jusqu'à la fin, clics protégés 300 ms", () => {
+    vi.useFakeTimers();
+    const { f, arriver } = monterAccueil({ charge: false, memo: 3 });
+    arriver();
+    expect(f.racine.querySelectorAll(".frequent--squelette")).toHaveLength(0);
+    expect(f.racine.querySelectorAll(".frequent-lien")).toHaveLength(3);
+    expect(f.racine.classList.contains("frequents--stabilisation")).toBe(true);
+    vi.advanceTimersByTime(350);
+    expect(f.racine.classList.contains("frequents--stabilisation")).toBe(false);
+    expect(localStorage.getItem("nedotab:frequentsAccueil")).toBe("3");
+    vi.useRealTimers();
+  });
+
+  it("réglage activé : la place reste réservée même sans aucune icône (la barre ne bouge jamais)", () => {
+    const a = monterAccueil({ charge: false, memo: 0 });
+    expect(a.f.racine.hidden).toBe(false);
+    expect(a.f.racine.style.minHeight).toBe("48px");
+    a.arriver();
+    expect(a.f.racine.hidden).toBe(false);
+    expect(a.f.racine.style.minHeight).toBe("48px");
+  });
+});

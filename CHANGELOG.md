@@ -2,6 +2,35 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.1.0] - 2026-11-07
+
+Les 14 corrections de `docs/plan/todo.md`. **Testé en simulation (vitest) et par les builds ; rien n'a été essayé sur un iPhone** (zone sûre, fantôme du glisser-déposer, copie d'image sur Safari : à vérifier sur l'appareil).
+
+### Changé
+
+- **Todos : une fenêtre pour créer, modifier et supprimer** (titre sur plusieurs lignes, description, image, sujet, dates, Enregistrer / Annuler, Supprimer en danger avec confirmation). Sur téléphone elle devient une feuille quasi plein écran qui suit le clavier. La barre du bas n'est plus qu'un bouton « Nouveau todo » ; une image collée ou déposée sur le panneau ouvre la fenêtre avec l'image. Mêmes écritures partielles, mêmes compteurs.
+- **Image d'un todo** : le nom long raccourcit (infobulle) et le bouton ✕ « Retirer l'image » reste toujours visible.
+- **Visionneuse d'image des todos** : l'image tient dans la fenêtre, plus aucune barre de défilement, la page derrière ne défile plus.
+- **Sujets** : le formulaire « Nom du sujet » se ferme avec ✕, Échap ou un nouveau clic sur « + ».
+- **Message « En attente d'envoi »** : n'apparaît plus qu'au-delà de 5 s ou hors ligne, en fondu, sans décaler la page. Cause : Firestore marque chaque écriture « en attente » le temps de l'accusé du serveur (le compteur est écrit dans le même lot).
+- **Galerie de partage** : plus de case sur les cartes ; le bouton « Sélectionner » ouvre un mode sélection (cases rondes, case par période avec état partiel, « Tout sélectionner », Terminer, clic droit / appui long).
+- **Accueil** : la rangée « Les plus utilisés » réserve sa place dès le premier rendu (emplacements gris), la barre de recherche ne bouge plus et les pastilles ne prennent pas de clic pendant 300 ms après leur arrivée.
+- **Assistant** : un appui à l'extérieur masque le panneau sans effacer la conversation ni le brouillon.
+- **Zone sûre iPhone** : quatre jetons `--safe-haut/bas/gauche/droite` définis une fois ; l'en-tête de la galerie et le ✕ de la visionneuse passent sous l'heure et l'îlot.
+
+### Ajouté
+
+- **Télécharger un todo en PDF** (menu « ⋯ ») : le PDF est écrit sur l'appareil et téléchargé directement, sans fenêtre d'impression ; l'image est dans le fichier. Caractères hors Latin-1 (émojis) remplacés par « ? ».
+- **Télécharger un todo en `.md`** (avec son image dans un `.zip`) depuis la fenêtre du todo. Rien n'est envoyé nulle part.
+- **Copier / télécharger une image** : visionneuse et fenêtre des todos, cartes de l'espace de partage, menu de la visionneuse de la galerie (une seule liste d'actions, copie en PNG, masquée si le navigateur ne sait pas copier une image).
+- **Confirmation avant toute suppression** : cartes de l'espace de partage, galerie (une et en lot), todos, sujets, image d'un todo (un seul dialogue commun, le focus sur « Annuler »).
+
+### Corrigé
+
+- Une tuile « fantôme » restait bloquée après un glisser-déposer interrompu (iPhone) : nettoyage de sécurité (fin de geste manquante, `touchcancel`, page cachée, inactivité), pas de recréation des listes pendant un glisser.
+- **Appui long sans bouger (iPhone, PWA)** : la tuile agrandie restait collée à l'écran jusqu'à la fermeture de l'app. Cause : la feuille d'actions est un *popover* que le navigateur réduisait à 0 × 0 ; le voile et les boutons étaient invisibles, seule la copie de la tuile (en `position: fixed`) restait. La feuille couvre maintenant l'écran et la copie lui est attachée (`absolute`).
+- **Sortir une icône d'un dossier (Chrome)** : un panneau flou et presque transparent restait au lieu de laisser voir l'accueil. Cause : le minifieur CSS ne gardait que `-webkit-backdrop-filter: none`, ignoré par Chrome. La fenêtre passe à `opacity: 0` et le flou n'est plus écrit qu'une fois (test qui l'interdit).
+
 ## [7.0.0] - 2026-11-06
 
 Les todos **refaits de zéro, en plus simple**.

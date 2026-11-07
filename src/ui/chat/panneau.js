@@ -259,6 +259,22 @@ export function creerChat({
     if (!toucher()) saisie.focus();
     liste.defiler();
     actualiser(); // the key or the connection may have changed
+    setTimeout(() => ouvert && document.addEventListener("pointerdown", surExterieur, true), 0);
+  }
+
+  /**
+   * A press OUTSIDE the panel hides it (TODO 10). Hiding is not erasing: the conversation, the text
+   * being typed, the scroll and an answer still being written all stay, and reopening finds the
+   * panel as it was. There is no veil: the press goes through to what was pressed (a site, the
+   * search bar), so one gesture does both. Never hides on: the panel itself, a window or menu it
+   * opened, a message toast. A selection started inside and released outside is no press outside.
+   */
+  function surExterieur(e) {
+    if (!ouvert) return;
+    const cible = e.target;
+    if (panneau.contains(cible) || bouton.contains(cible)) return;
+    if (cible.closest?.("dialog, .menu, .toast")) return;
+    fermer();
   }
   const toucher = () => !!globalThis.matchMedia?.("(pointer: coarse)").matches;
   /** Phone or narrow tablet: the panel is a full-screen sheet (chat.css). */
@@ -268,6 +284,7 @@ export function creerChat({
     if (!ouvert) return;
     ouvert = false;
     panneau.hidden = true;
+    document.removeEventListener("pointerdown", surExterieur, true);
     document.documentElement.classList.remove("chat-ouvert");
     const robot = modes.afficher && boutonAutorise();
     bouton.hidden = !robot;

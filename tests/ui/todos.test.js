@@ -51,6 +51,18 @@ async function monter({ sujets = [sujet("s1"), sujet("s2")], todos = [], options
   await attendre();
   return { p, fb };
 }
+/** The actions of a todo are behind "⋯": open it and choose an entry. */
+async function menuTodo(m, libelle) {
+  m.querySelector(".modale-todo-plus").click();
+  [...document.querySelectorAll(".menu-entree")].find((b) => b.textContent.includes(libelle)).click();
+  await attendre();
+}
+const fenetre = () => document.querySelector(".modale-todo[open]");
+async function ouvrirTodo(p, id) {
+  p.panneau.querySelector(`[data-id="${id}"] .todo-corps`).click();
+  await attendre();
+  return fenetre();
+}
 const titres = (p) => [...p.panneau.querySelectorAll(".todos-liste:not(.todos-liste--faits) .todo-titre")].map((n) => n.textContent);
 
 describe("panneau des todos (version simple)", () => {
@@ -111,15 +123,20 @@ describe("panneau des todos (version simple)", () => {
     expect(fb.creerSujetTodos.mock.calls[0][1]).toMatchObject({ nom: "Vacances" });
   });
 
-  it("ajoute un todo par Entrée, en haut de la liste ; refuse un titre vide", async () => {
+  it("« Nouveau todo » ouvre la fenêtre ; refuse un titre vide, puis ajoute en haut de la liste", async () => {
     const { p, fb } = await monter({ todos: [todo("a", { ordre: 5000 })] });
-    const form = p.panneau.querySelector(".todos-compositeur");
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
-    expect(p.panneau.querySelector(".todos-compositeur .todos-message").textContent).toMatch(/titre/);
-    form.querySelector("input").value = "  Acheter du pain ";
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    p.panneau.querySelector(".todos-ajouter").click();
+    const m = fenetre();
+    expect(m.getAttribute("aria-modal")).toBe("true");
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    expect(m.querySelector(".modale-todo-message").textContent).toMatch(/titre/);
+    m.querySelector(".todo-champ--titre").value = "  Acheter du pain ";
+    m.querySelector(".todo-champ--description").value = "chez Paul";
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     await attendre();
-    expect(fb.creerTodo.mock.calls[0][1]).toMatchObject({ titre: "Acheter du pain", sujetId: "s1", ordre: 4000 });
+    await attendre();
+    expect(fb.creerTodo.mock.calls[0][1]).toMatchObject({ titre: "Acheter du pain", description: "chez Paul", sujetId: "s1", ordre: 4000 });
+    expect(fenetre()).toBeNull();
   });
 
   it("cocher : 5 clics rapides = une écriture, l'état final", async () => {
@@ -131,51 +148,55 @@ describe("panneau des todos (version simple)", () => {
     expect(fb.majTodo.mock.calls[0].slice(1)).toEqual(["a", { fait: true }, { sujetId: "s1" }]);
   });
 
-  it("le todo s'ouvre sur place : titre et description, enregistrés 1,5 s après la dernière frappe", async () => {
+  it("un todo s'ouvre dans la fenêtre ; Enregistrer n'écrit que ce qui a changé", async () => {
+    const { p, fb } = await monter({ todos: [todo("a", { titre: "Avant", description: "x" })] });
+    const m = await ouvrirTodo(p, "a");
+    expect(m.querySelector(".todo-champ--titre").value).toBe("Avant");
+    m.querySelector(".todo-champ--description").value = "bon";
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    await attendre();
+    await attendre();
+    expect(fb.majTodo).toHaveBeenCalledOnce();
+    expect(fb.majTodo.mock.calls[0][2]).toEqual({ description: "bon" });
+    expect(fenetre()).toBeNull();
+  });
+
+  it("Annuler et Échap n'écrivent rien ; un titre vidé est refusé", async () => {
+    const { p, fb } = await monter({ todos: [todo("a")] });
+    let m = await ouvrirTodo(p, "a");
+    m.querySelector(".todo-champ--titre").value = "autre";
+    m.querySelector('button[aria-label="Annuler"]').click();
+    expect(fenetre()).toBeNull();
+    m = await ouvrirTodo(p, "a");
+    m.querySelector(".todo-champ--titre").value = "   ";
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    expect(m.querySelector(".modale-todo-message").textContent).toMatch(/vide/);
+    m.close();
+    expect(fb.majTodo).not.toHaveBeenCalled();
+  });
+
+  it("le bouton Supprimer du pied : icône en danger, confirmation d'abord", async () => {
+    const { p } = await monter({ todos: [todo("a")] });
+    const m = await ouvrirTodo(p, "a");
+    const b = m.querySelector(".modale-todo-pied .modale-todo-icone--danger");
+    expect(b.getAttribute("aria-label")).toBe("Supprimer le todo");
+    b.click();
+    expect(document.querySelector('[role="alertdialog"]')).not.toBeNull();
+    expect(p.panneau.querySelector('[data-id="a"]')).not.toBeNull();
+  });
+
+  it("« Fait » : enregistre et coche le todo ; sur un todo fait il le rouvre ; absent à la création", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { p, fb } = await monter({ todos: [todo("a", { titre: "Avant" })] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    expect(p.ouvertId()).toBe("a");
-    const li = p.panneau.querySelector('[data-id="a"]');
-    const desc = li.querySelector(".todo-champ--description");
-    for (const t of ["b", "bo", "bon"]) {
-      desc.value = t;
-      desc.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    const titre = li.querySelector(".todo-champ--titre");
-    titre.value = "Nouveau";
-    titre.dispatchEvent(new Event("input", { bubbles: true }));
-    await vi.advanceTimersByTimeAsync(1600);
-    expect(fb.majTodo).toHaveBeenCalledOnce();
-    expect(fb.majTodo.mock.calls[0][2]).toEqual({ description: "bon", titre: "Nouveau" });
-  });
-
-  it("refermer écrit tout de suite ; un titre vidé n'est pas enregistré ; un seul todo ouvert", async () => {
-    const { p, fb } = await monter({ todos: [todo("a"), todo("b")] });
-    const ouvrir = (id) => p.panneau.querySelector(`[data-id="${id}"] .todo-corps`);
-    ouvrir("a").click();
-    const titre = p.panneau.querySelector('[data-id="a"] .todo-champ--titre');
-    titre.value = "   ";
-    titre.dispatchEvent(new Event("input", { bubbles: true }));
-    const desc = p.panneau.querySelector('[data-id="a"] .todo-champ--description');
-    desc.value = "notes";
-    desc.dispatchEvent(new Event("input", { bubbles: true }));
-    ouvrir("b").click();
-    await attendre();
-    expect(p.ouvertId()).toBe("b");
-    expect(p.panneau.querySelector('[data-id="a"]').classList.contains("todo--ouvert")).toBe(false);
-    expect(fb.majTodo.mock.calls[0][2]).toEqual({ description: "notes" });
-  });
-
-  it("un instantané ne remplace pas un champ en cours de frappe", async () => {
-    const { p } = await monter({ todos: [todo("a", { titre: "Avant" })] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    const titre = p.panneau.querySelector('[data-id="a"] .todo-champ--titre');
-    titre.focus();
-    titre.value = "En cours";
-    titre.dispatchEvent(new Event("input", { bubbles: true }));
-    p.donnees.notifier();
-    expect(titre.value).toBe("En cours");
+    const m = await ouvrirTodo(p, "a");
+    m.querySelector(".todo-champ--titre").value = "Après";
+    const bouton = m.querySelector(".modale-todo-icone--fait");
+    expect(bouton.getAttribute("aria-label")).toBe("Marquer comme fait");
+    bouton.click();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fb.majTodo.mock.calls.map((c) => c[2])).toEqual([{ titre: "Après" }, { fait: true }]);
+    p.panneau.querySelector(".todos-ajouter").click();
+    expect(fenetre().querySelector(".modale-todo-icone--fait")).toBeNull();
   });
 
   it("un titre hostile reste du texte", async () => {
@@ -183,15 +204,35 @@ describe("panneau des todos (version simple)", () => {
     expect(p.panneau.querySelector("img[src='x']")).toBeNull();
     expect(p.panneau.querySelector("script")).toBeNull();
     expect(p.panneau.querySelector(".todo-titre").textContent).toBe("<img src=x onerror=alert(1)>");
+    const m = await ouvrirTodo(p, "a");
+    expect(m.querySelector("img[src='x']")).toBeNull();
+    expect(m.querySelector(".todo-champ--description").value).toBe("<script>x</script>");
   });
 
-  it("supprimer : le todo disparaît, « Annuler » dans les 5 s n'écrit rien", async () => {
+  it("supprimer : confirmation d'abord (Annuler a le focus), puis le todo disparaît, « Annuler » dans les 5 s n'écrit rien", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { p, fb } = await monter({ todos: [todo("a")] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    p.panneau.querySelector('[data-id="a"] .todo-supprimer').click();
+    const m = await ouvrirTodo(p, "a");
+    await menuTodo(m, "Supprimer le todo");
+    const conf = document.querySelector('[role="alertdialog"]');
+    expect(conf.textContent).toContain("irréversible");
+    expect(p.panneau.querySelector('[data-id="a"]')).not.toBeNull(); // nothing yet
+    expect(document.activeElement.textContent).toBe("Annuler");
+    [...conf.querySelectorAll("button")].find((b) => b.textContent === "Supprimer").click();
+    await vi.advanceTimersByTimeAsync(0);
     expect(p.panneau.querySelector('[data-id="a"]')).toBeNull();
     document.querySelector(".toast-action").click();
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(fb.supprimerTodo).not.toHaveBeenCalled();
+    expect(p.panneau.querySelector('[data-id="a"]')).not.toBeNull();
+  });
+
+  it("refuser la confirmation ne supprime rien", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const { p, fb } = await monter({ todos: [todo("a")] });
+    const m = await ouvrirTodo(p, "a");
+    await menuTodo(m, "Supprimer le todo");
+    [...document.querySelector('[role="alertdialog"]').querySelectorAll("button")].find((b) => b.textContent === "Annuler").click();
     await vi.advanceTimersByTimeAsync(6000);
     expect(fb.supprimerTodo).not.toHaveBeenCalled();
     expect(p.panneau.querySelector('[data-id="a"]')).not.toBeNull();
@@ -200,19 +241,22 @@ describe("panneau des todos (version simple)", () => {
   it("supprimer sans annuler : une écriture avec le sujet, l'état et l'image", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const { p, fb } = await monter({ todos: [todo("a")] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    p.panneau.querySelector('[data-id="a"] .todo-supprimer').click();
+    const m = await ouvrirTodo(p, "a");
+    await menuTodo(m, "Supprimer le todo");
+    [...document.querySelector('[role="alertdialog"]').querySelectorAll("button")].find((b) => b.textContent === "Supprimer").click();
     await vi.advanceTimersByTimeAsync(5100);
+    expect(fb.supprimerTodo).toHaveBeenCalledOnce();
     expect(fb.supprimerTodo).toHaveBeenCalledWith("u1", "a", { sujetId: "s1", fait: false, images: [] });
   });
 
-  it("une photo : validée, préparée, envoyée ; une seule par todo", async () => {
-    const preparer = vi.fn(async () => ({ blob: new Blob(["p"]), mini: new Blob(["m"]), ext: "webp", typeMime: "image/webp", largeur: 1, hauteur: 1 }));
+  it("une photo : validée, préparée, envoyée à l'enregistrement", async () => {
+    const preparer = vi.fn(async () => prete());
     const { p, fb } = await monter({ todos: [todo("a")], options: { preparer } });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    const champ = p.panneau.querySelector('[data-id="a"] input[type="file"]');
-    Object.defineProperty(champ, "files", { value: [new File(["x"], "a.jpg", { type: "image/jpeg" })], configurable: true });
-    champ.dispatchEvent(new Event("change"));
+    const m = await ouvrirTodo(p, "a");
+    choisir(m, new File(["x"], "a.jpg", { type: "image/jpeg" }));
+    expect(fb.envoyerImageTodo).not.toHaveBeenCalled(); // nothing before « Enregistrer »
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    await attendre();
     await attendre();
     await attendre();
     expect(preparer).toHaveBeenCalledOnce();
@@ -220,118 +264,125 @@ describe("panneau des todos (version simple)", () => {
     expect(fb.envoyerImageTodo.mock.calls[0][1]).toBe("a");
   });
 
-  it("une photo GIF ou SVG est refusée avec un message ; le todo qui a déjà une photo n'en accepte pas une autre", async () => {
+  it("une photo GIF ou SVG est refusée avec un message", async () => {
     const { p, fb } = await monter({ todos: [todo("a")] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    const champ = p.panneau.querySelector('[data-id="a"] input[type="file"]');
-    Object.defineProperty(champ, "files", { value: [new File(["x"], "a.gif", { type: "image/gif" })], configurable: true });
-    champ.dispatchEvent(new Event("change"));
-    await attendre();
-    expect(p.panneau.querySelector('[data-id="a"] .todo-message').textContent).toContain("GIF");
+    const m = await ouvrirTodo(p, "a");
+    choisir(m, new File(["x"], "a.gif", { type: "image/gif" }));
+    expect(m.querySelector(".modale-todo-message").textContent).toContain("GIF");
     expect(fb.envoyerImageTodo).not.toHaveBeenCalled();
   });
 
-  it("500 todos : champ désactivé", async () => {
+  it("500 todos : bouton désactivé", async () => {
     const { p } = await monter({ todos: Array.from({ length: 500 }, (_, i) => todo(`t${i}`)) });
-    expect(p.panneau.querySelector(".todos-compositeur input").disabled).toBe(true);
+    expect(p.panneau.querySelector(".todos-ajouter").disabled).toBe(true);
   });
 
-  it("indicateur d'écritures en attente", async () => {
+  it("l'attente d'envoi ne s'affiche pas tout de suite, seulement si elle dure", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
     const { p } = await monter({ todos: [todo("a", { enAttente: true })] });
-    expect(p.panneau.querySelector(".todos-etat").textContent).toBe("En attente d'envoi (1)");
+    const note = p.panneau.querySelector(".todos-etat");
+    expect(note.textContent).toBe("");
+    await vi.advanceTimersByTimeAsync(5200);
+    expect(note.textContent).toBe("Envoi en cours (1)");
   });
 });
 
-describe("photo ajoutée en créant le todo", () => {
+const prete = () => ({ blob: new Blob(["p"]), mini: new Blob(["m"]), ext: "webp", typeMime: "image/webp", largeur: 1, hauteur: 1 });
+global.URL.createObjectURL ??= () => "blob:test";
+global.URL.revokeObjectURL ??= () => {};
+const choisir = (m, f) => {
+  const champ = m.querySelector('input[type="file"]');
+  Object.defineProperty(champ, "files", { value: [f], configurable: true });
+  champ.dispatchEvent(new Event("change"));
+};
+
+describe("image ajoutée en créant le todo", () => {
   const coller = (cible, fichier) => {
     const e = new Event("paste", { bubbles: true, cancelable: true });
     e.clipboardData = { files: [fichier] };
     cible.dispatchEvent(e);
     return e;
   };
-  const prete = () => ({ blob: new Blob(["p"]), mini: new Blob(["m"]), ext: "webp", typeMime: "image/webp", largeur: 1, hauteur: 1 });
-  global.URL.createObjectURL ??= () => "blob:test";
-  global.URL.revokeObjectURL ??= () => {};
 
-  it("Ctrl+V d'une image : elle s'affiche à côté du champ, puis part avec le nouveau todo", async () => {
+  it("Ctrl+V d'une image sur le panneau ouvre la fenêtre avec l'image, qui part avec le nouveau todo", async () => {
     const preparer = vi.fn(async () => prete());
     const { p, fb } = await monter({ options: { preparer } });
-    const e = coller(p.panneau.querySelector(".todos-compositeur input[type=text], .todos-compositeur .todos-champ"), new File(["x"], "image.png", { type: "image/png" }));
+    const e = coller(p.panneau.querySelector(".todos-corps"), new File(["x"], "image.png", { type: "image/png" }));
     expect(e.defaultPrevented).toBe(true);
-    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(false);
-    expect(p.panneau.querySelector(".todos-attente-nom").textContent).toBe("Image collée");
-    const form = p.panneau.querySelector(".todos-compositeur");
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    const m = fenetre();
+    expect(m.querySelector(".modale-todo-nom").textContent).toBe("Image collée");
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     await attendre();
     await attendre();
     await attendre();
     expect(fb.creerTodo.mock.calls[0][1].titre).toBe("Photo");
     expect(fb.envoyerImageTodo).toHaveBeenCalledOnce();
     expect(fb.envoyerImageTodo.mock.calls[0][1]).toBe("t-neuf");
-    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
   });
 
-  it("le bouton joindre prend un fichier, avec un titre ; « Retirer » l'enlève", async () => {
+  it("un nom de fichier très long : le nom se raccourcit, le bouton Retirer reste là et fonctionne", async () => {
     const { p, fb } = await monter();
-    const champ = p.panneau.querySelector('.todos-compositeur input[type="file"]');
-    Object.defineProperty(champ, "files", { value: [new File(["x"], "vacances.jpg", { type: "image/jpeg" })], configurable: true });
-    champ.dispatchEvent(new Event("change"));
-    expect(p.panneau.querySelector(".todos-attente-nom").textContent).toBe("vacances.jpg");
-    p.panneau.querySelector(".todos-attente-photo .todo-lien").click();
-    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+    p.panneau.querySelector(".todos-ajouter").click();
+    const m = fenetre();
+    const nom = `${"4e13be43-4ae9-4e8f-9897-".repeat(8)}.webp`;
+    choisir(m, new File(["x"], nom, { type: "image/webp" }));
+    const nomEl = m.querySelector(".modale-todo-nom");
+    expect(nomEl.textContent).toBe(nom);
+    expect(nomEl.getAttribute("title")).toBe(nom);
+    const retirer = m.querySelector(".modale-todo-retirer");
+    expect(retirer.getAttribute("aria-label")).toBe("Retirer l'image");
+    retirer.click();
+    await attendre();
+    expect(m.querySelector(".modale-todo-image")).toBeNull();
     expect(fb.envoyerImageTodo).not.toHaveBeenCalled();
   });
 
-  it("un texte collé reste un texte collé ; un GIF est refusé avec un message", async () => {
+  it("un texte collé reste un texte collé", async () => {
     const { p } = await monter();
     const e = new Event("paste", { bubbles: true, cancelable: true });
     e.clipboardData = { files: [] };
-    p.panneau.querySelector(".todos-compositeur .todos-champ").dispatchEvent(e);
+    p.panneau.querySelector(".todos-corps").dispatchEvent(e);
     expect(e.defaultPrevented).toBe(false);
-    coller(p.panneau.querySelector(".todos-compositeur .todos-champ"), new File(["x"], "a.gif", { type: "image/gif" }));
-    expect(p.panneau.querySelector(".todos-compositeur .todos-message").textContent).toContain("GIF");
-  });
-
-  it("un todo ouvert prend l'image collée, pas le champ d'ajout", async () => {
-    const { p } = await monter({ todos: [todo("a")], options: { preparer: vi.fn(async () => prete()) } });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    coller(p.panneau.querySelector('[data-id="a"] .todo-champ--description'), new File(["x"], "image.png", { type: "image/png" }));
-    expect(p.panneau.querySelector(".todos-attente-photo").hidden).toBe(true);
+    expect(fenetre()).toBeNull();
   });
 });
 
 describe("changer le sujet d'un todo", () => {
   it("la liste propose tous les sujets ; un autre sujet déplace le todo (un lot, deux compteurs)", async () => {
     const { p, fb } = await monter({ todos: [todo("a")] });
-    p.panneau.querySelector('[data-id="a"] .todo-corps').click();
-    const choix = p.panneau.querySelector('[data-id="a"] .todo-champ--sujet');
+    const m = await ouvrirTodo(p, "a");
+    const choix = m.querySelector(".todo-champ--sujet");
     expect([...choix.options].map((o) => o.textContent)).toEqual(["Sujet s1", "Sujet s2"]);
     expect(choix.value).toBe("s1");
     choix.value = "s2";
-    choix.dispatchEvent(new Event("change"));
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     await attendre();
     await attendre();
     expect(fb.deplacerTodo).toHaveBeenCalledOnce();
     expect(fb.deplacerTodo.mock.calls[0][2]).toMatchObject({ depuis: "s1", vers: "s2", fait: false });
   });
-  it("le bouton Supprimer est un vrai bouton avec une icône", async () => {
+  it("les actions sont dans un menu « ⋯ » : télécharger .md, .pdf, supprimer ; les boutons du bas sont des icônes", async () => {
     const { p } = await monter({ todos: [todo("a")] });
-    const b = p.panneau.querySelector('[data-id="a"] .todo-supprimer');
-    expect(b.textContent).toBe("");
-    expect(b.getAttribute("aria-label")).toBe("Supprimer le todo");
-    expect(b.querySelector("svg")).not.toBeNull();
-    expect(b.parentElement.querySelector("select")).not.toBeNull(); // next to the subject
+    const m = await ouvrirTodo(p, "a");
+    m.querySelector(".modale-todo-plus").click();
+    const entrees = [...document.querySelectorAll(".menu-entree")].map((b) => b.textContent);
+    expect(entrees.some((e) => e.includes(".md"))).toBe(true);
+    expect(entrees.some((e) => e.includes("PDF"))).toBe(true);
+    expect(document.querySelector(".menu-entree--danger").textContent).toContain("Supprimer");
+    const pied = [...m.querySelectorAll(".modale-todo-pied button")];
+    expect(pied.map((b) => b.textContent)).toEqual(["", "", "", ""]);
+    expect(pied.every((b) => b.getAttribute("aria-label") && b.querySelector("svg"))).toBe(true);
   });
   it("les dates : créé et appareil ; « Modifié » seulement s'il apporte quelque chose", async () => {
     const t0 = new Date(2026, 10, 6, 21, 31).getTime();
     const a = await monter({ todos: [todo("a", { creeLe: t0, modifieLe: t0 + 5000, appareil: "Pc-lyon" })] });
-    const texte = a.p.panneau.querySelector('[data-id="a"] .todo-dates').textContent;
+    const texte = (await ouvrirTodo(a.p, "a")).querySelector(".todo-dates").textContent;
     expect(texte).toContain("Créé 6 nov. 2026");
     expect(texte).toContain("Pc-lyon");
     expect(texte).not.toContain("Modifié");
     document.body.replaceChildren();
     const b = await monter({ todos: [todo("a", { creeLe: t0, modifieLe: t0 + 3_600_000 })] });
-    expect(b.p.panneau.querySelector('[data-id="a"] .todo-dates').textContent).toContain("Modifié");
+    expect((await ouvrirTodo(b.p, "a")).querySelector(".todo-dates").textContent).toContain("Modifié");
   });
 });
 
@@ -361,5 +412,40 @@ describe("suppressions interrompues par un rechargement", () => {
     await vi.advanceTimersByTimeAsync(5100);
     expect(document.querySelector(".toast").textContent).toContain("La suppression a échoué");
     expect(a.p.donnees.etat().sujets).toHaveLength(1);
+  });
+});
+
+describe("télécharger un todo en .md", () => {
+  it("sans image : un fichier .md au nom du titre", async () => {
+    const sauve = [];
+    const { enregistrerFichier } = await import("../../src/ui/copierImage.js");
+    void enregistrerFichier;
+    const orig = URL.createObjectURL;
+    URL.createObjectURL = (b) => (sauve.push(b), "blob:x");
+    const { p } = await monter({ todos: [todo("a", { titre: "Acheter: du pain" })] });
+    const m = await ouvrirTodo(p, "a");
+    await menuTodo(m, "Télécharger en Markdown (.md)");
+    await attendre();
+    await attendre();
+    URL.createObjectURL = orig;
+    expect(sauve).toHaveLength(1);
+    expect(sauve[0].name).toBe("Acheter du pain.md");
+    expect(await sauve[0].text()).toContain("# Acheter: du pain");
+  });
+  it("avec image : une archive .zip", async () => {
+    const sauve = [];
+    const orig = URL.createObjectURL;
+    URL.createObjectURL = (b) => (sauve.push(b), "blob:x");
+    const t = todo("a", { titre: "Photo", images: [{ id: "i", chemin: "todos/u1/a/i.webp", typeMime: "image/webp", taille: 1 }] });
+    const { p, fb } = await monter({ todos: [t] });
+    const m = await ouvrirTodo(p, "a");
+    await menuTodo(m, "Télécharger en Markdown (.md)");
+    await attendre();
+    await attendre();
+    await attendre();
+    URL.createObjectURL = orig;
+    const fichier = sauve.find((b) => b.name === "Photo.zip");
+    expect(fichier).toBeTruthy();
+    expect(fb.lireImageTodo).toHaveBeenCalledWith("todos/u1/a/i.webp");
   });
 });

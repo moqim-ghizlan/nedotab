@@ -225,3 +225,39 @@
     transition: none;
   }
 }
+
+/* --- TODO 9: the room is kept before the figures arrive ------------------------------------------ */
+.frequents--accueil.frequents--reserve {
+  min-height: 48px;
+}
+
+.frequents--accueil .frequents-liste {
+  min-height: 48px;
+  align-items: center;
+}
+
+.frequent--squelette {
+  flex: none;
+  width: 44px;
+  height: 40px;
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  background: var(--creux);
+}
+
+/* No click while the pills are placeholders or just arrived. */
+.frequents--chargement,
+.frequents--stabilisation {
+  pointer-events: none;
+}
+
+.frequents--arrivee .frequent {
+  animation: frequents-entree 200ms ease-out;
+}
+
+/* Landscape phone: the block is hidden (see above), so it must not keep a reserved room either. */
+@media (max-height: 480px) {
+  .frequents--accueil.frequents--reserve {
+    min-height: 0;
+  }
+}

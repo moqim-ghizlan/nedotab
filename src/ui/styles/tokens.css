@@ -5,6 +5,13 @@
 :root {
   color-scheme: light dark;
 
+  /* Safe area (notch, dynamic island, home bar), defined ONCE: every full-screen or edge-hugging
+     element uses these, never a fixed value. 0 on a desktop browser and in the extension. */
+  --safe-haut: env(safe-area-inset-top, 0px);
+  --safe-bas: env(safe-area-inset-bottom, 0px);
+  --safe-gauche: env(safe-area-inset-left, 0px);
+  --safe-droite: env(safe-area-inset-right, 0px);
+
   --fond: #e4e8e1;
   --surface: #f5f7f2;
   --surface-2: #ecefe8;

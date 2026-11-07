@@ -1,0 +1,143 @@
+/*
+ * Todos, V7.1: the todo window (create / edit / delete), the bottom bar that opens it, the way out of
+ * the subject form, the "not sent yet" note that keeps its place, and the picture viewer without
+ * scroll bars. Loaded after todos.css: same specificity, this file wins.
+ */
+
+/* --- Picture viewer: it fits the window, nothing scrolls ------------------------------------------------ */
+.visionneuse { overflow: hidden; overscroll-behavior: contain; }
+/* The page behind does not scroll while the viewer is open. */
+html.visionneuse-ouverte,
+html.visionneuse-ouverte body { overflow: hidden; }
+.visionneuse-scene { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; overflow: hidden; }
+.visionneuse-image { display: block; width: auto; height: auto; min-width: 0; min-height: 0; max-width: 100%; max-height: 100%; object-fit: contain; }
+.visionneuse-note { max-height: 22dvh; overflow: hidden auto; }
+
+/* --- The "not sent yet" note keeps its place: it fades, nothing jumps ------------------------------------- */
+.todos-etat { min-height: 1.2em; color: var(--texte-secondaire); opacity: 0; transition: opacity 200ms; }
+.todos-etat[hidden] { display: none; }
+.todos-etat--visible { opacity: 1; }
+
+/* --- Bottom bar: one button opens the window ----------------------------------------------------------------- */
+.todos-compositeur { display: flex; }
+.todos-ajouter { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: 10px; width: auto; height: 52px; padding: 0 20px; border-radius: 26px; font: inherit; font-weight: 650; }
+.todos-ajouter-texte { white-space: nowrap; }
+
+/* --- Subject form: a way out ------------------------------------------------------------------------------------- */
+.sujets-plus--ouvert { background: var(--survol); color: var(--texte); }
+.sujets-plus--ouvert svg { rotate: 45deg; }
+
+/* --- The todo window ------------------------------------------------------------------------------------------------ */
+.modale-todo {
+  width: min(880px, calc(100vw - 2 * var(--espace-4)));
+  max-width: none;
+  max-height: min(94dvh, 940px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--trait-fort);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: var(--ombre-forte);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.modale-todo[open] { display: flex; }
+.modale-todo::backdrop { background: var(--voile); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.modale-todo-forme { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; max-height: inherit; }
+.modale-todo-entete { display: flex; flex: none; align-items: center; justify-content: space-between; gap: var(--espace-2); padding: 14px 10px 6px 24px; }
+.modale-todo-titre { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; }
+.modale-todo-corps { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; align-content: start; gap: var(--espace-4); min-height: 0; padding: var(--espace-3) 24px var(--espace-4); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.modale-todo-corps::-webkit-scrollbar { display: none; }
+.modale-todo-champ { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
+.modale-todo-etiquette { font-size: 0.875rem; font-weight: 600; color: var(--texte-secondaire); }
+.modale-todo .todo-champ { padding: 12px 14px; }
+.modale-todo .todo-champ--titre { min-height: 48px; max-height: 140px; font-weight: 600; line-height: 1.35; resize: none; overflow-y: auto; scrollbar-width: thin; }
+.modale-todo .todo-champ--description { min-height: 110px; max-height: 320px; line-height: 1.5; resize: none; }
+.modale-todo .todo-champ--sujet { min-height: 48px; padding: 0 12px; }
+.modale-todo-message { margin: 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); font-size: 0.875rem; }
+.modale-todo-message[hidden] { display: none; }
+.modale-todo-pied { display: flex; flex: none; align-items: center; gap: var(--espace-2); padding: var(--espace-3) 24px var(--espace-4); border-top: 1px solid var(--trait); }
+.modale-todo-espace { flex: 1; }
+.modale-todo-pied { flex-wrap: wrap; }
+.modale-todo-pied .bouton { min-height: 48px; white-space: nowrap; }
+.modale-todo-supprimer { display: inline-flex; align-items: center; gap: 8px; }
+
+/* The picture line: thumbnail · name · remove. The name takes what is left and shortens; the
+   button never shrinks, so "remove" stays in sight whatever the name. */
+.modale-todo-image { display: flex; overflow: hidden; align-items: center; gap: var(--espace-3); min-width: 0; padding: 6px 6px 6px 8px; border: 1px solid var(--trait); border-radius: 14px; background: var(--creux); }
+.modale-todo-miniature-btn { flex: none; padding: 0; border: 0; border-radius: 10px; background: none; line-height: 0; cursor: zoom-in; }
+.modale-todo-miniature { flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--creux); }
+.modale-todo-nom { flex: 1; min-width: 0; overflow: hidden; font-size: 0.875rem; color: var(--texte-secondaire); text-overflow: ellipsis; white-space: nowrap; }
+.modale-todo-retirer { display: grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--texte-secondaire); cursor: pointer; }
+.modale-todo-retirer:hover { background: var(--survol); color: var(--danger); }
+.modale-todo-retirer:focus-visible,
+.modale-todo-miniature-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Phone: a sheet that nearly fills the screen, one column, thumb-sized targets; the keyboard never
+   hides the fields or the buttons. */
+@media (max-width: 699px) {
+  .modale-todo {
+    width: 100vw;
+    max-height: calc(100dvh - max(var(--espace-5), var(--safe-haut)));
+    margin: auto 0 0;
+    border-radius: 24px 24px 0 0;
+    border-bottom: 0;
+    padding-bottom: calc(var(--safe-bas) + var(--clavier, 0px));
+  }
+  .modale-todo-entete { padding-left: 20px; }
+  .modale-todo-corps { padding-inline: 20px; }
+  .modale-todo-pied { flex-wrap: wrap; padding-inline: 20px; padding-bottom: var(--espace-3); }
+  .modale-todo-pied .bouton { flex: 1 1 0; min-width: 0; justify-content: center; }
+  .modale-todo-pied .modale-todo-supprimer,
+  .modale-todo-pied .modale-todo-telecharger { flex: 1 1 100%; order: 5; }
+  .modale-todo-espace { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .modale-todo[open] { animation: modale-todo-entree 200ms var(--glisse); }
+  @keyframes modale-todo-entree { from { opacity: 0; transform: translateY(14px); } }
+}
+@media (forced-colors: active) { .modale-todo { border-color: CanvasText; } }
+
+/* Viewer and window: round icon buttons for copy / download. */
+.visionneuse-outils { display: flex; align-items: center; gap: var(--espace-1); }
+.visionneuse-action { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: rgb(255 255 255 / 0.12); color: inherit; cursor: pointer; }
+.visionneuse-action:hover { background: rgb(255 255 255 / 0.22); }
+.visionneuse-action:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.visionneuse-action[aria-busy="true"] { opacity: 0.5; cursor: progress; }
+.modale-todo-action { display: grid; flex: none; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--texte-secondaire); cursor: pointer; }
+.modale-todo-action:hover { background: var(--survol); color: var(--texte); }
+.modale-todo-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.modale-todo-action[aria-busy="true"] { opacity: 0.5; cursor: progress; }
+.modale-todo-telecharger { display: inline-flex; align-items: center; gap: 8px; }
+
+/* --- Bigger window, icon-only actions, large picture --------------------------------------------------- */
+.modale-todo-outils { display: flex; align-items: center; gap: var(--espace-1); }
+.modale-todo-pied { justify-content: flex-end; }
+.modale-todo-icone { display: grid; flex: none; place-items: center; width: 48px; height: 48px; padding: 0; border: 1px solid var(--trait-fort); border-radius: 50%; background: none; color: var(--texte-secondaire); cursor: pointer; transition: background-color 140ms, transform 140ms; }
+.modale-todo-icone:hover { background: var(--survol); color: var(--texte); }
+.modale-todo-icone:active { transform: scale(0.94); }
+.modale-todo-icone:disabled { opacity: 0.5; cursor: progress; }
+.modale-todo-icone:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.modale-todo-icone--principal { border-color: transparent; background: var(--accent); color: var(--accent-texte); }
+.modale-todo-icone--principal:hover { background: var(--accent); color: var(--accent-texte); filter: brightness(1.08); }
+.modale-todo .todo-champ--description { min-height: 150px; max-height: 360px; }
+.modale-todo-image { display: grid; gap: 0; padding: 0; overflow: hidden; }
+.modale-todo-apercu { display: grid; place-items: center; width: 100%; max-height: min(52dvh, 460px); padding: 0; border: 0; background: var(--creux); line-height: 0; cursor: zoom-in; }
+.modale-todo-apercu--fixe { cursor: default; }
+.modale-todo-apercu:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.modale-todo-miniature { width: 100%; height: auto; max-height: min(52dvh, 460px); min-height: 120px; border-radius: 0; object-fit: contain; }
+.modale-todo-image-barre { display: flex; align-items: center; gap: var(--espace-1); min-width: 0; padding: 4px 6px 4px 14px; border-top: 1px solid var(--trait); }
+@media (max-width: 699px) {
+  .modale-todo-pied { flex-wrap: nowrap; }
+  .modale-todo-apercu, .modale-todo-miniature { max-height: 38dvh; }
+}
+
+/* "Done" on the left of the footer: green when the todo is done. */
+.modale-todo-icone--fait { border-color: color-mix(in srgb, var(--accent) 55%, transparent); color: var(--accent); }
+.modale-todo-icone--fait:hover { background: var(--accent-doux); color: var(--accent); }
+.modale-todo-icone--fait-actif { background: var(--accent); border-color: transparent; color: var(--accent-texte); }
+.modale-todo-icone--fait-actif:hover { background: var(--accent); color: var(--accent-texte); filter: brightness(1.08); }
+
+.modale-todo-icone--danger { border-color: color-mix(in srgb, var(--danger) 55%, transparent); color: var(--danger); }
+.modale-todo-icone--danger:hover { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }

@@ -12,7 +12,10 @@ import {
   tronquerMilieu,
   validerFichier,
 } from "../core/espacePartageFichiers.js";
+import { estImageSortie } from "../core/imageSortie.js";
+import { copieImagePossible, copierImage as copierBlobImage } from "./copierImage.js";
 import { demander } from "./dialogues/commun.js";
+import { confirmerSuppression } from "./dialogues/confirmerSuppression.js";
 import { el } from "./dom.js";
 import { boutonAction, rangeeActions, tuileType } from "./espacePartageActions.js";
 import { vibrer } from "./haptique.js";
@@ -377,6 +380,13 @@ export function creerFichiers({
     }
   }
 
+  /** Only for pictures: the clipboard gets a PNG (converted when needed), decrypted locally if it was in the vault. */
+  const estImage = (e) => estImageSortie(e.contenu, e.typeMime);
+  async function copierImage(e) {
+    const ok = await copierBlobImage(() => obtenirBlob(e));
+    toast(ok ? "Image copiée" : "Copie impossible", ok ? {} : { type: "erreur" });
+  }
+
   async function partager(e) {
     try {
       await navigator.share({ files: [await obtenirFichier(e)] });
@@ -385,7 +395,9 @@ export function creerFichiers({
     }
   }
 
-  async function supprimer(e) {
+  /** `confirme`: the caller (the gallery) has already asked; the cards' own buttons ask here. */
+  async function supprimer(e, { confirme = false } = {}) {
+    if (!confirme && !(await confirmerSuppression({ message: `Le fichier « ${nomAffiche(e.contenu)} » sera supprimé.` }))) return;
     try {
       await (await charger()).supprimerFichierPartage(uid(), e);
       cache.delete(e.id);
@@ -590,6 +602,10 @@ export function creerFichiers({
           boutonAction("telecharger", "Télécharger", { onclick: () => telecharger(e) }),
         ],
         [
+          estImage(e) && copieImagePossible()
+            ? boutonAction("copier", "Copier l'image", { onclick: () => copierImage(e) })
+            : null,
+          estImage(e) ? boutonAction("telecharger", "Télécharger", { onclick: () => telecharger(e) }) : null,
           typeof navigator.share === "function" && estTactile()
             ? boutonAction("partager", "Partager", { onclick: () => partager(e) })
             : null,
@@ -768,6 +784,8 @@ export function creerFichiers({
     urlApercu,
     lienFichier,
     telecharger,
+    copierImage,
+    estImage,
     partager,
     supprimer,
     modifier,

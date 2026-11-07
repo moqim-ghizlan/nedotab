@@ -8,8 +8,8 @@
 /* --- Floating button ------------------------------------------------------------------------- */
 .partage-bouton {
   position: fixed;
-  left: max(var(--espace-4), env(safe-area-inset-left, 0px));
-  bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px));
+  left: max(var(--espace-4), var(--safe-gauche));
+  bottom: max(var(--espace-4), var(--safe-bas));
   z-index: 30;
   display: grid;
   place-items: center;
@@ -125,9 +125,9 @@
     /* Over the assistant's button and its sheet: one full-screen thing at a time. */
     z-index: 46;
     inset: 0;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    padding-top: var(--safe-haut);
+    padding-left: var(--safe-gauche);
+    padding-right: var(--safe-droite);
     background: var(--surface);
   }
   .partage[hidden] {
@@ -261,7 +261,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--espace-3);
-  padding: 16px 16px max(24px, env(safe-area-inset-bottom, 0px));
+  padding: 16px 16px max(24px, var(--safe-bas));
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -999,8 +999,8 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: var(--safe-haut);
+  padding-bottom: var(--safe-bas);
   background: rgb(8 12 10 / 0.9);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -1012,7 +1012,7 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
   justify-self: end;
   width: 44px;
   height: 44px;
-  margin: 10px max(10px, env(safe-area-inset-right, 0px)) 0 0;
+  margin: 10px max(10px, var(--safe-droite)) 0 0;
   background: rgb(255 255 255 / 0.14);
   color: #fff;
 }
@@ -1274,7 +1274,7 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
 /* --- T6: sticky "gallery" button at the foot of the panel ----------------------------------- */
 .partage-galerie-pied {
   flex: none;
-  padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  padding: 10px 16px max(12px, var(--safe-bas));
   border-top: 1px solid var(--trait);
   background: var(--verre);
 }

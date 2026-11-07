@@ -1,3 +1,5 @@
+import { nomTelechargementImage } from "../../core/imageSortie.js";
+import { actionsImage, boutonsActionsImage } from "../copierImage.js";
 import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { rapatrierToasts } from "../toast.js";
@@ -12,11 +14,13 @@ import { rapatrierToasts } from "../toast.js";
  * @param {number} d.index
  * @param {(chemin: string) => Promise<Blob>} d.lire
  * @param {HTMLElement} [d.retourFocus]
+ * @param {string} [d.titre] the todo title: names the downloaded file
  */
-export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
+export function ouvrirVisionneuse({ images, index, lire, retourFocus, titre = "" }) {
   let i = Math.min(Math.max(0, index), Math.max(0, images().length - 1));
   let url = null;
   let jeton = 0; // a late answer for a picture we left is ignored
+  let blobCourant = null; // the picture on screen: copy / download reuse it
 
   const img = el("img", { class: "visionneuse-image", alt: "" });
   const note = el("p", { class: "visionneuse-note" });
@@ -37,10 +41,17 @@ export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
     { type: "button", class: "todos-fermer visionneuse-fermer", "aria-label": "Fermer", onclick: () => dialogue.close() },
     icone("fermer", { taille: 18 }),
   );
+  // Copy and download: the one list of actions on a picture, as icon buttons.
+  const actions = boutonsActionsImage(
+    actionsImage({
+      lire: async () => blobCourant ?? lire(images()[i].chemin),
+      nom: () => nomTelechargementImage({ titre, typeMime: blobCourant?.type }),
+    }),
+  );
   const dialogue = el(
     "dialog",
     { class: "visionneuse", "aria-label": "Visionneuse d'images" },
-    el("div", { class: "visionneuse-haut" }, compteur, fermer),
+    el("div", { class: "visionneuse-haut" }, compteur, el("div", { class: "visionneuse-outils" }, ...actions, fermer)),
     el("div", { class: "visionneuse-scene" }, precedent, img, suivant),
     etat,
     note,
@@ -59,6 +70,7 @@ export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
     const courante = liste[i];
     const moi = ++jeton;
     liberer();
+    blobCourant = null;
     img.alt = courante.note || "Image du todo";
     note.textContent = courante.note ?? "";
     note.hidden = !courante.note;
@@ -69,6 +81,7 @@ export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
     try {
       const blob = await lire(courante.chemin);
       if (moi !== jeton) return;
+      blobCourant = blob;
       url = URL.createObjectURL(blob);
       img.src = url;
       etat.textContent = "";
@@ -87,6 +100,7 @@ export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
     }
   });
   dialogue.addEventListener("close", () => {
+    document.documentElement.classList.remove("visionneuse-ouverte");
     jeton++;
     liberer();
     rapatrierToasts();
@@ -94,6 +108,7 @@ export function ouvrirVisionneuse({ images, index, lire, retourFocus }) {
     retourFocus?.focus?.();
   });
   document.body.append(dialogue);
+  document.documentElement.classList.add("visionneuse-ouverte");
   dialogue.showModal();
   aller(i);
   fermer.focus();

@@ -19,7 +19,7 @@ import {
   tempsRestantMs,
 } from "../core/expirationPartage.js";
 import { domaine } from "../core/url.js";
-import { demander } from "./dialogues/commun.js";
+import { confirmerSuppression } from "./dialogues/confirmerSuppression.js";
 import { el } from "./dom.js";
 import { icone } from "./icones.js";
 import { ouvrirMenu } from "./menuContextuel.js";
@@ -54,6 +54,7 @@ export function creerGalerie(api) {
   let filtre = "tout";
   let recherche = "";
   let selection = new Set();
+  let modeSelection = false; // the check boxes only exist in selection mode
   let courant = null; // id of the item shown in the viewer, null in the library
   let limite = PAS_AFFICHAGE;
   let retourFocus = null;
@@ -95,7 +96,19 @@ export function creerGalerie(api) {
     role: "radiogroup",
     "aria-label": "Filtrer",
   });
-  const barreSelection = el("div", { class: "pgal-selection", hidden: true, role: "toolbar" });
+  const selectionner = el(
+    "button",
+    {
+      type: "button",
+      class: "pgal-bouton pgal-selectionner",
+      "aria-pressed": "false",
+      title: "Sélectionner des éléments",
+      onclick: () => (modeSelection ? quitterSelection() : entrerSelection()),
+    },
+    icone("coche", { taille: 18 }),
+    el("span", { class: "pgal-selectionner-texte", texte: "Sélectionner" }),
+  );
+  const barreSelection = el("div", { class: "pgal-selection", hidden: true, role: "toolbar", "aria-label": "Sélection" });
   const vueGrille = el("div", { class: "pgal-grille-vue" });
   const vueVisionneuse = el("div", { class: "pgal-visionneuse", hidden: true });
 
@@ -138,26 +151,47 @@ export function creerGalerie(api) {
     dessiner();
   };
   const itemsSelection = () => tous().filter((i) => selection.has(i.id));
-  async function confirmerSuppression(liste) {
+  function entrerSelection(ids = []) {
+    modeSelection = true;
+    if (ids.length) selection = new Set([...selection, ...ids]);
+    dessiner();
+  }
+  function quitterSelection() {
+    modeSelection = false;
+    selection = new Set();
+    dessiner();
+    selectionner.focus?.();
+  }
+  async function confirmer(liste) {
     const n = liste.length;
-    const ok = await demander({
-      titre: n > 1 ? `Supprimer ${n} éléments ?` : "Supprimer cet élément ?",
-      message: "Cette action est définitive.",
-      boutons: [
-        { libelle: "Annuler", valeur: false },
-        { libelle: "Supprimer", valeur: true, principal: true, danger: true },
-      ],
+    return confirmerSuppression({
+      message: n > 1 ? `${n} éléments seront supprimés.` : `L'élément « ${titreAffiche(liste[0])} » sera supprimé.`,
     });
-    return ok === true;
   }
   function dessinerSelection() {
     selection = selectionValide(selection, tous());
-    barreSelection.hidden = selection.size === 0;
-    if (!selection.size) return barreSelection.replaceChildren();
+    selectionner.setAttribute("aria-pressed", String(modeSelection));
+    selectionner.classList.toggle("pgal-selectionner--actif", modeSelection);
+    barreSelection.hidden = !modeSelection;
+    if (!modeSelection) return barreSelection.replaceChildren();
     const lot = itemsSelection();
     const fichiers = lot.filter((i) => i.type === "fichier" && !i.verrouille);
+    const visiblesIds = visibles().map((i) => i.id);
+    const toutChoisi = visiblesIds.length > 0 && visiblesIds.every((id) => selection.has(id));
+    const vide = selection.size === 0;
     barreSelection.replaceChildren(
-      el("strong", { texte: `${selection.size} sélectionné${selection.size > 1 ? "s" : ""}` }),
+      el("strong", {
+        class: "pgal-selection-compte",
+        role: "status",
+        "aria-live": "polite",
+        texte: vide ? "Aucun élément sélectionné" : `${selection.size} sélectionné${selection.size > 1 ? "s" : ""}`,
+      }),
+      el("button", {
+        type: "button",
+        class: "bouton",
+        texte: toutChoisi ? "Tout désélectionner" : "Tout sélectionner",
+        onclick: () => basculerSelection(visiblesIds, !toutChoisi),
+      }),
       el("button", {
         type: "button",
         class: "bouton",
@@ -170,6 +204,7 @@ export function creerGalerie(api) {
         type: "button",
         class: "bouton",
         texte: "Prolonger",
+        disabled: vide || null,
         onclick: async () => {
           await api.lot.prolonger(lot);
         },
@@ -178,23 +213,35 @@ export function creerGalerie(api) {
         type: "button",
         class: "bouton bouton--danger",
         texte: "Supprimer",
+        disabled: vide || null,
         onclick: async () => {
-          if (await confirmerSuppression(lot)) {
+          if (await confirmer(lot)) {
             await api.lot.supprimer(lot);
             selection = new Set();
             dessiner();
           }
         },
       }),
-      el("button", {
+      el("button", { type: "button", class: "bouton pgal-terminer", texte: "Terminer", onclick: () => quitterSelection() }),
+    );
+  }
+
+  /** A round check box that is not a native input: role="checkbox", states true / false / mixed. */
+  function cocheCustom({ etat, libelle, onBascule, classe }) {
+    return el(
+      "button",
+      {
         type: "button",
-        class: "lien-discret",
-        texte: "Annuler la sélection",
-        onclick: () => {
-          selection = new Set();
-          dessiner();
+        role: "checkbox",
+        class: `pgal-coche ${classe}`,
+        "aria-checked": etat,
+        "aria-label": libelle,
+        onclick: (e) => {
+          e.stopPropagation();
+          onBascule();
         },
-      }),
+      },
+      etat === "mixed" ? el("span", { class: "pgal-coche-tiret" }) : icone("coche", { taille: 14 }),
     );
   }
 
@@ -219,25 +266,24 @@ export function creerGalerie(api) {
   }
   function tuile(item) {
     let minuteur = null;
-    const coche = el("input", {
-      type: "checkbox",
-      class: "pgal-coche",
-      "aria-label": `Sélectionner ${titreAffiche(item)}`,
-      checked: selection.has(item.id) || null,
-      onclick: (e) => {
-        e.stopPropagation();
-        basculerSelection([item.id], e.currentTarget.checked);
-      },
-    });
+    const choisi = selection.has(item.id);
+    const coche = modeSelection
+      ? cocheCustom({
+          etat: String(choisi),
+          libelle: `Sélectionner ${titreAffiche(item)}`,
+          classe: "pgal-coche--tuile",
+          onBascule: () => basculerSelection([item.id]),
+        })
+      : null;
     const bouton = el(
       "button",
       {
         type: "button",
-        class: `pgal-tuile${selection.has(item.id) ? " pgal-tuile--choisie" : ""}`,
+        class: `pgal-tuile${choisi ? " pgal-tuile--choisie" : ""}`,
         dataset: { id: item.id },
         "aria-label": titreAffiche(item),
         onclick: () => {
-          if (selection.size) basculerSelection([item.id]);
+          if (modeSelection) basculerSelection([item.id]);
           else aller(item.id);
         },
       },
@@ -256,11 +302,17 @@ export function creerGalerie(api) {
       minuteur = setTimeout(() => {
         minuteur = null;
         bouton.dataset.appuiLong = "1";
-        basculerSelection([item.id], true);
+        entrerSelection([item.id]);
       }, APPUI_LONG_MS);
     });
     for (const t of ["pointerup", "pointerleave", "pointercancel", "pointermove"])
       bouton.addEventListener(t, () => clearTimeout(minuteur));
+    // Right click enters the selection mode with this card checked.
+    bouton.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      if (!modeSelection) entrerSelection([item.id]);
+      else basculerSelection([item.id], true);
+    });
     bouton.addEventListener(
       "click",
       (e) => {
@@ -293,7 +345,8 @@ export function creerGalerie(api) {
       if (restant <= 0) break;
       const items = g.items.slice(0, restant);
       restant -= items.length;
-      const tousChoisis = g.items.every((i) => selection.has(i.id));
+      const nbChoisis = g.items.filter((i) => selection.has(i.id)).length;
+      const etatGroupe = nbChoisis === 0 ? "false" : nbChoisis === g.items.length ? "true" : "mixed";
       sections.push(
         el(
           "section",
@@ -301,17 +354,18 @@ export function creerGalerie(api) {
           el(
             "div",
             { class: "pgal-groupe-entete" },
-            el("input", {
-              type: "checkbox",
-              class: "pgal-coche pgal-coche--groupe",
-              "aria-label": `Sélectionner ${g.libelle}`,
-              checked: tousChoisis || null,
-              onclick: (e) =>
-                basculerSelection(
-                  g.items.map((i) => i.id),
-                  e.currentTarget.checked,
-                ),
-            }),
+            modeSelection
+              ? cocheCustom({
+                  etat: etatGroupe,
+                  libelle: `Sélectionner ${g.libelle}`,
+                  classe: "pgal-coche--groupe",
+                  onBascule: () =>
+                    basculerSelection(
+                      g.items.map((i) => i.id),
+                      etatGroupe !== "true",
+                    ),
+                })
+              : null,
             el("h3", { texte: g.libelle }),
             el("span", { class: "pgal-groupe-nb", texte: String(g.items.length) }),
           ),
@@ -543,7 +597,7 @@ export function creerGalerie(api) {
   }
   async function lancer(item, a) {
     if (a.id === "supprimer") {
-      if (!(await confirmerSuppression([item]))) return;
+      if (!(await confirmer([item]))) return;
       const liste = visibles();
       const i = liste.findIndex((x) => x.id === item.id);
       await a.onChoix();
@@ -588,6 +642,8 @@ export function creerGalerie(api) {
     const texteFermer = courant !== null ? "Fermer l'aperçu (Échap)" : "Fermer la galerie (Échap)";
     fermerBouton.title = texteFermer;
     fermerBouton.setAttribute("aria-label", texteFermer);
+    selectionner.hidden = courant !== null;
+    racine.classList.toggle("pgal--selection", modeSelection);
     vueGrille.hidden = courant !== null;
     vueVisionneuse.hidden = courant === null;
     compte.textContent = `${tous().length}`;
@@ -605,10 +661,8 @@ export function creerGalerie(api) {
   // Same behaviour for the close button and Escape: close only the top-most level.
   function retourOuFermer() {
     if (courant !== null) aller(null);
-    else if (selection.size) {
-      selection = new Set();
-      dessiner();
-    } else fermer();
+    else if (modeSelection) quitterSelection();
+    else fermer();
   }
 
   function surTouche(e) {
@@ -669,6 +723,7 @@ export function creerGalerie(api) {
         el("h2", { class: "pgal-titre" }, "Galerie ", compte),
         champ,
         puces,
+        selectionner,
         fermerBouton,
       ),
       barreSelection,
@@ -691,6 +746,7 @@ export function creerGalerie(api) {
     document.removeEventListener("keydown", surTouche, true);
     racine.remove();
     racine = null;
+    modeSelection = false;
     selection = new Set();
     retourFocus?.focus?.();
   }

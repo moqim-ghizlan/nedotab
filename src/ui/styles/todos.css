@@ -26,8 +26,8 @@
 /* --- Button: bottom left, beside the sharing button ---------------------------------------------- */
 .todos-bouton {
   position: fixed;
-  left: max(var(--espace-4), env(safe-area-inset-left, 0px));
-  bottom: calc(max(var(--espace-4), env(safe-area-inset-bottom, 0px)) + 60px);
+  left: max(var(--espace-4), var(--safe-gauche));
+  bottom: calc(max(var(--espace-4), var(--safe-bas)) + 60px);
   z-index: 30;
   display: grid;
   place-items: center;
@@ -45,7 +45,7 @@
   transition: transform 200ms var(--ressort), background-color 160ms;
 }
 .todos-bouton[hidden] { display: none; }
-body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px)); }
+body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), var(--safe-bas)); }
 .todos-bouton:hover { transform: translateY(-2px); }
 .todos-bouton:active { transform: scale(0.94); }
 .todos-bouton[aria-expanded="true"] { background: var(--accent); border-color: transparent; color: var(--accent-texte); }
@@ -103,7 +103,7 @@ body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), e
   .todos {
     z-index: 46;
     inset: 0;
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) calc(env(safe-area-inset-bottom, 0px) + var(--clavier, 0px)) env(safe-area-inset-left, 0px);
+    padding: var(--safe-haut) var(--safe-droite) calc(var(--safe-bas) + var(--clavier, 0px)) var(--safe-gauche);
     background: var(--surface);
   }
   .todos[hidden] { translate: 0 40px; }
@@ -417,13 +417,14 @@ body:has(.partage-bouton[hidden]) .todos-bouton { bottom: max(var(--espace-4), e
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
-  padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  padding: 0 var(--safe-droite) var(--safe-bas) var(--safe-gauche);
   border: 0;
   background: rgb(10 14 12 / 0.94);
   color: #f0f4ef;
 }
 .visionneuse[open] { display: grid; grid-template-rows: auto 1fr auto auto; }
-.visionneuse-haut { display: flex; align-items: center; justify-content: space-between; padding: var(--espace-3) var(--espace-4); }
+/* The ✕ and the counter sit below the clock and the island. */
+.visionneuse-haut { display: flex; align-items: center; justify-content: space-between; padding: max(var(--espace-3), calc(var(--safe-haut) + var(--espace-2))) var(--espace-4) var(--espace-3); }
 .visionneuse-scene { position: relative; display: grid; place-items: center; min-height: 0; padding: 0 56px; }
 .visionneuse-image { max-width: 100%; max-height: 100%; object-fit: contain; }
 .visionneuse-fleche {

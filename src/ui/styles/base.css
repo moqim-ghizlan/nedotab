@@ -64,10 +64,10 @@ textarea {
   flex-direction: column;
   align-items: center;
   /* Installed on iPhone (V3.1), the page goes under the status bar: never above it. */
-  padding: max(14vh, calc(env(safe-area-inset-top, 0px) + var(--espace-6)))
-    calc(var(--espace-4) + env(safe-area-inset-right, 0px))
-    calc(var(--espace-6) + env(safe-area-inset-bottom, 0px))
-    calc(var(--espace-4) + env(safe-area-inset-left, 0px));
+  padding: max(14vh, calc(var(--safe-haut) + var(--espace-6)))
+    calc(var(--espace-4) + var(--safe-droite))
+    calc(var(--espace-6) + var(--safe-bas))
+    calc(var(--espace-4) + var(--safe-gauche));
 }
 
 .visuellement-cache {

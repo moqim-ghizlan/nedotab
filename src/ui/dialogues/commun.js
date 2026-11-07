@@ -9,13 +9,13 @@ let compteur = 0;
  * `pile`: the buttons are stacked full width, each with its small `detail` line under the
  * label; colour tells the consequence (green: keep, red: erase, neutral: cancel).
  */
-export function demander({ titre, message, boutons, contenu = [], retourFocus, pile = false }) {
+export function demander({ titre, message, boutons, contenu = [], retourFocus, pile = false, alerte = false }) {
   return new Promise((resolve) => {
     const id = `dialogue-${++compteur}`;
     let valeur = null;
     const dialogue = el(
       "dialog",
-      { class: "dialogue", "aria-labelledby": id },
+      { class: "dialogue", "aria-labelledby": id, role: alerte ? "alertdialog" : null, "aria-modal": alerte ? "true" : null },
       el(
         "form",
         { method: "dialog", novalidate: true, class: "formulaire" },
@@ -66,7 +66,9 @@ export function demander({ titre, message, boutons, contenu = [], retourFocus, p
     // Nested in an open dialog so it stays above it and interactive.
     (document.querySelector("dialog[open]") ?? document.body).append(dialogue);
     dialogue.showModal();
-    (dialogue.querySelector("input") ?? dialogue.querySelector(".bouton--principal"))?.focus();
+    // A confirmation of a removal starts on "Annuler": Enter never confirms by default.
+    const depart = alerte ? dialogue.querySelector(".bouton:not(.bouton--danger):not(.bouton--principal)") : null;
+    (depart ?? dialogue.querySelector("input") ?? dialogue.querySelector(".bouton--principal"))?.focus();
   });
 }
 

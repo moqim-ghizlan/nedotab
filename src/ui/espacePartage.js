@@ -33,6 +33,8 @@ import { creerFichiers } from "./espacePartageFichiers.js";
 import { toast } from "./toast.js";
 import { creerCoffreUI } from "./coffre/coffre.js";
 import { demander } from "./dialogues/commun.js";
+import { copieImagePossible } from "./copierImage.js";
+import { confirmerSuppression } from "./dialogues/confirmerSuppression.js";
 import { creerSelecteurDuree } from "./selecteurDuree.js";
 import { creerGalerie } from "./galeriePartage.js";
 import { creerLienPourElement, ouvrirMesLiens } from "./liensPartage.js";
@@ -978,6 +980,8 @@ export function creerEspacePartage({
   }
 
   async function supprimerAvecAnnulation(e) {
+    // Never without asking: the card's own button confirms first (the gallery has its own question).
+    if (!(await confirmerSuppression({ message: `L'élément « ${apercu(e.titre || e.contenu || "", 40)} » sera supprimé.` }))) return;
     try {
       const fb = await charger();
       await fb.supprimerDuPartage(uid(), e.id);
@@ -1190,6 +1194,8 @@ export function creerEspacePartage({
     if (!item.verrouille) {
       if (item.type === "fichier") {
         ajouter("telecharger", "Télécharger", () => fichiers.telecharger(item));
+        if (fichiers.estImage(item) && copieImagePossible())
+          ajouter("copier-image", "Copier l'image", () => fichiers.copierImage(item));
         if (typeof navigator.share === "function" && matchMedia("(pointer: coarse)").matches)
           ajouter("partager", "Partager", () => fichiers.partager(item));
         if (item.taille <= 5 * 1024 * 1024)
@@ -1233,7 +1239,7 @@ export function creerEspacePartage({
       "Supprimer",
       () =>
         item.type === "fichier"
-          ? fichiers.supprimer(brut)
+          ? fichiers.supprimer(brut, { confirme: true })
           : charger().then((fb) => fb.supprimerDuPartage(uid(), item.id)),
       { danger: true },
     );

@@ -12,6 +12,8 @@
   background: var(--fond);
   color: var(--texte);
   font-size: 0.875rem;
+  /* Left / right: the side notch of a phone on its side. Top and bottom are handled by the parts. */
+  padding-inline: var(--safe-gauche) var(--safe-droite);
   animation: pgal-entree 220ms var(--glisse);
 }
 
@@ -28,7 +30,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--espace-2) var(--espace-3);
-  padding: var(--espace-3) var(--espace-4);
+  /* Under the clock and the island: the tabs and the search stay readable and touchable. */
+  padding: max(var(--espace-3), calc(var(--safe-haut) + var(--espace-2))) var(--espace-4) var(--espace-3);
   border-bottom: 1px solid var(--trait);
   background: var(--surface);
 }
@@ -170,7 +173,7 @@
 .pgal-grille-vue {
   flex: 1;
   min-width: 0;
-  padding: var(--espace-3) var(--espace-4) var(--espace-6);
+  padding: var(--espace-3) var(--espace-4) calc(var(--espace-6) + var(--safe-bas));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -300,31 +303,86 @@
   text-overflow: ellipsis;
 }
 
+/* Selection mode (V7.1): no check box on a card until "Sélectionner" is on. The box is a round
+   custom control in the corner, on a half-transparent disc so it never hides the card. */
+.pgal-selectionner {
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  height: 44px;
+  border-radius: 22px;
+  gap: 6px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: var(--taille-s);
+  font-weight: 600;
+}
+
+.pgal-selectionner--actif {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-texte);
+}
+
 .pgal-coche {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 2px solid var(--trait-fort);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  color: transparent;
   cursor: pointer;
+  transition: background-color 120ms, border-color 120ms, color 120ms;
+}
+
+.pgal-coche[aria-checked="true"],
+.pgal-coche[aria-checked="mixed"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-texte);
+}
+
+.pgal-coche-tiret {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.pgal-coche:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A touch target of 44 px around the 24 px disc, on cards and on period headers. */
+.pgal-coche::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
 }
 
 .pgal-case .pgal-coche {
   position: absolute;
   top: 8px;
   left: 8px;
-  opacity: 0;
-  transition: opacity 120ms;
 }
 
-.pgal-case:hover .pgal-coche,
-.pgal-case:focus-within .pgal-coche,
-.pgal-coche:checked {
-  opacity: 1;
+.pgal-groupe-entete .pgal-coche {
+  position: relative;
 }
 
-@media (hover: none) {
-  .pgal-case .pgal-coche {
-    opacity: 0.85;
-  }
+.pgal-selection .pgal-terminer {
+  margin-left: auto;
+}
+
+.pgal-selection .bouton {
+  min-height: 44px;
 }
 
 .pgal-vide {
@@ -536,7 +594,7 @@
     border-top: 1px solid var(--trait);
     border-left: 0;
     border-radius: var(--panneau-rayon) var(--panneau-rayon) 0 0;
-    padding-bottom: max(var(--espace-4), env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(var(--espace-4), var(--safe-bas));
   }
 
   .pgal-tuiles {
@@ -549,5 +607,16 @@
   .pgal-image,
   .pgal-attente {
     animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .pgal-selectionner-texte {
+    display: none;
+  }
+  .pgal-selectionner {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
   }
 }

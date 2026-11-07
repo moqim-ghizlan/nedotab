@@ -12,7 +12,7 @@ html.accueil-en-pages #app {
   height: 100dvh;
   min-height: 0;
   /* Above the iPhone's home bar when the app is installed (V3.1). */
-  padding-bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--espace-3) + var(--safe-bas));
 }
 
 /* The pages use 90 % of the window's width (the search bar keeps its own width). */
@@ -410,7 +410,7 @@ html.accueil-en-pages .accueil[hidden] {
 .bandeau-installation {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--espace-3) + var(--safe-bas));
   z-index: 30;
   display: flex;
   align-items: center;

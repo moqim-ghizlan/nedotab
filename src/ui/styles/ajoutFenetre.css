@@ -100,7 +100,7 @@ body.ajout-page {
   justify-content: flex-end;
   gap: var(--espace-2);
   padding: var(--espace-3) var(--espace-5);
-  padding-bottom: calc(var(--espace-3) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--espace-3) + var(--safe-bas));
   border-top: 1px solid var(--trait);
   background: var(--surface);
 }

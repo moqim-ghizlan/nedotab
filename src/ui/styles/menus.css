@@ -227,6 +227,14 @@
 .feuille-actions {
   position: fixed;
   inset: 0;
+  /* The sheet is a popover (top layer). The browser sizes a popover to its content ("fit-content"):
+     our children are all positioned, so it became 0 x 0: the veil and the sheet were invisible and
+     could not be tapped, while the enlarged copy of the tile (position: fixed) floated alone above
+     the page until the app was closed. A popover must be given its size. */
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
   margin: 0;
   padding: 0;
   border: 0;
@@ -240,13 +248,16 @@
   position: absolute;
   inset: 0;
   background: rgb(0 0 0 / 0.45);
+  /* Never followed by "-webkit-backdrop-filter": the CSS minifier would keep only the prefixed
+     one, which Chrome ignores. Written alone, the build adds the prefix for Safari itself. */
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
-/* The pressed tile, above the dimmed page; it is only a picture. */
+/* The pressed tile, above the dimmed page; it is only a picture. Absolute in the sheet (which
+   covers the screen at 0,0), never fixed: if the sheet were ever not shown, the copy goes with
+   it instead of floating alone above the page. */
 .feuille-tuile {
-  position: fixed;
+  position: absolute;
   max-width: none;
   pointer-events: none;
   transform: scale(1.08);
@@ -260,9 +271,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--espace-2);
-  padding: var(--espace-3) calc(var(--espace-3) + env(safe-area-inset-right, 0px))
-    calc(var(--espace-3) + env(safe-area-inset-bottom, 0px))
-    calc(var(--espace-3) + env(safe-area-inset-left, 0px));
+  padding: var(--espace-3) calc(var(--espace-3) + var(--safe-droite))
+    calc(var(--espace-3) + var(--safe-bas))
+    calc(var(--espace-3) + var(--safe-gauche));
   animation: monter 200ms ease-out;
 }
 

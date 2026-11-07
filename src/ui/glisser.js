@@ -4,6 +4,16 @@ import { trouver } from "../core/arbre.js";
 import { vibrer } from "./haptique.js";
 import { EVENEMENT_EDITION, enEdition } from "./modeEdition.js";
 import { DELAI_APPUI_LONG_MS, SEUIL_MOUVEMENT_PX, brancherAppuiLong } from "./appuiLong.js";
+import { fermerMenuTactile } from "./menuTactile.js";
+import { nettoyerGlisser } from "./nettoyageGlisser.js";
+
+/** After a release, a drag still "in progress" this long later never got its end event (ms). */
+export const DELAI_VERIF_FIN_MS = 600;
+/** A drag that has not moved nor ended for this long is over (ms). */
+export const INACTIVITE_MAX_MS = 30_000;
+
+/** Instances (home grid, open folder) whose drag is running now: none cleans another one's copy. */
+const actifs = new Set();
 
 const REDUIT = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
@@ -83,7 +93,13 @@ export function activerGlisser(
 ) {
   let glisserEnCours = false;
   let annule = false;
+  let generation = 0; // one more at each drag start: a late check ignores a newer drag
+  let derniereActivite = 0;
+  let aSynchroniser = false;
+  let veilleur = null;
+  const jeton = {};
   const suivre = (e) => {
+    derniereActivite = Date.now();
     placerCopieAuPremierPlan();
     intention?.suivre(e.clientX, e.clientY);
   };
@@ -130,8 +146,17 @@ export function activerGlisser(
     invertSwap: true,
     invertedSwapThreshold: 0.7,
     onStart(evt) {
+      // A drag that starts after a long press: the action sheet of that press must be gone.
+      fermerMenuTactile();
       vibrer(store);
       glisserEnCours = true;
+      actifs.add(jeton);
+      generation++;
+      derniereActivite = Date.now();
+      clearInterval(veilleur);
+      veilleur = setInterval(() => {
+        if (glisserEnCours && Date.now() - derniereActivite > INACTIVITE_MAX_MS) terminerDeForce();
+      }, 5000);
       annule = false;
       document.body.classList.add("glisser-en-cours");
       requestAnimationFrame(placerCopieAuPremierPlan);
@@ -151,6 +176,8 @@ export function activerGlisser(
     },
     onEnd(evt) {
       vibrer(store);
+      clearInterval(veilleur);
+      actifs.delete(jeton);
       document.body.classList.remove("glisser-en-cours");
       document.removeEventListener("pointermove", suivre, true);
       document.removeEventListener("keydown", surTouche, true);
@@ -176,12 +203,74 @@ export function activerGlisser(
       }, 0);
       // Always re-render: Sortable moved DOM nodes, the state decides where they go.
       rendre();
+      if (aSynchroniser) {
+        aSynchroniser = false;
+        setTimeout(synchroniser, 0);
+      }
+      setTimeout(nettoyerGlisser, DELAI_VERIF_FIN_MS);
     },
   };
+
+  /**
+   * The drag was cut (touchcancel, system gesture, page hidden): SortableJS will not tell. End it
+   * as a cancelled drag: stop the target timer and the listeners, tell the pages, clean the
+   * orphan copy and render once from the state.
+   */
+  function terminerDeForce() {
+    clearInterval(veilleur);
+    actifs.delete(jeton);
+    if (glisserEnCours) {
+      glisserEnCours = false;
+      document.removeEventListener("pointermove", suivre, true);
+      document.removeEventListener("keydown", surTouche, true);
+      try {
+        intention?.terminer();
+      } catch {
+        /* nothing active */
+      }
+      surFin?.({ annule: true });
+    }
+    nettoyerGlisser();
+    rendre();
+    if (aSynchroniser) {
+      aSynchroniser = false;
+      synchroniser();
+    }
+  }
+
+  // Each grid (home, open folder) has its own instance: the copy of a drag running in another
+  // one is not ours to clean (a flag or a copy left by a cut drag still is).
+  const autreGlisser = () => !glisserEnCours && actifs.size > 0;
+  // After a release or a cancel: if the end event never came, finish the job. A newer drag is left alone.
+  const verifierFin = () => {
+    const g = generation;
+    setTimeout(() => {
+      if (g !== generation || autreGlisser()) return;
+      if (glisserEnCours || document.querySelector("body > .sortable-fallback, body > .case--glissee")) terminerDeForce();
+    }, DELAI_VERIF_FIN_MS);
+  };
+  // Whatever the user touches next, a copy left behind by a cut drag is removed (no drag is running).
+  const surNouvelAppui = () => {
+    if (!glisserEnCours && !autreGlisser()) nettoyerGlisser();
+  };
+  for (const type of ["pointerdown", "touchstart"]) document.addEventListener(type, surNouvelAppui, true);
+  const surCache = () => {
+    if (document.visibilityState === "hidden" && glisserEnCours) terminerDeForce();
+  };
+  const surFlou = () => glisserEnCours && terminerDeForce();
+  for (const type of ["pointerup", "pointercancel", "touchend", "touchcancel"])
+    document.addEventListener(type, verifierFin, true);
+  document.addEventListener("visibilitychange", surCache);
+  globalThis.addEventListener?.("blur", surFlou);
 
   // One SortableJS instance per list; lists added or removed by a render follow.
   const instances = new Map();
   const synchroniser = () => {
+    // Never destroy an instance in the middle of a drag: its copy would be orphaned.
+    if (glisserEnCours) {
+      aSynchroniser = true;
+      return;
+    }
     const voulues = new Set(listes());
     for (const [liste, instance] of instances) {
       if (voulues.has(liste) && liste.isConnected) continue;
@@ -239,7 +328,18 @@ export function activerGlisser(
     },
     enCours: () => glisserEnCours,
     synchroniser,
+    /** Tests / safety: ends a cut drag and cleans what it left. */
+    terminerDeForce,
     detruire: () => {
+      clearInterval(veilleur);
+      // Destroyed during its own drag (folder window closed): the other grids must not take it
+      // for a drag still running, or they would never clean again.
+      actifs.delete(jeton);
+      for (const type of ["pointerup", "pointercancel", "touchend", "touchcancel"])
+        document.removeEventListener(type, verifierFin, true);
+      for (const type of ["pointerdown", "touchstart"]) document.removeEventListener(type, surNouvelAppui, true);
+      document.removeEventListener("visibilitychange", surCache);
+      globalThis.removeEventListener?.("blur", surFlou);
       debrancherAppuiLong();
       document.removeEventListener(EVENEMENT_EDITION, surEdition);
       for (const type of ["pointerup", "pointercancel"])
