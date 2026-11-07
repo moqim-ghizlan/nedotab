@@ -80,7 +80,8 @@ export function lireSujet(id, brut, enAttente = false) {
     couleur: estCouleurSujet(brut.couleur) ? brut.couleur : null,
     creeLe: enMs(brut.creeLe),
     modifieLe: enMs(brut.modifieLe),
-    nbRestants: entierPositif(brut.nbRestants),
+    // Remaining can never exceed the total (a drifted counter would show "1" on an empty subject).
+    nbRestants: Math.min(entierPositif(brut.nbRestants), entierPositif(brut.nbTotal)),
     nbTotal: entierPositif(brut.nbTotal),
     enAttente,
   };
