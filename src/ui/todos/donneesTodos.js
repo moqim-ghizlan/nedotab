@@ -47,7 +47,20 @@ export function creerDonneesTodos({ charger, uid }) {
   const fb = () => charger();
   const notifier = () => abonnes.forEach((f) => f());
 
-  const sujetsVisibles = () => trierSujets(etat.sujets.filter((s) => !suppressions.has(`sujet:${s.id}`)));
+  // The open subject shows the counters of what is really displayed (a pending removal or tick is
+  // counted at once, without waiting for the batch that updates the stored counters).
+  const sujetsVisibles = () => {
+    const liste = etat.sujets.filter((s) => !suppressions.has(`sujet:${s.id}`));
+    if (etat.todosStatut === "ok" && etat.sujetId) {
+      const affiches = todosVisibles();
+      const total = affiches.length;
+      const restants = affiches.filter((t) => !t.fait).length;
+      return trierSujets(
+        liste.map((s) => (s.id === etat.sujetId ? { ...s, nbTotal: total, nbRestants: restants } : s)),
+      );
+    }
+    return trierSujets(liste);
+  };
   const todosVisibles = () =>
     trierTodos(
       etat.todos
