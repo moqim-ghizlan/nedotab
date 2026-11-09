@@ -495,6 +495,9 @@ export function creerEspacePartage({
         !masque
           ? boutonAction("crayon", "Modifier", { onclick: () => modifierTexte(brut, e) })
           : null,
+        !brut.chiffre && e.type !== "fichier"
+          ? boutonAction("cadenas", "Chiffrer", { onclick: () => chiffrerApresCoup(brut, e) })
+          : null,
         boutonAction("horloge", "Prolonger", { onclick: () => choisirProlongation(e) }),
         boutonAction("poubelle", "Supprimer", {
           classe: "partage-action--danger",
@@ -778,7 +781,18 @@ export function creerEspacePartage({
    * @returns {Promise<{ titre: string, description: string, expireLe?: number } | null>}
    *   null when cancelled; `expireLe` only when the user changed it
    */
-  async function editerDetails({ titre = "", description = "", element = null }) {
+  async function editerDetails({ titre = "", description = "", element = null, contenu = null, erreur = "" }) {
+    // `contenu` is null for a file (its content is not editable here).
+    const c =
+      contenu === null
+        ? null
+        : el("textarea", {
+            id: "partage-modif-contenu",
+            rows: "5",
+            maxlength: String(LIMITE_CARACTERES),
+            spellcheck: "false",
+          });
+    if (c) c.value = contenu;
     const t = el("input", {
       id: "partage-modif-titre",
       type: "text",
@@ -890,6 +904,8 @@ export function creerEspacePartage({
     const ok = await demander({
       titre: "Titre et description",
       contenu: [
+        erreur ? el("p", { class: "partage-modif-alerte", role: "alert", texte: erreur }) : null,
+        c ? el("div", { class: "champ" }, el("label", { for: c.id, texte: "Contenu" }), c) : null,
         el("div", { class: "champ" }, el("label", { for: t.id, texte: "Titre" }), t),
         el("div", { class: "champ" }, el("label", { for: d.id, texte: "Description" }), d),
         avecDuree
@@ -937,30 +953,78 @@ export function creerEspacePartage({
       });
       if (!sur) return null;
     }
-    return exp?.ok && exp.change ? { ...r, expireLe: exp.expireLe } : r;
+    const base = exp?.ok && exp.change ? { ...r, expireLe: exp.expireLe } : r;
+    return c ? { ...base, contenu: c.value } : base;
   }
 
   async function modifierTexte(brut, e) {
     const auto = titreDe(e.type, e.contenu);
-    const r = await editerDetails({
+    let saisie = {
       titre: e.titre && e.titre !== auto ? e.titre : "",
       description: e.description ?? "",
-      element: brut,
-    });
-    if (!r) return;
-    const titre = r.titre || auto;
+      contenu: e.contenu,
+    };
+    let r;
+    let contenu;
+    for (let erreur = ""; ; ) {
+      r = await editerDetails({ ...saisie, element: brut, erreur });
+      if (!r) return;
+      // Same checks as when sending; a link must stay a valid http(s) address.
+      erreur =
+        validerContenu(r.contenu) ||
+        (e.type === "lien" && !urlSure(r.contenu) ? "Ce n'est pas une adresse http ou https valide." : "");
+      if (!erreur) {
+        contenu = e.type === "lien" ? urlSure(r.contenu) : r.contenu.replace(/\r\n/g, "\n");
+        break;
+      }
+      saisie = { titre: r.titre, description: r.description, contenu: r.contenu };
+    }
+    const titre = r.titre || titreDe(e.type, contenu);
     if (brut.chiffre && !coffre.session.estDeverrouille()) return;
     action(async () => {
       const fb = await charger();
       if (brut.chiffre) {
-        const clair = { contenu: e.contenu, titre, description: r.description };
+        const clair = { contenu, titre, description: r.description };
         const bloc = await coffre.chiffrer(brut.id, clair);
         await fb.modifierDetailsPartage(uid(), brut.id, { contenu: bloc });
         dechiffres.set(brut.id, { ...clair, bloc });
       } else {
-        await fb.modifierDetailsPartage(uid(), brut.id, { titre, description: r.description });
+        await fb.modifierDetailsPartage(uid(), brut.id, {
+          titre,
+          description: r.description,
+          ...(contenu !== e.contenu ? { contenu } : {}),
+        });
       }
       if (r.expireLe) await fb.prolongerPartage(uid(), brut.id, r.expireLe);
+      rendre();
+    });
+  }
+
+  /** Puts a posted text or link in the vault (one way: it stays encrypted). */
+  async function chiffrerApresCoup(brut, e) {
+    if (brut.chiffre || e.type === "fichier") return;
+    if (!(await coffre.assurerDeverrouille())) return;
+    const ok = await demander({
+      titre: "Chiffrer cet élément ?",
+      message:
+        "Le contenu, le titre et la description seront chiffrés. Un lien de partage déjà créé reste lisible tant que vous ne le supprimez pas.",
+      boutons: [
+        { libelle: "Annuler", valeur: false },
+        { libelle: "Chiffrer", valeur: true, principal: true },
+      ],
+    });
+    if (!ok) return;
+    action(async () => {
+      const fb = await charger();
+      const clair = {
+        contenu: brut.contenu,
+        titre: brut.titre || titreDe(e.type, brut.contenu),
+        description: brut.description ?? "",
+      };
+      const bloc = await coffre.chiffrer(brut.id, clair);
+      await fb.chiffrerElementPartage(uid(), brut.id, bloc);
+      dechiffres.set(brut.id, { ...clair, bloc });
+      toast("Chiffré");
       rendre();
     });
   }
@@ -1221,6 +1285,8 @@ export function creerEspacePartage({
           }),
         );
       }
+      if (!brut.chiffre && item.type !== "fichier")
+        ajouter("chiffrer", "Chiffrer", () => chiffrerApresCoup(brut, item));
       ajouter("modifier", "Modifier le titre et la description", () =>
         item.type === "fichier"
           ? fichiers.modifier(brut, item, item.titre && item.titre !== item.contenu ? item.titre : "")

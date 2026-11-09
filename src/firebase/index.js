@@ -86,6 +86,7 @@ export {
   ecouterEspacePartage,
   epingler as epinglerPartage,
   modifierDetails as modifierDetailsPartage,
+  chiffrerElement as chiffrerElementPartage,
   lirePage as lirePagePartage,
   migrerExpiration as migrerExpirationPartage,
   prolonger as prolongerPartage,

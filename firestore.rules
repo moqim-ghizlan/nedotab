@@ -180,10 +180,20 @@ service cloud.firestore {
       // V4.27): any valid value, longer OR shorter (within [now + 55 min, now + 31 days], or
       // unlimited), whatever the old one. There is NO read rule based on request.time.
       allow update: if proprietaire(uid)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe', 'titre', 'description', 'contenu'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['epingle', 'creeLe', 'expireLe', 'titre', 'description', 'contenu', 'type', 'chiffre'])
         && request.resource.data.epingle is bool
-        // V4.31: title and description changed afterwards ("Modifier"). The content itself
-        // never changes, except the encrypted block of a vault item (re-encrypted on the device).
+        // A text or link can be put in the vault afterwards (never taken out, never a file).
+        && chiffreValide(request.resource.data)
+        && (resource.data.get('chiffre', false) != true || request.resource.data.get('chiffre', false) == true)
+        && (request.resource.data.get('chiffre', false) == resource.data.get('chiffre', false)
+            || (resource.data.type in ['texte', 'lien'] && request.resource.data.contenu.size() <= 110000
+                && !('description' in request.resource.data)))
+        // The type only switches between texte and lien (never to or from a file).
+        && (request.resource.data.type == resource.data.type
+            || (resource.data.type in ['texte', 'lien'] && request.resource.data.type in ['texte', 'lien']))
+        // V4.31: title and description changed afterwards ("Modifier"). The content of a text or
+        // link can be edited too (max 20000), never that of a file; a vault item changes its
+        // encrypted block (re-encrypted on the device).
         && request.resource.data.titre is string
         && request.resource.data.titre.size() <= 200
         && (!('description' in request.resource.data)
@@ -193,7 +203,17 @@ service cloud.firestore {
             || (resource.data.get('chiffre', false) == true
                 && request.resource.data.contenu is string
                 && request.resource.data.contenu.size() >= 1
-                && request.resource.data.contenu.size() <= 110000))
+                && request.resource.data.contenu.size() <= 110000)
+            || (resource.data.get('chiffre', false) != true
+                && request.resource.data.get('chiffre', false) == true
+                && request.resource.data.contenu is string
+                && request.resource.data.contenu.size() >= 1)
+            || (resource.data.get('chiffre', false) != true
+                && request.resource.data.get('chiffre', false) != true
+                && resource.data.type in ['texte', 'lien']
+                && request.resource.data.contenu is string
+                && request.resource.data.contenu.size() >= 1
+                && request.resource.data.contenu.size() <= 20000))
         && (request.resource.data.creeLe == resource.data.creeLe
             || request.resource.data.creeLe == request.time)
         && (request.resource.data.get('expireLe', null) == resource.data.get('expireLe', null)

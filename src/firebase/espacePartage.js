@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getCountFromServer,
   getDocs,
@@ -132,6 +133,19 @@ export async function epingler(uid, id, epingle) {
  */
 export async function modifierDetails(uid, id, champs) {
   await updateDoc(doc(elements(uid), id), champs);
+}
+
+/**
+ * Puts a text or link in the vault afterwards: `bloc` is the content already encrypted on the
+ * device. The clear title and description leave the document (they are inside the block).
+ */
+export async function chiffrerElement(uid, id, bloc) {
+  await updateDoc(doc(elements(uid), id), {
+    contenu: bloc,
+    titre: "",
+    chiffre: true,
+    description: deleteField(),
+  });
 }
 
 /** Removes an element and decrements the counter (one batch). */

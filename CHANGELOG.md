@@ -2,6 +2,15 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.1.1] - 2026-11-09
+
+Correctif de l'espace de partage. **Les règles Firestore ont changé : à déployer (`npx firebase deploy --only firestore:rules --project prod`).** Testé par lint et vitest (interface) ; les règles n'ont pas été jouées dans les émulateurs.
+
+### Ajouté
+
+- **Modifier le contenu d'un texte ou d'un lien** après l'envoi (liste et galerie) : champ « Contenu » dans la fenêtre « Modifier », mêmes contrôles qu'à l'envoi. Les fichiers restent non modifiables.
+- **Chiffrer un texte ou un lien après l'envoi** (bouton « Chiffrer » de la carte et du menu de la galerie, coffre déverrouillé requis). Sens unique ; le titre et la description en clair quittent Firestore. Un lien de partage public déjà créé reste lisible. Pas encore pour les fichiers ni les images.
+
 ## [7.1.0] - 2026-11-07
 
 Les 14 corrections de `docs/plan/todo.md`. **Testé en simulation (vitest) et par les builds ; rien n'a été essayé sur un iPhone** (zone sûre, fantôme du glisser-déposer, copie d'image sur Safari : à vérifier sur l'appareil).
