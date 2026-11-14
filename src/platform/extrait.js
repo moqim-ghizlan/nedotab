@@ -3,6 +3,7 @@
  * network and the permission are here, the analysis is src/core/extraitPage.js. Extracts are
  * kept in memory only, briefly: no durable storage of page contents.
  */
+import { retirerGestionnaires } from "../core/htmlSur.js";
 import { analyserConfidentialite } from "../core/confidentialiteUrl.js";
 import { extraireContenu, extraitReduit } from "../core/extraitPage.js";
 
@@ -45,7 +46,7 @@ export async function lireExtrait(url, { lirePage, permissions, signal } = {}) {
   if (!(await permissions.contient().catch(() => false))) return null;
   const page = await lirePage(regle.url, { signal });
   if (!page) return null;
-  const doc = new DOMParser().parseFromString(page.html, "text/html");
+  const doc = new DOMParser().parseFromString(retirerGestionnaires(page.html), "text/html");
   const extrait = extraireContenu(doc, page.urlFinale || regle.url);
   retenir(regle.url, extrait);
   return extrait;

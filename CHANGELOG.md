@@ -2,6 +2,14 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.1.2] - 2026-11-14
+
+Correctif : erreurs dans la page des extensions de Chrome.
+
+### Corrigé
+
+- **Erreurs de CSP à l'ajout d'un site** (« Executing inline event handler violates the Content Security Policy ») : le HTML des pages lues pour trouver titre et icônes est nettoyé de ses attributs `onload=`/`onerror=` avant analyse. Rien ne change à l'écran. À vérifier dans Chrome (`chrome://extensions` → Erreurs).
+
 ## [7.1.1] - 2026-11-09
 
 Correctif de l'espace de partage. **Les règles Firestore ont changé : à déployer (`npx firebase deploy --only firestore:rules --project prod`).** Testé par lint et vitest (interface) ; les règles n'ont pas été jouées dans les émulateurs.

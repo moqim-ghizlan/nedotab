@@ -1,3 +1,4 @@
+import { retirerGestionnaires } from "../../core/htmlSur.js";
 import { couleurDepuisTexte } from "../../core/couleurs.js";
 import { classerIcones, extraireInfos, iconesDuManifeste } from "../../core/infosPage.js";
 import { domaine, domainesParents } from "../../core/url.js";
@@ -70,7 +71,7 @@ async function depuisHtml(url, signal, meilleur) {
   if (!(await plateforme.permissionsSites.contient().catch(() => false))) return null;
   const page = await plateforme.lirePage(url, { signal });
   if (!page) return null;
-  const doc = new DOMParser().parseFromString(page.html, "text/html");
+  const doc = new DOMParser().parseFromString(retirerGestionnaires(page.html), "text/html");
   const infos = extraireInfos(doc, page.urlFinale, url);
   meilleur.titre = infos.titre;
   let candidats = infos.icones;
