@@ -2,6 +2,12 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.1.3] - 2026-11-14
+
+### Changé
+
+- **Champ « Chercher un dossier »** (ajout de site, déplacement) au style du projet : loupe, bouton d'effacement, focus et thèmes clair/sombre comme les autres champs. Même comportement qu'avant.
+
 ## [7.1.2] - 2026-11-14
 
 Correctif : erreurs dans la page des extensions de Chrome.

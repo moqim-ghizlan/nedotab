@@ -53,13 +53,28 @@ export function creerSelecteurDossier({
     "aria-label": "Chercher un dossier",
     autocomplete: "off",
   });
+  const effacer = el("button", {
+    type: "button",
+    class: "selecteur-recherche-effacer",
+    "aria-label": "Effacer la recherche",
+    title: "Effacer",
+    hidden: "",
+    texte: "×",
+  });
+  const boite = el(
+    "div",
+    { class: "selecteur-recherche-boite" },
+    el("span", { class: "selecteur-recherche-loupe", "aria-hidden": "true" }),
+    champ,
+    effacer,
+  );
   const arbre = el("ul", { class: "arbre", role: "tree", id: idArbre, "aria-label": "Dossiers" });
   const ariane = el("nav", { class: "selecteur-ariane", "aria-label": "Destination choisie" });
   const panneau = apercu ? el("div", { class: "selecteur-apercu", "aria-live": "polite" }) : null;
   const racine = el(
     "div",
     { class: `selecteur${apercu ? " selecteur--apercu" : ""}` },
-    champ,
+    boite,
     apercu ? el("div", { class: "selecteur-corps" }, arbre, panneau) : arbre,
     ariane,
   );
@@ -258,7 +273,15 @@ export function creerSelecteurDossier({
   });
   champ.addEventListener("input", () => {
     filtre = champ.value;
+    effacer.hidden = filtre === "";
     dessiner();
+  });
+  effacer.addEventListener("click", () => {
+    champ.value = "";
+    filtre = "";
+    effacer.hidden = true;
+    dessiner();
+    champ.focus();
   });
   champ.addEventListener("keydown", (e) => {
     if (e.key === "Enter") e.preventDefault(); // never submits the surrounding dialog
