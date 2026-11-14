@@ -162,6 +162,8 @@ export const INTERRUPTEURS = [
   "sansEspacePartage",
   // V6: the todos are ON by default; this stores the opt-out.
   "sansTodos",
+  // 7.2: the pin list of the home page is ON by default; this stores the opt-out.
+  "sansEpingles",
 ];
 
 /**

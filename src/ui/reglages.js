@@ -363,6 +363,12 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
       true,
     ],
     [
+      "sansEpingles",
+      "Afficher les sites épinglés",
+      "Liste verticale à gauche de la page d'accueil (écrans larges). Désactivé, elle disparaît ; vos épingles sont conservées et reviennent à la réactivation. Les éléments épinglés restent masqués de la grille tant qu'ils sont épinglés.",
+      true,
+    ],
+    [
       "sansTodos",
       "Activer les todos",
       "Sujets et todos synchronisés avec votre compte. Désactivé, le bouton et le panneau disparaissent et rien n'est lu ni écrit ; vos todos sont conservés et reviennent à la réactivation.",
@@ -910,6 +916,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     ],
     general: [
       section("Todos", ...ligneDes(["sansTodos"])),
+      section("Sites épinglés", ...ligneDes(["sansEpingles"])),
       section(
         "Ouverture des liens",
         el("p", { class: "reglages-note", texte: "Votre page NedoTab reste ouverte derrière." }),

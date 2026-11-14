@@ -192,7 +192,8 @@ export function deplacer(grille, id, versParentId = null, versIndex) {
  * goes down into a sub-folder: its content is not the content of the folder.
  */
 export function apercuDossier(dossier, n = 4) {
-  return dossier.items.slice(0, n);
+  // A home pin (7.2) is shown in the pin list, not inside its folder's preview.
+  return dossier.items.filter((e) => e.epingleAccueil == null).slice(0, n);
 }
 
 /** Total number of sites in a folder, all levels. */

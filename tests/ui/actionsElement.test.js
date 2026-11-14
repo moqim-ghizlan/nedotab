@@ -36,6 +36,7 @@ describe("menu contextuel", () => {
       "Ouvrir dans un nouvel onglet",
       "Copier le lien",
       "Épingler dans la recherche",
+      "Épingler à l'accueil",
       "Déplacer vers…",
       "Créer un dossier avec ce site",
       "Ne pas montrer à l'IA",

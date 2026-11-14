@@ -66,6 +66,7 @@ import { creerServiceVisites } from "./services/visites.js";
 import { creerServiceUsage } from "./services/usage.js";
 import { frequentsDe } from "../core/frequents.js";
 import { creerFrequents } from "./frequents.js";
+import { creerEpingles } from "./epingles.js";
 import { typeAppareil } from "../core/appareil.js";
 import { demanderNomAppareil } from "./dialogues/nomAppareil.js";
 import { creerServiceAppareils } from "./services/appareils.js";
@@ -880,6 +881,13 @@ export async function demarrerApp(racine) {
   ligneRecherche.after(frequents.racine);
   page.insertBefore(creerHorloge(store).racine, ligneRecherche);
   page.insertBefore(frequentsAccueil.racine, ligneRecherche);
+  // 7.2: vertical list of the pinned sites and folders (large screens).
+  const epingles = creerEpingles({
+    store,
+    ouvrirDossier: (id, tuile) => ouvrirDossier(id, tuile),
+    lectureSeule: () => lectureSeule,
+  });
+  document.body.append(epingles.racine);
   // New tab taken over from Chrome's address bar (V2.10.7): the cursor goes to the search.
   // The "?focus=1" marker is then removed from the address shown by Chrome.
   if (new URLSearchParams(location.search).has("focus")) {

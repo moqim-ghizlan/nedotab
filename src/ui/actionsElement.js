@@ -8,6 +8,7 @@ import { ouvrirEditionDossier } from "./dialogues/dialogueDossier.js";
 import { ouvrirEditionSite } from "./dialogues/dialogueSite.js";
 import { PROFONDEUR_ATTEINTE } from "./messages.js";
 import { ouvrirMenu } from "./menuContextuel.js";
+import { MESSAGE_PLEIN, peutEpingler } from "../core/epingles.js";
 import { menuPourPointeur } from "./entrees.js";
 import { ecranTactile, fermerMenuTactile, ouvrirMenuTactile } from "./menuTactile.js";
 import { toast } from "./toast.js";
@@ -208,6 +209,18 @@ export function brancherActionsElements(
     const e = r.element;
     const modifiable = !lectureSeule();
     const entrees = [];
+    // 7.2: pin to the home page list (sites and folders). Disabled with the reason when full.
+    const epingleAccueil = e.epingleAccueil != null
+      ? {
+          libelle: "Désépingler de l'accueil",
+          onChoix: () => store.envoyer({ type: A.DESEPINGLER, id }),
+        }
+      : {
+          libelle: "Épingler à l'accueil",
+          desactive: !peutEpingler(store.lire().grille, id).ok,
+          info: MESSAGE_PLEIN,
+          onChoix: () => store.envoyer({ type: A.EPINGLER, id }),
+        };
     const deplacerVers = {
       libelle: "Déplacer vers…",
       onChoix: () => ouvrirDeplacerVers(store, id, { retourFocus: tuileDe(id) }),
@@ -226,6 +239,7 @@ export function brancherActionsElements(
                 },
               ]
             : []),
+          epingleAccueil,
           deplacerVers,
         );
       }
@@ -252,6 +266,7 @@ export function brancherActionsElements(
                 changements: { epingle: e.epingle !== true },
               }),
           },
+          epingleAccueil,
           deplacerVers,
           {
           libelle: "Créer un dossier avec ce site",

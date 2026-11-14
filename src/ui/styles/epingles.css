@@ -1,0 +1,235 @@
+/* Home pins (7.2): a vertical column, top left, 15 % from the top. Large screens only. */
+.epingles {
+  position: fixed;
+  top: 15%;
+  left: var(--espace-4);
+  z-index: 5;
+  display: none;
+}
+
+@media (min-width: 700px) {
+  .epingles:not([hidden]) {
+    display: block;
+  }
+}
+
+.epingles-liste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espace-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.epingle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: epingle-entree 320ms var(--ressort) both;
+  transition:
+    opacity 160ms,
+    transform 160ms var(--glisse);
+}
+
+.epingles-liste:not(.epingles-liste--entree) .epingle {
+  animation-duration: 240ms;
+}
+
+.epingle--sortie {
+  opacity: 0;
+  transform: translateX(-12px) scale(0.9);
+}
+
+.epingle-lien {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--espace-2);
+  min-height: 44px;
+  max-width: 260px;
+  padding: 4px;
+  border: 1px solid var(--trait);
+  border-radius: 999px;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: var(--ombre);
+  color: var(--texte);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 160ms var(--ressort),
+    border-color 160ms,
+    box-shadow 160ms;
+}
+
+.epingle-lien .tuile-icone {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 0.9rem;
+}
+
+.epingle-lien .tuile-icone--image {
+  padding: 4px;
+}
+
+.epingle-lien .tuile-icone--dossier {
+  transform: scale(0.8);
+  transform-origin: center;
+}
+
+.epingle:hover .epingle-lien,
+.epingle:focus-within .epingle-lien {
+  border-color: var(--accent);
+  transform: translateX(3px);
+}
+
+.epingle-lien:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Icon only: the title unfolds on hover or keyboard focus (and stays in the tooltip). */
+.epingle-titre {
+  max-width: 0;
+  margin-left: calc(var(--espace-2) * -1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  font-size: var(--taille-s);
+  font-weight: 600;
+  transition:
+    max-width 220ms var(--glisse),
+    margin 220ms var(--glisse),
+    opacity 160ms;
+}
+
+.epingle:hover .epingle-titre,
+.epingle:focus-within .epingle-titre {
+  max-width: 170px;
+  margin-right: 10px;
+  margin-left: 0;
+  opacity: 1;
+}
+
+/* The two buttons slide out on the right of the pill. */
+.epingle-actions {
+  position: absolute;
+  left: 100%;
+  display: flex;
+  gap: 4px;
+  padding-left: 6px;
+  opacity: 0;
+  translate: -8px 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms,
+    translate 200ms var(--glisse);
+}
+
+.epingle:hover .epingle-actions,
+.epingle:focus-within .epingle-actions {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+.epingle-action {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--trait);
+  border-radius: 50%;
+  background: var(--verre);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  color: var(--texte-secondaire);
+  cursor: pointer;
+  transition:
+    transform 140ms var(--ressort),
+    color 140ms,
+    border-color 140ms,
+    background-color 140ms;
+}
+
+.epingle-action:hover,
+.epingle-action:focus-visible {
+  border-color: var(--accent);
+  color: var(--texte);
+  transform: scale(1.12);
+}
+
+.epingle-desepingler:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.epingle-poignee {
+  cursor: grab;
+  touch-action: none;
+}
+
+.epingles--glisse .epingle-poignee {
+  cursor: grabbing;
+}
+
+.epingle-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.epingle--fantome {
+  opacity: 0.35;
+}
+
+.epingle--glissee .epingle-lien {
+  border-color: var(--accent);
+  box-shadow: var(--ombre-forte);
+}
+
+.epingle--glissee .epingle-actions {
+  opacity: 0;
+}
+
+.epingle--glissee .epingle-titre {
+  max-width: 170px;
+  margin: 0 10px 0 0;
+  opacity: 1;
+}
+
+@keyframes epingle-entree {
+  from {
+    opacity: 0;
+    transform: translateX(-16px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .epingle,
+  .epingle-lien,
+  .epingle-titre,
+  .epingle-actions,
+  .epingle-action {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .epingle-lien,
+  .epingle-action {
+    border-color: CanvasText;
+  }
+}

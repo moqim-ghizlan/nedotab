@@ -1,3 +1,4 @@
+import { normaliserEpingles } from "./epingles.js";
 import { PROFONDEUR_MAX, VERSION_SCHEMA } from "./constantes.js";
 import { validerIconeDossier } from "./iconeDossier.js";
 import { etatInitial } from "./modele.js";
@@ -150,7 +151,9 @@ export function valider(
 ) {
   const base = etatInitial();
   const ctx = { ignores: [], corrections: [], vus: new Set() };
-  const grille = Array.isArray(etat?.grille) ? filtrer(etat.grille, 0, ctx) : [];
+  const filtree = Array.isArray(etat?.grille) ? filtrer(etat.grille, 0, ctx) : [];
+  // 7.2: home pins (ranks 1..10, at most 10).
+  const grille = normaliserEpingles(filtree);
   if (ctx.ignores.length) onIgnore(ctx.ignores);
   if (ctx.corrections.length) onCorriger(ctx.corrections);
   const reglages = avecPagesValides(

@@ -17,6 +17,7 @@ import {
   trouver,
 } from "./arbre.js";
 import { PROFONDEUR_MAX } from "./constantes.js";
+import { deplacerEpingle, desepingler, epingler } from "./epingles.js";
 import {
   capaciteDe,
   comptesAStocker,
@@ -54,6 +55,9 @@ export const A = {
   FOND_AJOUTER: "FOND_AJOUTER",
   FOND_SUPPRIMER: "FOND_SUPPRIMER",
   GRILLE_RESTAURER: "GRILLE_RESTAURER",
+  EPINGLER: "EPINGLER",
+  DESEPINGLER: "DESEPINGLER",
+  EPINGLE_DEPLACER: "EPINGLE_DEPLACER",
 };
 
 export const TITRE_DOSSIER_MAX = 40;
@@ -358,6 +362,12 @@ function reduireBase(etat, action) {
       return avecGrille(etat, fusionner(etat.grille, action));
     case A.GRILLE_REMPLACER:
       return Array.isArray(action.grille) ? avecGrille(etat, action.grille) : etat;
+    case A.EPINGLER:
+      return avecGrille(etat, epingler(etat.grille, action.id));
+    case A.DESEPINGLER:
+      return avecGrille(etat, desepingler(etat.grille, action.id));
+    case A.EPINGLE_DEPLACER:
+      return avecGrille(etat, deplacerEpingle(etat.grille, action.id, action.versIndex));
     case A.ELEMENT_IA_EXCLURE: {
       // V4.20: hide a site or a folder (and its content) from the AI. Absent = shown.
       const exclu = action.exclu === true;

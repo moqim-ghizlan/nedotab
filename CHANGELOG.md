@@ -2,6 +2,12 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.2.0] - 2026-11-14
+
+### Ajouté
+
+- **Sites épinglés à l'accueil** : jusqu'à 10 sites ou dossiers, en liste verticale en haut à gauche (à 15 % du haut), sur PC et grands écrans (masquée sur téléphone). Clic droit sur une carte → « Épingler à l'accueil ». Un élément épinglé disparaît de la grille et revient exactement à sa place quand on le désépingle. Icône seule ; au survol le titre se déploie et deux boutons apparaissent (désépingler, changer de place par glisser ou avec ↑ ↓). Un dossier épinglé ouvre sa fenêtre. Le 11e est refusé avec un message. Réglage « Afficher les sites épinglés » (Général). Indépendant de « Les plus utilisés » (champ `epingle`). Données : champ `epingleAccueil` (rang 1 à 10) sur l'élément, aucune règle Firestore à changer. À essayer dans Chrome.
+
 ## [7.1.4] - 2026-11-14
 
 ### Ajouté
