@@ -8,6 +8,7 @@ import { el } from "../dom.js";
 import { icone } from "../icones.js";
 import { ouvrirMenu } from "../menuContextuel.js";
 import { rapatrierToasts, toast } from "../toast.js";
+import { rendreDeplacable } from "./deplacerModale.js";
 import { preparerImage } from "./compresserImage.js";
 import { televerserPhoto } from "./envoiPhoto.js";
 import { telechargerPdfTodo } from "./pdfTodo.js";
@@ -420,7 +421,9 @@ export function ouvrirModaleTodo({ donnees, todo = null, sujetId, preparer = pre
   dialogue.addEventListener("pointerdown", (e) => {
     if (e.target === dialogue) dialogue.close();
   });
+  const retirerDeplacement = rendreDeplacable(dialogue, formulaire.querySelector(".modale-todo-entete"));
   dialogue.addEventListener("close", () => {
+    retirerDeplacement();
     for (const u of [etat.nouvelleUrl, etat.miniUrl]) if (u) URL.revokeObjectURL(u);
     rapatrierToasts();
     dialogue.remove();

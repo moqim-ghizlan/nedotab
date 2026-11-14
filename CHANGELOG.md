@@ -2,6 +2,12 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.1.4] - 2026-11-14
+
+### Ajouté
+
+- **Fenêtre des todos déplaçable à la souris** par son en-tête, sans jamais sortir de l'écran (reste dans le cadre même si on réduit la fenêtre du navigateur). Elle revient au centre à chaque ouverture. PC uniquement ; sur téléphone, la feuille ne bouge pas. À essayer dans Chrome.
+
 ## [7.1.3] - 2026-11-14
 
 ### Changé
