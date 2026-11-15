@@ -1,3 +1,4 @@
+import { pistesDe } from "../../src/core/pistes.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { creerPanneauTodos } from "../../src/ui/todos/panneauTodos.js";
 
@@ -14,10 +15,14 @@ afterEach(() => {
 const vraiSetTimeout = globalThis.setTimeout;
 const attendre = () => new Promise((r) => vraiSetTimeout(r, 0));
 const sujet = (id, extra = {}) => ({ id, nom: `Sujet ${id}`, ordre: 1000, couleur: null, creeLe: 1, nbRestants: 0, nbTotal: 0, enAttente: false, ...extra });
-const todo = (id, extra = {}) => ({
-  id, v: 1, sujetId: "s1", titre: id, description: "", echeance: null, fait: false, faitLe: null,
-  creeLe: 1, modifieLe: 1, ordre: 1000, images: [], enAttente: false, ...extra,
-});
+const todo = (id, extra = {}) => {
+  const t = {
+    id, v: 1, sujetId: "s1", titre: id, description: "", echeance: null, fait: false, faitLe: null,
+    creeLe: 1, modifieLe: 1, ordre: 1000, images: [], enAttente: false, ...extra,
+  };
+  // As lireTodo gives it: an old todo is read as a todo with one piste.
+  return { ...t, pistes: extra.pistes ?? pistesDe(t) };
+};
 
 async function monter({ sujets = [sujet("s1"), sujet("s2")], todos = [], options = {} } = {}) {
   const fb = {
@@ -131,11 +136,12 @@ describe("panneau des todos (version simple)", () => {
     m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     expect(m.querySelector(".modale-todo-message").textContent).toMatch(/titre/);
     m.querySelector(".todo-champ--titre").value = "  Acheter du pain ";
-    m.querySelector(".todo-champ--description").value = "chez Paul";
+    m.querySelector(".modale-piste-description").value = "chez Paul";
+    m.querySelector(".modale-piste-description").dispatchEvent(new Event("input"));
     m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     await attendre();
     await attendre();
-    expect(fb.creerTodo.mock.calls[0][1]).toMatchObject({ titre: "Acheter du pain", description: "chez Paul", sujetId: "s1", ordre: 4000 });
+    expect(fb.creerTodo.mock.calls[0][1]).toMatchObject({ titre: "Acheter du pain", sujetId: "s1", ordre: 4000, v: 2, pistes: [expect.objectContaining({ description: "chez Paul" })] });
     expect(fenetre()).toBeNull();
   });
 
@@ -152,12 +158,13 @@ describe("panneau des todos (version simple)", () => {
     const { p, fb } = await monter({ todos: [todo("a", { titre: "Avant", description: "x" })] });
     const m = await ouvrirTodo(p, "a");
     expect(m.querySelector(".todo-champ--titre").value).toBe("Avant");
-    m.querySelector(".todo-champ--description").value = "bon";
+    m.querySelector(".modale-piste-description").value = "bon";
+    m.querySelector(".modale-piste-description").dispatchEvent(new Event("input"));
     m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
     await attendre();
     await attendre();
     expect(fb.majTodo).toHaveBeenCalledOnce();
-    expect(fb.majTodo.mock.calls[0][2]).toEqual({ description: "bon" });
+    expect(fb.majTodo.mock.calls[0][2]).toEqual({ pistes: [{ id: "principale", titre: "", description: "bon", imageId: null }] });
     expect(fenetre()).toBeNull();
   });
 
@@ -206,7 +213,47 @@ describe("panneau des todos (version simple)", () => {
     expect(p.panneau.querySelector(".todo-titre").textContent).toBe("<img src=x onerror=alert(1)>");
     const m = await ouvrirTodo(p, "a");
     expect(m.querySelector("img[src='x']")).toBeNull();
-    expect(m.querySelector(".todo-champ--description").value).toBe("<script>x</script>");
+    expect(m.querySelector(".modale-piste-description").value).toBe("<script>x</script>");
+  });
+
+  it("pistes : ajouter une piste (5 au plus), remplir, enregistrer en v2", async () => {
+    const { p, fb } = await monter({ todos: [todo("a", { titre: "Plan" })] });
+    const m = await ouvrirTodo(p, "a");
+    expect(m.querySelectorAll(".modale-piste")).toHaveLength(0);
+    const ajout = m.querySelector(".modale-pistes-ajout");
+    ajout.click();
+    expect(m.querySelectorAll(".modale-piste")).toHaveLength(1);
+    const piste = m.querySelector(".modale-piste");
+    piste.querySelector(".modale-piste-titre").value = "Étape 1";
+    piste.querySelector(".modale-piste-titre").dispatchEvent(new Event("input"));
+    piste.querySelector(".modale-piste-description").value = "faire ceci";
+    piste.querySelector(".modale-piste-description").dispatchEvent(new Event("input"));
+    for (let i = 0; i < 6; i++) ajout.click();
+    expect(m.querySelectorAll(".modale-piste")).toHaveLength(5);
+    expect(ajout.disabled).toBe(true);
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    await attendre();
+    await attendre();
+    const champs = fb.majTodo.mock.calls[0][2];
+    expect(champs.pistes).toHaveLength(1); // the empty pistes are left out
+    expect(champs.pistes[0]).toMatchObject({ titre: "Étape 1", description: "faire ceci", imageId: null });
+  });
+
+  it("pistes : un ancien todo montre sa piste et ne s'écrit pas s'il n'est pas modifié", async () => {
+    const { p, fb } = await monter({ todos: [todo("a", { titre: "Vieux", description: "texte ancien" })] });
+    const m = await ouvrirTodo(p, "a");
+    expect(m.querySelectorAll(".modale-piste")).toHaveLength(1);
+    expect(m.querySelector(".modale-piste-description").value).toBe("texte ancien");
+    m.querySelector("form").dispatchEvent(new Event("submit", { cancelable: true }));
+    await attendre();
+    await attendre();
+    expect(fb.majTodo).not.toHaveBeenCalled();
+  });
+
+  it("pistes : la liste annonce le nombre de pistes", async () => {
+    const pistes = [{ id: "p1", titre: "A", description: "", imageId: null }, { id: "p2", titre: "B", description: "", imageId: null }];
+    const { p } = await monter({ todos: [todo("a", { v: 2, pistes })] });
+    expect(p.panneau.querySelector('[data-id="a"]').textContent).toContain("2 pistes");
   });
 
   it("supprimer : confirmation d'abord (Annuler a le focus), puis le todo disparaît, « Annuler » dans les 5 s n'écrit rien", async () => {

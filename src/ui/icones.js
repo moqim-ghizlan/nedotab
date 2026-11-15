@@ -111,6 +111,7 @@ const TRACES = {
   retour: ["M15 5l-7 7 7 7"],
   chevron: ["M9 5l7 7-7 7"],
   bas: ["M12 5v14", "M6 13l6 6 6-6"],
+  haut: ["M12 19V5", "M6 11l6-6 6 6"],
   // V6.1: todos (check in a rounded square), grip, "more" dots, search, filter, pen on a page.
   todos: [
     "M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z",

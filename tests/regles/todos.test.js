@@ -164,6 +164,37 @@ describe("todos", () => {
     await assertFails(ajouterTodo(db("alice"), "t4", { appareilId: "x".repeat(41) }));
     await assertFails(updateDoc(tod(db("alice"), "t1"), { appareil: "autre", modifieLe: serverTimestamp() }));
   });
+  it("pistes (v2) : valides acceptées, hors limites refusées", async () => {
+    const piste = (i, extra = {}) => ({ id: `p${i}`, titre: "T", description: "d", imageId: null, ...extra });
+    const dix = Array.from({ length: 5 }, (_, i) => piste(i));
+    await assertSucceeds(ajouterTodo(db("alice"), "t1", { v: 2, pistes: [piste(0), piste(1, { imageId: "a".repeat(32) })] }));
+    await assertSucceeds(ajouterTodo(db("alice"), "t2", { v: 2, pistes: dix }));
+    await assertFails(ajouterTodo(db("alice"), "t3", { v: 2, pistes: [...dix, piste(5)] }));
+    await assertFails(ajouterTodo(db("alice"), "t4", { v: 2, pistes: [piste(0, { titre: "x".repeat(201) })] }));
+    await assertFails(ajouterTodo(db("alice"), "t5", { v: 2, pistes: [piste(0, { description: "x".repeat(20001) })] }));
+    await assertFails(ajouterTodo(db("alice"), "t6", { v: 2, pistes: [piste(0, { imageId: "court" })] }));
+    await assertFails(ajouterTodo(db("alice"), "t7", { v: 2, pistes: [{ ...piste(0), extra: 1 }] }));
+    await assertFails(ajouterTodo(db("alice"), "t8", { v: 2 }));
+    await assertFails(ajouterTodo(db("alice"), "t9", { v: 1, pistes: [piste(0)] }));
+    await assertFails(ajouterTodo(db("alice"), "t10", { v: 3, pistes: [] }));
+  });
+  it("pistes : le pire cas (5 pistes, 5 images) reste sous la limite d'évaluation", async () => {
+    const hex = (i) => String(i).repeat(32).slice(0, 32);
+    const images = Array.from({ length: 5 }, (_, i) => ({
+      id: hex(i), chemin: `todos/alice/t1/${hex(i)}.webp`, note: "n", taille: 1000, typeMime: "image/webp", largeur: 10, hauteur: 10, ordre: 1000 * (i + 1),
+    }));
+    const pistes = images.map((im, i) => ({ id: `p${i}`, titre: "T", description: "d", imageId: im.id }));
+    await assertSucceeds(ajouterTodo(db("alice"), "t1", { v: 2, pistes, images }));
+    await assertSucceeds(updateDoc(tod(db("alice"), "t1"), { pistes: pistes.slice(0, 4), modifieLe: serverTimestamp() }));
+  });
+  it("pistes : l'ancien format migre en v2, jamais l'inverse", async () => {
+    await assertSucceeds(ajouterTodo(db("alice"), "t1", { description: "ancien texte" }));
+    await assertSucceeds(
+      updateDoc(tod(db("alice"), "t1"), { v: 2, description: "", pistes: [{ id: "principale", titre: "", description: "ancien texte", imageId: null }], modifieLe: serverTimestamp() }),
+    );
+    await assertSucceeds(updateDoc(tod(db("alice"), "t1"), { pistes: [], modifieLe: serverTimestamp() }));
+    await assertFails(updateDoc(tod(db("alice"), "t1"), { v: 1, description: "écrasé", modifieLe: serverTimestamp() }));
+  });
   it("un titre vide est un brouillon valide", async () => {
     await assertSucceeds(ajouterTodo(db("alice"), "t1", { titre: "" }));
   });

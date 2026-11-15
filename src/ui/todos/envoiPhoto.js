@@ -6,14 +6,14 @@ import { ErreurImage, preparerImage } from "./compresserImage.js";
  * uploaded. Never throws: the answer says what to show the user.
  * @returns {Promise<{ ok: true } | { ok: false, erreur: string }>}
  */
-export async function televerserPhoto({ donnees, todoId, fichier, preparer = preparerImage, surProgres }) {
+export async function televerserPhoto({ donnees, todoId, fichier, pisteId = null, preparer = preparerImage, surProgres }) {
   if (typeof navigator !== "undefined" && navigator.onLine === false)
     return { ok: false, erreur: "Ajout de photo impossible hors ligne." };
   try {
     const prete = await preparer(fichier);
     const ok = validerResultat(prete.blob.size, donnees.etat().compteurs.octets);
     if (!ok.ok) return { ok: false, erreur: ok.erreur };
-    const { promesse } = await donnees.envoyerImage(todoId, prete, { surProgres });
+    const { promesse } = await donnees.envoyerImage(todoId, prete, { surProgres, ...(pisteId ? { pisteId } : {}) });
     await promesse;
     return { ok: true };
   } catch (e) {

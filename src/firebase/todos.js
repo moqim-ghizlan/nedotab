@@ -191,6 +191,8 @@ async function ecrireCreation(uid, todo, id) {
     sujetId: todo.sujetId,
     titre: todo.titre,
     description: todo.description,
+    // 7.3: a new todo is version 2 and holds its pistes.
+    ...(Array.isArray(todo.pistes) ? { pistes: todo.pistes } : {}),
     echeance: todo.echeance ?? null,
     fait: !!todo.fait,
     faitLe: todo.fait ? serverTimestamp() : null,
@@ -216,6 +218,11 @@ async function ecrireCreation(uid, todo, id) {
  */
 export async function majTodo(uid, id, champs, { sujetId } = {}) {
   const ecrit = { ...champs };
+  // 7.3: saving pistes makes it a version 2 todo, whose text lives in the pistes.
+  if ("pistes" in ecrit) {
+    ecrit.v = 2;
+    ecrit.description = "";
+  }
   if ("fait" in ecrit) ecrit.faitLe = ecrit.fait ? serverTimestamp() : null;
   else delete ecrit.faitLe;
   const donnees = { ...ecrit, modifieLe: serverTimestamp() };

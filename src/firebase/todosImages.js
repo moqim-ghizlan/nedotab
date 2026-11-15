@@ -7,7 +7,6 @@ import {
 } from "firebase/firestore";
 import { creerFile } from "../core/espacePartageFichiers.js";
 import {
-  IMAGES_MAX,
   cheminImage,
   cheminMini,
   cheminsDeFichiers,
@@ -17,6 +16,7 @@ import {
   octetsDesImages,
   ordreSuivant,
 } from "../core/imagesTodo.js";
+import { PISTES_MAX } from "../core/pistes.js";
 import { obtenirApp } from "./app.js";
 
 /**
@@ -44,10 +44,11 @@ const file = creerFile();
  * @param {string} todoId a todo that already exists
  * @param {{ blob: Blob, mini: Blob, ext: string, typeMime: string, largeur: number, hauteur: number }} image
  *        already compressed (compresserImage.js)
- * @param {{ note?: string, surProgres?: (part: number) => void }} [options]
+ * @param {{ note?: string, pisteId?: string, surProgres?: (part: number) => void }} [options]
+ *        `pisteId`: the piste that gets the picture (7.3), in the same transaction
  * @returns {{ promesse: Promise<object>, annuler: () => void }} promise of the stored metadata
  */
-export function envoyerImage(uid, todoId, image, { note = "", surProgres } = {}) {
+export function envoyerImage(uid, todoId, image, { note = "", pisteId = null, surProgres } = {}) {
   const id = nouvelIdImage();
   const chemin = cheminImage(uid, todoId, id, image.ext);
   const objet = ref(stockage(), chemin);
@@ -78,7 +79,11 @@ export function envoyerImage(uid, todoId, image, { note = "", surProgres } = {})
         const s = await tx.get(todoRef(uid, todoId));
         if (!s.exists()) throw Object.assign(new Error("todo introuvable"), { code: "not-found" });
         const actuelles = s.data().images ?? [];
-        if (actuelles.length >= IMAGES_MAX) throw Object.assign(new Error("limite"), { code: "limite" });
+        if (actuelles.length >= PISTES_MAX) throw Object.assign(new Error("limite"), { code: "limite" });
+        const pistes = s.data().pistes;
+        const piste = pisteId ? (pistes ?? []).find((p) => p.id === pisteId) : null;
+        // One picture per piste, and the piste must still exist (deleted from another device).
+        if (pisteId && (!piste || piste.imageId)) throw Object.assign(new Error("limite"), { code: "limite" });
         const meta = creerMetaImage({
           id,
           chemin,
@@ -89,7 +94,11 @@ export function envoyerImage(uid, todoId, image, { note = "", surProgres } = {})
           note,
           ordre: ordreSuivant(actuelles),
         });
-        tx.update(todoRef(uid, todoId), { images: [...actuelles, meta], modifieLe: serverTimestamp() });
+        tx.update(todoRef(uid, todoId), {
+          images: [...actuelles, meta],
+          ...(piste ? { pistes: pistes.map((p) => (p.id === pisteId ? { ...p, imageId: id } : p)) } : {}),
+          modifieLe: serverTimestamp(),
+        });
         tx.set(metaRef(uid), { octets: increment(meta.taille) }, { merge: true });
         return meta;
       });
@@ -118,7 +127,17 @@ async function modifierListe(uid, todoId, fabrique, octetsEnPlus = () => 0) {
     if (!s.exists()) throw Object.assign(new Error("todo introuvable"), { code: "not-found" });
     const avant = s.data().images ?? [];
     const apres = fabrique(avant);
-    tx.update(todoRef(uid, todoId), { images: apres, modifieLe: serverTimestamp() });
+    // A piste never points to a picture that is gone.
+    const pistes = s.data().pistes;
+    const gardees = new Set(apres.map((i) => i.id));
+    const nettoyees = Array.isArray(pistes)
+      ? pistes.map((p) => (p.imageId && !gardees.has(p.imageId) ? { ...p, imageId: null } : p))
+      : null;
+    tx.update(todoRef(uid, todoId), {
+      images: apres,
+      ...(nettoyees && nettoyees.some((p, i) => p !== pistes[i]) ? { pistes: nettoyees } : {}),
+      modifieLe: serverTimestamp(),
+    });
     const delta = octetsEnPlus(avant, apres);
     if (delta !== 0) tx.set(metaRef(uid), { octets: increment(delta) }, { merge: true });
     return apres;

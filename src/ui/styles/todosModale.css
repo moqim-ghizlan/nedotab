@@ -148,3 +148,23 @@ html.visionneuse-ouverte body { overflow: hidden; }
   .modale-todo-entete button { cursor: pointer; }
   .modale-todo-entete--saisie, .modale-todo-entete--saisie * { cursor: grabbing !important; }
 }
+
+/* --- Pistes (7.3) ------------------------------------------------------------------------------------------------ */
+.modale-pistes { display: grid; gap: var(--espace-3); min-width: 0; }
+.modale-pistes[hidden] { display: none; }
+.modale-piste { display: grid; gap: var(--espace-2); min-width: 0; padding: var(--espace-3); border: 1px solid var(--trait); border-radius: 16px; background: color-mix(in srgb, var(--creux) 60%, transparent); animation: piste-entree 220ms var(--ressort) both; }
+.modale-piste-entete { display: flex; align-items: center; justify-content: space-between; gap: var(--espace-2); }
+.modale-piste-numero { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.modale-piste-actions { display: flex; gap: 2px; }
+.modale-piste-action { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--texte-secondaire); cursor: pointer; transition: background-color 140ms, color 140ms, transform 140ms var(--ressort); }
+.modale-piste-action:hover:not(:disabled) { background: var(--survol); color: var(--texte); transform: scale(1.08); }
+.modale-piste-action:disabled { opacity: 0.3; cursor: default; }
+.modale-piste-supprimer:hover:not(:disabled) { color: var(--danger); }
+.modale-piste-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.modale-todo .modale-piste-titre { min-height: 44px; font-weight: 600; }
+.modale-piste .todo-champ--description { min-height: 84px; }
+.modale-pistes-ajout { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin-top: var(--espace-2); padding: 0 14px; border: 1px dashed var(--trait-fort); border-radius: 14px; background: none; color: var(--texte-secondaire); font: inherit; font-weight: 600; cursor: pointer; transition: border-color 160ms, color 160ms, background-color 160ms; }
+.modale-pistes-ajout:hover:not(:disabled), .modale-pistes-ajout:focus-visible { border-color: var(--accent); color: var(--accent); background: var(--accent-doux); outline: none; }
+.modale-pistes-ajout:disabled { opacity: 0.45; cursor: default; }
+@keyframes piste-entree { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .modale-piste { animation: none; } }

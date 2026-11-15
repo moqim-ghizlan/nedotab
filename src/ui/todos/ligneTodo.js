@@ -1,3 +1,4 @@
+import { apercuPistes, imageDePiste } from "../../core/pistes.js";
 import { cheminMini } from "../../core/imagesTodo.js";
 import { vibrer } from "../haptique.js";
 import { el } from "../dom.js";
@@ -70,14 +71,18 @@ export function creerLigneTodo({ donnees, todo, surOuvrir, store }) {
     const nom = t.titre || SANS_TITRE;
     titre.textContent = nom;
     titre.classList.toggle("todo-titre--vide", !t.titre);
-    indices.textContent = t.description ? t.description.split("\n")[0].slice(0, 90) : "";
-    indices.hidden = !t.description;
+    // 7.3: a line of the pistes, and how many there are.
+    const apercu = apercuPistes(t.pistes);
+    const nb = t.pistes?.length ?? 0;
+    const texte = nb > 1 ? `${apercu ? `${apercu} · ` : ""}${nb} pistes` : apercu;
+    indices.textContent = texte;
+    indices.hidden = !texte;
     li.classList.toggle("todo--faite", !!t.fait);
     li.classList.toggle("todo--attente", !!t.enAttente);
     case_.setAttribute("aria-checked", String(!!t.fait));
     case_.setAttribute("aria-label", `${t.fait ? "Rouvrir" : "Terminer"} : ${nom}`);
     corps.setAttribute("aria-label", `Ouvrir le todo : ${nom}`);
-    const image = t.images[0] ?? null;
+    const image = (t.pistes ?? []).map((p) => imageDePiste(t, p)).find(Boolean) ?? t.images[0] ?? null;
     chargerMini(image ? cheminMini(image.chemin) : null);
   }
 

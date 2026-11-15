@@ -6,11 +6,15 @@
  * Todo: { id, v, sujetId, titre, description, creeLe, modifieLe (ms or null while pending),
  *         echeance ('AAAA-MM-JJ' or null), fait, faitLe (ms or null), ordre, images: [] }
  */
-export const VERSION_TODO = 1;
+import { PISTES_MAX, VERSION_TODO_PISTES, creerPiste, pistesDe, validerPistes } from "./pistes.js";
+
+/** 2 since 7.3 (pistes); a document of version 1 is still read, as a todo with one piste. */
+export const VERSION_TODO = VERSION_TODO_PISTES;
 export const LIMITE_TODOS = 500;
 export const TITRE_MAX = 200;
 export const DESCRIPTION_MAX = 20_000;
-export const IMAGES_MAX = 1;
+/** Pictures of a todo: one per piste. */
+export const IMAGES_MAX = PISTES_MAX;
 export const NOTE_IMAGE_MAX = 300;
 export const ECART_ORDRE = 1000;
 export const ECART_MIN = 0.001;
@@ -32,13 +36,14 @@ export function echeanceValide(texte) {
 }
 
 /** @returns {string|null} an error message, or null (an empty title is a draft: allowed) */
-export function validerTodo({ titre = "", description = "", echeance = null } = {}) {
+export function validerTodo({ titre = "", description = "", echeance = null, pistes } = {}) {
   if (typeof titre !== "string" || longueur(titre) > TITRE_MAX)
     return `Le titre est limité à ${TITRE_MAX} caractères.`;
   if (typeof description !== "string" || longueur(description) > DESCRIPTION_MAX)
     return `La description est limitée à ${DESCRIPTION_MAX.toLocaleString("fr-FR")} caractères.`;
   if (echeance !== null && !echeanceValide(echeance))
     return "Cette échéance n'est pas une date valide.";
+  if (pistes !== undefined) return validerPistes(pistes);
   return null;
 }
 
@@ -52,9 +57,13 @@ export function creerTodo({
   description = "",
   echeance = null,
   ordre = ECART_ORDRE,
+  pistes = [],
 }) {
   if (typeof sujetId !== "string" || !sujetId) return { ok: false, erreur: "Sujet introuvable." };
-  const erreur = validerTodo({ titre: String(titre).trim(), description, echeance: echeance || null });
+  // 7.3: the text lives in the pistes; a description given alone becomes the first piste.
+  const base = pistes.length || !String(description).trim() ? pistes : [{ description }];
+  const propres = base.map((p) => creerPiste(p));
+  const erreur = validerTodo({ titre: String(titre).trim(), echeance: echeance || null, pistes: propres });
   if (erreur) return { ok: false, erreur };
   return {
     ok: true,
@@ -62,7 +71,8 @@ export function creerTodo({
       v: VERSION_TODO,
       sujetId,
       titre: String(titre).trim(),
-      description: String(description).replace(/\r\n?/g, "\n"),
+      description: "",
+      pistes: propres,
       echeance: echeance || null,
       fait: false,
       faitLe: null,
@@ -81,6 +91,8 @@ export const CHAMPS_MODIFIABLES = [
   "faitLe",
   "ordre",
   "images",
+  "v",
+  "pistes",
 ];
 
 /** Done / not done: `faitLe` is set when it becomes true, cleared (null) when it becomes false. */
@@ -106,10 +118,16 @@ export function modifierTodo(todo, changements, maintenant = Date.now()) {
           : changements[cle];
   }
   if ("echeance" in changements) suivant.echeance = changements.echeance || null;
-  const erreur = validerTodo(suivant);
+  if ("pistes" in changements) {
+    // Saving pistes makes it a v2 todo: the old description now lives in the pistes.
+    suivant.pistes = (changements.pistes ?? []).map((p) => creerPiste(p));
+    suivant.v = VERSION_TODO;
+    suivant.description = "";
+  }
+  const erreur = validerTodo({ ...suivant, pistes: "pistes" in changements ? suivant.pistes : undefined });
   if (erreur) return { ok: false, erreur };
   if (Array.isArray(suivant.images) && suivant.images.length > IMAGES_MAX)
-    return { ok: false, erreur: "Un todo ne peut avoir qu'une image." };
+    return { ok: false, erreur: `Un todo ne peut avoir que ${IMAGES_MAX} images.` };
   if ("fait" in changements)
     return { ok: true, todo: basculerFait(suivant, !!changements.fait, maintenant) };
   return { ok: true, todo: suivant };
@@ -159,9 +177,11 @@ export function lireTodo(id, brut, enAttente = false) {
   const images = Array.isArray(brut.images)
     ? brut.images.map(lireImage).filter(Boolean).slice(0, IMAGES_MAX)
     : [];
+  const v = Number.isInteger(brut.v) ? brut.v : 1;
   return {
     id,
-    v: Number.isInteger(brut.v) ? brut.v : VERSION_TODO,
+    v,
+    pistes: pistesDe({ v, pistes: brut.pistes, description: brut.description, images }),
     sujetId: brut.sujetId,
     titre: brut.titre,
     description: brut.description,
@@ -215,6 +235,7 @@ export function exporterTodos(todos) {
     sujetId: t.sujetId,
     titre: t.titre,
     description: t.description,
+    pistes: (t.pistes ?? []).map((p) => ({ id: p.id, titre: p.titre, description: p.description, imageId: p.imageId ?? null })),
     echeance: t.echeance ?? null,
     fait: !!t.fait,
     faitLe: t.faitLe ?? null,

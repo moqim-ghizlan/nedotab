@@ -2,6 +2,16 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.3.0] - 2026-11-15
+
+Branche `new-todo-style`, **à valider avant fusion dans `dev`**. **Les règles Firestore ont changé : à déployer AVANT de publier cette version (`npx firebase deploy --only firestore:rules --project prod`).** Règles testées dans l'émulateur ; rien déployé.
+
+### Ajouté
+
+- **Pistes** : un todo contient jusqu'à **5 pistes** (titre, description, une image chacune). Bouton « Ajouter une piste », déplacer, supprimer. Le todo garde un titre seul. Limite de 5 imposée par le plafond de 1000 évaluations des règles Firestore.
+- **Migration sans perte** : un ancien todo est lu comme un todo à une piste (sa description et son image) ; rien n'est écrit tant qu'on ne l'enregistre pas, puis il passe en version 2. Un ancien appareil ne peut plus écraser un todo en version 2.
+- **PDF professionnel** : en-tête (sujet, titre, détails), un bloc par piste avec image entière, pied de page « Page n / N », sans bloc coupé. Export `.md`/`.zip` : une section par piste.
+
 ## [7.2.0] - 2026-11-14
 
 ### Ajouté

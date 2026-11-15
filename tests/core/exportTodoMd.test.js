@@ -49,3 +49,30 @@ describe("todoVersMarkdown", () => {
     expect(todoVersMarkdown({ ...base, titre: "  " }).startsWith("# Sans titre")).toBe(true);
   });
 });
+
+describe("todoVersMarkdown : pistes (7.3)", () => {
+  const todo = {
+    titre: "Voyage",
+    creeLe: null,
+    pistes: [
+      { id: "a", titre: "Billets", description: "Train ou avion ?", imageId: "i1" },
+      { id: "b", titre: "", description: "Réserver l'hôtel", imageId: null },
+      { id: "c", titre: "Photo", description: "", imageId: "i2" },
+    ],
+  };
+  it("écrit une section par piste, avec ses images", () => {
+    const md = todoVersMarkdown(todo, { cheminsImages: { a: "images/piste-1.webp" }, imagesIndisponibles: ["c"] });
+    expect(md).toContain("# Voyage");
+    expect(md).toContain("## Billets");
+    expect(md).toContain("![Billets](images/piste-1.webp)");
+    expect(md).toContain("## Piste 2");
+    expect(md).toContain("Réserver l'hôtel");
+    expect(md).toContain("## Photo");
+    expect(md).toContain("_Image indisponible au moment de l'export._");
+  });
+  it("une seule piste sans titre : pas de sous-titre", () => {
+    const md = todoVersMarkdown({ titre: "Seul", pistes: [{ id: "a", titre: "", description: "Texte", imageId: null }] });
+    expect(md).not.toContain("##");
+    expect(md).toContain("Texte");
+  });
+});

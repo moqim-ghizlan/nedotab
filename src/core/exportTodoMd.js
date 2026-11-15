@@ -47,9 +47,11 @@ const quand = (ms) =>
  * @param {string} [o.sujet] name of the subject
  * @param {string|null} [o.cheminImage] relative path of the picture inside the archive
  * @param {boolean} [o.imageIndisponible] the todo has a picture that could not be read
+ * @param {Record<string, string>} [o.cheminsImages] 7.3: relative path of the picture of each piste (by piste id)
+ * @param {string[]} [o.imagesIndisponibles] 7.3: ids of the pistes whose picture could not be read
  * @returns {string}
  */
-export function todoVersMarkdown(todo, { sujet = "", cheminImage = null, imageIndisponible = false } = {}) {
+export function todoVersMarkdown(todo, { sujet = "", cheminImage = null, imageIndisponible = false, cheminsImages = {}, imagesIndisponibles = [] } = {}) {
   const titre = String(todo?.titre ?? "").replace(/\s+/g, " ").trim();
   const sortie = [`# ${titre ? echapperLigne(titre) : "Sans titre"}`, ""];
   const infos = [];
@@ -58,6 +60,18 @@ export function todoVersMarkdown(todo, { sujet = "", cheminImage = null, imageIn
   if (todo?.modifieLe != null && todo.creeLe != null && Math.abs(todo.modifieLe - todo.creeLe) > 60_000) infos.push(`**Modifié** : ${quand(todo.modifieLe)}`);
   if (todo?.fait) infos.push("**État** : fait");
   if (infos.length) sortie.push(infos.join("  \n"), "");
+  // 7.3: one section per piste (a todo of the old format is read as one piste with no title).
+  if (Array.isArray(todo?.pistes) && todo.pistes.length > 0 && !cheminImage && !imageIndisponible) {
+    const plusieurs = todo.pistes.length > 1;
+    todo.pistes.forEach((p, i) => {
+      const nomPiste = String(p.titre ?? "").replace(/\s+/g, " ").trim();
+      if (plusieurs || nomPiste) sortie.push(`## ${echapperLigne(nomPiste || `Piste ${i + 1}`)}`, "");
+      if (p.description?.trim()) sortie.push(echapperTexte(p.description), "");
+      if (cheminsImages[p.id]) sortie.push(`![${echapperLigne(nomPiste || "Image")}](${cheminsImages[p.id].replace(/ /g, "%20")})`, "");
+      else if (imagesIndisponibles.includes(p.id)) sortie.push("_Image indisponible au moment de l'export._", "");
+    });
+    return `${sortie.join("\n").trimEnd()}\n`;
+  }
   if (todo?.description?.trim()) sortie.push(echapperTexte(todo.description), "");
   if (cheminImage) sortie.push(`![Image du todo](${cheminImage.replace(/ /g, "%20")})`, "");
   else if (imageIndisponible) sortie.push("_Image indisponible au moment de l'export._", "");

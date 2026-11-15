@@ -339,9 +339,31 @@ service cloud.firestore {
         && (l.size() <= 9 || imageValide(uid, l[9]));
     }
 
+    // 7.3: a todo of version 2 holds `pistes` (title, description, one picture each, 5 at most);
+    // the pictures stay in `images`, a piste only points to one (`imageId`). Same trick as for
+    // the images: a rule cannot loop, the 5 places are checked one by one. Kept as short as
+    // possible (a request may evaluate 1000 expressions at most); `.size()` on a value that is not
+    // a string or a list fails, which refuses it.
+    function pisteValide(p) {
+      return p.keys().hasOnly(['id', 'titre', 'description', 'imageId'])
+        && p.titre.size() <= 200
+        && p.description.size() <= 20000
+        && (p.imageId == null || p.imageId.size() == 32);
+    }
+
+    function pistesValides(l) {
+      return l.size() <= 5
+        && (l.size() <= 0 || pisteValide(l[0]))
+        && (l.size() <= 1 || pisteValide(l[1]))
+        && (l.size() <= 2 || pisteValide(l[2]))
+        && (l.size() <= 3 || pisteValide(l[3]))
+        && (l.size() <= 4 || pisteValide(l[4]));
+    }
+
     function todoValide(uid, d) {
-      return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images', 'appareil', 'appareilId'])
-        && d.v == 1
+      return d.keys().hasOnly(['v', 'sujetId', 'titre', 'description', 'creeLe', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images', 'pistes', 'appareil', 'appareilId'])
+        && ((d.v == 1 && !('pistes' in d))
+            || (d.v == 2 && d.pistes is list && pistesValides(d.pistes)))
         && d.sujetId is string && d.sujetId.size() >= 1 && d.sujetId.size() <= 40
         && d.titre is string && d.titre.size() <= 200
         && d.description is string && d.description.size() <= 20000
@@ -391,7 +413,9 @@ service cloud.firestore {
       // Partial updates: only these fields may change; creeLe never does.
       allow update: if proprietaire(uid)
         && todoValide(uid, request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['sujetId', 'titre', 'description', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['v', 'pistes', 'sujetId', 'titre', 'description', 'modifieLe', 'echeance', 'fait', 'faitLe', 'ordre', 'images'])
+        // A todo never goes back to an older format (an old device cannot erase the pistes).
+        && request.resource.data.v >= resource.data.v
         && (request.resource.data.sujetId == resource.data.sujetId
             || exists(/databases/$(db)/documents/users/$(uid)/sujets/$(request.resource.data.sujetId)));
     }

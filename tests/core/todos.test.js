@@ -53,10 +53,11 @@ describe("creerTodo / modifierTodo", () => {
     const r = creerTodo({ sujetId: "s1", titre: "  Acheter du pain ", description: "a\r\nb" });
     expect(r.ok).toBe(true);
     expect(r.todo).toMatchObject({
-      v: 1,
+      v: 2,
       sujetId: "s1",
       titre: "Acheter du pain",
-      description: "a\nb",
+      description: "",
+      pistes: [expect.objectContaining({ titre: "", description: "a\nb", imageId: null })],
       echeance: null,
       fait: false,
       faitLe: null,
