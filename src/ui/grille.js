@@ -23,12 +23,7 @@ export function rendreGrille(
     fragment.append(
       el(
         "li",
-        {
-          class: element.epingleAccueil != null ? "case case--element case--epinglee" : "case case--element",
-          // A home pin (7.2) is shown in the pin list: its cell stays in the DOM (indexes of the
-          // drag and drop stay the same as in the data) but takes no room.
-          ...(element.epingleAccueil != null ? { hidden: "" } : {}),
-        },
+        { class: "case case--element" },
         tuile,
         el("button", {
           type: "button",
@@ -93,7 +88,7 @@ export function activerClavierGrille(
     if (e.target.closest("input, textarea, select, [contenteditable]")) return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
-    const tuiles = [...conteneur.querySelectorAll(".case:not([hidden]) .tuile")];
+    const tuiles = [...conteneur.querySelectorAll(".tuile")];
     const actuel = tuiles.indexOf(document.activeElement);
     if (actuel < 0) return;
     const vertical = !(e.key in DEPLACEMENTS);

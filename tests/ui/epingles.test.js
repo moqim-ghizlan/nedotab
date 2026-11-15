@@ -39,12 +39,12 @@ describe("actions d'épinglage", () => {
 });
 
 describe("grille", () => {
-  it("garde la case d'un élément épinglé dans le DOM, mais cachée", () => {
+  it("montre toujours un élément épinglé dans la grille", () => {
     const ul = document.createElement("ul");
     rendreGrille(ul, [site("a"), site("b", { epingleAccueil: 1 })]);
     const cases = [...ul.querySelectorAll(".case--element")];
     expect(cases).toHaveLength(2);
-    expect(cases[1].hidden).toBe(true);
+    expect(cases[1].hidden).toBe(false);
     expect(cases[0].hidden).toBe(false);
   });
 });

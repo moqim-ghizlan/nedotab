@@ -810,6 +810,3 @@
     animation: none;
   }
 }
-
-/* A home pin (7.2) lives in the pin list: its cell stays in the DOM but takes no room. */
-.case--epinglee { display: none !important; }

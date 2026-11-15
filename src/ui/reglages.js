@@ -365,7 +365,7 @@ export function ouvrirReglages(store, { retourFocus, session, onglet } = {}) {
     [
       "sansEpingles",
       "Afficher les sites épinglés",
-      "Liste verticale à gauche de la page d'accueil (écrans larges). Désactivé, elle disparaît ; vos épingles sont conservées et reviennent à la réactivation. Les éléments épinglés restent masqués de la grille tant qu'ils sont épinglés.",
+      "Liste verticale à gauche de la page d'accueil (écrans larges). Désactivé, elle disparaît ; vos épingles sont conservées et reviennent à la réactivation.",
       true,
     ],
     [

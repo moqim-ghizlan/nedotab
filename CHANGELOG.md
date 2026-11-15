@@ -2,6 +2,12 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.3.1] - 2026-11-15
+
+### Changé
+
+- **Épingles d'accueil** : un élément épinglé **reste aussi à sa place** dans la grille et dans son dossier ; l'épingle n'est plus qu'un raccourci. Désépingler ne déplace rien.
+
 ## [7.3.0] - 2026-11-15
 
 Branche `new-todo-style`, **à valider avant fusion dans `dev`**. **Les règles Firestore ont changé : à déployer AVANT de publier cette version (`npx firebase deploy --only firestore:rules --project prod`).** Règles testées dans l'émulateur ; rien déployé.

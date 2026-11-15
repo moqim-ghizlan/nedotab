@@ -3,8 +3,8 @@
  * home page (large screens). Pure functions, no DOM.
  *
  * A pinned element stays where it is in the grid tree (so sync, search, backups and moves keep
- * working) and carries `epingleAccueil`: its rank in the list, 1..MAX_EPINGLES. The grid hides
- * it, which is why unpinning puts it back exactly where it was. This is NOT `epingle`
+ * working) and carries `epingleAccueil`: its rank in the list, 1..MAX_EPINGLES. The grid still
+ * shows it: the pin is a shortcut. This is NOT `epingle`
  * (V4.21, "Les plus utilisés"): the two never interact.
  */
 import { aplatir, remplacer, trouver } from "./arbre.js";
