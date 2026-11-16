@@ -2,6 +2,13 @@
 
 Format inspiré de [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versionnage sémantique.
 
+## [7.3.2] - 2026-11-16
+
+### Corrigé
+
+- **Installation neuve** : plus d'erreur « You need to request host permissions » dans le worker ; les écouteurs `webRequest` ne sont branchés que si l'accès aux sites est accordé.
+- **Espace de partage** : l'alerte d'une archive (« n'ouvrez que des fichiers… ») passe à la ligne au lieu de déborder de la carte.
+
 ## [7.3.1] - 2026-11-15
 
 ### Changé

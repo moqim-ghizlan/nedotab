@@ -1209,7 +1209,8 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
 .partage-fichier-ligne {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 2px 8px;
   min-width: 0;
 }
 .partage-fichier-ligne .partage-nom {
@@ -1235,7 +1236,8 @@ li.partage-carte--erreur:not(.partage-carte--fichier) {
   font-variant-numeric: tabular-nums;
 }
 .partage-alerte {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--attention);
   font-size: 0.6875rem;
 }
